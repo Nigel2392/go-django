@@ -101,6 +101,8 @@ func TestState(t *testing.T) {
 		},
 	})
 
+	var originalModel = model
+
 	t.Run("StateNilBeforeFieldDefsCalled", func(t *testing.T) {
 		var state = model.State()
 		if state != nil {
@@ -456,4 +458,132 @@ func TestState(t *testing.T) {
 		})
 	})
 
+	t.Run("LoadFromDB", func(t *testing.T) {
+
+		t.Run("default", func(t *testing.T) {
+			var model = models.Setup(context.Background(), &StatefulModel{
+				ID: model.ID,
+			})
+
+			err := model.Load(t.Context())
+
+			if err != nil {
+				t.Fatalf("failed to load model from PK: %v", err)
+			}
+
+			if model.Image == nil {
+				t.Fatal("Image should not be nil on model")
+			}
+
+			if model.Image.ID != originalModel.Image.ID || model.Image.ID == 0 {
+				t.Fatalf("Expected image ID to be loaded on model %+v", model.Image)
+			}
+
+			if model.Image.ImageTitle != "" {
+				t.Fatal("Expected related image not to be loaded")
+			}
+		})
+
+		t.Run("shouldOverwrite", func(t *testing.T) {
+			var model = models.Setup(context.Background(), &StatefulModel{
+				ID:    model.ID,
+				Image: originalModel.Image,
+			})
+
+			err := model.Load(t.Context())
+
+			if err != nil {
+				t.Fatalf("failed to load model from PK: %v", err)
+			}
+
+			if model.Image == nil {
+				t.Fatal("Image should not be nil on model")
+			}
+
+			if model.Image.ID != originalModel.Image.ID || model.Image.ID == 0 {
+				t.Fatalf("Expected image ID to be loaded on model %+v", model.Image)
+			}
+
+			if model.Image.ImageTitle != "" {
+				t.Fatal("Expected related image not to be loaded")
+			}
+		})
+
+		t.Run("shouldNotOverwrite", func(t *testing.T) {
+			var model = models.Setup(context.Background(), &StatefulModel{
+				ID:    model.ID,
+				Image: originalModel.Image,
+			})
+
+			err := model.Load(t.Context(), func(mlc *models.ModelLoadConfig) {
+				mlc.ExcludedFields = []string{"Image"}
+			})
+
+			if err != nil {
+				t.Fatalf("failed to load model from PK: %v", err)
+			}
+
+			if model.Image == nil {
+				t.Fatal("Image should not be nil on model")
+			}
+
+			if model.Image.ID != originalModel.Image.ID {
+				t.Fatalf("Expected image ID to be loaded on model %+v", model.Image)
+			}
+
+			if model.Image.ImageTitle != "New Image Title" {
+				t.Fatal("Expected related image to still be loaded")
+			}
+		})
+
+		t.Run("setter", func(t *testing.T) {
+			var model = models.Setup(context.Background(), &StatefulModel{
+				ID: model.ID,
+			})
+
+			err := model.Load(t.Context(),
+				models.LoadSetter(func(d attrs.Definer) error {
+					*model = *d.(*StatefulModel)
+					return nil
+				}),
+			)
+
+			if err != nil {
+				t.Fatalf("failed to load model from PK: %v", err)
+			}
+
+			if model.Image == nil {
+				t.Fatal("Image should not be nil on model")
+			}
+
+			if model.Image.ID != originalModel.Image.ID || model.Image.ID == 0 {
+				t.Fatalf("Expected image ID to be loaded on model %+v", model.Image)
+			}
+
+			if model.Image.ImageTitle != "" {
+				t.Fatal("Expected related image not to be loaded")
+			}
+		})
+
+		t.Run("preload", func(t *testing.T) {
+			var model = models.Setup(context.Background(), &StatefulModel{
+				ID: model.ID,
+			})
+
+			err := model.Load(t.Context(),
+				models.LoadQS(func(qs *queries.QuerySet[attrs.Definer]) *queries.QuerySet[attrs.Definer] {
+					return qs.Select("*", "Image.*")
+				}),
+			)
+
+			if err != nil {
+				t.Fatalf("failed to load model from PK: %v", err)
+			}
+
+			if model.Image == nil || model.Image.ImageTitle != "New Image Title" {
+				t.Fatalf("Image either not set or title mismatch: %+v", model.Image)
+			}
+		})
+
+	})
 }

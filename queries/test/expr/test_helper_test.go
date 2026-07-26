@@ -66,12 +66,7 @@ func (m *TestModel) FieldDefs(ctx context.Context) attrs.Definitions {
 
 func getTestInfo() *expr.ExpressionInfo {
 	qs := queries.GetQuerySet(&TestModel{})
-	var info *expr.ExpressionInfo
-	qs.Scope(func(q *queries.QuerySet[*TestModel], internals *queries.QuerySetInternals) *queries.QuerySet[*TestModel] {
-		info = q.Compiler().ExpressionInfo(q)
-		return q
-	})
-	return info
+	return qs.Compiler().ExpressionInfo(qs)
 }
 
 // fixSQL replaces backticks with the compiler's quote character and ? with its placeholder.

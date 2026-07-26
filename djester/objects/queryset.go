@@ -24,6 +24,8 @@ type QuerySetTest struct {
 	// []T.(attrs.Definer), func(ctx context.Context, t *testing.T)
 	Create any
 
+	Verbose bool
+
 	Execute func(dj *djester.Tester, t *testing.T, ctx context.Context)
 
 	Teardown func(*djester.Tester, *testing.T, context.Context)
@@ -177,7 +179,9 @@ func (q *QuerySetTest) createObjectsFunc() func(ctx context.Context, t *testing.
 
 	return func(ctx context.Context, t *testing.T) {
 
-		t.Logf("creating objects...")
+		if q.Verbose {
+			t.Logf("creating objects...")
+		}
 
 		for objectList, err := range orderedDefinerSlice(reflect.ValueOf(q.Create)) {
 			if err != nil {
@@ -199,7 +203,9 @@ func (q *QuerySetTest) createObjectsFunc() func(ctx context.Context, t *testing.
 				fmt.Fprintf(&listString, "%v", obj)
 			}
 
-			t.Logf("Creating %v...", listString.String())
+			if q.Verbose {
+				t.Logf("Creating %v...", listString.String())
+			}
 
 			_, err = objQs.BulkCreate(objectList)
 			if err != nil {
@@ -211,14 +217,12 @@ func (q *QuerySetTest) createObjectsFunc() func(ctx context.Context, t *testing.
 
 func (q *QuerySetTest) Test(dj *djester.Tester, t *testing.T) {
 
+	t.Helper()
+
 	var ctx, tx, err = queries.StartTransaction(t.Context())
 	if err != nil {
 		t.Fatalf("faield to start transaction: %v", err)
 	}
-
-	// roll back at the end
-	// commit will never be called
-	defer tx.Rollback(ctx)
 
 	var createFn = q.createObjectsFunc()
 	createFn(ctx, t)
@@ -228,4 +232,11 @@ func (q *QuerySetTest) Test(dj *djester.Tester, t *testing.T) {
 	if q.Teardown != nil {
 		q.Teardown(dj, t, ctx)
 	}
+
+	// roll back at the end
+	// commit will never be called
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("Error while rolling back transaction: %v", err)
+	}
+
 }

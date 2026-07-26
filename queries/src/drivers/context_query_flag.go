@@ -1,6 +1,7 @@
 package drivers
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -13,14 +14,17 @@ func (f QueryFlag) String() string {
 	var n, ok = flagNames[f]
 	if !ok {
 		var parts = make([]string, 0)
-		for k, v := range flagNames {
+		var keys = maps.Keys(flagNames)
+		for _, k := range slices.Sorted(keys) {
 			if f&k != 0 {
-				parts = append(parts, v)
+				parts = append(parts, flagNames[k])
 			}
 		}
+
 		if len(parts) == 0 {
 			return "UNKNOWN"
 		}
+
 		slices.Sort(parts)
 		n = strings.Join(parts, "|")
 	}

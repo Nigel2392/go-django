@@ -87,6 +87,7 @@ func (d *dbWrapper) Begin(ctx context.Context) (Transaction, error) {
 		return nil, databaseError(d.d, err)
 	}
 	return &txWrapper{
+		inTx:         true,
 		queryWrapper: queryWrapper[*sql.Tx]{conn: tx, d: d.d},
 	}, nil
 }
@@ -109,7 +110,7 @@ func (d *dbWrapper) Close() error {
 
 type txWrapper struct {
 	queryWrapper[*sql.Tx]
-	finished bool
+	inTx bool
 }
 
 func (p *txWrapper) Driver() driver.Driver {
@@ -117,11 +118,23 @@ func (p *txWrapper) Driver() driver.Driver {
 }
 
 func (p *txWrapper) Finished() bool {
-	return p.finished
+	return !p.inTx
+}
+
+func (d *txWrapper) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
+	return d.queryWrapper.QueryContext(ContextLogMarkTx(ctx, &d.inTx), query, args...)
+}
+
+func (d *txWrapper) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
+	return d.queryWrapper.QueryRowContext(ContextLogMarkTx(ctx, &d.inTx), query, args...)
+}
+
+func (d *txWrapper) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return d.queryWrapper.ExecContext(ContextLogMarkTx(ctx, &d.inTx), query, args...)
 }
 
 func (t *txWrapper) Commit(ctx context.Context) error {
-	defer func() { t.finished = true }()
+	defer func() { t.inTx = false }()
 	var _, err = ContextQueryExec(ctx, t.d.Name, "COMMIT", nil, Q_TCOMMIT, func(ctx context.Context, query string, args ...any) (any, error) {
 		return nil, t.queryWrapper.conn.Commit()
 	})
@@ -130,7 +143,7 @@ func (t *txWrapper) Commit(ctx context.Context) error {
 }
 
 func (t *txWrapper) Rollback(ctx context.Context) error {
-	defer func() { t.finished = true }()
+	defer func() { t.inTx = false }()
 	var _, err = ContextQueryExec(ctx, t.d.Name, "ROLLBACK", nil, Q_TROLLBACK, func(ctx context.Context, query string, args ...any) (any, error) {
 		return nil, t.queryWrapper.conn.Rollback()
 	})

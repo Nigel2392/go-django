@@ -48,6 +48,29 @@ func BenchmarkBaseline_RawDriver(b *testing.B) {
 	}
 }
 
+func BenchmarkBaseline_RawQueryRows(b *testing.B) {
+	ctx := drivers.SetLogSQLContext(b.Context(), false)
+	b.ResetTimer()
+
+	for b.Loop() {
+		rows, err := queries.QueryRows(ctx, &BenchmarkAuthor{}, "SELECT ![ID], ![Name] from TABLE(self) LIMIT ?", COUNT*2)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		var count int
+		for rows.Next() {
+			var id uint64
+			var name string
+			if err := rows.Scan(&id, &name); err != nil {
+				b.Fatal(err)
+			}
+			count++
+		}
+		rows.Close()
+	}
+}
+
 func BenchmarkBaseline_RawSQL_OrderedMap_Dedupe(b *testing.B) {
 	b.StopTimer()
 
@@ -66,6 +89,55 @@ func BenchmarkBaseline_RawSQL_OrderedMap_Dedupe(b *testing.B) {
 
 	for b.Loop() {
 		rows, err := db.QueryContext(ctx, rawSQL, COUNT*2)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		om := orderedmap.NewOrderedMap[uint64, *DedupeAuthor]()
+
+		for rows.Next() {
+			var (
+				aID       uint64
+				aName     string
+				bID       sql.NullInt64
+				bTitle    sql.NullString
+				bAuthorID sql.NullInt64
+			)
+
+			if err := rows.Scan(&aID, &aName, &bID, &bTitle, &bAuthorID); err != nil {
+				b.Fatal(err)
+			}
+
+			author, exists := om.Get(aID)
+			if !exists {
+				author = &DedupeAuthor{ID: aID, Name: aName}
+				om.Set(aID, author)
+			}
+
+			if bID.Valid {
+				author.Books = append(author.Books, &DedupeBook{
+					ID:       uint64(bID.Int64),
+					Title:    bTitle.String,
+					AuthorID: uint64(bAuthorID.Int64),
+				})
+			}
+		}
+		rows.Close()
+	}
+}
+
+func BenchmarkBaseline_RawQueryRows_OrderedMap_Dedupe(b *testing.B) {
+
+	ctx := drivers.SetLogSQLContext(b.Context(), false)
+	// ctx := b.Context()
+
+	for b.Loop() {
+		rows, err := queries.QueryRows(ctx, &BenchmarkAuthorModel{}, `
+		SELECT ![a.ID], ![a.Name], ![Books.ID], ![Books.Title], ![Books.Author] 
+		FROM TABLE(SELF) AS a
+		LEFT JOIN Table(Books) ON ![a.ID] = ![Books.Author] 
+		LIMIT ?
+	`, COUNT*2)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -269,6 +341,49 @@ func BenchmarkBaseline_QuerySet__Authors(b *testing.B) {
 	}
 }
 
+func BenchmarkBaseline_QuerySet__Authors__ValuesList(b *testing.B) {
+	b.StopTimer()
+
+	var qs = queries.
+		GetQuerySet(&BenchmarkAuthor{}).
+		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+		Select("*").
+		Limit(COUNT * 2)
+
+	b.StartTimer()
+	b.ResetTimer()
+
+	for b.Loop() {
+		var rows, err = qs.ValuesList()
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if len(rows) != COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", COUNT, len(rows))
+		}
+	}
+}
+
+func BenchmarkBaseline_QuerySet__Authors__ValuesList__InitInLoop(b *testing.B) {
+	for b.Loop() {
+		var qs = queries.
+			GetQuerySet(&BenchmarkAuthor{}).
+			WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+			Select("*").
+			Limit(COUNT * 2)
+
+		var rows, err = qs.ValuesList()
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if len(rows) != COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", COUNT, len(rows))
+		}
+	}
+}
+
 func BenchmarkBaseline_QuerySet__Books(b *testing.B) {
 	b.StopTimer()
 
@@ -375,6 +490,56 @@ func TestBaseline_RawSQL_OrderedMap_Dedupe(t *testing.T) {
 	for el := om.Front(); el != nil; el = el.Next() {
 		if len(el.Value.Books) != BOOKS_PER_AUTHOR {
 			t.Fatalf("query returned incorrect number of books per author, wanted: %d, got: %d", BOOKS_PER_AUTHOR, len(el.Value.Books))
+		}
+	}
+}
+
+func TestBaseline_RawQueryRows_OrderedMap_Dedupe(t *testing.T) {
+
+	rows, err := queries.QueryRows(t.Context(), &BenchmarkAuthorModel{}, `
+		SELECT ![a.ID], ![a.Name], ![Books.ID], ![Books.Title], ![Books.Author] 
+		FROM TABLE(SELF) 'a'
+		LEFT JOIN Table(Books) ON ![a.ID] = ![Books.Author] 
+		LIMIT ?
+	`, COUNT*2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer rows.Close()
+	om := orderedmap.NewOrderedMap[uint64, *DedupeAuthor]()
+
+	for rows.Next() {
+		var (
+			aID       uint64
+			aName     string
+			bID       sql.NullInt64
+			bTitle    sql.NullString
+			bAuthorID sql.NullInt64
+		)
+
+		if err := rows.Scan(&aID, &aName, &bID, &bTitle, &bAuthorID); err != nil {
+			t.Fatal(err)
+		}
+
+		author, exists := om.Get(aID)
+		if !exists {
+			author = &DedupeAuthor{ID: aID, Name: aName}
+			om.Set(aID, author)
+		}
+
+		if bID.Valid {
+			author.Books = append(author.Books, &DedupeBook{
+				ID:       uint64(bID.Int64),
+				Title:    bTitle.String,
+				AuthorID: uint64(bAuthorID.Int64),
+			})
+		}
+	}
+
+	for head := om.Front(); head != nil; head = head.Next() {
+		if len(head.Value.Books) != BOOKS_PER_AUTHOR {
+			t.Fatalf("Book count mismatch: %d != %d (expected)", len(head.Value.Books), BOOKS_PER_AUTHOR)
 		}
 	}
 }

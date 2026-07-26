@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -141,8 +142,8 @@ func (c *connWrapperPGX[T]) Begin(ctx context.Context) (Transaction, error) {
 		return nil, databaseError(c.d, err)
 	}
 	return &pgxTx{
+		inTx:            true,
 		queryWrapperPGX: queryWrapperPGX[pgx.Tx]{conn: tx, d: c.d},
-		ctx:             ctx,
 	}, nil
 }
 
@@ -168,12 +169,12 @@ func (p *poolWrapperPGX) Acquire(ctx context.Context) (Database, error) {
 
 type pgxTx struct {
 	queryWrapperPGX[pgx.Tx]
-	ctx      context.Context
-	finished bool
+	txId uuid.UUID
+	inTx bool
 }
 
 func (p *pgxTx) Finished() bool {
-	return p.finished
+	return !p.inTx
 }
 
 func (p *pgxTx) Driver() driver.Driver {
@@ -181,7 +182,7 @@ func (p *pgxTx) Driver() driver.Driver {
 }
 
 func (p *pgxTx) Commit(ctx context.Context) error {
-	defer func() { p.finished = true }()
+	defer func() { p.inTx = false }()
 	var _, err = ContextQueryExec(ctx, p.d.Name, "COMMIT", nil, Q_TCOMMIT, func(ctx context.Context, query string, args ...any) (any, error) {
 		return nil, p.conn.Commit(ctx)
 	})
@@ -190,7 +191,7 @@ func (p *pgxTx) Commit(ctx context.Context) error {
 }
 
 func (p *pgxTx) Rollback(ctx context.Context) error {
-	defer func() { p.finished = true }()
+	defer func() { p.inTx = false }()
 	var _, err = ContextQueryExec(ctx, p.d.Name, "ROLLBACK", nil, Q_TROLLBACK, func(ctx context.Context, query string, args ...any) (any, error) {
 		return nil, p.conn.Rollback(ctx)
 	})
@@ -198,6 +199,22 @@ func (p *pgxTx) Rollback(ctx context.Context) error {
 		LogSQL(ctx, fmt.Sprintf("%T", p.conn), err, "ROLLBACK")
 	}
 	return databaseError(p.d, err)
+}
+
+func (d *pgxTx) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
+	return d.queryWrapperPGX.QueryContext(ContextLogMarkTx(ctx, &d.inTx), query, args...)
+}
+
+func (d *pgxTx) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
+	return d.queryWrapperPGX.QueryRowContext(ContextLogMarkTx(ctx, &d.inTx), query, args...)
+}
+
+func (d *pgxTx) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return d.queryWrapperPGX.ExecContext(ContextLogMarkTx(ctx, &d.inTx), query, args...)
+}
+
+func (d *pgxTx) SendBatch(ctx context.Context, batch *pgx.Batch) pgx.BatchResults {
+	return d.queryWrapperPGX.SendBatch(ContextLogMarkTx(ctx, &d.inTx), batch)
 }
 
 type pgxRows struct {

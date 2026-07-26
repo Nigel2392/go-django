@@ -7,6 +7,7 @@ import (
 
 var (
 	queryContextKey = dbContextKey{"db.query.context"}
+	txContextKey    = dbContextKey{"db.query.tx.mark"}
 )
 
 func ContextWithQueryInfo(ctx context.Context) (context.Context, *QueryInformation) {

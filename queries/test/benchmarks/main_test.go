@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -68,6 +69,8 @@ func TestMain(m *testing.M) {
 	})
 
 	django.App(django.Configure(settings))
+
+	queries.QUERYSET_USE_CACHE_DEFAULT = false
 
 	var tables = quest.Table(&fatalLogger{},
 		&BenchmarkAuthor{},

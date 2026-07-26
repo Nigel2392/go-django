@@ -144,6 +144,8 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 			continue
 		}
 
+		preloadId = attrs.PrimaryKey(qs.Context(), preloadId)
+
 		// Cache a reference to the specific  row in
 		// the preload map - this allows us to efficiently
 		// set the  object later in a single query
@@ -208,16 +210,9 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 		}
 
 		for _, row := range rows {
-			var pk, ok = qs.opts.GetSpecificTargetID(row.Object)
-			if !ok {
-				return nil, errors.New(errors.CodeNoRows, fmt.Sprintf(
-					"no specific target ID found for content type %s",
-					head.Key,
-				))
-			}
-
+			var pk = attrs.PrimaryKey(qs.Context(), row.Object)
 			var originalRow, exists = head.Value.s[pk]
-			if !exists {
+			if !exists || attrs.IsZero(row.Object) {
 				return nil, errors.New(errors.CodeNoRows, fmt.Sprintf(
 					"no original row found for content type %s with PK %d",
 					head.Key, pk,

@@ -49,6 +49,14 @@ func expressionFromInterface[T Expression](exprValue interface{}, asValue bool) 
 		} else {
 			exprs = append(exprs, Field(v).(T))
 		}
+	case []string:
+		for _, l := range v {
+			if asValue {
+				exprs = append(exprs, Value(l).(T))
+			} else {
+				exprs = append(exprs, Field(l).(T))
+			}
+		}
 	case nil:
 		// ignore nils
 		// do nothing
@@ -67,6 +75,10 @@ func expressionFromInterface[T Expression](exprValue interface{}, asValue bool) 
 	}
 
 	return exprs
+}
+
+func ExpressionFromInterface[T Expression](exprValue interface{}, asValue bool) []T {
+	return expressionFromInterface[T](exprValue, asValue)
 }
 
 func Express(key interface{}, vals ...interface{}) []ClauseExpression {

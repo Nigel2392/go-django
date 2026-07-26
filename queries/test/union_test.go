@@ -244,6 +244,10 @@ func TestQuerySetUnion(t *testing.T) {
 			t.Fatalf("missing rows in union query, should be: %d, result: %d", int(count1+count2), len(rowList))
 		}
 
+		if !testing.Verbose() {
+			return
+		}
+
 		for _, row := range rowList {
 			t.Logf(
 				"queried union row: %q\n\tID: %v\n\tTitle: %q\n\tDesc: %q",

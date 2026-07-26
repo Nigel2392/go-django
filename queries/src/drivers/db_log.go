@@ -51,6 +51,15 @@ func getLogger() logger.Log {
 	return localLogger
 }
 
+func ContextLogIsTx(ctx context.Context) bool {
+	b, ok := ctx.Value(txContextKey).(*bool)
+	return (b != nil && ok && *b)
+}
+
+func ContextLogMarkTx(ctx context.Context, mark *bool) context.Context {
+	return context.WithValue(ctx, txContextKey, mark)
+}
+
 // LogSQL logs the SQL query and its arguments if logging is enabled in the context.
 //
 // It logs the query with the source of the query (from) and the error if it exists.
@@ -60,11 +69,18 @@ func LogSQL(ctx context.Context, from string, err error, query string, args ...a
 	if !canLogSQL(ctx) {
 		return false
 	}
+
+	var txStr string
+	if ContextLogIsTx(ctx) {
+		txStr = "TX."
+	}
+
 	if err != nil {
-		getLogger().Errorf("[%s.Query]: %s: %s %v", from, err.Error(), query, args)
+		getLogger().Errorf("[%s%s.Query]: %s: %s %v", txStr, from, err.Error(), query, args)
 		return wasLogged(logger.ERR)
 	}
-	getLogger().Debugf("[%s.Query]: %s %v", from, query, args)
+
+	getLogger().Debugf("[%s%s.Query]: %s %v", txStr, from, query, args)
 	return wasLogged(logger.DBG)
 }
 

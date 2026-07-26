@@ -812,6 +812,166 @@ func (m *Model) Validate(ctx context.Context) error {
 	return nil
 }
 
+type ModelLoadConfig struct {
+	object         *Model
+	ExcludedFields []string
+	Setter         func(attrs.Definer) error // wont override the pointer value if Setter exists
+	QuerySet       *queries.QuerySet[attrs.Definer]
+}
+
+func LoadSetter(setter func(attrs.Definer) error) func(*ModelLoadConfig) {
+	return func(mlc *ModelLoadConfig) {
+		mlc.Setter = setter
+	}
+}
+
+func LoadQS(load func(qs *queries.QuerySet[attrs.Definer]) *queries.QuerySet[attrs.Definer]) func(*ModelLoadConfig) {
+	return func(mlc *ModelLoadConfig) {
+		mlc.QuerySet = load(queries.QS(
+			mlc.object.internals.ReflectValue.Interface().(attrs.Definer),
+		))
+	}
+}
+
+func LoadExcl(fields ...string) func(*ModelLoadConfig) {
+	return func(mlc *ModelLoadConfig) {
+		mlc.ExcludedFields = append(mlc.ExcludedFields, fields...)
+	}
+}
+
+// Load fetches the model from the database.
+//
+// It will override any related model if they are not explicitly
+// excluded, or if they are not explicitly included in the custom queryset.
+//
+// This function overwrites the pointer to the original model with an object from the DB,
+// the internal state of the [*Model] will be resynchronised automatically after the pointer override.
+func (m *Model) Load(ctx context.Context, loadOptions ...func(*ModelLoadConfig)) error {
+	if m.internals == nil || m.internals.ReflectValue == nil {
+		return errors.NotImplemented.WithCause(fmt.Errorf(
+			"cannot load model %w (internals==nil: %t, object==nil: %t)",
+			ErrModelInitialized, m.internals == nil, m.internals != nil && m.internals.ReflectValue == nil,
+		))
+	}
+
+	var cnf = new(ModelLoadConfig{
+		object: m,
+	})
+	for _, fn := range loadOptions {
+		fn(cnf)
+	}
+
+	// auto generate unique filter for bound model
+	var model = m.internals.ReflectValue.Interface().(attrs.Definer)
+	var uqFilter, err = queries.GenerateObjectsWhereClause(model)
+	if err != nil {
+		return errors.Wrapf(err, "Error generating unique filter for model %v", model)
+	}
+
+	if cnf.QuerySet == nil {
+		cnf.QuerySet =
+			queries.QS(model)
+	}
+
+	// load from DB
+	cnf.QuerySet = cnf.
+		QuerySet.
+		WithContext(ctx).
+		Filter(uqFilter)
+
+	row, err := cnf.QuerySet.Get()
+	if err != nil {
+		return errors.Wrapf(err, "Error loading model %v", model)
+	}
+
+	// prepare for state desync
+	var (
+		oldInternals   = m.internals
+		oldChanged     = m.changed
+		oldProxies     = m.proxies
+		oldThrough     = m.ThroughModel
+		oldAnnotations = m.Annotations
+		oldMap         = make(map[string]any, len(cnf.ExcludedFields))
+	)
+
+	// allow for excluding any fields that should remain
+	// unchanged after loading from DB
+	for _, fieldName := range cnf.ExcludedFields {
+		f, ok := m.internals.Defs.Field(fieldName)
+		if !ok {
+			return errors.FieldNotFound.Wrapf(
+				"Field %q not found in model %T definitions",
+				fieldName, m.internals.ReflectValue.Interface(),
+			)
+		}
+
+		oldMap[fieldName] = f.GetValue()
+	}
+
+	// pointer/state desync
+	if cnf.Setter != nil {
+		err = cnf.Setter(row.Object)
+		if err != nil {
+			return errors.Wrapf(err, "Error setting model %T to dest (%v)", model, model)
+		}
+	} else {
+		rv := reflect.ValueOf(row.Object)
+		m.internals.ReflectValue.Elem().Set(rv.Elem())
+	}
+
+	// restore internal state after it gets copied from
+	// the row because model is embedded in the reflectvalue
+	// and was overwritten above
+	m.internals = oldInternals
+	m.changed = oldChanged
+	m.proxies = oldProxies
+	m.ThroughModel = oldThrough
+
+	// merge annotations, any new ones should overwrite old ones
+	var annotations = oldAnnotations
+	maps.Copy(annotations, m.Annotations)
+	m.Annotations = annotations
+
+	// restore values that wished to remain unchanged
+	for name, val := range oldMap {
+		if err := m.internals.Defs.Set(name, val); err != nil {
+			return err
+		}
+	}
+
+	// restore current reference
+	model = m.internals.ReflectValue.Interface().(attrs.Definer)
+
+	base := getModelChain(model)
+	if base == nil {
+		// ok this really shouldn't happen...
+		return fmt.Errorf(
+			"object %T does not have an embedded Model field: %w",
+			model, ErrModelEmbedded,
+		)
+	}
+
+	// check state resynchronised successfully
+	var self = reflect.ValueOf(m)
+	var defElem = m.internals.ReflectValue.Elem()
+	var defModel = defElem.FieldByIndex(base.base.Index)
+	if defModel.Addr().Pointer() != self.Pointer() {
+		// this also really shouldn't happen
+		return fmt.Errorf(
+			"failed to load object %s model (%s) is not the same as the model %T, expected %d, got %d",
+			m.internals.ReflectValue.Type(), defModel.Type(), m, defModel.Addr().Pointer(), self.Pointer(),
+		)
+	}
+
+	// update any internal state that requires it (think of proxies)
+	if err := m.Setup(ctx, model); err != nil {
+		return errors.Wrapf(err, "Failed to re-sync model internal state after load for %T", model)
+	}
+
+	m.internals.Flags = m.internals.Flags.Set(flagFromDB, true)
+	return nil
+}
+
 // Save saves the model to the database.
 //
 // It checks if the model is properly initialized and if the model's definitions

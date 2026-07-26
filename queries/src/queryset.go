@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
+	"github.com/Nigel2392/go-django/queries/src/resolver"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -55,33 +56,6 @@ var QUERYSET_USE_CACHE_DEFAULT = true
 // If false, the queryset will not automatically start a transaction
 // on each write / update / delete operation to the database.
 var QUERYSET_CREATE_IMPLICIT_TRANSACTION = true
-
-// Basic information about the model used in the QuerySet.
-// It contains the model's meta information, primary key field, all fields,
-// and the table name.
-type modelInfo struct {
-	Primary  attrs.FieldDefinition
-	Object   attrs.Definer
-	Fields   []attrs.FieldDefinition
-	Table    string
-	Ordering []string
-}
-
-func (m modelInfo) Model() attrs.Definer {
-	return m.Object
-}
-
-func (m modelInfo) TableName() string {
-	return m.Table
-}
-
-func (m modelInfo) PrimaryKey() attrs.FieldDefinition {
-	return m.Primary
-}
-
-func (m modelInfo) OrderBy() []string {
-	return m.Ordering
-}
 
 type BulkUpdateQuerySetParam interface {
 	BuildUpdateInfo() ([]UpdateInfo, error)
@@ -187,7 +161,7 @@ func (p *QuerySetPreloads) Copy() *QuerySetPreloads {
 // It includes all nescessary information for
 // the compiler to build a query out of.
 type QuerySetInternals struct {
-	Model       modelInfo
+	Model       resolver.ModelInfo
 	Annotations *orderedmap.OrderedMap[string, attrs.Field]
 	Fields      []*FieldInfo[attrs.FieldDefinition]
 	Preload     *QuerySetPreloads
@@ -348,6 +322,16 @@ func GetQuerySet[T attrs.Definer](model T) *QuerySet[T] {
 	return Objects(model)
 }
 
+// QS is a shorthand for [GetQuerySet]
+func QS[T attrs.Definer](model T) *QuerySet[T] {
+	return GetQuerySet(model)
+}
+
+// QSC is a shorthand for [GetQuerySetWithContext]
+func QSC[T attrs.Definer](ctx context.Context, model T) *QuerySet[T] {
+	return GetQuerySetWithContext(ctx, model)
+}
+
 // GetQuerySetWithContext creates a new QuerySet for the given model
 // with the given context bound to it.
 //
@@ -386,40 +370,17 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 		panic("QuerySet: too many databases provided")
 	}
 
-	var (
-		defaultDb   = getDatabaseName(model, database...)
-		meta        = attrs.GetModelMeta(model)
-		definitions = meta.Definitions()
-		primary     = definitions.Primary()
-		tableName   = definitions.TableName()
-	)
-
-	if tableName == "" {
-		panic(errors.NoTableName.WithCause(fmt.Errorf(
-			"model %T has no table name", model,
-		)))
+	var info, err = resolver.NewModelInfo(model)
+	if err != nil {
+		panic(err)
 	}
 
-	var orderBy []string
-	if ord, ok := any(model).(OrderByDefiner); ok {
-		orderBy = ord.OrderBy()
-	}
-
-	if len(orderBy) == 0 && primary != nil {
-		orderBy = []string{primary.Name()}
-	}
-
+	var defaultDb = getDatabaseName(model, database...)
 	var qs = &QuerySet[T]{
 		AliasGen: alias.NewGenerator(),
 		context:  context.Background(),
 		internals: &QuerySetInternals{
-			Model: modelInfo{
-				Primary:  primary,
-				Object:   model,
-				Fields:   definitions.Fields(),
-				Table:    tableName,
-				Ordering: orderBy,
-			},
+			Model:       info,
 			Annotations: orderedmap.NewOrderedMap[string, attrs.Field](),
 			Where:       make([]expr.ClauseExpression, 0),
 			Having:      make([]expr.ClauseExpression, 0),
@@ -439,8 +400,8 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 	qs.compiler = Compiler(defaultDb)
 
 	// Add default ordering to the QuerySet if the model implements OrderByDefiner
-	if len(orderBy) > 0 {
-		qs.internals.OrderBy = qs.compileOrderBy(orderBy...)
+	if len(info.Ordering) > 0 {
+		qs.internals.OrderBy = qs.compileOrderBy(info.Ordering...)
 	}
 
 	// Allow the model to change the QuerySet
@@ -501,13 +462,7 @@ func (qs *QuerySet[T]) DB() drivers.DB {
 // Meta returns the model meta information for the QuerySet.
 func (qs *QuerySet[T]) Meta() expr.ModelMeta {
 	// return a new model meta object with the model information
-	return &modelInfo{
-		Primary:  qs.internals.Model.Primary,
-		Object:   qs.internals.Model.Object,
-		Fields:   qs.internals.Model.Fields,
-		Table:    qs.internals.Model.Table,
-		Ordering: qs.internals.Model.Ordering,
-	}
+	return qs.internals.Model
 }
 
 // Return the compiler which the queryset is using.
@@ -2787,14 +2742,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 					alias = f.Name()
 				}
 
-				// If the value is a byte slice, convert it to a string
-				// It is highly unlikely that a byte slice will be used as an annotation,
-				// thus we convert it to a string in case the database driver returns the wrong type.
-				// This is a workaround for some drivers that return []byte instead of string.
-				// This should also be done in [Aggregate], [Values] and [ValuesList].
-				if bytes, ok := val.([]byte); ok {
-					val = string(bytes)
-				}
+				val = normalizeAnnotation(vf, val)
 
 				annotations[alias] = val
 
@@ -2967,11 +2915,11 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 		return qs.cached.([]map[string]any), nil
 	}
 
-	var resultQuery = qs.QueryAll(fields...)
-	var preAlloc, results = iterQuery(resultQuery)
 	var (
-		list = make([]map[string]any, 0, preAlloc)
-		plan = compileScanPlan(qs.context, qs.internals.Fields, qs.internals.Model.Object)
+		resultQuery       = qs.QueryAll(fields...)
+		preAlloc, results = iterQuery(resultQuery)
+		list              = make([]map[string]any, 0, preAlloc)
+		plan              = compileScanPlan(qs.context, qs.internals.Fields, qs.internals.Model.Object)
 	)
 	for row, err := range results {
 		if err != nil {
@@ -3001,16 +2949,7 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 			var value = f.GetValue()
 			if vf, ok := f.(AliasField); ok {
 				key = vf.Alias()
-
-				// If the value is a byte slice, convert it to a string
-				// It is highly unlikely that a byte slice will be used as an annotation,
-				// thus we convert it to a string in case the database driver returns the wrong type.
-				// This is a workaround for some drivers that return []byte instead of string.
-				// This should also be done in [All], [Aggregate] and [ValuesList].
-				if bytes, ok := value.([]byte); ok {
-					value = string(bytes)
-				}
-
+				value = normalizeAnnotation(vf, value)
 			} else if len(field.chainKey) > 0 {
 				key = strings.Join(
 					append([]string{field.chainKey}, f.Name()),
@@ -3047,6 +2986,73 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 	return list, nil
 }
 
+func normalizeAnnotation(f attrs.Field, v any) any {
+	// If the value is a byte slice, convert it to a string
+	// It is highly unlikely that a byte slice will be used as an annotation,
+	// thus we convert it to a string in case the database driver returns the wrong type.
+	// This is a workaround for some drivers that return []byte instead of string.
+	// This should also be done in [All], [Aggregate] and [Values].
+	if _, ok := f.(AliasField); ok {
+		if bytes, ok := v.([]byte); ok {
+			v = string(bytes)
+		}
+	}
+	return v
+}
+
+// IterValuesList is used to retrieve a list of values from the database.
+//
+// It provides an iterator and streams each row straight from the database.
+//
+// It does not compile preloads, nor does it deduplicate related results.
+//
+// preAlloc might not always be returned, and could be 0 depending on the type of [CompiledQuery]
+// that the compiler returns when [QuerySet.QueryAll] is called.
+//
+// It takes a list of field names as arguments and returns a ValuesListQuery.
+func (qs *QuerySet[T]) IterValuesList(fields ...any) (preAlloc int, loop iter.Seq2[[]interface{}, error], err error) {
+	var (
+		resultQuery          = qs.QueryAll(fields...)
+		preallocate, results = iterQuery(resultQuery)
+		plan                 = compileScanPlan(qs.context, qs.internals.Fields, qs.internals.Model.Object)
+	)
+
+	preAlloc = preallocate
+	loop = func(yield func([]interface{}, error) bool) {
+	outer:
+		for row, err := range results {
+			if err != nil {
+				yield(row, err)
+				break
+			}
+
+			var obj = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
+			var fields = plan.apply(qs.context, row, obj)
+			var values = make([]any, len(fields))
+			for j, field := range fields {
+				var f = field.field
+				var val = row[j]
+
+				if err = f.Scan(val); err != nil {
+					yield(values, errors.ValueError.WithCause(fmt.Errorf(
+						"failed to scan field %q in %T: %w",
+						f.Name(), row, err,
+					)))
+					break outer
+				}
+
+				values[j] = normalizeAnnotation(f, f.GetValue())
+			}
+
+			if !yield(values, nil) {
+				break
+			}
+		}
+	}
+
+	return preAlloc, loop, nil
+}
+
 // ValuesList is used to retrieve a list of values from the database.
 //
 // It takes a list of field names as arguments and returns a ValuesListQuery.
@@ -3055,52 +3061,16 @@ func (qs *QuerySet[T]) ValuesList(fields ...any) ([][]interface{}, error) {
 		return qs.cached.([][]any), nil
 	}
 
-	var (
-		resultQuery             = qs.QueryAll(fields...)
-		preAlloc, results       = iterQuery(resultQuery)
-		list                    = make([][]any, 0, preAlloc)
-		_scannable_instances    = make(map[string]attrs.Definer)
-		_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
-	)
+	var preAlloc, results, err = qs.IterValuesList(fields...)
+	if err != nil {
+		return nil, err
+	}
 
-	for row, err := range results {
+	var list = make([][]any, 0, preAlloc)
+	for values, err := range results {
 		if err != nil {
 			return nil, err
 		}
-
-		var obj = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
-		var size, fields = getScannableFields(
-			qs.context, qs.internals.Fields, obj, _scannable_instances, _scannable_parentFields,
-		)
-		var values = make([]any, size)
-		for j, field := range fields {
-			var f = field.field
-			var val = row[j]
-
-			if err = f.Scan(val); err != nil {
-				return nil, errors.ValueError.WithCause(fmt.Errorf(
-					"failed to scan field %q in %T: %w",
-					f.Name(), row, err,
-				))
-			}
-
-			var v = f.GetValue()
-			// If the value is a byte slice, convert it to a string
-			// It is highly unlikely that a byte slice will be used as an annotation,
-			// thus we convert it to a string in case the database driver returns the wrong type.
-			// This is a workaround for some drivers that return []byte instead of string.
-			// This should also be done in [All], [Aggregate] and [Values].
-			if _, ok := f.(AliasField); ok {
-				if bytes, ok := v.([]byte); ok {
-					v = string(bytes)
-				}
-			}
-
-			values[j] = v
-		}
-
-		clear(_scannable_instances)
-		clear(_scannable_parentFields)
 
 		list = append(list, values)
 	}
@@ -3641,13 +3611,19 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		createInfos = append(createInfos, info)
 	}
 
-	var plan = compileScanPlan(
-		ctx,
-		[]*FieldInfo[attrs.Field]{planInfo},
-		qs.internals.Model.Object,
+	var (
+		plan    *scanPlan
+		support = qs.compiler.SupportsReturning()
 	)
 
-	var support = qs.compiler.SupportsReturning()
+	if support == drivers.SupportsReturningColumns {
+		plan = compileScanPlan(
+			ctx,
+			[]*FieldInfo[attrs.Field]{planInfo},
+			qs.internals.Model.Object,
+		)
+	}
+
 	var results [][]any
 	if isCommitContext {
 		var resultQuery = qs.compiler.BuildCreateQuery(

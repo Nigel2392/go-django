@@ -209,6 +209,61 @@ func BenchmarkQuerySetForeignKeys__Select__OneToOne(b *testing.B) {
 	}
 }
 
+func BenchmarkQuerySetForeignKeys__Select__OneToX__InitInLoop(b *testing.B) {
+
+	for b.Loop() {
+		var qs = queries.
+			GetQuerySet(&BenchmarkAuthorModel{}).
+			WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+			Select("*", "Books.*").
+			Limit(TOTAL_COUNT * 2)
+
+		var rowLen, rows, err = qs.IterAll()
+
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if rowLen != COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", COUNT, rowLen)
+		}
+
+		var chk *BenchmarkAuthorModel
+		for row, err := range rows {
+			if err != nil {
+				b.Fatalf("error while querying objects: %v", err)
+			}
+			chk = row.Object
+			break
+		}
+
+		relLen := len(chk.Books.AsList())
+		if relLen != BOOKS_PER_AUTHOR {
+			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", BOOKS_PER_AUTHOR, relLen)
+		}
+	}
+}
+
+func BenchmarkQuerySetForeignKeys__Select__OneToOne__InitInLoop(b *testing.B) {
+	for b.Loop() {
+		var qs = queries.
+			GetQuerySet(&BenchmarkBookModel{}).
+			WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+			Select("*", "Author.*").
+			Limit(TOTAL_BOOKS * 2)
+
+		var rows, err = qs.All()
+
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if len(rows) != TOTAL_BOOKS {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", TOTAL_BOOKS, len(rows))
+		}
+	}
+}
+
 func BenchmarkQuerySetForeignKeys__Preload__OneToX(b *testing.B) {
 	b.StopTimer()
 

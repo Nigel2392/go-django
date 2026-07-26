@@ -2,6 +2,7 @@ package specific_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/Nigel2392/go-django/djester"
@@ -14,6 +15,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
 type Author struct {
@@ -102,15 +104,7 @@ func defaultSpecificOpts() specific.SpecificQuerySetOptions[*GenericComment[Comm
 		GetSpecificTargetID: func(target attrs.Definer) (id any, ok bool) {
 			var pk = attrs.PrimaryKey(context.Background(), target)
 			switch v := pk.(type) {
-			case int:
-				return v, true
-			case int64:
-				return int(v), true
 			case uint64:
-				return int(v), true
-			case int32:
-				return int(v), true
-			case uint32:
 				return int(v), true
 			}
 			return pk, true
@@ -148,15 +142,28 @@ func TestSpecificQuerySet(t *testing.T) {
 		{Text: "Comment 3", Specific: cwas[2]},
 	}
 
+	logger.Setup(&logger.Logger{
+		Level:       logger.DBG,
+		WrapPrefix:  logger.ColoredLogWrapper,
+		OutputDebug: os.Stdout,
+		OutputInfo:  os.Stdout,
+		OutputWarn:  os.Stdout,
+		OutputError: os.Stdout,
+	})
+
+	authors, delAuthors := quest.CreateObjects(t, []*Author{author})
+	author = authors[0]
+	cwas, delCwas := quest.CreateObjects(t, cwas)
+	gcs, delGcs := quest.CreateObjects(t, gcs)
+
+	defer delAuthors(0)
+	defer delCwas(0)
+	defer delGcs(0)
+
 	var testAll = objects.QuerySetTest{
-		Create: []any{
-			author,
-			[]any{cwas[0], cwas[1], cwas[2]},
-			[]any{gcs[0], gcs[1], gcs[2]},
-		},
 		Execute: func(_ *djester.Tester, t *testing.T, ctx context.Context) {
 			var qs = queries.GetQuerySetWithContext(ctx, &GenericComment[CommentWithAuthor]{})
-			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts())
+			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts()).WithContext(ctx)
 
 			results, err := sqs.All()
 			if err != nil {
@@ -169,7 +176,7 @@ func TestSpecificQuerySet(t *testing.T) {
 
 			for i, row := range results {
 				var specificObj = row.Object.Specific.(*CommentWithAuthor)
-				if specificObj.ID != cwas[i].ID {
+				if specificObj.ID != cwas[i].ID || specificObj.ID == 0 {
 					t.Fatalf("Expected specific object ID to be %d, got %d", cwas[i].ID, specificObj.ID)
 				}
 			}
@@ -177,14 +184,9 @@ func TestSpecificQuerySet(t *testing.T) {
 	}
 
 	var testFilter = objects.QuerySetTest{
-		Create: []any{
-			author,
-			[]any{cwas[0], cwas[1], cwas[2]},
-			[]any{gcs[0], gcs[1], gcs[2]},
-		},
 		Execute: func(_ *djester.Tester, t *testing.T, ctx context.Context) {
 			var qs = queries.GetQuerySetWithContext(ctx, &GenericComment[CommentWithAuthor]{})
-			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts())
+			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts()).WithContext(ctx)
 
 			results, err := sqs.Filter("Text__icontains", "Comment 2").All()
 			if err != nil {
@@ -200,22 +202,24 @@ func TestSpecificQuerySet(t *testing.T) {
 				t.Fatalf("Expected generic comment ID %d, got %d", gcs[1].ID, row.Object.Original.ID)
 			}
 
+			if row.Object.Specific == nil {
+				t.Fatalf("Expected specific object to be present for ID %d => %d", row.Object.Original.ID, row.Object.Original.SpecificID)
+			}
+
+			t.Logf("ResultRow Original: %+v", row.Object.Original)
+			t.Logf("ResultRow Specific: %+v", row.Object.Specific)
+
 			var specificObj = row.Object.Specific.(*CommentWithAuthor)
-			if specificObj.ID != cwas[1].ID {
+			if specificObj.ID != cwas[1].ID || specificObj.ID == 0 {
 				t.Fatalf("Expected specific object ID %d, got %d", cwas[1].ID, specificObj.ID)
 			}
 		},
 	}
 
 	var testGet = objects.QuerySetTest{
-		Create: []any{
-			author,
-			[]any{cwas[0], cwas[1], cwas[2]},
-			[]any{gcs[0], gcs[1], gcs[2]},
-		},
 		Execute: func(_ *djester.Tester, t *testing.T, ctx context.Context) {
 			var qs = queries.GetQuerySetWithContext(ctx, &GenericComment[CommentWithAuthor]{})
-			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts())
+			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts()).WithContext(ctx)
 
 			row, err := sqs.Filter("ID", gcs[2].ID).Get()
 			if err != nil {
@@ -226,6 +230,10 @@ func TestSpecificQuerySet(t *testing.T) {
 				t.Fatalf("Expected generic comment ID %d, got %d", gcs[2].ID, row.Object.Original.ID)
 			}
 
+			if row.Object.Specific == nil {
+				t.Fatalf("Expected specific object to be present for ID %d => %d", row.Object.Original.ID, row.Object.Original.SpecificID)
+			}
+
 			var specificObj = row.Object.Specific.(*CommentWithAuthor)
 			if specificObj.ID != cwas[2].ID {
 				t.Fatalf("Expected specific object ID %d, got %d", cwas[2].ID, specificObj.ID)
@@ -234,14 +242,9 @@ func TestSpecificQuerySet(t *testing.T) {
 	}
 
 	var testFirstLast = objects.QuerySetTest{
-		Create: []any{
-			author,
-			[]any{cwas[0], cwas[1], cwas[2]},
-			[]any{gcs[0], gcs[1], gcs[2]},
-		},
 		Execute: func(_ *djester.Tester, t *testing.T, ctx context.Context) {
 			var qs = queries.GetQuerySetWithContext(ctx, &GenericComment[CommentWithAuthor]{})
-			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts())
+			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts()).WithContext(ctx)
 
 			first, err := sqs.OrderBy("ID").First()
 			if err != nil {
@@ -251,6 +254,10 @@ func TestSpecificQuerySet(t *testing.T) {
 				t.Fatalf("Expected First() ID %d, got %d", gcs[0].ID, first.Object.Original.ID)
 			}
 
+			if first.Object.Specific == nil {
+				t.Fatalf("Expected specific object to be present for ID %d => %d", first.Object.Original.ID, first.Object.Original.SpecificID)
+			}
+
 			last, err := sqs.OrderBy("ID").Last()
 			if err != nil {
 				t.Fatalf("Last() failed: %v", err)
@@ -258,18 +265,18 @@ func TestSpecificQuerySet(t *testing.T) {
 			if last.Object.Original.ID != gcs[2].ID {
 				t.Fatalf("Expected Last() ID %d, got %d", gcs[2].ID, last.Object.Original.ID)
 			}
+
+			if last.Object.Specific == nil {
+				t.Fatalf("Expected specific object to be present for ID %d => %d", last.Object.Original.ID, last.Object.Original.SpecificID)
+			}
+
 		},
 	}
 
 	var testIterAll = objects.QuerySetTest{
-		Create: []any{
-			author,
-			[]any{cwas[0], cwas[1], cwas[2]},
-			[]any{gcs[0], gcs[1], gcs[2]},
-		},
 		Execute: func(_ *djester.Tester, t *testing.T, ctx context.Context) {
 			var qs = queries.GetQuerySetWithContext(ctx, &GenericComment[CommentWithAuthor]{})
-			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts())
+			var sqs = specific.GetSpecificQuerySet(qs, defaultSpecificOpts()).WithContext(ctx)
 
 			count, iter, err := sqs.IterAll()
 			if err != nil {
@@ -301,11 +308,6 @@ func TestSpecificQuerySet(t *testing.T) {
 	}
 
 	var testPreload = objects.QuerySetTest{
-		Create: []any{
-			author,
-			[]any{cwas[0], cwas[1], cwas[2]},
-			[]any{gcs[0], gcs[1], gcs[2]},
-		},
 		Execute: func(_ *djester.Tester, t *testing.T, ctx context.Context) {
 			var qs = queries.GetQuerySetWithContext(ctx, &GenericComment[CommentWithAuthor]{})
 
@@ -315,7 +317,7 @@ func TestSpecificQuerySet(t *testing.T) {
 				return queries.GetQuerySetWithContext(ctx, target).Preload("Author")
 			}
 
-			var sqs = specific.GetSpecificQuerySet(qs, opts)
+			var sqs = specific.GetSpecificQuerySet(qs, opts).WithContext(ctx)
 			results, err := sqs.All()
 			if err != nil {
 				t.Fatalf("Error querying specific queryset: %v", err)
@@ -326,6 +328,11 @@ func TestSpecificQuerySet(t *testing.T) {
 			}
 
 			for _, row := range results {
+
+				if row.Object.Specific == nil {
+					t.Fatalf("Expected specific object to be present for ID %d => %d", row.Object.Original.ID, row.Object.Original.SpecificID)
+				}
+
 				var specificObj = row.Object.Specific.(*CommentWithAuthor)
 				if specificObj.Author == nil {
 					t.Fatalf("Expected Author to be preloaded, got nil")
@@ -336,6 +343,8 @@ func TestSpecificQuerySet(t *testing.T) {
 			}
 		},
 	}
+
+	t.Helper()
 
 	t.Run("TestSpecificQuerySet_All", func(t *testing.T) { testAll.Test(nil, t) })
 	t.Run("TestSpecificQuerySet_Filter", func(t *testing.T) { testFilter.Test(nil, t) })

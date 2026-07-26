@@ -150,6 +150,11 @@ var PARSER = &statement{
 				if err != nil {
 					return "", []any{}, fmt.Errorf("invalid index %q in statement: %w", in[1], err)
 				}
+
+				if valIdx == 0 {
+					return "", []any{}, fmt.Errorf("invalid index %q in statement, use 1-based list indexing", in[1])
+				}
+
 				valIdx-- // convert to 0-based index
 			} else {
 				valIdx = typIndex
@@ -224,13 +229,15 @@ var PARSER = &statement{
 		},
 	},
 	Table: &statementParser{
-		typ:     "table",
-		pattern: `(?:(?i)table)\(([a-zA-Z][a-zA-Z0-9_.-]*)\)`, // table(FieldPath)
+		typ: "table",
+		// table(FieldPath), table(self), table(FieldPath as myCustomTable)
+		pattern: `(?:[tT][aA][bB][lL][eE])\(([a-zA-Z][a-zA-Z0-9_.-]*)(?:|\s+[aA][sS]\s+(?:'|"|` + "`" + "|)([a-zA-Z][a-zA-Z0-9_-]*)(?:'|\"|" + "`" + `|))\)`,
 		rawtext: func(in []string) string {
 			return in[1]
 		},
 		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
 			var fieldPath = in[1]
+			var asAlias = in[2]
 			if strings.EqualFold(fieldPath, SELF_TABLE) {
 				return info.QuoteIdentifier(info.Resolver.Meta().TableName()), []any{}, nil
 			}
@@ -264,7 +271,15 @@ var PARSER = &statement{
 				)
 
 				if len(split) == 2 {
-					return info.QuoteIdentifier(defs.TableName()), []any{}, nil
+					var sb = new(strings.Builder)
+					sb.WriteString(info.QuoteIdentifier(defs.TableName()))
+
+					if asAlias != "" {
+						sb.WriteString(" AS ")
+						sb.WriteString(info.QuoteIdentifier(asAlias))
+					}
+
+					return sb.String(), []any{}, nil
 				}
 
 				pathClone := strings.Join(split[2:], ".")
@@ -289,10 +304,16 @@ var PARSER = &statement{
 				defs           = attrs.Define(info.Resolver.Context(), current)
 				tableName      = defs.TableName()
 				lhs_tableName  = info.QuoteIdentifier(tableName)
-				rhs_tableAlias = info.QuoteIdentifier(info.Resolver.Alias().GetTableAlias(
-					defs.TableName(), fieldPath,
-				))
+				rhs_tableAlias string
 			)
+
+			if asAlias != "" {
+				rhs_tableAlias = info.QuoteIdentifier(asAlias)
+			} else {
+				rhs_tableAlias = info.QuoteIdentifier(info.Resolver.Alias().GetTableAlias(
+					tableName, fieldPath,
+				))
+			}
 
 			return fmt.Sprintf("%s AS %s", lhs_tableName, rhs_tableAlias), []any{}, nil
 		},
@@ -323,9 +344,29 @@ func parseExpressionsFromArgs(expr ...any) (list []Expression, _map map[string]E
 	var (
 		exprs_list = make([]Expression, 0, len(expr))
 		exprs_map  = make(map[string]Expression, len(expr))
+		manualMap  bool
+		mapKey     string
 	)
 
-	for _, e := range expr {
+	for i := 0; i < len(expr); i++ {
+		e := expr[i]
+
+		switch {
+		case i == 0 || (i%2 == 0 && manualMap):
+			mapKey, manualMap = e.(string)
+			if manualMap {
+				continue
+			}
+
+		case manualMap:
+			var ex Expression
+			ex, manualMap = e.(Expression)
+			if manualMap {
+				exprs_map[mapKey] = ex
+				continue
+			}
+		}
+
 		switch v := e.(type) {
 		case NamedExpression:
 			var name = v.FieldName()
@@ -653,10 +694,10 @@ func (s *ExpressionStatement) SQL() (string, []any) {
 // Example usage:
 //
 //	 stmt := ParseExprStatement(
-//			"SELECT * FROM ![Table] WHERE ![Field1] = ?[0] AND ![Field2] = ?[1] AND EXPR(MyExpression)",
+//			"SELECT * FROM TABLE(SELF as p) WHERE ![p.Field1] = ?[0] AND ![p.Field2] = ?[1] AND EXPR(MyExpression)",
 //			"users", 42, "active",
 //	     expr.PARSER.Expressions(map[string]expr.Expression{
-//				"MyExpression": expr.Q("Field2", "MyTitle")
+//				"MyExpression": expr.Q("p.Field2", "MyTitle")
 //			})
 //		)
 func ParseExprStatement(statement string, value []any) *ExpressionStatement {

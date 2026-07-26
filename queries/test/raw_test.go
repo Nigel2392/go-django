@@ -51,12 +51,12 @@ func TestQuerySetRawExecution(t *testing.T) {
 			todos_m[todo.ID] = todo
 		}
 
-		var query = `SELECT ![p.ID], EXPR(UpperTitle), ![User.ID], ![UserName], ![User.Profile.ID], ![User.Profile.Name], ![User.Profile.Email]
-	FROM TABLE(SELF) as p
+		var query = `SELECT ![p.ID], EXPR(UpperTitle), ![User.ID], ![UserName], ![profile.User.Profile.ID], ![profile.User.Profile.Name], ![profile.User.Profile.Email]
+	FROM TABLE(SELF) as 'p'
 	INNER JOIN
 		TABLE(User) ON ![User.ID] = ![p.User]
 	INNER JOIN
-		TABLE(User.Profile) ON ![User.Profile.ID] = ![User.Profile]
+		TABLE(User.Profile AS profile) ON ![profile.User.Profile.ID] = ![User.Profile]
 	WHERE 
 		![p.Done] = ?[1] AND 
 		EXPR(WhereFilter)

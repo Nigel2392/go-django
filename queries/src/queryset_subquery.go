@@ -9,9 +9,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
-//go:linkname newFunc github.com/Nigel2392/go-django/queries/src/expr.newFunc
-func newFunc(funcLookup string, value []any, expr ...any) *expr.Function
-
 var _ expr.Expression = (*subqueryExpr[attrs.Definer, *QuerySet[attrs.Definer]])(nil)
 
 type subqueryExpr[T attrs.Definer, QS BaseQuerySet[T, QS]] struct {

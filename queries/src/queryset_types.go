@@ -182,46 +182,6 @@ func (f *FieldInfo[T]) WriteFields(sb *strings.Builder, inf *expr.ExpressionInfo
 	return args
 }
 
-func (f *FieldInfo[T]) WriteUpdateFields(sb *strings.Builder, inf *expr.ExpressionInfo) []any {
-	var args = make([]any, 0, len(f.Fields))
-	var written bool
-
-	// If the field has a through relation, write the fields of the through relation first
-	//
-	// This logic matches in [getScannableFields]
-	if f.Through != nil {
-		for _, field := range f.Through.Fields {
-			if written {
-				sb.WriteString(", ")
-			}
-
-			var a, _, ok = f.Through.WriteField(sb, inf, field, true)
-			written = ok || written
-			if !ok {
-				continue
-			}
-
-			args = append(args, a...)
-		}
-	}
-
-	for _, field := range f.Fields {
-		if written {
-			sb.WriteString(", ")
-		}
-
-		var a, _, ok = f.WriteField(sb, inf, field, true)
-		written = ok || written
-		if !ok {
-			continue
-		}
-
-		args = append(args, a...)
-	}
-
-	return args
-}
-
 func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo, field attrs.FieldDefinition, forUpdate bool) (args []any, isSQL, written bool) {
 	var fieldAlias string
 	if ve, ok := field.(AliasField); ok && !forUpdate {

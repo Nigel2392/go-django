@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/resolver"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 
@@ -285,9 +286,9 @@ type ParentInfo struct {
 	Field  attrs.Field
 }
 
-// canPrimaryKey is an interface that can be implemented by a model field's value
+// canUniqueKey is an interface that can be implemented by a model field's value
 type canUniqueKey interface {
-	// PrimaryKey returns the primary key of the relation.
+	// UniqueKey returns the primary key of the relation.
 	UniqueKey() any
 }
 
@@ -443,10 +444,7 @@ type QuerySetDatabaseDefiner interface {
 
 // OrderByDefiner is an interface that can be implemented by models to indicate
 // that the model has a default ordering that should be used when executing queries.
-type OrderByDefiner interface {
-	attrs.Definer
-	OrderBy() []string
-}
+type OrderByDefiner = resolver.OrderByDefiner
 
 // DatabaseSpecificTransaction is an interface for transactions that are specific to a database.
 type DatabaseSpecificTransaction interface {
@@ -498,12 +496,43 @@ type UpdateInfo struct {
 	Values []any
 }
 
-func Resolver(ctx context.Context, model attrs.Definer) func(expr.Expression) expr.Expression {
-	other := Objects(model).WithContext(ctx)
-	info := other.compiler.ExpressionInfo(other)
-	return func(e expr.Expression) expr.Expression {
-		return e.Resolve(info)
+func Resolver(ctx context.Context, model attrs.Definer, database ...string) *resolver.Resolver {
+	var defaultDb = getDatabaseName(model, database...)
+	var compiler = Compiler(defaultDb)
+	return resolver.New(ctx, model, compiler)
+}
+
+func rawStatementExpr(ctx context.Context, model attrs.Definer, sqlStr string, args []any) (string, []any, drivers.DB) {
+	var (
+		defaultDb = getDatabaseName(model)
+		compiler  = Compiler(defaultDb)
+		resolver  = resolver.New(ctx, model, compiler)
+		stmt      = expr.ParseExprStatement(sqlStr, args)
+		resolved  = stmt.Resolve(resolver.ExpressionInfo())
+	)
+
+	sql, args := resolved.SQL()
+
+	if rebind, ok := compiler.(RebindCompiler); ok {
+		sql = rebind.Rebind(ctx, sql)
 	}
+
+	return sql, args, compiler.DB()
+}
+
+func QueryRow(ctx context.Context, model attrs.Definer, sqlStr string, args ...interface{}) drivers.SQLRow {
+	sqlStr, args, db := rawStatementExpr(ctx, model, sqlStr, args)
+	return db.QueryRowContext(ctx, sqlStr, args...)
+}
+
+func QueryRows(ctx context.Context, model attrs.Definer, sqlStr string, args ...interface{}) (drivers.SQLRows, error) {
+	sqlStr, args, db := rawStatementExpr(ctx, model, sqlStr, args)
+	return db.QueryContext(ctx, sqlStr, args...)
+}
+
+func QueryExec(ctx context.Context, model attrs.Definer, sqlStr string, args ...interface{}) (sql.Result, error) {
+	sqlStr, args, db := rawStatementExpr(ctx, model, sqlStr, args)
+	return db.ExecContext(ctx, sqlStr, args...)
 }
 
 // A QueryCompiler interface is used to compile a query.
@@ -512,6 +541,8 @@ func Resolver(ctx context.Context, model attrs.Definer) func(expr.Expression) ex
 //
 // It does not need to know about the model nor its field types.
 type QueryCompiler interface {
+	resolver.ExpressionCompiler
+
 	// DatabaseName returns the name of the database connection used by the query compiler.
 	//
 	// This is the name of the database connection as defined in the django.Global.Settings object.
@@ -608,13 +639,6 @@ type QueryCompiler interface {
 	// - istartswith
 	// - iendswith
 	LookupPatternOperatorsRHS() map[string]string
-
-	// ExpressionInfo returns a usable [expr.ExpressionInfo] for the compiler.
-	//
-	// This is used to parse raw queries inside of [QuerySet.Rows], [QuerySet.Row] and [QuerySet.Exec].
-	//
-	// Allowing for the use of GO field names in a raw SQL query.
-	ExpressionInfo(resolver expr.FieldResolver) *expr.ExpressionInfo
 
 	// Quote returns the quotes used by the database.
 	//
@@ -838,7 +862,7 @@ func Compiler(defaultDB string) QueryCompiler {
 	)
 	if db == nil {
 		panic(fmt.Errorf(
-			"no database connection found for %q",
+			"no database connection found for setting %q in django.Global.Settings",
 			defaultDB,
 		))
 	}

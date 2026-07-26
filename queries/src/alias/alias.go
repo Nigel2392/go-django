@@ -7,14 +7,6 @@ import (
 	"strings"
 )
 
-// generate an alias for fields.AliasField
-func NewFieldAlias(tableAlias, alias string) string {
-	if tableAlias == "" {
-		return alias
-	}
-	return fmt.Sprintf("%s_%s", tableAlias, alias)
-}
-
 type Generator struct {
 	Prefix  string
 	counter int
@@ -85,13 +77,25 @@ func (a *Generator) GetTableAlias(currentTable string, chainorKey any) string {
 	}
 
 	var aliasBuilder strings.Builder
-	if key == "" && currentTable != "" {
-		aliasBuilder.WriteString(currentTable)
-		return aliasBuilder.String()
+
+	if key == "" {
+		if alias, ok := a.mapping[key]; ok {
+			return alias
+		}
+
+		if currentTable != "" {
+			aliasBuilder.WriteString(currentTable)
+			return aliasBuilder.String()
+		}
 	}
 
 	if alias, ok := a.mapping[key]; ok {
 		return alias
+	}
+
+	if a.Prefix != "" {
+		aliasBuilder.WriteString(a.Prefix)
+		aliasBuilder.WriteRune('_')
 	}
 
 	aliasBuilder.WriteString("T")
@@ -111,4 +115,18 @@ func (a *Generator) GetTableAlias(currentTable string, chainorKey any) string {
 	a.mapping[key] = alias
 	a.counter++
 	return alias
+}
+
+func (a *Generator) Set(chainOrKey any, val string) {
+	var key string
+	switch v := chainOrKey.(type) {
+	case string:
+		key = v
+	case []string:
+		key = strings.Join(v, ".")
+	default:
+		panic(fmt.Sprintf("unsupported type %T for (*Generator).GetAlias(...)", v))
+	}
+
+	a.mapping[key] = val
 }
