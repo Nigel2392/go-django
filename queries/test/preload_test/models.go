@@ -19,9 +19,9 @@ var (
 
 type PreloadBook struct {
 	models.Model `table:"preload_books" json:"-"`
-	ID           uint64                                        `json:"id"`
-	Title        string                                        `json:"title"`
-	Authors      *queries.RelM2M[attrs.Definer, attrs.Definer] `json:"-"`
+	ID           uint64             `json:"id"`
+	Title        string             `json:"title"`
+	Authors      []queries.Relation `json:"-"`
 }
 
 func (pb *PreloadBook) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -35,6 +35,18 @@ func (pb *PreloadBook) FieldDefs(ctx context.Context) attrs.Definitions {
 			Label:     "Book Title",
 			HelpText:  trans.S("Title of the book. This is the title that will be displayed in the UI."),
 			MaxLength: 100,
+		}),
+		fields.NewManyToManyField[[]queries.Relation](pb, "Authors", &fields.FieldConfig{
+			ScanTo:    &pb.Authors,
+			IsReverse: true,
+			Rel: attrs.Relate(
+				&PreloadAuthor{},
+				"", &attrs.ThroughModel{
+					This:   &PreloadAuthorBook{},
+					Source: (&PreloadAuthorBook{}).TargetField(),
+					Target: (&PreloadAuthorBook{}).SourceField(),
+				},
+			),
 		}),
 	)
 }

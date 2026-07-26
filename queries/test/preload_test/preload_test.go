@@ -65,18 +65,18 @@ func TestPreload(t *testing.T) {
 
 		for _, bookRow := range bookRows {
 			var book = bookRow.Object
-			if book.Authors.Len() == 0 || book.Authors.Len() != len(booksAuthorMap[book.ID]) {
-				t.Fatalf("Expected book %s to have %d authors, got %d", book.Title, len(booksAuthorMap[book.ID]), book.Authors.Len())
+			if len(book.Authors) == 0 || len(book.Authors) != len(booksAuthorMap[book.ID]) {
+				t.Fatalf("Expected book %s to have %d authors, got %d", book.Title, len(booksAuthorMap[book.ID]), len(book.Authors))
 			}
 
-			t.Logf("Book %s has %d authors", book.Title, book.Authors.Len())
+			t.Logf("Book %s has %d authors", book.Title, len(book.Authors))
 
-			if len(book.Authors.AsList()) == 0 {
+			if len(book.Authors) == 0 {
 				t.Fatalf("Expected book %s to have authors, got none", book.Title)
 			}
 
-			for _, authorRow := range book.Authors.AsList() {
-				var author = authorRow.Object.(*PreloadAuthor)
+			for _, authorRow := range book.Authors {
+				var author = authorRow.Model().(*PreloadAuthor)
 				var authorBooks = authorBooksMap[author.ID]
 				if len(authorBooks) == 0 {
 					t.Fatalf("Expected author %s to have books, got none", author.Name)
@@ -156,14 +156,14 @@ func TestPreload(t *testing.T) {
 
 		for _, bookRow := range bookRows {
 			var book = bookRow.Object
-			if book.Authors.Len() == 0 || book.Authors.Len() != len(booksAuthorMap[book.ID]) {
-				t.Fatalf("Expected book %s to have %d authors, got %d", book.Title, len(booksAuthorMap[book.ID]), book.Authors.Len())
+			if len(book.Authors) == 0 || len(book.Authors) != len(booksAuthorMap[book.ID]) {
+				t.Fatalf("Expected book %s to have %d authors, got %d", book.Title, len(booksAuthorMap[book.ID]), len(book.Authors))
 			}
 
-			t.Logf("Book %s has %d authors with profiles", book.Title, book.Authors.Len())
+			t.Logf("Book %s has %d authors with profiles", book.Title, len(book.Authors))
 
-			for _, authorRow := range book.Authors.AsList() {
-				var author = authorRow.Object.(*PreloadAuthor)
+			for _, authorRow := range book.Authors {
+				var author = authorRow.Model().(*PreloadAuthor)
 				var profile = authorToProfileMap[author.ID]
 				if profile == nil {
 					t.Fatalf("Expected author %s to have a profile, got none:\n\t%s", author.Name, qs.LatestQuery().SQL())
@@ -242,14 +242,14 @@ func TestPreload(t *testing.T) {
 
 		for _, bookRow := range bookRows {
 			var book = bookRow.Object
-			if book.Authors.Len() == 0 || book.Authors.Len() != len(booksAuthorMap[book.ID]) {
-				t.Fatalf("Expected book %s to have %d authors, got %d", book.Title, len(booksAuthorMap[book.ID]), book.Authors.Len())
+			if len(book.Authors) == 0 || len(book.Authors) != len(booksAuthorMap[book.ID]) {
+				t.Fatalf("Expected book %s to have %d authors, got %d", book.Title, len(booksAuthorMap[book.ID]), len(book.Authors))
 			}
 
-			t.Logf("Book %s has %d authors", book.Title, book.Authors.Len())
+			t.Logf("Book %s has %d authors", book.Title, len(book.Authors))
 
-			for _, authorRow := range book.Authors.AsList() {
-				var author = authorRow.Object.(*PreloadAuthor)
+			for _, authorRow := range book.Authors {
+				var author = authorRow.Model().(*PreloadAuthor)
 				var authorBooks = authorBooksMap[author.ID]
 				if len(authorBooks) == 0 {
 					t.Fatalf("Expected author %s to have books, got none", author.Name)

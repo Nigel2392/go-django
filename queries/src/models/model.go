@@ -567,6 +567,14 @@ func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *att
 		}
 
 		for head := revMap.Front(); head != nil; head = head.Next() {
+			// skip creating if a forward rel exists
+			// when a forward rel exists, it is safe to assume
+			// a custom field was already provided.
+			_, ok := meta.Forward(head.Key)
+			if ok {
+				continue
+			}
+
 			var (
 				field attrs.Field
 				key   = head.Key

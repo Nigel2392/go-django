@@ -111,11 +111,12 @@ func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 			relation = fwd
 		}
 
-		if rev, ok2 = modelMeta.Reverse(part); ok2 {
-			if ok1 {
-				return errors.AmbiguousColumn.Wrapf(
-					"field %q is both a forward and reverse relation in %T", part, current)
-			}
+		// forward relations have priority
+		if rev, ok2 = modelMeta.Reverse(part); ok2 && !ok1 {
+			//if !ok1 {
+			//	return errors.AmbiguousColumn.Wrapf(
+			//		"field %q is both a forward and reverse relation in %T", part, current)
+			//}
 
 			relation = rev
 		}
@@ -230,8 +231,7 @@ func WalkRelationChain(m Definer, includeFinalRel bool, path []string) (*Relatio
 				var model = fieldRel.Model()
 				var field = fieldRel.Field()
 				if field == nil {
-					var defs = GetModelMeta(model).Definitions()
-					field = defs.Primary()
+					field = GetModelMeta(model).Primary()
 				}
 
 				// rebuild p to carry through-model info
