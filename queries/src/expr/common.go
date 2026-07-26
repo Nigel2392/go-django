@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // StringExpr is a string type which implements the Expression interface.
@@ -19,7 +19,7 @@ import (
 type String string
 
 func (e String) String() string                         { return string(e) }
-func (e String) SQL(sb *strings.Builder) []any          { sb.WriteString(string(e)); return []any{} }
+func (e String) SQL(sb builder.Builder)                 { sb.WriteString(string(e)) }
 func (e String) Clone() Expression                      { return String([]byte(e)) }
 func (e String) Resolve(inf *ExpressionInfo) Expression { return e }
 
@@ -42,9 +42,9 @@ func (e *field) FieldName() string {
 	return e.fieldName
 }
 
-func (e *field) SQL(sb *strings.Builder) []any {
+func (e *field) SQL(sb builder.Builder) {
 	sb.WriteString(e.field.SQLText)
-	return e.field.SQLArgs
+	sb.AddVar(e.field.SQLArgs...)
 }
 
 func (e *field) Clone() Expression {
@@ -90,7 +90,7 @@ func Values(vs ...any) Expression {
 	}
 }
 
-func (e *values) SQL(sb *strings.Builder) []any {
+func (e *values) SQL(sb builder.Builder) {
 
 	sb.WriteString("(")
 
@@ -121,14 +121,14 @@ func (e *values) SQL(sb *strings.Builder) []any {
 					sb.WriteString("::TEXT[]")
 				}
 			default:
-				panic(fmt.Errorf("unsupported value type %T in expression", v))
+				sb.AddError(fmt.Errorf("unsupported value type %T in expression", v))
+				return
 			}
 		}
 	}
 
 	sb.WriteString(")")
-
-	return slices.Clone(e.values)
+	sb.AddVar(e.values...)
 }
 
 func (e *values) Clone() Expression {
@@ -192,10 +192,10 @@ func V(v any, unsafe ...bool) Expression {
 	return Value(v, unsafe...)
 }
 
-func (e *value) SQL(sb *strings.Builder) []any {
+func (e *value) SQL(sb builder.Builder) {
 	if e.unsafe {
 		sb.WriteString(fmt.Sprintf("%v", e.v))
-		return []any{}
+		return
 	}
 
 	sb.WriteString(e.placeholder)
@@ -222,11 +222,12 @@ func (e *value) SQL(sb *strings.Builder) []any {
 				sb.WriteString("::TEXT[]")
 			}
 		default:
-			panic(fmt.Errorf("unsupported value type %T in expression", e.v))
+			sb.AddError(fmt.Errorf("unsupported value type %T in expression", e.v))
+			return
 		}
 	}
 
-	return []any{e.v}
+	sb.AddVar(e.v)
 }
 
 func (e *value) Clone() Expression {
@@ -362,20 +363,20 @@ func (n *namedExpression) Resolve(inf *ExpressionInfo) Expression {
 	return nE
 }
 
-func (n *namedExpression) SQL(sb *strings.Builder) []any {
+func (n *namedExpression) SQL(sb builder.Builder) {
 	if !n.forUpdate {
-		return n.Expression.SQL(sb)
+		n.Expression.SQL(sb)
+		return
 	}
 
-	var (
-		exprSb   strings.Builder
-		exprArgs = n.Expression.SQL(&exprSb)
-		opRHS, _ = n.fmtRhs(
-			EQ, exprSb.String(),
-		)
+	var exprSb builder.BaseBuilder
+	n.Expression.SQL(&exprSb)
+	var opRHS, _ = n.fmtRhs(
+		EQ, exprSb.String(),
 	)
 
 	sb.WriteString(n.field.SQLText)
 	sb.WriteString(opRHS)
-	return exprArgs
+	sb.AddVar(exprSb.Vars...)
+	sb.AddError(exprSb.Errors...)
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -12,8 +13,9 @@ func TestLookupExactSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Age__exact", 18)
 	resolved := q.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`age` = ?")) {
 		t.Errorf("Unexpected Exact Lookup SQL: %s", sb.String())
 	}
@@ -27,8 +29,9 @@ func TestLookupInSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Age__in", []int{18, 19, 20})
 	resolved := q.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`age` IN (?, ?, ?)")) {
 		t.Errorf("Unexpected In Lookup SQL: %s", sb.String())
 	}
@@ -42,9 +45,10 @@ func TestLookupContainsSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Name__contains", "John")
 	resolved := q.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
-	
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
+
 	// Just checking for basic LIKE/ILIKE substring to avoid dialect hell
 	if !strings.Contains(strings.ToUpper(sb.String()), "LIKE") {
 		t.Errorf("Unexpected Contains Lookup SQL: %s", sb.String())
@@ -59,7 +63,7 @@ func TestLookupIsNullSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Name__isnull", true)
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`name` IS NULL")) {
 		t.Errorf("Unexpected IsNull Lookup SQL: %s", sb.String())
@@ -114,10 +118,11 @@ func TestRangeLookupCoverage(t *testing.T) {
 
 	f1 := expr.Field("Age")
 	r1 := f1.Resolve(info)
-	
+
 	fn := l.Resolve(info, r1, []any{10, 20})
-	var sb strings.Builder
-	args := fn(&sb)
+	var sb builder.BaseBuilder
+	fn(&sb)
+	args := sb.Vars
 	if len(args) != 2 || args[0] != 10 || args[1] != 20 {
 		t.Errorf("Expected 10 and 20 in args")
 	}
@@ -132,6 +137,6 @@ func TestRangeLookupCoverage(t *testing.T) {
 		}
 	}()
 	fnBad := l.Resolve(info, r1, []any{10})
-	var sb2 strings.Builder
-	fnBad(&sb2)
+	sb = builder.BaseBuilder{}
+	fnBad(&sb)
 }

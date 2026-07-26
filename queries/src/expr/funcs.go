@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func init() {
@@ -13,41 +14,41 @@ func init() {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("SUM lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("SUM(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("SUM(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("COUNT", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("COUNT lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("COUNT(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("COUNT(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("AVG", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("AVG lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("AVG(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("AVG(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("MAX", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("MAX lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("MAX(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("MAX(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("MIN", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("MIN lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("MIN(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("MIN(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("COALESCE", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) < 2 {
@@ -56,8 +57,9 @@ func init() {
 		args = make([]any, 0, len(value))
 		var coalesce = make([]string, 0, len(value))
 		for _, v := range value {
-			var sb strings.Builder
-			args = append(args, v.SQL(&sb)...)
+			var sb builder.BaseBuilder
+			v.SQL(&sb)
+			args = append(args, sb.Vars...)
 			coalesce = append(coalesce, sb.String())
 		}
 		return fmt.Sprintf("COALESCE(%s)", strings.Join(coalesce, ", ")), args, nil
@@ -69,8 +71,9 @@ func init() {
 		args = make([]any, 0, len(value))
 		var concat = make([]string, 0, len(value))
 		for _, v := range value {
-			var sb strings.Builder
-			args = append(args, v.SQL(&sb)...)
+			var sb builder.BaseBuilder
+			v.SQL(&sb)
+			args = append(args, sb.Vars...)
 			concat = append(concat, sb.String())
 		}
 		switch d.(type) {
@@ -90,14 +93,16 @@ func init() {
 		if len(funcParams) != 2 {
 			return "", []any{}, fmt.Errorf("SUBSTR lookup requires exactly two function parameters (start and length)")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		args = sb.Vars
 
 		var startParam, endParam string
 		switch v := funcParams[0].(type) {
 		case Expression:
-			var startBuilder strings.Builder
-			args = append(args, v.SQL(&startBuilder)...)
+			var startBuilder builder.BaseBuilder
+			v.SQL(&startBuilder)
+			args = append(args, startBuilder.Vars...)
 			startParam = startBuilder.String()
 		default:
 			if v != nil {
@@ -107,8 +112,9 @@ func init() {
 
 		switch v := funcParams[1].(type) {
 		case Expression:
-			var endBuilder strings.Builder
-			args = append(args, v.SQL(&endBuilder)...)
+			var endBuilder builder.BaseBuilder
+			v.SQL(&endBuilder)
+			args = append(args, endBuilder.Vars...)
 			endParam = endBuilder.String()
 		default:
 			if v != nil {
@@ -147,33 +153,33 @@ func init() {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("TRIM lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("TRIM(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("TRIM(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("UPPER", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("UPPER lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("UPPER(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("UPPER(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("LOWER", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("LOWER lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("LOWER(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("LOWER(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("LENGTH", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("LENGTH lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("LENGTH(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("LENGTH(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("NOW", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		switch d.(type) {
@@ -212,23 +218,23 @@ func init() {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("DATE lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
-		return fmt.Sprintf("DATE(%s)", sb.String()), args, nil
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		return fmt.Sprintf("DATE(%s)", sb.String()), sb.Vars, nil
 	})
 	RegisterFunc("EXISTS", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 {
 			return "", []any{}, fmt.Errorf("EXISTS lookup requires exactly one value")
 		}
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
 		switch d.(type) {
 		case *drivers.DriverMySQL, *drivers.DriverMariaDB:
-			return fmt.Sprintf("EXISTS (%s)", sb.String()), args, nil
+			return fmt.Sprintf("EXISTS (%s)", sb.String()), sb.Vars, nil
 		case *drivers.DriverPostgres:
-			return fmt.Sprintf("EXISTS (%s)", sb.String()), args, nil
+			return fmt.Sprintf("EXISTS (%s)", sb.String()), sb.Vars, nil
 		case *drivers.DriverSQLite:
-			return fmt.Sprintf("EXISTS (%s)", sb.String()), args, nil
+			return fmt.Sprintf("EXISTS (%s)", sb.String()), sb.Vars, nil
 		}
 		return "", nil, fmt.Errorf("unsupported driver for EXISTS: %T", d)
 	})
@@ -237,13 +243,15 @@ func init() {
 			return "", []any{}, fmt.Errorf("DATE_FORMAT lookup requires exactly one value and one format parameter")
 		}
 
-		var sb strings.Builder
-		args = value[0].SQL(&sb)
+		var sb builder.BaseBuilder
+		value[0].SQL(&sb)
+		args = sb.Vars
 		var format string
 		switch v := funcParams[0].(type) {
 		case Expression:
-			var formatBuilder strings.Builder
-			args = append(args, v.SQL(&formatBuilder)...)
+			var formatBuilder builder.BaseBuilder
+			v.SQL(&formatBuilder)
+			args = append(args, formatBuilder.Vars...)
 			format = formatBuilder.String()
 		default:
 			if v != nil {

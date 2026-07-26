@@ -5,12 +5,14 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func TestExprOperatorSQLGeneration1(t *testing.T) {
 	resolved := expr.EQ.Resolve(nil)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if len(args) != 0 {
 		t.Errorf("Expected 0 args, got %d", len(args))
 	}
@@ -22,7 +24,7 @@ func TestExprOperatorSQLGeneration1(t *testing.T) {
 
 func TestExprOperatorSQLGeneration2(t *testing.T) {
 	resolved := expr.IN.Resolve(nil)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	sql := sb.String()
 	if !strings.Contains(sql, "IN") {

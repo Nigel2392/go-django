@@ -1,11 +1,10 @@
 package queries
 
 import (
-	"strings"
-
 	_ "unsafe"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -18,10 +17,8 @@ type subqueryExpr[T attrs.Definer, QS BaseQuerySet[T, QS]] struct {
 	used bool
 }
 
-func (s *subqueryExpr[T, QS]) SQL(sb *strings.Builder) []any {
+func (s *subqueryExpr[T, QS]) SQL(sb builder.Builder) {
 	var written bool
-	var args = make([]any, 0)
-
 	if s.not {
 		if written {
 			sb.WriteString(" ")
@@ -58,10 +55,8 @@ func (s *subqueryExpr[T, QS]) SQL(sb *strings.Builder) []any {
 			sb.WriteString(")")
 		}
 
-		args = append(args, query.Args()...)
+		sb.AddVar(query.Args()...)
 	}
-
-	return args
 }
 
 func (s *subqueryExpr[T, QS]) Clone() expr.Expression {

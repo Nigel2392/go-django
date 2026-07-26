@@ -3,7 +3,9 @@ package expr_test
 import (
 	"strings"
 	"testing"
+
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -11,7 +13,7 @@ func TestLookupsTransformsUpperSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Name__upper__exact", "JOHN")
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "UPPER(`test_model`.`name`) = ?")) {
 		t.Errorf("Unexpected upper transform SQL: %s", sb.String())
@@ -23,7 +25,7 @@ func TestLookupsTransformsLowerSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Name__lower__contains", "john")
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(strings.ToUpper(sb.String()), "LIKE") {
 		t.Errorf("Unexpected lower transform SQL: %s", sb.String())
@@ -36,7 +38,7 @@ func TestLookupsTransformsUpperImplicitExact(t *testing.T) {
 	// Without exact, it defaults to exact
 	q := expr.Q("Name__upper", "JOHN")
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "UPPER(`test_model`.`name`) = ?")) {
 		t.Errorf("Unexpected upper transform implicit exact SQL: %s", sb.String())
@@ -49,7 +51,7 @@ func TestLookupsTransformsDoubleTransform(t *testing.T) {
 	// lower__upper is silly but should generate UPPER(LOWER(col))
 	q := expr.Q("Name__lower__upper", "JOHN")
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "UPPER(LOWER(`test_model`.`name`)) = ?")) {
 		t.Errorf("Unexpected chained transforms SQL: %s", sb.String())

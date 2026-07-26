@@ -1,11 +1,11 @@
 package expr_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/Nigel2392/go-django/djester/testdb"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 type funcTestCase struct {
@@ -146,8 +146,9 @@ func TestFuncsImplTableDriven(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.Name, func(t *testing.T) {
 			resolved := tc.Fn.Resolve(info)
-			var sb strings.Builder
-			args := resolved.SQL(&sb)
+			var sb builder.BaseBuilder
+			resolved.SQL(&sb)
+			args := sb.Vars
 			sql := sb.String()
 
 			expectedSQL := tc.getExpected(info)

@@ -6,14 +6,16 @@ import (
 
 	"github.com/Nigel2392/go-django/djester/testdb"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func TestCastStringGeneration(t *testing.T) {
 	info := getTestInfo()
 	c := expr.CastString(expr.Field("Age"), 255)
 	resolved := c.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 
 	expectedType := "TEXT"
 	switch testdb.ENGINE {
@@ -36,8 +38,9 @@ func TestCastFloatGeneration(t *testing.T) {
 	info := getTestInfo()
 	c := expr.CastFloat(expr.Field("Score"), 10, 2)
 	resolved := c.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 
 	expectedType := "REAL"
 	switch testdb.ENGINE {
@@ -60,7 +63,7 @@ func TestCastDateTimeGeneration(t *testing.T) {
 	info := getTestInfo()
 	c := expr.CastDate(expr.Field("CreatedAt"))
 	resolved := c.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 
 	expectedType := "TEXT"

@@ -3,7 +3,8 @@ package expr
 import (
 	"fmt"
 	"slices"
-	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 type Function struct {
@@ -32,7 +33,7 @@ func (e *Function) FieldName() string {
 	return ""
 }
 
-func (e *Function) SQL(sb *strings.Builder) []any {
+func (e *Function) SQL(sb builder.Builder) {
 	if e.sql == nil {
 		panic(fmt.Errorf("SQL function %v not provided", e.funcLookup))
 	}
@@ -43,12 +44,12 @@ func (e *Function) SQL(sb *strings.Builder) []any {
 	)
 
 	if err != nil {
-		panic(err)
+		sb.AddError(err)
+		return
 	}
 
 	sb.WriteString(sql)
-
-	return params
+	sb.AddVar(params...)
 }
 
 func (e *Function) Clone() Expression {

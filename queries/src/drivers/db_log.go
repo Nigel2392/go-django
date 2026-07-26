@@ -2,7 +2,6 @@ package drivers
 
 import (
 	"context"
-	"sync"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -33,8 +32,7 @@ func wasLogged(level logger.LogLevel) bool {
 }
 
 var (
-	_setupLogger = &sync.Once{}
-	localLogger  logger.Log
+	localLogger logger.Log
 )
 
 func getLogger() logger.Log {

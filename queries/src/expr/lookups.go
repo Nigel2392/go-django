@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func init() {
@@ -174,7 +175,7 @@ func RegisterTransforms(transforms ...LookupTransform) {
 // GetLookup retrieves a lookup function based on the provided expression info, lookup name, inner expression, and arguments.
 // It returns a function that can be used to build a SQL string with the lookup applied.
 // The LHS will need to be either an Expression (RESOLVED ALREADY!) or a sql `table`.`column` pair.
-func GetLookup(inf *ExpressionInfo, lookupName string, lhs any, args []any) (func(sb *strings.Builder) []any, error) {
+func GetLookup(inf *ExpressionInfo, lookupName string, lhs any, args []any) (func(sb builder.Builder), error) {
 	if inf == nil {
 		return nil, fmt.Errorf("expression info cannot be nil")
 	}

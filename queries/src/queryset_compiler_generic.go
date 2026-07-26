@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/go-sql-driver/mysql"
@@ -577,8 +578,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 	internals *QuerySetInternals,
 ) CompiledRowsQuery[[][]interface{}] {
 	var (
-		query = new(strings.Builder)
-		args  []any
+		query = new(builder.BaseBuilder)
 		inf   = newExpressionInfo(g, resolver, false)
 	)
 
@@ -592,10 +592,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 		if i > 0 {
 			query.WriteString(", ")
 		}
-
-		args = append(
-			args, info.WriteFields(
-				query, inf)...)
+		info.WriteFields(query, inf)
 	}
 
 	query.WriteString(" FROM ")
@@ -604,18 +601,16 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 	// First we must resolve all where, having clauses & group by clauses.
 	// These might add joins to the queryset, so this
 	// must be done before we write the joins to the query.
-	var sb2 = new(strings.Builder)
-	var args2 = make([]any, 0, 8)
-	args2 = append(args2, g.writeWhereClause(sb2, inf, internals.Where)...)
-	args2 = append(args2, g.writeGroupBy(sb2, inf, internals.GroupBy)...)
-	args2 = append(args2, g.writeHaving(sb2, inf, internals.Having)...)
+	var sb2 = new(builder.BaseBuilder)
+	g.writeWhereClause(sb2, inf, internals.Where)
+	g.writeGroupBy(sb2, inf, internals.GroupBy)
+	g.writeHaving(sb2, inf, internals.Having)
 
 	// Write the joins to the query.
-	args = append(args, g.writeJoins(query, inf, internals.Joins)...)
+	g.writeJoins(query, inf, internals.Joins)
 
 	// Actually write the where and group by clauses to the query.
-	query.WriteString(sb2.String())
-	args = append(args, args2...)
+	sb2.WriteTo(query)
 
 	for _, union := range internals.Unions {
 		union.context = expr.MakeSubqueryContext(ctx)
@@ -630,7 +625,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 		}
 
 		query.WriteString(queryObj.SQL())
-		args = append(args, queryObj.Args()...)
+		query.AddVar(queryObj.Args()...)
 	}
 
 	if !expr.IsSubqueryContext(ctx) {
@@ -643,7 +638,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 		)
 	}
 
-	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
+	g.writeLimitOffset(query, internals.Limit, internals.Offset)
 
 	if internals.ForUpdate {
 		query.WriteString(" FOR UPDATE")
@@ -654,10 +649,14 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 			QueryInfo: &Query{
 				Stmt:    g.Rebind(ctx, query.String()),
 				Object:  resolver.Meta().Model(),
-				Params:  args,
+				Params:  query.Vars,
 				Builder: g,
 			},
 			ExecSQL: func(sql string, args ...any) (drivers.SQLRows, error) {
+				if err := query.GetError(); err != nil {
+					return nil, err
+				}
+
 				return g.DB().QueryContext(ctx, sql, args...)
 			},
 		},
@@ -717,26 +716,23 @@ func (g *genericQueryBuilder) BuildCountQuery(
 	internals *QuerySetInternals,
 ) CompiledRowQuery[int64] {
 	var inf = newExpressionInfo(g, resolver, false)
-	var query = new(strings.Builder)
-	var args = make([]any, 0)
+	var query = new(builder.BaseBuilder)
 	query.WriteString("SELECT COUNT(*) FROM ")
 	g.writeTableName(query, resolver.Alias(), internals)
 
 	// First we must resolve all where clauses & group by clauses.
 	// These might add joins to the queryset, so this
 	// must be done before we write the joins to the query.
-	var sb2 = new(strings.Builder)
-	var args2 = make([]any, 0, 8)
-	args2 = append(args2, g.writeWhereClause(sb2, inf, internals.Where)...)
-	args2 = append(args2, g.writeGroupBy(sb2, inf, internals.GroupBy)...)
-	args2 = append(args2, g.writeHaving(sb2, inf, internals.Having)...)
+	var sb2 = new(builder.BaseBuilder)
+	g.writeWhereClause(sb2, inf, internals.Where)
+	g.writeGroupBy(sb2, inf, internals.GroupBy)
+	g.writeHaving(sb2, inf, internals.Having)
 
 	// Write the joins to the query.
-	args = append(args, g.writeJoins(query, inf, internals.Joins)...)
+	g.writeJoins(query, inf, internals.Joins)
 
 	// Actually write the where and group by clauses to the query.
-	query.WriteString(sb2.String())
-	args = append(args, args2...)
+	sb2.WriteTo(query)
 
 	for _, union := range internals.Unions {
 		union.context = expr.MakeSubqueryContext(ctx)
@@ -751,19 +747,23 @@ func (g *genericQueryBuilder) BuildCountQuery(
 		}
 
 		query.WriteString(queryObj.SQL())
-		args = append(args, queryObj.Args()...)
+		query.AddVar(queryObj.Args()...)
 	}
 
-	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
+	g.writeLimitOffset(query, internals.Limit, internals.Offset)
 
 	return &QueryRowObject[int64]{
 		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  resolver.Meta().Model(),
-			Params:  args,
+			Params:  query.Vars,
 		},
 		ExecSQL: func(sql string, args ...any) (drivers.SQLRow, error) {
+			if err := query.GetError(); err != nil {
+				return nil, err
+			}
+
 			var row = g.DB().QueryRowContext(ctx, sql, args...)
 			return row, nil
 		},
@@ -789,7 +789,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 ) CompiledQuery[[][]interface{}] {
 	var (
 		model   = attrs.NewObject[attrs.Definer](resolver.Context(), resolver.Meta().Model())
-		query   = new(strings.Builder)
+		query   = new(builder.BaseBuilder)
 		support = drivers.SupportsReturning(
 			g.queryInfo.DB,
 		)
@@ -825,7 +825,6 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	query.WriteString(") VALUES ")
 
 	var written bool
-	var values = make([]any, 0, len(objects)*len(object.Fields))
 	for _, obj := range objects {
 		if written {
 			query.WriteString(", ")
@@ -841,7 +840,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 		}
 		query.WriteString(")")
 		for i, v := range obj.Values {
-			values = append(values, g.This().PrepareValue(obj.Fields[i], v))
+			query.AddVar(g.This().PrepareValue(obj.Fields[i], v))
 		}
 		written = true
 	}
@@ -900,9 +899,13 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  model,
-			Params:  values,
+			Params:  query.Vars,
 		},
-		Execute: func(query string, args ...any) ([][]interface{}, error) {
+		Execute: func(sql string, args ...any) ([][]interface{}, error) {
+			if err := query.GetError(); err != nil {
+				return nil, err
+			}
+
 			var err error
 			switch support {
 			case drivers.SupportsReturningLastInsertId:
@@ -911,7 +914,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 					return nil, nil
 				}
 
-				var rows, err = g.DB().QueryContext(ctx, query, args...)
+				var rows, err = g.DB().QueryContext(ctx, sql, args...)
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to execute query")
 				}
@@ -937,7 +940,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 			case drivers.SupportsReturningColumns:
 
 				var results = make([][]interface{}, 0, len(objects))
-				var rows, err = g.DB().QueryContext(ctx, query, args...)
+				var rows, err = g.DB().QueryContext(ctx, sql, args...)
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to execute query")
 				}
@@ -968,7 +971,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 				return results, rows.Err()
 
 			case drivers.SupportsReturningNone:
-				_, err = g.DB().ExecContext(ctx, query, args...)
+				_, err = g.DB().ExecContext(ctx, sql, args...)
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to execute query")
 				}
@@ -989,9 +992,8 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 ) CompiledQuery[int64] {
 	var (
 		inf     = newExpressionInfo(g, resolver, true)
+		query   = new(builder.BaseBuilder)
 		written bool
-		args    = make([]any, 0)
-		query   = new(strings.Builder)
 	)
 
 	for _, info := range objects {
@@ -1017,8 +1019,9 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 				query.WriteString(", ")
 			}
 
-			var a, isSQL, ok = info.WriteField(
-				query, inf, f, true,
+			var sub = new(builder.BaseBuilder)
+			var isSQL, ok = info.WriteField(
+				sub, inf, f, true,
 			)
 
 			fieldWritten = ok || fieldWritten
@@ -1026,10 +1029,13 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 				continue
 			}
 
+			query.WriteString(sub.String())
+			query.AddError(sub.Errors...)
+
 			if isSQL {
-				args = append(args, a...)
+				query.AddVar(sub.Vars...)
 			} else {
-				args = append(args, g.This().PrepareValue(f, info.Values[valuesIdx]))
+				query.AddVar(g.This().PrepareValue(f, info.Values[valuesIdx]))
 				valuesIdx++
 			}
 		}
@@ -1038,15 +1044,8 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 		// incorrect column formatting in joins and where clauses.
 		inf.ForUpdate = false
 
-		args = append(
-			args,
-			g.writeJoins(query, inf, info.Joins)...,
-		)
-
-		args = append(
-			args,
-			g.writeWhereClause(query, inf, info.Where)...,
-		)
+		g.writeJoins(query, inf, info.Joins)
+		g.writeWhereClause(query, inf, info.Where)
 	}
 
 	return &QueryObject[int64]{
@@ -1054,7 +1053,7 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Resolver.Meta().Model(),
-			Params:  args,
+			Params:  query.Vars,
 		},
 		Execute: func(sql string, args ...any) (int64, error) {
 			result, err := g.DB().ExecContext(ctx, sql, args...)
@@ -1072,36 +1071,28 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 	internals *QuerySetInternals,
 ) CompiledQuery[int64] {
 	var inf = newExpressionInfo(g, resolver, false)
-	var query = new(strings.Builder)
-	var args = make([]any, 0)
+	var query = new(builder.BaseBuilder)
 	query.WriteString("DELETE FROM ")
+
 	query.WriteString(g.quote)
 	query.WriteString(internals.Model.Table)
 	query.WriteString(g.quote)
 
-	args = append(
-		args,
-		g.writeJoins(query, inf, internals.Joins)...,
-	)
-
-	args = append(
-		args,
-		g.writeWhereClause(query, inf, internals.Where)...,
-	)
-
-	args = append(
-		args,
-		g.writeGroupBy(query, inf, internals.GroupBy)...,
-	)
+	g.writeJoins(query, inf, internals.Joins)
+	g.writeWhereClause(query, inf, internals.Where)
+	g.writeGroupBy(query, inf, internals.GroupBy)
 
 	return &QueryObject[int64]{
 		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Resolver.Meta().Model(),
-			Params:  args,
+			Params:  query.Vars,
 		},
 		Execute: func(sql string, args ...any) (int64, error) {
+			if err := query.GetError(); err != nil {
+				return 0, err
+			}
 			result, err := g.DB().ExecContext(ctx, sql, args...)
 			if err != nil {
 				return 0, err
@@ -1111,7 +1102,7 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 	}
 }
 
-func (g *genericQueryBuilder) writeTableName(sb *strings.Builder, aliasGen *alias.Generator, internals *QuerySetInternals) {
+func (g *genericQueryBuilder) writeTableName(sb *builder.BaseBuilder, aliasGen *alias.Generator, internals *QuerySetInternals) {
 	sb.WriteString(g.quote)
 	sb.WriteString(internals.Model.Table)
 	sb.WriteString(g.quote)
@@ -1126,8 +1117,7 @@ func (g *genericQueryBuilder) writeTableName(sb *strings.Builder, aliasGen *alia
 	}
 }
 
-func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.ExpressionInfo, joins []JoinDef) []any {
-	var args = make([]any, 0)
+func (g *genericQueryBuilder) writeJoins(sb *builder.BaseBuilder, inf *expr.ExpressionInfo, joins []JoinDef) {
 	var aliasGen = inf.Resolver.Alias()
 	for _, join := range joins {
 		sb.WriteString(" ")
@@ -1156,7 +1146,7 @@ func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.Expressi
 
 			var col, argsCol = g.FormatColumn(aliasGen, &condition.ConditionA)
 			sb.WriteString(col)
-			args = append(args, argsCol...)
+			sb.AddVar(argsCol...)
 
 			sb.WriteString(" ")
 			sb.WriteString(string(condition.Operator))
@@ -1164,7 +1154,7 @@ func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.Expressi
 
 			col, argsCol = g.FormatColumn(aliasGen, &condition.ConditionB)
 			sb.WriteString(col)
-			args = append(args, argsCol...)
+			sb.AddVar(argsCol...)
 
 			if condition.Next != nil {
 				sb.WriteString(" AND ")
@@ -1173,28 +1163,20 @@ func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.Expressi
 			condition = condition.Next
 		}
 	}
-
-	return args
 }
 
-func (g *genericQueryBuilder) writeWhereClause(sb *strings.Builder, inf *expr.ExpressionInfo, where []expr.ClauseExpression) []any {
-
-	var args = make([]any, 0)
+func (g *genericQueryBuilder) writeWhereClause(sb *builder.BaseBuilder, inf *expr.ExpressionInfo, where []expr.ClauseExpression) {
 	if len(where) > 0 {
 		sb.WriteString(" WHERE ")
-		args = append(
-			args, buildWhereClause(sb, inf, where)...,
-		)
+		buildWhereClause(sb, inf, where)
 	}
-	return args
 }
 
-func (g *genericQueryBuilder) writeGroupBy(sb *strings.Builder, inf *expr.ExpressionInfo, groupBy []*FieldInfo[attrs.FieldDefinition]) []any {
+func (g *genericQueryBuilder) writeGroupBy(sb *builder.BaseBuilder, inf *expr.ExpressionInfo, groupBy []*FieldInfo[attrs.FieldDefinition]) {
 
 	var infCpy = *inf
 	infCpy.SupportsAsExpr = false // Disable AS expressions in GROUPBY clauses
 
-	var args = make([]any, 0)
 	if len(groupBy) > 0 {
 		sb.WriteString(" GROUP BY ")
 		for i, info := range groupBy {
@@ -1202,26 +1184,19 @@ func (g *genericQueryBuilder) writeGroupBy(sb *strings.Builder, inf *expr.Expres
 				sb.WriteString(", ")
 			}
 
-			args = append(
-				args, info.WriteFields(sb, &infCpy)...,
-			)
+			info.WriteFields(sb, &infCpy)
 		}
 	}
-	return args
 }
 
-func (g *genericQueryBuilder) writeHaving(sb *strings.Builder, inf *expr.ExpressionInfo, having []expr.ClauseExpression) []any {
-	var args = make([]any, 0)
+func (g *genericQueryBuilder) writeHaving(sb *builder.BaseBuilder, inf *expr.ExpressionInfo, having []expr.ClauseExpression) {
 	if len(having) > 0 {
 		sb.WriteString(" HAVING ")
-		args = append(
-			args, buildWhereClause(sb, inf, having)...,
-		)
+		buildWhereClause(sb, inf, having)
 	}
-	return args
 }
 
-func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.Generator, orderBy []expr.OrderBy, stripTableAlias bool) {
+func (g *genericQueryBuilder) writeOrderBy(sb *builder.BaseBuilder, aliasGen *alias.Generator, orderBy []expr.OrderBy, stripTableAlias bool) {
 	if len(orderBy) > 0 {
 		sb.WriteString(" ORDER BY ")
 
@@ -1258,18 +1233,16 @@ func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.
 	}
 }
 
-func (g *genericQueryBuilder) writeLimitOffset(sb *strings.Builder, limit int, offset int) []any {
-	var args = make([]any, 0)
+func (g *genericQueryBuilder) writeLimitOffset(sb *builder.BaseBuilder, limit int, offset int) {
 	if limit > 0 {
 		sb.WriteString(" LIMIT ?")
-		args = append(args, limit)
+		sb.AddVar(limit)
 	}
 
 	if offset > 0 {
 		sb.WriteString(" OFFSET ?")
-		args = append(args, offset)
+		sb.AddVar(offset)
 	}
-	return args
 }
 
 type postgresQueryBuilder struct {
@@ -1676,15 +1649,12 @@ func getDriverResult(res driver.Result, err error) (driver.Result, error) {
 // Helpers
 // -----------------------------------------------------------------------------
 
-func buildWhereClause(b *strings.Builder, inf *expr.ExpressionInfo, exprs []expr.ClauseExpression) []any {
-	var args = make([]any, 0)
+func buildWhereClause(b *builder.BaseBuilder, inf *expr.ExpressionInfo, exprs []expr.ClauseExpression) {
 	for i, e := range exprs {
 		e := e.Resolve(inf)
-		var a = e.SQL(b)
+		e.SQL(b)
 		if i < len(exprs)-1 {
 			b.WriteString(" AND ")
 		}
-		args = append(args, a...)
 	}
-	return args
 }

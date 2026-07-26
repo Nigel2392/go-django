@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -43,7 +44,7 @@ func (l *BaseLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any, er
 	return newValues, nil
 }
 
-func (l *BaseLookup) Resolve(inf *ExpressionInfo, lhsResolved ResolvedExpression, values []any) func(sb *strings.Builder) []any {
+func (l *BaseLookup) Resolve(inf *ExpressionInfo, lhsResolved ResolvedExpression, values []any) func(sb builder.Builder) {
 	if l.ResolveFunc == nil {
 		panic(fmt.Sprintf(
 			"lookup %q does not have a resolve function defined, cannot be used",
@@ -74,34 +75,32 @@ func (l *LogicalLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any,
 	return l.BaseLookup.NormalizeArgs(inf, values)
 }
 
-func (l *LogicalLookup) Resolve(inf *ExpressionInfo, lhsResolved ResolvedExpression, values []any) func(sb *strings.Builder) []any {
-	return func(sb *strings.Builder) []any {
-		var lhsExpr strings.Builder
-		var args = lhsResolved.SQL(&lhsExpr)
-		sb.WriteString(inf.Lookups.FormatLookupCol(
-			l.Identifier, lhsExpr.String(),
-		))
+func (l *LogicalLookup) Resolve(inf *ExpressionInfo, lhsResolved ResolvedExpression, values []any) func(sb builder.Builder) {
+	return func(sb builder.Builder) {
+		inf.Lookups.FormatLookupExpr(
+			sb, l.Identifier, lhsResolved,
+		)
 		sb.WriteString(" ")
 
 		switch arg := values[0].(type) {
 		case Expression:
-			var inner strings.Builder
-			var innerArgs = arg.SQL(&inner)
-			args = append(args, innerArgs...)
+			var inner builder.BaseBuilder
+			arg.SQL(&inner)
+			sb.AddVar(inner.Vars...)
+			sb.AddError(inner.Errors...)
 
 			var opRHS, _ = inf.Lookups.FormatLogicalOpRHS(
 				l.Operator, inf.Lookups.FormatLookupCol(l.Identifier, inner.String()),
 			)
+
 			sb.WriteString(opRHS)
 		default:
 			var opRHS, exprArgs = inf.Lookups.FormatLogicalOpRHS(
 				l.Operator, inf.Lookups.FormatLookupCol(l.Identifier, inf.Placeholder), arg,
 			)
 			sb.WriteString(opRHS)
-			args = append(args, exprArgs...)
+			sb.AddVar(exprArgs...)
 		}
-
-		return args
 	}
 }
 
@@ -134,41 +133,29 @@ func (l *PatternLookup) NormalizeArgs(inf *ExpressionInfo, value []any) ([]any, 
 	return []any{normalizedValue}, nil
 }
 
-func (l *PatternLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb *strings.Builder) []any {
+func (l *PatternLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb builder.Builder) {
 
-	return func(sb *strings.Builder) []any {
-		var lhsExpr strings.Builder
-		var args = resolvedExpression.SQL(
-			&lhsExpr,
+	return func(sb builder.Builder) {
+
+		inf.Lookups.FormatLookupExpr(
+			sb, l.Identifier, resolvedExpression,
 		)
-
-		sb.WriteString(inf.Lookups.FormatLookupCol(
-			l.Identifier, lhsExpr.String(),
-		))
 
 		sb.WriteString(" ")
 
 		switch arg := values[0].(type) {
 		case Expression:
-			var inner strings.Builder
-			args = append(
-				args, arg.SQL(&inner)...,
-			)
-			sb.WriteString(inf.Lookups.PatternOpRHS(
-				l.Identifier, inner.String(),
-			))
+			inf.Lookups.PatternOpRHSExpr(sb, l.Identifier, arg)
 		default:
 			sb.WriteString(inf.Lookups.FormatOpRHS(
 				l.Identifier, inf.Lookups.FormatLookupCol(
 					l.Identifier, inf.Placeholder,
 				),
 			))
-			args = append(args, fmt.Sprintf(
+			sb.AddVar(fmt.Sprintf(
 				l.Pattern, arg.(string),
 			))
 		}
-
-		return args
 	}
 }
 
@@ -195,19 +182,15 @@ func (l *IsNullLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any, 
 	return []any{isNull}, nil
 }
 
-func (l *IsNullLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb *strings.Builder) []any {
-	return func(sb *strings.Builder) []any {
-		var lhsExpr strings.Builder
-		var args = resolvedExpression.SQL(&lhsExpr)
-		sb.WriteString(inf.Lookups.FormatLookupCol(
-			l.Identifier, lhsExpr.String(),
-		))
+func (l *IsNullLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb builder.Builder) {
+	return func(sb builder.Builder) {
+		inf.Lookups.FormatLookupExpr(sb, l.Identifier, resolvedExpression)
+
 		if values[0].(bool) {
 			sb.WriteString(" IS NULL")
 		} else {
 			sb.WriteString(" IS NOT NULL")
 		}
-		return args
 	}
 }
 
@@ -245,25 +228,25 @@ func (l *InLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any, erro
 	return values, nil
 }
 
-func (l *InLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb *strings.Builder) []any {
-	return func(sb *strings.Builder) []any {
+func (l *InLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb builder.Builder) {
+	return func(sb builder.Builder) {
 
-		var lhsExpr strings.Builder
-		var args = resolvedExpression.SQL(&lhsExpr)
-		sb.WriteString(inf.Lookups.FormatLookupCol(
-			l.Identifier, lhsExpr.String(),
-		))
+		inf.Lookups.FormatLookupExpr(
+			sb, l.Identifier, resolvedExpression,
+		)
+
 		sb.WriteString(" IN (")
 
 		if len(values) == 0 {
-			panic(fmt.Sprintf("nil values provided to %T: %v", l, sb.String()))
+			sb.AddError(
+				fmt.Errorf("nil values provided to %T: %v", l, values),
+			)
+			return
 		}
 
 		switch v := values[0].(type) {
 		case Expression: // handle expression case (maybe subquery)
-			args = append(
-				args, v.SQL(sb)...,
-			)
+			v.SQL(sb)
 		default:
 			var placeholders = make([]string, len(values))
 			for i := range values {
@@ -272,11 +255,10 @@ func (l *InLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpre
 				)
 			}
 			sb.WriteString(strings.Join(placeholders, ", "))
-			args = append(args, values...)
+			sb.AddVar(values...)
 		}
 
 		sb.WriteString(")")
-		return args
 	}
 }
 
@@ -295,25 +277,22 @@ func (l *RangeLookup) Arity() (min, max int) {
 	return 2, 2 // exactly two arguments
 }
 
-func (l *RangeLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb *strings.Builder) []any {
-	return func(sb *strings.Builder) []any {
+func (l *RangeLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb builder.Builder) {
+	return func(sb builder.Builder) {
 		if len(values) != 2 {
 			panic(fmt.Sprintf("lookup %s requires exactly two values, got %d", l.Identifier, len(values)))
 		}
 
-		var lhsExpr strings.Builder
-		var args = resolvedExpression.SQL(&lhsExpr)
-		sb.WriteString(inf.Lookups.FormatLookupCol(
-			l.Identifier, lhsExpr.String(),
-		))
+		inf.Lookups.FormatLookupExpr(
+			sb, l.Identifier, resolvedExpression,
+		)
 
 		sb.WriteString(" BETWEEN ")
 		sb.WriteString(inf.Placeholder)
 		sb.WriteString(" AND ")
 		sb.WriteString(inf.Placeholder)
 
-		args = append(args, values[0], values[1])
-		return args
+		sb.AddVar(values[0], values[1])
 	}
 }
 

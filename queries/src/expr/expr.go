@@ -5,9 +5,9 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -20,11 +20,10 @@ type LogicalOp string
 
 func (op LogicalOp) Resolve(*ExpressionInfo) Expression { return op }
 func (op LogicalOp) Clone() Expression                  { return op }
-func (op LogicalOp) SQL(sb *strings.Builder) []any {
-	sb.WriteString(" ")
+func (op LogicalOp) SQL(sb builder.Builder) {
+	sb.WriteRune(' ')
 	sb.WriteString(string(op))
-	sb.WriteString(" ")
-	return []any{}
+	sb.WriteRune(' ')
 }
 
 const (
@@ -60,7 +59,7 @@ const (
 	OpOr  ExprOp = "OR"
 )
 
-type LookupExpression = func(sb *strings.Builder) []any
+type LookupExpression = func(sb builder.Builder)
 
 type LookupTransform interface {
 	// returns the drivers that support this transform
@@ -162,7 +161,7 @@ type ExpressionBuilder interface {
 }
 
 type ResolvedExpression interface {
-	SQL(sb *strings.Builder) []any
+	SQL(builder.Builder)
 }
 
 type Expression interface {

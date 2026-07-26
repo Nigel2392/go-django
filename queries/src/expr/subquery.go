@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 type subqueryContextKey struct{}
@@ -48,9 +50,9 @@ func (e *outerRef) FieldName() string {
 	return e.fieldName
 }
 
-func (e *outerRef) SQL(sb *strings.Builder) []any {
+func (e *outerRef) SQL(sb builder.Builder) {
 	sb.WriteString(e.field.SQLText)
-	return e.field.SQLArgs
+	sb.AddVar(e.field.SQLArgs...)
 }
 
 func (e *outerRef) Clone() Expression {

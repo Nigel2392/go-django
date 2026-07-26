@@ -2,7 +2,8 @@ package expr
 
 import (
 	"fmt"
-	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 type when struct {
@@ -224,12 +225,10 @@ func (c *CaseExpression) Resolve(inf *ExpressionInfo) Expression {
 	return nC
 }
 
-func (c *CaseExpression) SQL(sb *strings.Builder) []any {
+func (c *CaseExpression) SQL(sb builder.Builder) {
 	if !c.used {
 		panic("CaseExpression was not resolved, cannot generate SQL")
 	}
-
-	var args = make([]any, 0)
 
 	sb.WriteString("CASE ")
 
@@ -244,30 +243,32 @@ func (c *CaseExpression) SQL(sb *strings.Builder) []any {
 
 		sb.WriteString("WHEN ")
 
-		args = append(args, w.lhs.SQL(sb)...)
+		w.lhs.SQL(sb)
 
 		if w.rhs != nil {
 			sb.WriteString(" ")
 
-			var inner strings.Builder
-			args = append(args, w.rhs.SQL(&inner)...)
+			var inner builder.BaseBuilder
+
+			w.rhs.SQL(&inner)
 
 			var rhs, _ = c.inf.Lookups.FormatLogicalOpRHS(
 				EQ, inner.String(),
 			)
+
 			sb.WriteString(rhs)
+			sb.AddVar(inner.Vars...)
+			sb.AddError(inner.Errors...)
 		}
 
 		sb.WriteString(" THEN ")
-		args = append(args, w.then.SQL(sb)...)
+		w.then.SQL(sb)
 	}
 
 	if c.dflt != nil {
 		sb.WriteString(" ELSE ")
-		args = append(args, c.dflt.SQL(sb)...)
+		c.dflt.SQL(sb)
 	}
 
 	sb.WriteString(" END")
-
-	return args
 }

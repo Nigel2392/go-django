@@ -3,7 +3,8 @@ package expr
 import (
 	"fmt"
 	"slices"
-	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 type chainExpr struct {
@@ -24,17 +25,15 @@ func (e *chainExpr) FieldName() string {
 	return ""
 }
 
-func (e *chainExpr) SQL(sb *strings.Builder) []any {
+func (e *chainExpr) SQL(sb builder.Builder) {
 	if len(e.inner) == 0 {
-		panic(fmt.Errorf("SQL chainExpr has no inner expressions"))
+		sb.AddError(fmt.Errorf("SQL chainExpr has no inner expressions"))
+		return
 	}
 
-	var args = make([]any, 0)
 	for _, inner := range e.inner {
-		args = append(args, inner.SQL(sb)...)
+		inner.SQL(sb)
 	}
-
-	return args
 }
 
 func (e *chainExpr) Clone() Expression {

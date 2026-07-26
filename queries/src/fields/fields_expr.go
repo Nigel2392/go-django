@@ -1,10 +1,9 @@
 package fields
 
 import (
-	"strings"
-
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -38,7 +37,12 @@ func (f *ExpressionField[T]) SQL(chain []string, inf *expr.ExpressionInfo) (stri
 
 	// must resolve for chain in case we are querying a related model's virtual field
 	var expr = f.expr.Resolve(inf.ForExpressionChain(chain))
-	var sb strings.Builder
-	var args = expr.SQL(&sb)
-	return sb.String(), args
+	var sb builder.BaseBuilder
+	expr.SQL(&sb)
+
+	if err := sb.GetError(); err != nil {
+		panic(err)
+	}
+
+	return sb.String(), sb.Vars
 }

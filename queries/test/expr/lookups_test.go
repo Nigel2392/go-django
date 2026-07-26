@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -12,8 +13,9 @@ func TestLookupsIstartswithSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Name__istartswith", "John")
 	resolved := q.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if !strings.Contains(sb.String(), "LIKE") {
 		t.Errorf("Unexpected istartswith SQL: %s", sb.String())
 	}
@@ -27,7 +29,7 @@ func TestLookupsLteSQL(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Age__lte", 65)
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`age` <= ?")) {
 		t.Errorf("Unexpected lte SQL: %s", sb.String())
@@ -39,7 +41,7 @@ func TestLookupsNotExactResolve(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Name__not", "John")
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`name` != ?")) {
 		t.Errorf("Unexpected NOT SQL: %s", sb.String())
@@ -51,7 +53,7 @@ func TestLookupsBitwiseAndResolve(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Score__bitand", 1)
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`score` & ?")) {
 		t.Errorf("Unexpected bitand SQL: %s", sb.String())

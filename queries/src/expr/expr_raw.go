@@ -2,7 +2,8 @@ package expr
 
 import (
 	"fmt"
-	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // RawExpr is a function expression for SQL queries.
@@ -105,10 +106,10 @@ func (e *RawNamedExpression) FieldName() string {
 	return e.Field
 }
 
-func (e *RawNamedExpression) SQL(sb *strings.Builder) []any {
+func (e *RawNamedExpression) SQL(sb builder.Builder) {
 	var sql, args = e.Statement.SQL()
 	sb.WriteString(sql)
-	return args
+	sb.AddVar(args...)
 }
 
 func (e *RawNamedExpression) Clone() Expression {

@@ -6,13 +6,15 @@ import (
 
 	"github.com/Nigel2392/go-django/djester/testdb"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
 func TestStringExprSQLGeneration(t *testing.T) {
 	s := expr.String("SELECT * FROM table")
-	var sb strings.Builder
-	args := s.SQL(&sb)
+	var sb builder.BaseBuilder
+	s.SQL(&sb)
+	args := sb.Vars
 	if sb.String() != "SELECT * FROM table" {
 		t.Errorf("Unexpected StringExpr output: %s", sb.String())
 	}
@@ -26,7 +28,7 @@ func TestFieldExprSQLGeneration(t *testing.T) {
 	info := getTestInfo()
 	f := expr.Field("Name")
 	resolved := f.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`name`")) {
 		t.Errorf("Unexpected FieldExpr output: %s", sb.String())
@@ -38,8 +40,9 @@ func TestValueExprResolve(t *testing.T) {
 	info := getTestInfo()
 	v := expr.Value("hello")
 	resolved := v.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	expectedSQL := fixSQL(info, "?")
 	if testdb.ENGINE == "postgres" {
 		expectedSQL = fixSQL(info, "?::TEXT")
@@ -103,15 +106,16 @@ func TestValuesCoverage(t *testing.T) {
 	info := getTestInfo()
 	v := expr.Values(1, 2, 3)
 	v2 := v.Clone()
-	
+
 	resolved := v2.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
-	
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
+
 	if len(args) != 3 {
 		t.Errorf("Expected 3 args, got %d", len(args))
 	}
-	
+
 	// Also test unhappy path where values are empty
 	defer func() {
 		if r := recover(); r == nil {

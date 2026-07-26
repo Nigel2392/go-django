@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func Q(fieldLookup LookupFilter, value ...any) *ExprNode {
@@ -34,7 +36,7 @@ func Or[T any](exprs ...T) *ExprGroup {
 }
 
 type ExprNode struct {
-	sql    func(sb *strings.Builder) []any
+	sql    func(sb builder.Builder)
 	args   []any
 	not    bool
 	field  NamedExpression
@@ -77,17 +79,17 @@ func (e *ExprNode) Resolve(inf *ExpressionInfo) Expression {
 	return nE
 }
 
-func (e *ExprNode) SQL(sb *strings.Builder) []any {
+func (e *ExprNode) SQL(sb builder.Builder) {
 	if e.not {
 		sb.WriteString("NOT (")
 	}
 
-	var args = e.sql(sb)
+	e.sql(sb)
 
 	if e.not {
 		sb.WriteString(")")
 	}
-	return args
+
 }
 
 func (e *ExprNode) Not(not bool) ClauseExpression {
@@ -134,14 +136,13 @@ type ExprGroup struct {
 	wrap     bool
 }
 
-func (g *ExprGroup) SQL(sb *strings.Builder) []any {
+func (g *ExprGroup) SQL(sb builder.Builder) {
 	if g.not {
 		sb.WriteString("NOT ")
 	}
 	if g.wrap {
 		sb.WriteString("(")
 	}
-	var args = make([]any, 0)
 	for i, child := range g.children {
 		if i > 0 {
 			if g.op != "" {
@@ -151,12 +152,11 @@ func (g *ExprGroup) SQL(sb *strings.Builder) []any {
 			}
 		}
 
-		args = append(args, child.SQL(sb)...)
+		child.SQL(sb)
 	}
 	if g.wrap {
 		sb.WriteString(")")
 	}
-	return args
 }
 
 func (g *ExprGroup) Not(not bool) ClauseExpression {
@@ -285,11 +285,11 @@ func (l *logicalChainExpr) FieldName() string {
 	return ""
 }
 
-func (l *logicalChainExpr) SQL(sb *strings.Builder) []any {
+func (l *logicalChainExpr) SQL(sb builder.Builder) {
 	if len(l.inner) == 0 {
-		panic(fmt.Errorf("SQL logicalChainExpr has no inner expressions"))
+		sb.AddError(fmt.Errorf("SQL logicalChainExpr has no inner expressions"))
+		return
 	}
-	var args = make([]any, 0)
 	//if l.field != nil {
 	//	if l.field.SQLText != "" {
 	//		sb.WriteString(l.field.SQLText)
@@ -300,9 +300,8 @@ func (l *logicalChainExpr) SQL(sb *strings.Builder) []any {
 	//	args = append(args, l.field.SQLArgs...)
 	//}
 	for _, inner := range l.inner {
-		args = append(args, inner.SQL(sb)...)
+		inner.SQL(sb)
 	}
-	return args
 }
 
 func (l *logicalChainExpr) Clone() Expression {

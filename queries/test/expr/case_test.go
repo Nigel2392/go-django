@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nigel2392/go-django/djester/testdb"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func TestCaseWhenSQL(t *testing.T) {
@@ -14,9 +15,10 @@ func TestCaseWhenSQL(t *testing.T) {
 	w := expr.When(expr.Raw("![Age] = ?", 18)).Then("adult")
 	c := expr.Case(w, expr.Value("minor"))
 	resolved := c.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
 	sql := sb.String()
+	args := sb.Vars
 
 	t.Logf("Generated SQL: %q", sql)
 
@@ -38,9 +40,10 @@ func TestCaseWhenComplex(t *testing.T) {
 	w := expr.When(f1).Then("adult")
 	c := expr.Case(w, expr.Value("minor"))
 	resolved := c.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
 	sql := sb.String()
+	args := sb.Vars
 
 	expectedSQL := "CASE WHEN `test_model`.`age` > ? THEN ? ELSE ? END"
 	if testdb.ENGINE == "postgres" {
@@ -59,7 +62,7 @@ func TestCaseNoDefault(t *testing.T) {
 	w := expr.When(expr.Q("Age__gt", 18)).Then("adult")
 	c := expr.Case(w)
 	resolved := c.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	sql := sb.String()
 

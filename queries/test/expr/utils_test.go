@@ -3,7 +3,9 @@ package expr_test
 import (
 	"strings"
 	"testing"
+
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -15,8 +17,9 @@ func TestUtilsExpressSQL1(t *testing.T) {
 		t.Fatalf("Expected 1 expression, got %d", len(ce))
 	}
 	resolved := ce[0].Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`age` > ?")) {
 		t.Errorf("Unexpected Express SQL: %s", sb.String())
 	}
@@ -36,8 +39,9 @@ func TestUtilsExpressSQL2(t *testing.T) {
 		t.Fatalf("Expected 1 expression, got %d", len(ce))
 	}
 	resolved := ce[0].Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`name` = ?")) {
 		t.Errorf("Unexpected Express Map SQL: %s", sb.String())
 	}
@@ -57,7 +61,7 @@ func TestUtilsExpressMultiple(t *testing.T) {
 // Happy Path 2
 func TestUtilsExpressMapMultiple(t *testing.T) {
 	ce := expr.Express(map[string]any{
-		"Age": 18,
+		"Age":  18,
 		"Name": "John",
 	})
 	if len(ce) != 2 {

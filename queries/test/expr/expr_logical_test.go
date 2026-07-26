@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func TestLogicalQ(t *testing.T) {
@@ -12,8 +13,9 @@ func TestLogicalQ(t *testing.T) {
 	q := expr.Q("Name", "John")
 	resolved := q.Resolve(info)
 
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if sb.String() != fixSQL(info, "`test_model`.`name` = ?") {
 		t.Errorf("Unexpected SQL output for basic Q: %s", sb.String())
 	}
@@ -27,8 +29,9 @@ func TestLogicalAndChaining(t *testing.T) {
 	q := expr.And(expr.Q("Age__gt", 18), expr.Q("Name", "John"))
 	resolved := q.Resolve(info)
 
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 
 	if !strings.Contains(sql, fixSQL(info, "`test_model`.`age` > ?")) || !strings.Contains(sql, "AND") || !strings.Contains(sql, fixSQL(info, "`test_model`.`name` = ?")) {
@@ -44,7 +47,7 @@ func TestLogicalNot(t *testing.T) {
 	q := expr.Q("Name", "John").Not(true)
 	resolved := q.Resolve(info)
 
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	sql := sb.String()
 
@@ -92,7 +95,7 @@ func TestLogicalOperatorsCoverage(t *testing.T) {
 	info := getTestInfo()
 	gAnd := g.And(expr.Q("Score", 100))
 	resolvedAnd := gAnd.Resolve(info)
-	var sbAnd strings.Builder
+	var sbAnd builder.BaseBuilder
 	resolvedAnd.SQL(&sbAnd)
 	if !strings.Contains(sbAnd.String(), "AND") {
 		t.Errorf("Expected AND, got %s", sbAnd.String())
@@ -100,7 +103,7 @@ func TestLogicalOperatorsCoverage(t *testing.T) {
 
 	gOr := g.Or(expr.Q("Score", 100))
 	resolvedOr := gOr.Resolve(info)
-	var sbOr strings.Builder
+	var sbOr builder.BaseBuilder
 	resolvedOr.SQL(&sbOr)
 	if !strings.Contains(sbOr.String(), "OR") {
 		t.Errorf("Expected OR, got %s", sbOr.String())
@@ -130,7 +133,7 @@ func TestLogicalScope(t *testing.T) {
 	chain := expr.Logical("Age")
 	q := chain.Scope(expr.EQ, expr.Q("Name", "John"))
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`age` = ")) || !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`name`")) {
 		t.Errorf("Expected Scope to contain both fields, got: %s", sb.String())
@@ -164,7 +167,7 @@ func TestLogicalOpsMethods(t *testing.T) {
 		chain := expr.Logical("Age")
 		opExpr := tc.fn(chain, v1)
 		resolved := opExpr.Resolve(info)
-		var sb strings.Builder
+		var sb builder.BaseBuilder
 		resolved.SQL(&sb)
 		if !strings.Contains(sb.String(), tc.expected) {
 			t.Errorf("Expected %s, got %s", tc.expected, sb.String())
@@ -175,7 +178,7 @@ func TestLogicalOpsMethods(t *testing.T) {
 	chain := expr.Logical("Age")
 	bnot := chain.BITNOT(nil)
 	resolved := bnot.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), "~") {
 		t.Errorf("Expected ~, got %s", sb.String())

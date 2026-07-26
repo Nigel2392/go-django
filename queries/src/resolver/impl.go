@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -169,14 +170,23 @@ func (rs *Resolver) ResolveExpression(e expr.Expression) expr.Expression {
 // ExpressionSQL resolves the expression and writes its' SQL output to `w`.
 //
 // The only returned errors are those from `w.Write`.
-func (rs *Resolver) ExpressionSQL(w io.Writer, e expr.Expression) ([]any, error) {
+func (rs *Resolver) ExpressionSQL(w io.Writer, e expr.Expression) error {
 	if rs.exprInfo == nil {
 		rs.exprInfo = rs.compiler.ExpressionInfo(rs)
 	}
 
-	sb := new(strings.Builder)
+	sb, ok := w.(*builder.BaseBuilder)
+	if !ok {
+		sb = new(builder.BaseBuilder)
+	}
+
 	e = e.Resolve(rs.exprInfo)
-	a := e.SQL(sb)
-	_, err := w.Write([]byte(sb.String()))
-	return a, err
+	e.SQL(sb)
+
+	if !ok {
+		_, err := w.Write([]byte(sb.String()))
+		return err
+	}
+
+	return nil
 }

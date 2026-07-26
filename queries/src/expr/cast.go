@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 type CastType uint
@@ -155,9 +156,9 @@ func (c *castExpr) Resolve(inf *ExpressionInfo) Expression {
 	return nE
 }
 
-func (c *castExpr) SQL(sb *strings.Builder) []any {
-	var colBuilder strings.Builder
-	var args = c.col.SQL(&colBuilder)
+func (c *castExpr) SQL(sb builder.Builder) {
+	var colBuilder builder.BaseBuilder
+	c.col.SQL(&colBuilder)
 
 	// FormatCount includes the column string itself.
 	// So the extra arguments needed is FormatCount - 1.
@@ -172,7 +173,8 @@ func (c *castExpr) SQL(sb *strings.Builder) []any {
 	}
 
 	fmt.Fprintf(sb, c.funcEntry.SQL, sprintParams...)
-	return args
+	sb.AddVar(colBuilder.Vars...)
+	sb.AddError(colBuilder.Errors...)
 }
 
 func Cast(typ CastType, col any, value ...any) NamedExpression {

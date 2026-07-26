@@ -5,9 +5,9 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
@@ -47,10 +47,10 @@ func (q *queryField) FieldDefinitions() attrs.Definitions {
 func (q *queryField) Alias() string { return q.name }
 func (q *queryField) SQL(_ []string, inf *expr.ExpressionInfo) (string, []any) {
 	// chain is not used as it should already be fully present, used internally in QS.
-	var sqlBuilder = &strings.Builder{}
+	var sqlBuilder = new(builder.BaseBuilder)
 	var expr = q.expr.Resolve(inf)
-	var args = expr.SQL(sqlBuilder)
-	return sqlBuilder.String(), args
+	expr.SQL(sqlBuilder)
+	return sqlBuilder.String(), sqlBuilder.Vars
 }
 
 func (q *queryField) Expression() expr.Expression {
@@ -102,10 +102,10 @@ type exprField struct {
 
 func (e *exprField) SQL(_ []string, inf *expr.ExpressionInfo) (string, []any) {
 	// chain is not used as it should already be fully present, used internally in QS.
-	var sqlBuilder = &strings.Builder{}
+	var sqlBuilder = new(builder.BaseBuilder)
 	var expr = e.expr.Resolve(inf)
-	var args = expr.SQL(sqlBuilder)
-	return sqlBuilder.String(), args
+	expr.SQL(sqlBuilder)
+	return sqlBuilder.String(), sqlBuilder.Vars
 }
 
 type aliasExprField struct {

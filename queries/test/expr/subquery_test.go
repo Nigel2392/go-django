@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 type mockFieldResolver struct {
@@ -34,8 +35,9 @@ func TestSubqueryOuterRefSQLGen1(t *testing.T) {
 	ref := expr.OuterRef("Age")
 	resolved := ref.Resolve(subInfo)
 
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 
 	if !strings.Contains(sql, fixSQL(parentInfo, "`test_model`.`age`")) {
@@ -60,7 +62,7 @@ func TestSubqueryOuterRefSQLGen2(t *testing.T) {
 	ref := expr.OuterRef("alias.Name")
 	resolved := ref.Resolve(subInfo)
 
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	sql := sb.String()
 

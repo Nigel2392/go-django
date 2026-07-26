@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -12,7 +13,7 @@ func TestRawExprSQL(t *testing.T) {
 	info := getTestInfo()
 	r := expr.Raw("![Age] = ?", 18)
 	resolved := r.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`age` = ?")) {
 		t.Errorf("Unexpected Raw SQL generation: %s", sb.String())
@@ -24,8 +25,9 @@ func TestFExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("![Age] + ?[1] + ![Score]", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`test_model`.`age` + ? + `test_model`.`score`")) {
 		t.Errorf("Unexpected F SQL generation: %s", sql)
@@ -40,8 +42,9 @@ func TestModelTableExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("#[expr_test.OtherTestModel.Name] + ?[1] + ![Score]", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`other_test_model`.`name` + ? + `test_model`.`score`")) {
 		t.Errorf("Unexpected F SQL generation: %s", sql)
@@ -56,8 +59,9 @@ func TestModelTableAliasExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("#[t1.expr_test.OtherTestModel.Name] + ?[1] + ![Score]", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`t1`.`name` + ? + `test_model`.`score`")) {
 		t.Errorf("Unexpected F SQL generation: %s", sql)
@@ -72,8 +76,9 @@ func TestModelTableOtherExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("#[expr_test.OtherTestModel.TestModel.Name] + ?[1] + ![Score]", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`T_test_model`.`name` + ? + `test_model`.`score`")) {
 		t.Errorf("Unexpected F SQL generation: %s", sql)
@@ -88,8 +93,9 @@ func TestModelTableOtherBackrefExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("#[expr_test.OtherTestModel.TestModel.OtherTestModelSet.Name] #[t1.expr_test.OtherTestModel.TestModel.OtherTestModelSet.Name] #[t1.expr_test.OtherTestModel.Name] #[t1.expr_test.OtherTestModel.Name] #[t1.expr_test.OtherTestModel.Name] #[t1.expr_test.OtherTestModel.Name] TABLE(expr_test.OtherTestModel) + ?[1] + ![Score]", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`T1_other_test_model`.`name` `t1`.`name` `t1`.`name` `t1`.`name` `t1`.`name` `t1`.`name` `other_test_model` + ? + `test_model`.`score`")) {
 		t.Errorf("Unexpected F SQL generation: %s", sql)
@@ -103,8 +109,9 @@ func TestTableOtherExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("TABLE(expr_test.OtherTestModel) + ?[1] + ![Score]", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`other_test_model` + ? + `test_model`.`score`")) {
 		t.Errorf("Unexpected F SQL generation: %s", sql)
@@ -118,8 +125,9 @@ func TestTableOtherBackrefExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("![OtherTestModelSet.ID] == TABLE(OtherTestModelSet.TestModel) + ?[1] + ![Score]", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if expected := fixSQL(info, fixSQL(info, "`T_other_test_model`.`id` == `test_model` AS `T1_test_model` + ? + `test_model`.`score`")); !strings.Contains(sql, expected) {
 		t.Errorf("Unexpected F SQL generation: %s != %s", sql, expected)
@@ -133,8 +141,9 @@ func TestQuotesExprSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.F("'test_model.score' == ![Score] + ?", 3)
 	resolved := f.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`test_model`.`score` == `test_model`.`score` + ?")) {
 		t.Errorf("Unexpected F SQL generation: %s", sql)
@@ -160,7 +169,7 @@ func TestRawExprNot(t *testing.T) {
 	q := expr.Q("Age", 18)
 	notR := q.Not(true)
 	resolved := notR.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "NOT (`test_model`.`age` = ?)")) {
 		t.Errorf("Unexpected NOT Raw SQL: %s", sb.String())

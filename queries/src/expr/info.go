@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -214,6 +215,46 @@ func (inf *ExpressionLookupInfo) PatternOpRHS(op string, fmtArgs ...any) string 
 		return fmt.Sprintf(format, fmtArgs...)
 	}
 	panic(fmt.Errorf("unknown pattern operator %s: compiler does not support operator", op))
+}
+
+func (e *ExpressionLookupInfo) FormatLogicalOpRHSExpr(to builder.Builder, identifier string, resolvedEx ResolvedExpression) {
+	var lhsExpr builder.BaseBuilder
+	resolvedEx.SQL(&lhsExpr)
+	to.AddVar(lhsExpr.Vars...)
+	to.AddError(lhsExpr.Errors...)
+	to.WriteString(e.FormatLookupCol(
+		identifier, lhsExpr.String(),
+	))
+}
+
+func (e *ExpressionLookupInfo) FormatLookupExpr(to builder.Builder, identifier string, resolvedEx ResolvedExpression) {
+	var lhsExpr builder.BaseBuilder
+	resolvedEx.SQL(&lhsExpr)
+	to.AddVar(lhsExpr.Vars...)
+	to.AddError(lhsExpr.Errors...)
+	to.WriteString(e.FormatLookupCol(
+		identifier, lhsExpr.String(),
+	))
+}
+
+func (e *ExpressionLookupInfo) PatternOpRHSExpr(to builder.Builder, identifier string, resolvedEx ResolvedExpression) {
+	var expr builder.BaseBuilder
+	resolvedEx.SQL(&expr)
+	to.AddVar(expr.Vars...)
+	to.AddError(expr.Errors...)
+	to.WriteString(e.PatternOpRHS(
+		identifier, expr.String(),
+	))
+}
+
+func (e *ExpressionLookupInfo) FormatOpRHSExpr(to builder.Builder, op string, resolvedEx ResolvedExpression) {
+	var expr builder.BaseBuilder
+	resolvedEx.SQL(&expr)
+	to.AddVar(expr.Vars...)
+	to.AddError(expr.Errors...)
+	to.WriteString(e.FormatOpRHS(
+		op, expr.String(),
+	))
 }
 
 type LookupField interface {

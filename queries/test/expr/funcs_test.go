@@ -3,7 +3,9 @@ package expr_test
 import (
 	"strings"
 	"testing"
+
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -11,7 +13,7 @@ func TestFuncUpperSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.UPPER(expr.Field("Name"))
 	resolved := f.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if sql := sb.String(); !strings.Contains(sql, fixSQL(info, "UPPER(`test_model`.`name`)")) {
 		t.Errorf("Unexpected UPPER SQL: %s", sql)
@@ -23,7 +25,7 @@ func TestFuncLowerSQL(t *testing.T) {
 	info := getTestInfo()
 	f := expr.LOWER(expr.Field("Name"))
 	resolved := f.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if sql := sb.String(); !strings.Contains(sql, fixSQL(info, "LOWER(`test_model`.`name`)")) {
 		t.Errorf("Unexpected LOWER SQL: %s", sql)
@@ -35,7 +37,7 @@ func TestFuncLengthResolve(t *testing.T) {
 	info := getTestInfo()
 	f := expr.LENGTH(expr.Field("Name"))
 	resolved := f.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if sql := sb.String(); !strings.Contains(sql, fixSQL(info, "LENGTH(`test_model`.`name`)")) {
 		t.Errorf("Unexpected LENGTH SQL: %s", sql)

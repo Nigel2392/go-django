@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -18,8 +19,9 @@ func TestLookupRegistrySQLGeneration1(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Age__custom_op", []int{42})
 	resolved := q.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`age`")) || !strings.Contains(sb.String(), "IN") {
 		t.Errorf("Unexpected Custom Lookup SQL: %s", sb.String())
 	}
@@ -38,7 +40,7 @@ func TestLookupRegistrySQLGeneration2(t *testing.T) {
 	info := getTestInfo()
 	q := expr.Q("Name__is_cool", []string{"yes", "no"})
 	resolved := q.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	if !strings.Contains(sb.String(), fixSQL(info, "`test_model`.`name`")) || !strings.Contains(sb.String(), "IN") {
 		t.Errorf("Unexpected Custom Lookup SQL: %s", sb.String())
@@ -57,7 +59,7 @@ func TestLookupRegistryHappyPath1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get lookup: %v", err)
 	}
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	lookupFunc(&sb)
 	if sb.String() == "" {
 		t.Errorf("Expected SQL from lookup")

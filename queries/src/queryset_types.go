@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -142,8 +143,7 @@ type FieldInfo[FieldType attrs.FieldDefinition] struct {
 	Through     *FieldInfo[FieldType]
 }
 
-func (f *FieldInfo[T]) WriteFields(sb *strings.Builder, inf *expr.ExpressionInfo) []any {
-	var args = make([]any, 0, len(f.Fields))
+func (f *FieldInfo[T]) WriteFields(sb *builder.BaseBuilder, inf *expr.ExpressionInfo) {
 	var written bool
 
 	// If the field has a through relation, write the fields of the through relation first
@@ -155,13 +155,12 @@ func (f *FieldInfo[T]) WriteFields(sb *strings.Builder, inf *expr.ExpressionInfo
 				sb.WriteString(", ")
 			}
 
-			var a, _, ok = f.Through.WriteField(sb, inf, field, false)
+			var _, ok = f.Through.WriteField(sb, inf, field, false)
 			written = ok || written
 			if !ok {
 				continue
 			}
 
-			args = append(args, a...)
 		}
 	}
 
@@ -170,19 +169,16 @@ func (f *FieldInfo[T]) WriteFields(sb *strings.Builder, inf *expr.ExpressionInfo
 			sb.WriteString(", ")
 		}
 
-		var a, _, ok = f.WriteField(sb, inf, field, false)
+		var _, ok = f.WriteField(sb, inf, field, false)
 		written = ok || written
 		if !ok {
 			continue
 		}
 
-		args = append(args, a...)
 	}
-
-	return args
 }
 
-func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo, field attrs.FieldDefinition, forUpdate bool) (args []any, isSQL, written bool) {
+func (f *FieldInfo[T]) WriteField(sb *builder.BaseBuilder, inf *expr.ExpressionInfo, field attrs.FieldDefinition, forUpdate bool) (isSQL, written bool) {
 	var fieldAlias string
 	if ve, ok := field.(AliasField); ok && !forUpdate {
 		fieldAlias = ve.Alias()
@@ -199,7 +195,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 	if ve, ok := field.(VirtualField); ok {
 		var rawSql, a = ve.SQL(f.Chain, inf)
 		if rawSql == "" {
-			return nil, true, false
+			return true, false
 		}
 
 		col.RawSQL = rawSql
@@ -214,9 +210,9 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 
 		var fmtSql, extra = inf.FormatField(inf.Resolver.Alias(), col)
 		sb.WriteString(fmtSql)
-		args = append(args, a...)
-		args = append(args, extra...)
-		return args, true, true
+		sb.AddVar(a...)
+		sb.AddVar(extra...)
+		return true, true
 	}
 
 	if !forUpdate {
@@ -229,7 +225,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 	var fmtSql, _ = inf.FormatField(inf.Resolver.Alias(), col)
 	sb.WriteString(fmtSql)
 
-	return []any{}, false, true
+	return false, true
 }
 
 func generateFieldInfoKey[FieldType attrs.FieldDefinition](field *FieldInfo[FieldType]) (string, error) {

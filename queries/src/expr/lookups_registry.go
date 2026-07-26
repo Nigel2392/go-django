@@ -4,7 +4,8 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
-	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 func registerToMap[T _sharedLookupTransform](local map[reflect.Type]map[string]T, global map[string]T, lookup T) (map[reflect.Type]map[string]T, map[string]T) {
@@ -117,7 +118,7 @@ func (r *lookupRegistry) HasTransform(transformName string, driver driver.Driver
 	return ok
 }
 
-func (r *lookupRegistry) Lookup(inf *ExpressionInfo, transforms []string, lookupName string, lhs any, args []any) (func(sb *strings.Builder) []any, error) {
+func (r *lookupRegistry) Lookup(inf *ExpressionInfo, transforms []string, lookupName string, lhs any, args []any) (func(sb builder.Builder), error) {
 	var lookup, ok = retrieveFromMap(r.lookupsLocal, r.lookupsGlobal, lookupName, inf.Driver)
 	if !ok || lookup == nil {
 		return nil, fmt.Errorf(

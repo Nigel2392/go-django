@@ -1,7 +1,6 @@
 package expr
 
 import (
-	"bytes"
 	"fmt"
 	"maps"
 	"regexp"
@@ -11,6 +10,7 @@ import (
 	"unicode"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
@@ -34,7 +34,7 @@ type StatementParser interface {
 	RawText(in []string) string
 
 	// Resolve resolves the statement parser, given the matched input, the expression info, the arguments and any additional data
-	Resolve(nodesIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error)
+	Resolve(sb builder.Builder, nodesIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error
 }
 
 type statement struct {
@@ -74,13 +74,15 @@ var PARSER = &statement{
 		rawtext: func(in []string) string {
 			return in[1]
 		},
-		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+		resolve: func(sb builder.Builder, nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error {
 			var fieldName = in[1]
 			info.SupportsWhereAlias = false
 			info.SupportsAsExpr = false
 
 			var resolvedField = info.ResolveExpressionField(fieldName)
-			return resolvedField.SQLText, resolvedField.SQLArgs, nil
+			sb.WriteString(resolvedField.SQLText)
+			sb.AddVar(resolvedField.SQLArgs...)
+			return nil
 		},
 	},
 	Quotes: &statementParser{
@@ -89,15 +91,8 @@ var PARSER = &statement{
 		rawtext: func(in []string) string {
 			return in[1]
 		},
-		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
-			var (
-				sb   strings.Builder
-				flds = strings.Split(in[1], ".")
-			)
-
-			// for each dot in the path we add 2 quotes
-			sb.Grow(len(in[1]) + (len(flds) * 2))
-
+		resolve: func(sb builder.Builder, nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error {
+			var flds = strings.Split(in[1], ".")
 			for idx, field := range flds {
 				if idx != 0 {
 					sb.WriteRune('.')
@@ -105,7 +100,7 @@ var PARSER = &statement{
 				sb.WriteString(info.QuoteIdentifier(field))
 			}
 
-			return sb.String(), []any{}, nil
+			return nil
 		},
 	},
 	ModelField: &statementParser{
@@ -114,7 +109,7 @@ var PARSER = &statement{
 		rawtext: func(in []string) string {
 			return in[1]
 		},
-		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+		resolve: func(sb builder.Builder, nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error {
 			var (
 				tableAlias = in[2]              // table alias
 				modelPkg   = in[3]              // model pkg
@@ -124,7 +119,7 @@ var PARSER = &statement{
 
 			contentType := contenttypes.DefinitionForPackage(modelPkg, modelName)
 			if contentType == nil {
-				return "", []any{}, errors.NoTableName.Wrapf(
+				return errors.NoTableName.Wrapf(
 					"Could not find content type for %s.%s", modelPkg, modelName,
 				)
 			}
@@ -133,7 +128,9 @@ var PARSER = &statement{
 			info.SupportsWhereAlias = false
 			info.SupportsAsExpr = false
 			resolvedField := info.ResolveExpressionField(fieldName)
-			return resolvedField.SQLText, resolvedField.SQLArgs, nil
+			sb.WriteString(resolvedField.SQLText)
+			sb.AddVar(resolvedField.SQLArgs...)
+			return nil
 		},
 	},
 	Value: &statementParser{
@@ -142,17 +139,17 @@ var PARSER = &statement{
 		rawtext: func(in []string) string {
 			return "?"
 		},
-		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+		resolve: func(sb builder.Builder, nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error {
 			var valIdx = 0
 			if len(in) > 1 && in[1] != "" {
 				var err error
 				valIdx, err = strconv.Atoi(in[1])
 				if err != nil {
-					return "", []any{}, fmt.Errorf("invalid index %q in statement: %w", in[1], err)
+					return fmt.Errorf("invalid index %q in statement: %w", in[1], err)
 				}
 
 				if valIdx == 0 {
-					return "", []any{}, fmt.Errorf("invalid index %q in statement, use 1-based list indexing", in[1])
+					return fmt.Errorf("invalid index %q in statement, use 1-based list indexing", in[1])
 				}
 
 				valIdx-- // convert to 0-based index
@@ -160,17 +157,18 @@ var PARSER = &statement{
 				valIdx = typIndex
 			}
 			if valIdx < 0 || valIdx >= len(args) {
-				return "", nil, fmt.Errorf("index %d out of range in statement for %d arguments", valIdx, len(args))
+				return fmt.Errorf("index %d out of range in statement for %d arguments", valIdx, len(args))
 			}
 			var val = args[valIdx]
 
 			if expr, ok := val.(Expression); ok {
-				var exprStr strings.Builder
-				var exprParams = expr.Resolve(info).SQL(&exprStr)
-				return exprStr.String(), exprParams, nil
+				expr.Resolve(info).SQL(sb)
+				return nil
 			}
 
-			return "?", []any{val}, nil
+			sb.WriteRune('?')
+			sb.AddVar(val)
+			return nil
 		},
 	},
 	Expr: &expressionParser{
@@ -180,14 +178,14 @@ var PARSER = &statement{
 			rawtext: func(in []string) string {
 				return in[1]
 			},
-			resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+			resolve: func(sb builder.Builder, nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error {
 				if data == nil {
-					return "", nil, fmt.Errorf("expression data is nil for expr statement")
+					return fmt.Errorf("expression data is nil for expr statement")
 				}
 
 				var exprData, ok = data.(*expressionData)
 				if !ok {
-					return "", nil, fmt.Errorf("invalid expression data type for expr statement")
+					return fmt.Errorf("invalid expression data type for expr statement")
 				}
 
 				var (
@@ -200,10 +198,10 @@ var PARSER = &statement{
 				if unicode.IsDigit(rune(exprId[0])) {
 					var idx, err = strconv.Atoi(exprId)
 					if err != nil {
-						return "", nil, fmt.Errorf("invalid expression index %q: %w", exprId, err)
+						return fmt.Errorf("invalid expression index %q: %w", exprId, err)
 					}
 					if idx < 0 || idx >= len(exprData._list) {
-						return "", nil, fmt.Errorf("expression index %d out of range for %d expressions", idx, len(exprData._list))
+						return fmt.Errorf("expression index %d out of range for %d expressions", idx, len(exprData._list))
 					}
 
 					expr = exprData._list[idx]
@@ -215,16 +213,14 @@ var PARSER = &statement{
 				// assume the identifier is a name for an expression
 				expr, ok = exprData._map[exprId]
 				if !ok {
-					return "", nil, fmt.Errorf("expression %q not found in data", exprId)
+					return fmt.Errorf("expression %q not found in data", exprId)
 				}
 
 			buildExpression:
-				var exprStr strings.Builder
-				var exprParams = expr.
+				expr.
 					Resolve(info).
-					SQL(&exprStr)
-
-				return exprStr.String(), exprParams, nil
+					SQL(sb)
+				return nil
 			},
 		},
 	},
@@ -235,17 +231,18 @@ var PARSER = &statement{
 		rawtext: func(in []string) string {
 			return in[1]
 		},
-		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+		resolve: func(sb builder.Builder, nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error {
 			var fieldPath = in[1]
 			var asAlias = in[2]
 			if strings.EqualFold(fieldPath, SELF_TABLE) {
-				return info.QuoteIdentifier(info.Resolver.Meta().TableName()), []any{}, nil
+				sb.WriteString(info.QuoteIdentifier(info.Resolver.Meta().TableName()))
+				return nil
 			}
 
 			var _, field, _, err = info.Resolver.Resolve(fieldPath, info)
 			if err != nil {
-				var retErr = func(errs ...error) (string, []any, error) {
-					return "", []any{}, fmt.Errorf(
+				var retErr = func(errs ...error) error {
+					return fmt.Errorf(
 						"error when walking fields: %w", errors.Join(errs...),
 					)
 				}
@@ -271,15 +268,13 @@ var PARSER = &statement{
 				)
 
 				if len(split) == 2 {
-					var sb = new(strings.Builder)
 					sb.WriteString(info.QuoteIdentifier(defs.TableName()))
 
 					if asAlias != "" {
 						sb.WriteString(" AS ")
 						sb.WriteString(info.QuoteIdentifier(asAlias))
 					}
-
-					return sb.String(), []any{}, nil
+					return nil
 				}
 
 				pathClone := strings.Join(split[2:], ".")
@@ -294,7 +289,7 @@ var PARSER = &statement{
 
 			var rel = field.Rel()
 			if rel == nil {
-				return "", []any{}, fmt.Errorf(
+				return fmt.Errorf(
 					"field %q is not a relation, cannot resolve table name", fieldPath,
 				)
 			}
@@ -315,7 +310,11 @@ var PARSER = &statement{
 				))
 			}
 
-			return fmt.Sprintf("%s AS %s", lhs_tableName, rhs_tableAlias), []any{}, nil
+			sb.WriteString(lhs_tableName)
+			sb.WriteString(" AS ")
+			sb.WriteString(rhs_tableAlias)
+
+			return nil
 		},
 	},
 }
@@ -325,7 +324,7 @@ type statementParser struct {
 	pattern     string
 	processData func(data any) any // function to process the data, if needed
 	rawtext     func(in []string) string
-	resolve     func(index int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error)
+	resolve     func(sb builder.Builder, index int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error
 
 	_compiledAbs *regexp.Regexp
 	_compiled    *regexp.Regexp // compiled regex, used for matching
@@ -447,11 +446,11 @@ func (inf *statementParser) RawText(in []string) string {
 	return inf.rawtext(in)
 }
 
-func (inf *statementParser) Resolve(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+func (inf *statementParser) Resolve(sb builder.Builder, nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) error {
 	if inf.resolve == nil {
 		panic(fmt.Errorf("resolve function not defined for statement type %q", inf.typ))
 	}
-	return inf.resolve(nodeIndex, typIndex, in, info, args, data)
+	return inf.resolve(sb, nodeIndex, typIndex, in, info, args, data)
 }
 
 type statementBuilder struct {
@@ -511,9 +510,8 @@ func (r *nodeResolver) resolve(inf *ExpressionInfo, args []any) (string, []any, 
 		}
 	}
 
-	var stmt bytes.Buffer
 	var lastEnd = 0
-	var argList = make([]any, 0, len(params))
+	var builder = builder.BaseBuilder{}
 	var seen = make(map[string]int, len(r.nodes))
 	for nodeIdx, node := range r.nodes {
 		var nodeType = node.info.Type()
@@ -525,24 +523,20 @@ func (r *nodeResolver) resolve(inf *ExpressionInfo, args []any) (string, []any, 
 			return "", nil, fmt.Errorf("failed to match statement %q with pattern %q", inStmt, pattern.String())
 		}
 
-		var resolved, resolvedArgs, err = node.info.Resolve(nodeIdx, seenIdx, match, inf, params, data[nodeType])
+		builder.Grow(node.start - lastEnd)
+		builder.WriteString(r.stmt[lastEnd:node.start])
+
+		var err = node.info.Resolve(&builder, nodeIdx, seenIdx, match, inf, params, data[nodeType])
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to resolve node[%d.%d] %q: %w", nodeIdx, seenIdx, inStmt, err)
 		}
 
-		argList = append(
-			argList, resolvedArgs...,
-		)
-
-		stmt.Grow(node.start - lastEnd + len(resolved))
-		stmt.WriteString(r.stmt[lastEnd:node.start])
-		stmt.WriteString(resolved)
 		lastEnd = node.end
 		seen[nodeType] = seenIdx + 1
 	}
 
-	stmt.WriteString(r.stmt[lastEnd:]) // append remaining text
-	return stmt.String(), argList, nil
+	builder.WriteString(r.stmt[lastEnd:]) // append remaining text
+	return builder.String(), builder.Vars, builder.GetError()
 }
 
 func (b *statementBuilder) nodes(stmt string) *nodeResolver {

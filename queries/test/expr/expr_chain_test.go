@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
 // SQL Generation 1
@@ -12,7 +13,7 @@ func TestExprChainAndSQL(t *testing.T) {
 	info := getTestInfo()
 	c := expr.Chain(expr.Field("Age"), expr.EQ, expr.Field("Name"))
 	resolved := c.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`test_model`.`age` = `test_model`.`name`")) {
@@ -25,7 +26,7 @@ func TestExprChainOrSQL(t *testing.T) {
 	info := getTestInfo()
 	c := expr.Chain(expr.Field("Age"), expr.NE, expr.Field("Name"))
 	resolved := c.Resolve(info)
-	var sb strings.Builder
+	var sb builder.BaseBuilder
 	resolved.SQL(&sb)
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`test_model`.`age` != `test_model`.`name`")) {
@@ -48,8 +49,9 @@ func TestExprChainCondition(t *testing.T) {
 	info := getTestInfo()
 	c := expr.Chain(expr.Field("Age"), expr.EQ, expr.Value(18))
 	resolved := c.Resolve(info)
-	var sb strings.Builder
-	args := resolved.SQL(&sb)
+	var sb builder.BaseBuilder
+	resolved.SQL(&sb)
+	args := sb.Vars
 	sql := sb.String()
 	if !strings.Contains(sql, fixSQL(info, "`test_model`.`age` = ?")) {
 		t.Errorf("Unexpected Chain Condition output: %s", sql)
