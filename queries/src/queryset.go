@@ -105,11 +105,9 @@ type Preload struct {
 	ParentPath string
 	Chain      []string
 	Rel        attrs.Relation
-	Primary    attrs.FieldDefinition
 	Model      attrs.Definer
 	QuerySet   *QuerySet[attrs.Definer]
 	Field      attrs.FieldDefinition
-	Results    *PreloadResults
 }
 
 type QuerySetPreloads struct {
@@ -140,11 +138,9 @@ func (p *QuerySetPreloads) Copy() *QuerySetPreloads {
 			ParentPath: preload.ParentPath,
 			Chain:      preload.Chain,
 			Rel:        preload.Rel,
-			Primary:    preload.Primary,
 			Model:      preload.Model,
 			QuerySet:   querySet,
 			Field:      preload.Field,
-			Results:    preload.Results,
 		}
 
 		mapping[preload.Path] = preloads[i]
@@ -1632,7 +1628,6 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 					Rel:        curr.Prev.FieldRel,
 					Model:      curr.Model,
 					Field:      curr.Prev.Field,
-					Primary:    defs.Primary(),
 				}
 
 				// Set the QuerySet for the preload

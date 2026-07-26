@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 // orderedSet is a lightweight ordered unique collection.
@@ -251,7 +250,9 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 			pk = attrs.PrimaryKey(ctx, prim)
 		}
 
-		r.rootMapping[pk] = uniqueValue
+		if len(r.preloadMapping) > 0 {
+			r.rootMapping[pk] = uniqueValue
+		}
 	}
 
 	var root = &rootObject{
@@ -267,18 +268,20 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 
 	r.objects.set(uniqueValue, root)
 
-	if _, ok := r.preloadMapping[""]; ok {
-		var seenM, ok = r.seen[""]
-		if !ok {
-			seenM = &seenObject{
-				pks:     make([]any, 0, 1),
-				objects: make(map[any][]*object, 0),
+	if len(r.preloadMapping) > 0 {
+		if _, ok := r.preloadMapping[""]; ok {
+			var seenM, ok = r.seen[""]
+			if !ok {
+				seenM = &seenObject{
+					pks:     make([]any, 0, 1),
+					objects: make(map[any][]*object, 0),
+				}
+				r.seen[""] = seenM
 			}
-			r.seen[""] = seenM
-		}
 
-		seenM.pks = append(seenM.pks, pk)
-		seenM.objects[pk] = append(seenM.objects[pk], root.object)
+			seenM.pks = append(seenM.pks, pk)
+			seenM.objects[pk] = append(seenM.objects[pk], root.object)
+		}
 	}
 
 	return root
@@ -346,17 +349,19 @@ chainLoop:
 
 			// Store seen objects in map - this is later used for prefetching relations
 			// and deduplicating relations.
-			if _, ok := r.preloadMapping[part.chain]; ok {
-				var seenM, ok = r.seen[part.chain]
-				if !ok {
-					seenM = &seenObject{
-						pks:     make([]any, 0, 1),
-						objects: make(map[any][]*object, 0),
+			if len(r.preloadMapping) > 0 {
+				if _, ok := r.preloadMapping[part.chain]; ok {
+					var seenM, ok = r.seen[part.chain]
+					if !ok {
+						seenM = &seenObject{
+							pks:     make([]any, 0, 1),
+							objects: make(map[any][]*object, 0),
+						}
+						r.seen[part.chain] = seenM
 					}
-					r.seen[part.chain] = seenM
+					seenM.pks = append(seenM.pks, part.uniqueValue)
+					seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
 				}
-				seenM.pks = append(seenM.pks, part.uniqueValue)
-				seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
 			}
 		}
 
@@ -490,7 +495,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 					}
 
 					var val = attrs.PrimaryKey(ctx, field)
-					if fields.IsZero(val) {
+					if django_reflect.IsZero(val) {
 						zeroCount++
 						continue
 					}
@@ -534,24 +539,23 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 
 	subQueryset.internals.Limit = 0 // preload all objects
 	subQueryset.internals.Offset = 0
-	var count, preloadObjects, err = subQueryset.IterAll()
+	var _, preloadObjects, err = subQueryset.IterAll()
 	if err != nil {
 		return errors.Wrapf(
 			err, "failed to preload %s for %T", preload.Path, r.qs.internals.Model.Object,
 		)
 	}
 
-	var result = &PreloadResults{
-		rowsMap: make(map[any][]*Row[attrs.Definer], count),
-	}
-
-	var seenM, ok = r.seen[preload.Path]
-	if !ok {
-		seenM = &seenObject{
-			pks:     make([]any, 0, 1),
-			objects: make(map[any][]*object, 0),
+	var seenM *seenObject
+	if _, ok := r.preloadMapping[preload.Path]; ok {
+		seenM, ok = r.seen[preload.Path]
+		if !ok {
+			seenM = &seenObject{
+				pks:     make([]any, 0, 1),
+				objects: make(map[any][]*object, 0),
+			}
+			r.seen[preload.Path] = seenM
 		}
-		r.seen[preload.Path] = seenM
 	}
 
 	for row, err := range preloadObjects {
@@ -566,6 +570,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			primaryVal any
 			sourceVal  any
 		)
+
 		switch {
 		case relThrough == nil:
 			var sourceField, ok = rowDefs.Field(preload.Rel.Field().Name())
@@ -578,45 +583,15 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 
 			sourceVal = attrs.PrimaryKey(ctx, sourceField)
 			primaryVal = attrs.PrimaryKey(ctx, rowDefs.Primary())
-
-			if preload.Path == "" {
-				if sv, ok := r.rootMapping[sourceVal]; ok {
-					sourceVal = sv
-				}
-			}
-			// sourceVal = attrs.ToString(sourceVal)
-
-			if slice, ok := result.rowsMap[sourceVal]; ok {
-				result.rowsMap[sourceVal] = append(slice, row)
-			} else {
-				var rows = make([]*Row[attrs.Definer], 0, 1)
-				rows = append(rows, row)
-				result.rowsMap[sourceVal] = rows
-			}
-
 			parentObjs, parentOk = seenObj.objects[sourceVal]
 
 		default:
 			var defs = attrs.Define(ctx, row.Through)
 			var sourceField, _ = defs.Field(relThrough.SourceField())
 			sourceVal = attrs.PrimaryKey(ctx, sourceField)
-			if preload.Path == "" {
-				if sv, ok := r.rootMapping[sourceVal]; ok {
-					sourceVal = sv
-				}
-			}
-			// sourceVal = attrs.ToString(sourceVal)
 
 			var targetField, _ = defs.Field(relThrough.TargetField())
 			primaryVal = attrs.PrimaryKey(ctx, targetField)
-			if slice, ok := result.rowsMap[sourceVal]; ok {
-				result.rowsMap[sourceVal] = append(slice, row)
-			} else {
-				var rows = make([]*Row[attrs.Definer], 0, 1)
-				rows = append(rows, row)
-				result.rowsMap[sourceVal] = rows
-			}
-
 			parentObjs, parentOk = seenObj.objects[sourceVal]
 		}
 
@@ -642,11 +617,18 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			through:     row.Through,
 			fieldDefs:   rowDefs,
 			obj:         row.Object,
-			relations:   make(map[string]*objectRelation),
 		}
 
-		seenM.pks = append(seenM.pks, primaryVal)
-		seenM.objects[primaryVal] = append(seenM.objects[primaryVal], obj)
+		if seenM != nil {
+			seenM.pks = append(seenM.pks, primaryVal)
+			seenM.objects[primaryVal] = append(seenM.objects[primaryVal], obj)
+		}
+
+		if seenM != nil {
+			// we can skip making a new map if this obj is not expected to
+			// have any related models (i.e. no preload was given)
+			obj.relations = make(map[string]*objectRelation)
+		}
 
 		for _, parentObj := range parentObjs {
 			relationMap, ok := parentObj.relations[preload.FieldName]
@@ -661,21 +643,6 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			relationMap.objects.set(primaryVal, obj)
 		}
 	}
-
-	//preload.Results = result
-	//
-	//// chain example: "author.books.title" -> "author.books"
-	//var chainParts = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
-	//if existing, ok := r.preloads.Get(chainParts); ok {
-	//	// if the preload already exists, append the new preload to the existing one
-	//	existing = append(existing, preload)
-	//	r.preloads.Set(chainParts, existing)
-	//} else {
-	//	// otherwise, create a new slice with the preload
-	//	var p = make([]*Preload, 0, 1)
-	//	p = append(p, preload)
-	//	r.preloads.Set(chainParts, p)
-	//}
 
 	return nil
 }
@@ -775,25 +742,24 @@ func (r *rows[T]) compile(ctx context.Context) (count int, rowIter iter.Seq2[*Ro
 				return
 			}
 
-			var definer = obj.object.obj
-			if definer == nil {
+			if obj.object.obj == nil {
 				continue
 			}
 
 			// Annotate the object if it implements the Annotator interface
-			if annotator, ok := definer.(Annotator); ok {
+			if annotator, ok := obj.object.obj.(Annotator); ok {
 				annotator.Annotate(obj.annotations)
 			}
 
 			// If the definer implements ThroughModelSetter, we set the through model directly on the object.
 			// This is not done inside the [setRelatedObjects] function to avoid
 			// unreadable and complex code.
-			if throughSetter, ok := definer.(ThroughModelSetter); ok && obj.object.through != nil {
+			if throughSetter, ok := obj.object.obj.(ThroughModelSetter); ok && obj.object.through != nil {
 				throughSetter.SetThroughModel(obj.object.through)
 			}
 
 			var row = &Row[T]{
-				Object:          definer.(T),
+				Object:          obj.object.obj.(T),
 				ObjectFieldDefs: obj.object.fieldDefs,
 				Annotations:     obj.annotations,
 				Through:         obj.object.through,
@@ -849,7 +815,7 @@ func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableFie
 			primaryVal = pk
 		)
 
-		if primaryVal == nil || fields.IsZero(primaryVal) {
+		if primaryVal == nil || django_reflect.IsZero(primaryVal) {
 			var err error
 			pk, err = GetUniqueKey(ctx, defs)
 			if err != nil && !errors.Is(err, errors.NoUniqueKey) {
@@ -862,7 +828,7 @@ func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableFie
 		}
 
 		// var preload *Preload
-		if (cur.relType == attrs.RelManyToMany || cur.relType == attrs.RelOneToMany) && fields.IsZero(pk) {
+		if (cur.relType == attrs.RelManyToMany || cur.relType == attrs.RelOneToMany) && django_reflect.IsZero(pk) {
 
 			/*
 				the commented out code might be useful in the future
