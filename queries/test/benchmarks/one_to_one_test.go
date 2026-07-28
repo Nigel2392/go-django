@@ -50,8 +50,8 @@ func (t *BenchmarkO2OMain) FieldDefs(ctx context.Context) attrs.Definitions {
 
 type BenchmarkO2OThrough struct {
 	ID          uint64
-	SourceModel uint16
-	TargetModel uint16
+	SourceModel uint32
+	TargetModel uint32
 }
 
 func (t *BenchmarkO2OThrough) Fields() []attrs.Field {

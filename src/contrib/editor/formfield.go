@@ -4,7 +4,6 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
@@ -47,15 +46,12 @@ func (e *EditorJSFormField) HasChanged(initial, data interface{}) bool {
 	initialV, ok1 := initial.(*EditorJSBlockData)
 	dataV, ok2 := data.(*EditorJSBlockData)
 	if !ok1 || !ok2 {
-		logger.Warnf("EditorJSFormField HasChanged: both initial and data are not *EditorJSBlockData (initial: %T, data: %T)", initial, data)
 		return false
 	}
 	if initialV == nil && dataV == nil {
-		logger.Warnf("EditorJSFormField HasChanged: both initial and data are nil")
 		return false
 	}
 	if initialV == nil || dataV == nil {
-		logger.Errorf("EditorJSFormField HasChanged: one of initial or data is nil (initial: %v, data: %v)", initialV, dataV)
 		return true
 	}
 

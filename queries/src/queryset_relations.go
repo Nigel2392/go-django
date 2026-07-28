@@ -61,7 +61,8 @@ type relatedQuerySet[T attrs.Definer, T2 any] struct {
 }
 
 // NewrelatedQuerySet creates a new relatedQuerySet for the given model type.
-func newRelatedQuerySet[T attrs.Definer, T2 any](embedder T2, rel attrs.Relation, source *ParentInfo) *relatedQuerySet[T, T2] {
+func NewRelatedQuerySet[T attrs.Definer, T2 any](embedder T2, source *ParentInfo) *relatedQuerySet[T, T2] {
+	rel := source.Field.Rel()
 	if rel == nil {
 		panic("Relation is nil, cannot create relatedQuerySet")
 	}
@@ -382,7 +383,7 @@ func OneToManyQuerySet[T attrs.Definer](backRef MultiRelationValue) *RelOneToMan
 	var mQs = &RelOneToManyQuerySet[T]{
 		backRef: backRef,
 	}
-	mQs.relatedQuerySet = newRelatedQuerySet[T](mQs, parentInfo.Field.Rel(), parentInfo)
+	mQs.relatedQuerySet = NewRelatedQuerySet[T](mQs, parentInfo)
 	return mQs
 }
 
@@ -396,7 +397,7 @@ func ManyToManyQuerySet[T attrs.Definer](backRef MultiThroughRelationValue) *Rel
 	var mQs = &RelManyToManyQuerySet[T]{
 		backRef: backRef,
 	}
-	mQs.relatedQuerySet = newRelatedQuerySet[T](mQs, parentInfo.Field.Rel(), parentInfo)
+	mQs.relatedQuerySet = NewRelatedQuerySet[T](mQs, parentInfo)
 	return mQs
 }
 

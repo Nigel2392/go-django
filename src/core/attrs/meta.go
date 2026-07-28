@@ -213,6 +213,10 @@ func RegisterModel(model Definer) {
 		return
 	}
 
+	registerModel(t, model)
+}
+
+func registerModel(t reflect.Type, model Definer) {
 	defer func() {
 		if r := recover(); r != nil {
 			panic(fmt.Errorf(
@@ -277,6 +281,15 @@ func RegisterModel(model Definer) {
 			}
 		}
 
+		var rel = field.Rel()
+		//if rel != nil && rel.Model() != nil {
+		//	md := rel.Model()
+		//	rt := reflect.TypeOf(md)
+		//	if _, ok := modelReg[rt]; !ok {
+		//		RegisterModel(md)
+		//	}
+		//}
+
 		var attrs = field.Attrs()
 		fieldAttrs[name] = attrs
 
@@ -286,7 +299,6 @@ func RegisterModel(model Definer) {
 			meta.fieldsMap[name] = nil
 		}
 
-		var rel = field.Rel()
 		if rel == nil {
 			continue
 		}
@@ -444,12 +456,29 @@ func GetModelMeta(model any) ModelMeta {
 	panic(fmt.Errorf("model %T not registered with `RegisterModel`, could not retrieve meta", model))
 }
 
-func IsModelRegistered(model Definer) bool {
-	var mdl, ok = modelReg[reflect.TypeOf(model)]
-	if !ok {
+func IsModelRegistered(model any) (ok bool) {
+	var meta *modelMeta
+	switch model := model.(type) {
+	case Definer:
+		meta, ok = modelReg[reflect.TypeOf(model)]
+	case reflect.Type:
+		if model.Kind() != reflect.Pointer {
+			model = reflect.PointerTo(model)
+		}
+		meta, ok = modelReg[model]
+	case *reflect.Value:
+		return IsModelRegistered(*model)
+	case reflect.Value:
+		var t = model.Type()
+		if t.Kind() != reflect.Pointer {
+			t = reflect.PointerTo(t)
+		}
+		meta, ok = modelReg[t]
+	default:
 		return false
 	}
-	return mdl.setup
+
+	return ok && meta.setup
 }
 
 type ThroughMeta struct {
@@ -510,21 +539,21 @@ func ThroughModelMeta(m Definer) ThroughMeta {
 	return ThroughMeta{}
 }
 
-func GetRelationMeta(m Definer, name string) (Relation, bool) {
+func GetRelationMeta(m Definer, name string) (rel Relation, fwd bool, present bool) {
 	var (
 		meta ModelMeta
 		ok   bool
 	)
 	if meta, ok = modelReg[reflect.TypeOf(m)]; !ok {
-		return nil, false
+		return nil, false, false
 	}
 	if rel, ok := meta.Forward(name); ok {
-		return rel, true
+		return rel, true, true
 	}
 	if rel, ok := meta.Reverse(name); ok {
-		return rel, true
+		return rel, false, true
 	}
-	return nil, false
+	return nil, false, false
 }
 
 func StoreOnMeta(m Definer, key string, value any) {

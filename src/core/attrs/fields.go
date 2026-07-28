@@ -169,7 +169,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 
 	var field_t, ok = attrutils.GetStructField(instance_t_ptr.Elem(), name)
 	if !ok {
-		panic("field not found")
+		panic(fmt.Sprintf("field %q not found in %T", name, instance))
 	}
 
 	var cnf *FieldConfig

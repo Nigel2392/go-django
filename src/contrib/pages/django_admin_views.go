@@ -977,10 +977,11 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		r, p, "pages:publish",
 	)
 
+	var hasChanged bool
 	adminForm.Form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
-		var hasChanged = adminForm.HasChanged()
+		hasChanged = adminForm.HasChanged()
 		if !hasChanged && !publishPage && !unpublishPage {
-			logger.Warnf("No changes detected for page: %s", instance.Reference().Title)
+			// logger.Warnf("No changes detected for page: %s", instance.Reference().Title)
 			return nil
 		}
 
@@ -1129,7 +1130,11 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			var page = instance.(Page)
 			var ref = page.Reference()
 
-			messages.Success(r, "Page updated successfully")
+			if hasChanged {
+				messages.Success(r, "Page updated successfully")
+			} else {
+				messages.Warning(r, fmt.Sprintf("No changes detected for page: %s", ref.Title))
+			}
 
 			var redirectURL string
 			if unpublishPage && ref.Numchild > 0 && ref.StatusFlags.Is(StatusFlagPublished) {

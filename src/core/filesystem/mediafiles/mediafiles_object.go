@@ -36,6 +36,18 @@ func (s *SimpleStoredObject) String() string {
 	return s.Filepath
 }
 
+func (s *SimpleStoredObject) IsZero() bool {
+	if s == nil {
+		return true
+	}
+
+	if s.Filepath == "" {
+		return true
+	}
+
+	return false
+}
+
 func (s *SimpleStoredObject) Scan(value interface{}) error {
 	if value == nil {
 		return nil

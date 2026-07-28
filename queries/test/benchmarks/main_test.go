@@ -94,6 +94,12 @@ func TestMain(m *testing.M) {
 
 	attrs.RegisterModel(&BenchmarkAuthorModel{})
 	attrs.RegisterModel(&BenchmarkBookModel{})
+	attrs.RegisterModel(&FastAttrsBenchmarkAuthor{})
+	attrs.RegisterModel(&FastAttrsBenchmarkBook{})
+	attrs.RegisterModel(&FastAttrsBenchmarkAuthorModel{})
+	attrs.RegisterModel(&FastAttrsBenchmarkBookModel{})
+	attrs.RegisterModel(&FastAttrsBenchmarkO2ONoThroughMain{})
+	attrs.RegisterModel(&FastAttrsBenchmarkO2ONoThroughTarget{})
 	attrs.ResetDefinitions.Send(nil)
 
 	tables.Create()
@@ -212,8 +218,8 @@ func TestMain(m *testing.M) {
 
 	for i := range COUNT {
 		o2oThroughs[i] = &BenchmarkO2OThrough{
-			SourceModel: uint16(o2oMains[i].ID),
-			TargetModel: uint16(o2oTargets[i].ID),
+			SourceModel: uint32(o2oMains[i].ID),
+			TargetModel: uint32(o2oTargets[i].ID),
 		}
 	}
 	_, o2oThroughDel := quest.CreateObjects(&fatalLogger{}, o2oThroughs)

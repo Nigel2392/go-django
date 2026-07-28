@@ -229,68 +229,75 @@ func TestUserAddGroups(t *testing.T) {
 			return
 		}
 
-		for _, userRow := range userRows {
+		for i, userRow := range userRows {
 			t.Logf("User %s with ID %d has groups:", userRow.Object.Username, userRow.Object.ID)
 			for _, group := range userRow.Object.Groups.AsList() {
 				t.Logf(" - Group: %s", group.Object.Name)
 				for _, perm := range group.Object.Permissions.AsList() {
 					t.Logf("   - Permission: %s", perm.Object.Name)
-					var groupPermsObj, ok = perm.Object.DataStore().GetValue("GroupPermissions")
-					if ok {
-						var groupPerms, ok = groupPermsObj.(*queries.RelM2M[attrs.Definer, attrs.Definer])
-						if !ok {
-							t.Fatalf("Expected GroupPermissions to be of type *queries.RelM2M, got %T", groupPermsObj)
-						}
+					var groupPerms = perm.Object.GroupPermissions
 
-						for _, groupPerm := range groupPerms.AsList() {
-							t.Logf("     - Group Permission: %s", groupPerm.Object.(*users.Group).Name)
-						}
+					for _, groupPerm := range groupPerms.AsList() {
+						t.Logf("     - Group Permission: %s", groupPerm.Object.Name)
 					}
 				}
 			}
+
 			t.Logf("User %s has permissions:", userRow.Object.Username)
 			for _, perm := range userRow.Object.Permissions.AsList() {
 				t.Logf(" - Permission: %s", perm.Object.Name)
 			}
-		}
 
-		//for i, group := range userRow.Object.Groups.AsList() {
-		//	switch i {
-		//	case 0:
-		//		if group.Object.Name != "Administrators" {
-		//			t.Fatalf("Expected group name 'Administrators', got '%s'", group.Object.Name)
-		//		}
-		//	case 1:
-		//		if group.Object.Name != "Moderators" {
-		//			t.Fatalf("Expected group name 'Moderators', got '%s'", group.Object.Name)
-		//		}
-		//	case 2:
-		//		if group.Object.Name != "Viewers" {
-		//			t.Fatalf("Expected group name 'Viewers', got '%s'", group.Object.Name)
-		//		}
-		//	default:
-		//		t.Fatalf("Unexpected group index %d", i)
-		//	}
-		//}
-		//
-		//for i, perm := range userRow.Object.Permissions.AsList() {
-		//	switch i {
-		//	case 0:
-		//		if perm.Object.Name != "Can view users" {
-		//			t.Fatalf("Expected permission name 'Can view users', got '%s'", perm.Object.Name)
-		//		}
-		//	case 1:
-		//		if perm.Object.Name != "Can edit users" {
-		//			t.Fatalf("Expected permission name 'Can edit users', got '%s'", perm.Object.Name)
-		//		}
-		//	case 2:
-		//		if perm.Object.Name != "Can delete users" {
-		//			t.Fatalf("Expected permission name 'Can delete users', got '%s'", perm.Object.Name)
-		//		}
-		//	default:
-		//		t.Fatalf("Unexpected permission index %d", i)
-		//	}
-		//}
+			if i == 0 {
+				if l := len(userRow.Object.Groups.AsList()); l < 3 {
+					t.Fatalf("[%d] Expected at least 3 Groups, got %d", i, l)
+				}
+			}
+
+			for i, group := range userRow.Object.Groups.AsList() {
+				switch i {
+				case 0:
+					if group.Object.Name != "Administrators" {
+						t.Fatalf("Expected group name 'Administrators', got '%s'", group.Object.Name)
+					}
+				case 1:
+					if group.Object.Name != "Moderators" {
+						t.Fatalf("Expected group name 'Moderators', got '%s'", group.Object.Name)
+					}
+				case 2:
+					if group.Object.Name != "Viewers" {
+						t.Fatalf("Expected group name 'Viewers', got '%s'", group.Object.Name)
+					}
+				default:
+					t.Fatalf("Unexpected group index %d", i)
+				}
+			}
+
+			if i == 0 {
+				if l := len(userRow.Object.Permissions.AsList()); l < 3 {
+					t.Fatalf("[%d] Expected at least 3 Permissions, got %d", i, l)
+				}
+			}
+
+			for i, perm := range userRow.Object.Permissions.AsList() {
+				switch i {
+				case 0:
+					if perm.Object.Name != "Can view users" {
+						t.Fatalf("Expected permission name 'Can view users', got '%s'", perm.Object.Name)
+					}
+				case 1:
+					if perm.Object.Name != "Can edit users" {
+						t.Fatalf("Expected permission name 'Can edit users', got '%s'", perm.Object.Name)
+					}
+				case 2:
+					if perm.Object.Name != "Can delete users" {
+						t.Fatalf("Expected permission name 'Can delete users', got '%s'", perm.Object.Name)
+					}
+				default:
+					t.Fatalf("Unexpected permission index %d", i)
+				}
+			}
+		}
 
 	})
 

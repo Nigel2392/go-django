@@ -80,6 +80,18 @@ type scanPlanEntry struct {
 	virtualField attrs.Field
 }
 
+type scannableField struct {
+	idx       int
+	object    attrs.Definer
+	field     attrs.Field
+	srcField  *scannableField
+	relType   attrs.RelationType
+	isThrough bool          // is this a through model field (many-to-many or one-to-one)
+	through   attrs.Definer // the through field if this is a many-to-many or one-to-one relation
+	chainPart string        // name of the field in the chain
+	chainKey  string        // the chain up to this point, joined by "."
+}
+
 // scanPlan captures the static structure of [getScannableFields] output.
 // It is compiled once per query execution and applied per row to avoid
 // repeated schema traversal, string joins, and type assertions.

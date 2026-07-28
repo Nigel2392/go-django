@@ -39,14 +39,6 @@ func (pb *PreloadBook) FieldDefs(ctx context.Context) attrs.Definitions {
 		fields.NewManyToManyField[[]queries.Relation](pb, "Authors", &fields.FieldConfig{
 			ScanTo:    &pb.Authors,
 			IsReverse: true,
-			Rel: attrs.Relate(
-				&PreloadAuthor{},
-				"", &attrs.ThroughModel{
-					This:   &PreloadAuthorBook{},
-					Source: (&PreloadAuthorBook{}).TargetField(),
-					Target: (&PreloadAuthorBook{}).SourceField(),
-				},
-			),
 		}),
 	)
 }

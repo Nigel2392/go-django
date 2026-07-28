@@ -2693,7 +2693,6 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 	defer attrCtx.Reset()
 
 	var plan = compileScanPlan(qs.internals.Fields, qs.internals.Model.Object, true)
-
 	for row, err := range results {
 		if err != nil {
 			return 0, nil, err
@@ -2706,13 +2705,11 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			datastore    ModelDataStore
 		)
 
-		plan.apply(ctx, row, obj)
-
 		if annotator != nil {
 			datastore = annotator.DataStore()
 		}
 
-		for j, field := range plan.out {
+		for j, field := range plan.apply(ctx, row, obj) {
 			f := field.field
 			val := row[j]
 
@@ -4390,18 +4387,6 @@ func getDatabaseName(model attrs.Definer, database ...string) string {
 	}
 
 	return defaultDb
-}
-
-type scannableField struct {
-	idx       int
-	object    attrs.Definer
-	field     attrs.Field
-	srcField  *scannableField
-	relType   attrs.RelationType
-	isThrough bool          // is this a through model field (many-to-many or one-to-one)
-	through   attrs.Definer // the through field if this is a many-to-many or one-to-one relation
-	chainPart string        // name of the field in the chain
-	chainKey  string        // the chain up to this point, joined by "."
 }
 
 func getScannableFields[T attrs.FieldDefinition](ctx context.Context, fields []*FieldInfo[T], root attrs.Definer, instances map[string]attrs.Definer, parentFields map[string]*scannableField) (size int, _range iter.Seq2[int, *scannableField]) {

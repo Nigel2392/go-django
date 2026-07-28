@@ -297,18 +297,6 @@ func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 		attrutils.InterfaceList(fieldNames)...,
 	)
 
-	var selectedFields = make([]attrs.FieldDefinition, 0, len(fieldNames))
-	for _, fieldName := range fieldNames {
-		var res, err = qs.WalkField(fieldName)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		for _, inf := range res.Fields {
-			selectedFields = append(selectedFields, inf.Fields...)
-		}
-	}
-
 	var err error
 	if m.ChangeQuerySet != nil {
 		if qs, err = m.ChangeQuerySet(r, qs); err != nil {

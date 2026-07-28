@@ -452,6 +452,10 @@ func (f *BaseForm) HasChanged() bool {
 			}
 		}
 
+		if field.IsEmpty(f.Initial[k]) && field.IsEmpty(f.Cleaned[k]) {
+			continue
+		}
+
 		if field.HasChanged(f.Initial[k], f.Cleaned[k]) {
 			return true
 		}

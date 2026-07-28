@@ -2,9 +2,12 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
+	"github.com/Nigel2392/go-django/internal/sets"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -503,6 +506,33 @@ func (m *ModelDefinition) Check(ctx context.Context, app *AppDefinition) []check
 			"Model has no fields or panels defined for ListView",
 			m.GetName(),
 		))
+	}
+
+	var noFormFieldCheck = func(optName string, opt ViewOptions) {
+		var noFormFields = sets.NewOrderedSet[string]()
+		for _, field := range m.ModelFields(opt, attrs.NewObject[attrs.Definer](ctx, m.Model)) {
+			var formField = field.FormField()
+			if formField == nil {
+				noFormFields.Add(field.Name())
+			}
+		}
+
+		if noFormFields.Len() > 0 {
+			messages = append(messages, checks.Warningf(
+				fmt.Sprintf("admin.models.formfields.%s", optName),
+				"Model has fields without formfields: %s",
+				m.GetName(),
+				fmt.Sprintf("Provide a list of fields to the '%s' form options that exclude the named fields.", optName),
+				strings.Join(noFormFields.Values(), ", "),
+			))
+		}
+	}
+
+	if !m.DisallowCreate {
+		noFormFieldCheck("add", m.AddView.ViewOptions)
+	}
+	if !m.DisallowEdit {
+		noFormFieldCheck("edit", m.AddView.ViewOptions)
 	}
 
 	return messages

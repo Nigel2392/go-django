@@ -224,10 +224,11 @@ func FileFieldWithExtensions(allowedExtensions []string) func(Field) {
 }
 
 func FileField(engine string, opts ...func(Field)) *FileStorageField {
-	return &FileStorageField{
+	var f = &FileStorageField{
 		BaseField:     NewField(opts...),
 		StorageEngine: engine,
 	}
+	return f
 }
 
 func (i *FileStorageField) ValueToGo(value interface{}) (interface{}, error) {

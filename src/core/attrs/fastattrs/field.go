@@ -73,6 +73,10 @@ func fieldConfigToOptions[T attrs.Definer](name string, conf FieldConfig[T]) *re
 		opts.getDefault = func(obj T) interface{} {
 			return _default(obj)
 		}
+	case NULL:
+		opts.getDefault = func(obj T) interface{} {
+			return nil
+		}
 	case nil:
 		panic("default value must be provided")
 	default:
@@ -104,6 +108,8 @@ type ReflectlessField[T attrs.Definer] struct {
 	fieldName string
 	opts      *reflectlessFieldOpts[T]
 }
+
+type NULL struct{}
 
 func NewField[T attrs.Definer](obj T, name string) attrs.Field {
 	var (

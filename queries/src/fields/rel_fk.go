@@ -21,6 +21,12 @@ func NewForeignKeyField[T any](forModel attrs.Definer, name string, conf *FieldC
 			Relation: conf.Rel,
 			typ:      attrs.RelManyToOne,
 		}
+	} else if conf.Rel == nil {
+		var rel, fwd, ok = attrs.GetRelationMeta(forModel, name)
+		if ok {
+			conf.Rel = rel
+		}
+		conf.NoReverseRelation = !fwd
 	}
 
 	var f = &ForeignKeyField[T]{
@@ -61,6 +67,15 @@ func NewForeignKeyReverseField[T any](forModel attrs.Definer, name string, conf 
 			Relation: conf.Rel,
 			typ:      attrs.RelOneToMany,
 		}
+	} else if conf.Rel == nil {
+		var rel, fwd, ok = attrs.GetRelationMeta(forModel, name)
+		if ok {
+			conf.Rel = &typedRelation{
+				Relation: rel,
+				typ:      attrs.RelOneToMany,
+			}
+		}
+		conf.NoReverseRelation = !fwd
 	}
 
 	var f = &ForeignKeyReverseField[T]{

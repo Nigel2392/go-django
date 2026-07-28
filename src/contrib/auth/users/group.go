@@ -16,6 +16,7 @@ type Group struct {
 	Name         string                                         `json:"name"`
 	Description  string                                         `json:"description"`
 	Permissions  *queries.RelM2M[*Permission, *GroupPermission] `json:"-"`
+	UserGroups   *queries.RelM2M[attrs.Definer, attrs.Definer]  `json:"-"`
 }
 
 func (g *Group) String() string {

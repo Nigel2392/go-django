@@ -208,7 +208,7 @@ func (a *AdminForm[T1, T2]) HasChanged() bool {
 		}
 	}
 
-	logger.Warnf("AdminForm: Checking for changes in fields: %v", fields)
+	// logger.Warnf("AdminForm: Checking for changes in fields: %v", fields)
 
 	for _, fieldName := range fields {
 		var f, ok = a.Form.Field(fieldName)
@@ -220,18 +220,22 @@ func (a *AdminForm[T1, T2]) HasChanged() bool {
 			continue
 		}
 
+		if f.IsEmpty(initial[fieldName]) && f.IsEmpty(cleaned[fieldName]) {
+			continue
+		}
+
 		if f.HasChanged(initial[fieldName], cleaned[fieldName]) {
-			logger.Warnf("AdminForm: Field %s has changed (initial: %v, cleaned: %v)", fieldName, initial[fieldName], cleaned[fieldName])
+			// logger.Warnf("AdminForm: Field %s has changed (initial: %v, cleaned: %v)", fieldName, initial[fieldName], cleaned[fieldName])
 			return true
 		}
 	}
 
 	if a.formset != nil && a.formset.HasChanged() {
-		logger.Warnf("AdminForm: Formset has changed")
+		// logger.Warnf("AdminForm: Formset has changed")
 		return true
 	}
 
-	logger.Warnf("AdminForm: No fields have changed")
+	// logger.Warnf("AdminForm: No fields have changed")
 
 	return false
 }

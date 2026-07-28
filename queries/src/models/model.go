@@ -553,26 +553,31 @@ func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *att
 		return m.internals.Defs
 	}
 
+	m.internals.Defs = attrs.Make[attrs.Definer, any](
+		ctx, def, flds,
+	)
+
+	var tableName = m.internals.Base.base.Tag.Get("table")
+	if tableName != "" && m.internals.Defs.Table == "" {
+		m.internals.Defs.Table = tableName
+	}
+
 	var (
-		meta    = attrs.GetModelMeta(def)
-		revMap  = meta.ReverseMap()
-		_fields []attrs.Field
+		meta   = attrs.GetModelMeta(def)
+		revMap = meta.ReverseMap()
 	)
 
 	if revMap.Len()+len(m.internals.Base.proxies) == 0 {
-		goto defineNow // skip proxy & reverse field creaion
+		return m.internals.Defs
 	}
 
-	_fields = make([]attrs.Field, 0, revMap.Len()+len(m.internals.Base.proxies))
 	if revMap.Len() == 0 {
 		goto addProxies // skip reverse field creation
 	}
 
 	for head := revMap.Front(); head != nil; head = head.Next() {
-		// skip creating if a forward rel exists
-		// when a forward rel exists, it is safe to assume
-		// a custom field was already provided.
-		_, ok := meta.Forward(head.Key)
+		// skip creating if a custom field was already provided.
+		_, ok := m.internals.Defs.Field(head.Key)
 		if ok {
 			continue
 		}
@@ -620,7 +625,7 @@ func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *att
 		}
 
 		if field != nil {
-			_fields = append(_fields, field)
+			m.internals.Defs.ObjectFields.Set(key, field)
 		}
 	}
 
@@ -670,17 +675,7 @@ addProxies:
 		}
 
 		// add the proxy field to the model definitions
-		_fields = append(_fields, field)
-	}
-
-defineNow:
-	m.internals.Defs = attrs.Make[attrs.Definer, any](
-		ctx, def, flds, _fields,
-	)
-
-	var tableName = m.internals.Base.base.Tag.Get("table")
-	if tableName != "" && m.internals.Defs.Table == "" {
-		m.internals.Defs.Table = tableName
+		m.internals.Defs.ObjectFields.Set(fieldName, field)
 	}
 
 	return m.internals.Defs

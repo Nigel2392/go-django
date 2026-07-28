@@ -120,10 +120,6 @@ func NewRelatedField[T any](forModel attrs.Definer, name string, cnf *FieldConfi
 		panic(fmt.Sprintf("NewRelatedField: config is nil for field %q in model %T", name, forModel))
 	}
 
-	if cnf.Rel == nil {
-		panic(fmt.Sprintf("NewRelatedField: relation is nil for field %q in model %T", name, forModel))
-	}
-
 	if cnf.IsProxy && (cnf.Rel.Type() != attrs.RelOneToOne && cnf.Rel.Type() != attrs.RelManyToOne) {
 		panic(fmt.Sprintf(
 			"NewRelatedField: relation type %s is not supported for proxy fields in model %T",
@@ -138,18 +134,11 @@ func NewRelatedField[T any](forModel attrs.Definer, name string, cnf *FieldConfi
 		))
 	}
 
-	if cnf.TargetField != "" && (cnf.Rel.Field() == nil || cnf.Rel.Field().Name() != cnf.TargetField) {
-		cnf.Rel = &typedRelation{
-			Relation: attrs.Relate(
-				cnf.Rel.Model(),
-				cnf.TargetField,
-				cnf.Rel.Through(),
-			),
-			typ: cnf.Rel.Type(),
-		}
-	}
+	//	if cnf.Rel == nil && attrs.IsModelRegistered(forModel) {
+	//		panic(fmt.Sprintf("NewRelatedField: relation is nil for field %q in model %T", name, forModel))
+	//	}
 
-	if cnf.ReverseName == "" {
+	if cnf.Rel != nil && !cnf.NoReverseRelation && cnf.ReverseName == "" {
 		var nameParts = strings.Split(reflect.TypeOf(forModel).Elem().Name(), ".")
 		var modelName = nameParts[len(nameParts)-1]
 		switch cnf.Rel.Type() {
@@ -199,8 +188,8 @@ func (r *RelationField[T]) CanMigrate() bool {
 
 func (r *RelationField[T]) ColumnName() string {
 	if r.cnf.ColumnName == "" {
-		var from = r.cnf.Rel.From()
-		if from != nil {
+		var from = r.Rel().From()
+		if from != nil && from.Field() != r {
 			return from.Field().ColumnName()
 		}
 
@@ -356,7 +345,9 @@ func (r *RelationField[T]) IsReverse() bool {
 func (r *RelationField[T]) Attrs() map[string]any {
 	var atts = make(map[string]any)
 	atts[attrs.AttrNameKey] = r.Name()
-	atts[migrator.AttrUseInDBKey] = r.cnf.Rel.Through() == nil && !r.IsReverse()
+	if r.cnf.Rel != nil {
+		atts[migrator.AttrUseInDBKey] = r.cnf.Rel.Through() == nil && !r.IsReverse()
+	}
 	return atts
 }
 
@@ -365,8 +356,24 @@ func (r *RelationField[T]) RelatedName() string {
 }
 
 func (r *RelationField[T]) Rel() attrs.Relation {
+	if r.cnf.Rel == nil {
+		return nil
+	}
+
+	rel := r.cnf.Rel
+	if r.cnf.Rel != nil && r.cnf.TargetField != "" && (r.cnf.Rel.Field() == nil || r.cnf.Rel.Field().Name() != r.cnf.TargetField) {
+		rel = &typedRelation{
+			Relation: attrs.Relate(
+				r.cnf.Rel.Model(),
+				r.cnf.TargetField,
+				r.cnf.Rel.Through(),
+			),
+			typ: r.cnf.Rel.Type(),
+		}
+	}
+
 	return &wrappedRelation{
-		Relation: r.cnf.Rel,
+		Relation: rel,
 		from: &relationTarget{
 			model: r.Instance(),
 			field: r,

@@ -19,6 +19,12 @@ func NewOneToOneField[T any](forModel attrs.Definer, name string, conf *FieldCon
 			Relation: conf.Rel,
 			typ:      attrs.RelOneToOne,
 		}
+	} else if conf.Rel == nil {
+		var rel, fwd, ok = attrs.GetRelationMeta(forModel, name)
+		if ok {
+			conf.Rel = rel
+		}
+		conf.NoReverseRelation = !fwd
 	}
 
 	var f = &OneToOneField[T]{

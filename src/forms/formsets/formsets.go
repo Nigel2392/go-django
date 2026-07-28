@@ -491,10 +491,10 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 
 		if s, ok := any(subForm).(initialSetter); ok {
 			if totalAdded < len(defaults) && defaults[totalAdded] != nil {
-				logger.Warnf("FormSet: Setting initial data for form %d (%T): %v", totalAdded, subForm, defaults[totalAdded])
+				// logger.Warnf("FormSet: Setting initial data for form %d (%T): %v", totalAdded, subForm, defaults[totalAdded])
 				s.SetInitial(defaults[totalAdded])
 			} else if base != nil {
-				logger.Warnf("FormSet: Setting base initial data for form %d (%T): %v", totalAdded, subForm, base)
+				// logger.Warnf("FormSet: Setting base initial data for form %d (%T): %v", totalAdded, subForm, base)
 				s.SetInitial(base)
 			}
 		}
@@ -540,9 +540,9 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	// set the deleted forms to the formset
 	form.SetDeletedForms(deletedForms)
 
-	for _, form := range finalForms {
-		logger.Warnf("FormSet: Form with prefix %s has errors: %v and data: %v", form.Prefix(), form.ErrorList(), form.InitialData())
-	}
+	// for _, form := range finalForms {
+	// logger.Warnf("FormSet: Form with prefix %s has errors: %v and data: %v", form.Prefix(), form.ErrorList(), form.InitialData())
+	// }
 
 	return isValid && !forms.HasErrors(form)
 }
