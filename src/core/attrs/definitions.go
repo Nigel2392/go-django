@@ -71,7 +71,7 @@ func (d *FieldsMap) Iter() iter.Seq2[string, Field] {
 	}
 }
 
-// Define creates a new object definitions.
+// Make creates a new object definitions.
 //
 // This can then be returned by the FieldDefs method of a model
 // to make it comply with the Definer interface.
@@ -100,7 +100,7 @@ func Make[T1 Definer, T2 any](ctx context.Context, d T1, fieldDefinitions ...T2)
 			continue
 		}
 
-		if f.IsPrimary() && defs.PrimaryField == "" {
+		if defs.PrimaryField == "" && f.IsPrimary() {
 			defs.PrimaryField = f.Name()
 		}
 

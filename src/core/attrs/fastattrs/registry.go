@@ -21,7 +21,7 @@ func AddOptions[T attrs.Definer](typ reflect.Type, name string, opts optionsType
 	optsMap[name] = opts
 }
 
-func GetOptions[T attrs.Definer](typ reflect.Type, name string) *reflectlessFieldOpts[T] {
+func GetOptions[T attrs.Definer](typ reflect.Type, name string) (*reflectlessFieldOpts[T], bool) {
 	optsMap, ok := cachedOptions[typ]
 	if !ok {
 		optsMap = make(map[string]optionsType)
@@ -30,11 +30,14 @@ func GetOptions[T attrs.Definer](typ reflect.Type, name string) *reflectlessFiel
 
 	opts, ok := optsMap[name]
 	if !ok {
-		panic(fmt.Sprintf("ReflectLessField options were not configured for field %q in type %s", name, typ))
+		// panic(fmt.Sprintf("ReflectLessField options were not configured for field %q in type %s", name, typ))
+		return nil, false
 	}
+
 	o, ok := opts.(*reflectlessFieldOpts[T])
 	if !ok {
 		panic(fmt.Sprintf("ReflectLessField options are not of type *reflectLessFieldOpts[T], got %T", opts))
 	}
-	return o
+
+	return o, true
 }

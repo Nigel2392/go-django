@@ -100,6 +100,10 @@ func TestMain(m *testing.M) {
 	attrs.RegisterModel(&FastAttrsBenchmarkBookModel{})
 	attrs.RegisterModel(&FastAttrsBenchmarkO2ONoThroughMain{})
 	attrs.RegisterModel(&FastAttrsBenchmarkO2ONoThroughTarget{})
+	attrs.RegisterModel(&FastAttrsInlineBenchmarkM2MThrough{})
+	attrs.RegisterModel(&FastAttrsInlineBenchmarkM2MSource{})
+	attrs.RegisterModel(&FastAttrsInlineBenchmarkM2MTarget{})
+
 	attrs.ResetDefinitions.Send(nil)
 
 	tables.Create()

@@ -13,110 +13,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
 )
 
-func init() {
-	fastattrs.RegisterModel(func(field func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain])) {
-		field("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
-			Config:   *fast_fldCnfPrimary,
-			GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} { return obj.ID },
-			SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
-				switch v := value.(type) {
-				case uint64:
-					obj.ID = int32(v)
-				case int64:
-					obj.ID = int32(v)
-				case int:
-					obj.ID = int32(v)
-				default:
-					return fmt.Errorf("invalid ID type %T: %v", value, value)
-				}
-				return nil
-			},
-			Default: uint64(0),
-		})
-		field("Title", fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
-			Config:   attrs.FieldConfig{},
-			GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} { return obj.Title },
-			SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
-				switch v := value.(type) {
-				case string:
-					obj.Title = v
-				case []byte:
-					obj.Title = string(v)
-				default:
-					return fmt.Errorf("invalid Title type %T: %v", value, value)
-				}
-				return nil
-			},
-			Default: "",
-		})
-		field("Target", fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
-			Config: attrs.FieldConfig{
-				Column:      "target_id",
-				RelOneToOne: attrs.Relate(&FastAttrsBenchmarkO2ONoThroughTarget{}, "", nil),
-				Attributes: map[string]interface{}{
-					attrs.AttrReverseAliasKey: "MainReverse",
-				},
-			},
-			GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} {
-				return obj.Target
-			},
-			SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
-				switch v := value.(type) {
-				case int64:
-					obj.Target = &FastAttrsBenchmarkO2ONoThroughTarget{
-						ID: uint64(v),
-					}
-				case *FastAttrsBenchmarkO2ONoThroughTarget:
-					obj.Target = v
-				default:
-					return errors.TypeMismatch.Wrapf(
-						"%T does not match expected target type",
-						value,
-					)
-				}
-				return nil
-			},
-			Default: fastattrs.NULL{},
-		})
-	})
-	fastattrs.RegisterModel(func(field func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget])) {
-		field("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
-			Config:   *fast_fldCnfPrimary,
-			GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget) interface{} { return obj.ID },
-			SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget, value any) error {
-				switch v := value.(type) {
-				case uint64:
-					obj.ID = v
-				case int64:
-					obj.ID = uint64(v)
-				case int:
-					obj.ID = uint64(v)
-				default:
-					return fmt.Errorf("invalid ID type %T: %v", value, value)
-				}
-				return nil
-			},
-			Default: uint64(0),
-		})
-		field("Name", fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
-			Config:   attrs.FieldConfig{},
-			GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget) interface{} { return obj.Name },
-			SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget, value any) error {
-				switch v := value.(type) {
-				case string:
-					obj.Name = v
-				case []byte:
-					obj.Name = string(v)
-				default:
-					return fmt.Errorf("invalid Name type %T: %v", value, value)
-				}
-				return nil
-			},
-			Default: "",
-		})
-	})
-}
-
 type FastAttrsBenchmarkO2ONoThroughTarget struct {
 	models.Model
 	ID          uint64
@@ -126,8 +22,44 @@ type FastAttrsBenchmarkO2ONoThroughTarget struct {
 
 func (t *FastAttrsBenchmarkO2ONoThroughTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		fastattrs.NewField(t, "ID"),
-		fastattrs.NewField(t, "Name"),
+		fastattrs.NewField(t, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
+				Config:   *fast_fldCnfPrimary,
+				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget) interface{} { return obj.ID },
+				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget, value any) error {
+					switch v := value.(type) {
+					case uint64:
+						obj.ID = v
+					case int64:
+						obj.ID = uint64(v)
+					case int:
+						obj.ID = uint64(v)
+					default:
+						return fmt.Errorf("invalid ID type %T: %v", value, value)
+					}
+					return nil
+				},
+				Default: uint64(0),
+			}
+		}),
+		fastattrs.NewField(t, "Name", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
+				Config:   attrs.FieldConfig{},
+				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget) interface{} { return obj.Name },
+				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget, value any) error {
+					switch v := value.(type) {
+					case string:
+						obj.Name = v
+					case []byte:
+						obj.Name = string(v)
+					default:
+						return fmt.Errorf("invalid Name type %T: %v", value, value)
+					}
+					return nil
+				},
+				Default: "",
+			}
+		}),
 	).WithTableName("o2o_nt_target_bench")
 }
 
@@ -140,9 +72,75 @@ type FastAttrsBenchmarkO2ONoThroughMain struct {
 
 func (t *FastAttrsBenchmarkO2ONoThroughMain) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		fastattrs.NewField(t, "ID"),
-		fastattrs.NewField(t, "Title"),
-		fastattrs.NewField(t, "Target"),
+		fastattrs.NewField(t, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
+				Config:   *fast_fldCnfPrimary,
+				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} { return obj.ID },
+				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
+					switch v := value.(type) {
+					case uint64:
+						obj.ID = int32(v)
+					case int64:
+						obj.ID = int32(v)
+					case int:
+						obj.ID = int32(v)
+					default:
+						return fmt.Errorf("invalid ID type %T: %v", value, value)
+					}
+					return nil
+				},
+				Default: uint64(0),
+			}
+		}),
+		fastattrs.NewField(t, "Title", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
+				Config:   attrs.FieldConfig{},
+				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} { return obj.Title },
+				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
+					switch v := value.(type) {
+					case string:
+						obj.Title = v
+					case []byte:
+						obj.Title = string(v)
+					default:
+						return fmt.Errorf("invalid Title type %T: %v", value, value)
+					}
+					return nil
+				},
+				Default: "",
+			}
+		}),
+		fastattrs.NewField(t, "Target", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
+				Config: attrs.FieldConfig{
+					Column:      "target_id",
+					RelOneToOne: attrs.Relate(&FastAttrsBenchmarkO2ONoThroughTarget{}, "", nil),
+					Attributes: map[string]interface{}{
+						attrs.AttrReverseAliasKey: "MainReverse",
+					},
+				},
+				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} {
+					return obj.Target
+				},
+				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
+					switch v := value.(type) {
+					case int64:
+						obj.Target = &FastAttrsBenchmarkO2ONoThroughTarget{
+							ID: uint64(v),
+						}
+					case *FastAttrsBenchmarkO2ONoThroughTarget:
+						obj.Target = v
+					default:
+						return errors.TypeMismatch.Wrapf(
+							"%T does not match expected target type",
+							value,
+						)
+					}
+					return nil
+				},
+				Default: fastattrs.NULL{},
+			}
+		}),
 	).WithTableName("o2o_nt_main_bench")
 }
 

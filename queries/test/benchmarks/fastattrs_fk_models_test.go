@@ -8,41 +8,45 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/queries/src/fields"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
 )
 
 var (
-	fast_fldCnfRelAuthor = attrs.FieldConfig{
+	fast_fldCnfRelAuthorModel = attrs.FieldConfig{
 		Column:        "author_id",
-		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkAuthor{}, "", nil),
+		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkAuthorModel{}, "", nil),
 		Attributes: map[string]interface{}{
 			attrs.AttrReverseAliasKey: "Books",
 		},
 	}
 )
 
-type FastAttrsBenchmarkAuthor struct {
-	ID    uint64
+// Allows benchmarking reverse foreign key relations with
+// Select("*", "Books.*")
+// Preload("Books.*")
+type FastAttrsBenchmarkAuthorModel struct {
+	models.Model
+	ID    int
 	Name  string
 	Books *queries.RelRevFK[attrs.Definer]
 }
 
-func (a *FastAttrsBenchmarkAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.Make[*FastAttrsBenchmarkAuthor, attrs.Field](ctx, a,
-		fastattrs.NewField(a, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor]{
+func (a *FastAttrsBenchmarkAuthorModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return a.Model.Define(ctx, a,
+		fastattrs.NewField(a, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkAuthorModel] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkAuthorModel]{
 				Config:   *fast_fldCnfPrimary,
-				GetValue: func(obj *FastAttrsBenchmarkAuthor) interface{} { return obj.ID },
-				SetValue: func(obj *FastAttrsBenchmarkAuthor, value any) error {
+				GetValue: func(obj *FastAttrsBenchmarkAuthorModel) interface{} { return obj.ID },
+				SetValue: func(obj *FastAttrsBenchmarkAuthorModel, value any) error {
 					switch v := value.(type) {
 					case uint64:
-						obj.ID = v
+						obj.ID = int(v)
 					case int64:
-						obj.ID = uint64(v)
+						obj.ID = int(v)
 					case int:
-						obj.ID = uint64(v)
+						obj.ID = int(v)
 					default:
 						return fmt.Errorf("invalid ID type %T: %v", value, value)
 					}
@@ -51,11 +55,11 @@ func (a *FastAttrsBenchmarkAuthor) FieldDefs(ctx context.Context) attrs.Definiti
 				Default: uint64(0),
 			}
 		}),
-		fastattrs.NewField(a, "Name", func() fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor]{
+		fastattrs.NewField(a, "Name", func() fastattrs.FieldConfig[*FastAttrsBenchmarkAuthorModel] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkAuthorModel]{
 				Config:   attrs.FieldConfig{},
-				GetValue: func(obj *FastAttrsBenchmarkAuthor) interface{} { return obj.Name },
-				SetValue: func(obj *FastAttrsBenchmarkAuthor, value any) error {
+				GetValue: func(obj *FastAttrsBenchmarkAuthorModel) interface{} { return obj.Name },
+				SetValue: func(obj *FastAttrsBenchmarkAuthorModel, value any) error {
 					switch v := value.(type) {
 					case string:
 						obj.Name = v
@@ -69,26 +73,26 @@ func (a *FastAttrsBenchmarkAuthor) FieldDefs(ctx context.Context) attrs.Definiti
 				Default: "",
 			}
 		}),
-		fields.NewManyToManyField[*queries.RelRevFK[attrs.Definer]](a, "Books", &fields.FieldConfig{
-			ScanTo:    &a.Books,
-			IsReverse: true,
-		}),
 	).WithTableName("author_bench")
 }
 
-type FastAttrsBenchmarkBook struct {
+// Allows benchmarking forward foreign key relations with
+// Select("*", "Author.*")
+// SelectRelated("Author.*")
+type FastAttrsBenchmarkBookModel struct {
+	models.Model
 	ID     uint64
 	Title  string
-	Author *FastAttrsBenchmarkAuthor
+	Author *FastAttrsBenchmarkAuthorModel
 }
 
-func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.Make[*FastAttrsBenchmarkBook, attrs.Field](ctx, b,
-		fastattrs.NewField(b, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBook] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkBook]{
+func (b *FastAttrsBenchmarkBookModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
+		fastattrs.NewField(b, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBookModel] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkBookModel]{
 				Config:   *fast_fldCnfPrimary,
-				GetValue: func(obj *FastAttrsBenchmarkBook) interface{} { return obj.ID },
-				SetValue: func(obj *FastAttrsBenchmarkBook, value any) error {
+				GetValue: func(obj *FastAttrsBenchmarkBookModel) interface{} { return obj.ID },
+				SetValue: func(obj *FastAttrsBenchmarkBookModel, value any) error {
 					switch v := value.(type) {
 					case uint64:
 						obj.ID = v
@@ -104,11 +108,11 @@ func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definition
 				Default: uint64(0),
 			}
 		}),
-		fastattrs.NewField(b, "Title", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBook] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkBook]{
+		fastattrs.NewField(b, "Title", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBookModel] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkBookModel]{
 				Config:   attrs.FieldConfig{},
-				GetValue: func(obj *FastAttrsBenchmarkBook) interface{} { return obj.Title },
-				SetValue: func(obj *FastAttrsBenchmarkBook, value any) error {
+				GetValue: func(obj *FastAttrsBenchmarkBookModel) interface{} { return obj.Title },
+				SetValue: func(obj *FastAttrsBenchmarkBookModel, value any) error {
 					switch v := value.(type) {
 					case string:
 						obj.Title = v
@@ -122,19 +126,19 @@ func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definition
 				Default: "",
 			}
 		}),
-		fastattrs.NewField(b, "Author", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBook] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkBook]{
-				Config: fast_fldCnfRelAuthor,
-				GetValue: func(obj *FastAttrsBenchmarkBook) interface{} {
+		fastattrs.NewField(b, "Author", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBookModel] {
+			return fastattrs.FieldConfig[*FastAttrsBenchmarkBookModel]{
+				Config: fast_fldCnfRelAuthorModel,
+				GetValue: func(obj *FastAttrsBenchmarkBookModel) interface{} {
 					return obj.Author
 				},
-				SetValue: func(obj *FastAttrsBenchmarkBook, value any) error {
+				SetValue: func(obj *FastAttrsBenchmarkBookModel, value any) error {
 					switch v := value.(type) {
 					case int64:
-						obj.Author = &FastAttrsBenchmarkAuthor{
-							ID: uint64(v),
+						obj.Author = &FastAttrsBenchmarkAuthorModel{
+							ID: int(v),
 						}
-					case *FastAttrsBenchmarkAuthor:
+					case *FastAttrsBenchmarkAuthorModel:
 						obj.Author = v
 					default:
 						return errors.TypeMismatch.Wrapf(
@@ -150,11 +154,11 @@ func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definition
 	).WithTableName("book_bench")
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__NoPreload__Authors(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__NoPreload__Authors(b *testing.B) {
 	b.StopTimer()
 
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkAuthor{}).
+		GetQuerySet(&FastAttrsBenchmarkAuthorModel{}).
 		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 		Select("*").
 		Limit(COUNT * 2)
@@ -175,11 +179,11 @@ func BenchmarkFastAttrsQuerySetForeignKeys__NoPreload__Authors(b *testing.B) {
 	}
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__NoPreload__Books(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__NoPreload__Books(b *testing.B) {
 	b.StopTimer()
 
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkBook{}).
+		GetQuerySet(&FastAttrsBenchmarkBookModel{}).
 		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 		Select("*").
 		Limit(TOTAL_COUNT * 4)
@@ -200,11 +204,11 @@ func BenchmarkFastAttrsQuerySetForeignKeys__NoPreload__Books(b *testing.B) {
 	}
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToX(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__Select__OneToX(b *testing.B) {
 	b.StopTimer()
 
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkAuthor{}).
+		GetQuerySet(&FastAttrsBenchmarkAuthorModel{}).
 		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 		Select("*", "Books.*").
 		Limit(TOTAL_COUNT * 2)
@@ -223,7 +227,7 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToX(b *testing.B) {
 			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", COUNT, rowLen)
 		}
 
-		var chk *FastAttrsBenchmarkAuthor
+		var chk *FastAttrsBenchmarkAuthorModel
 		for row, err := range rows {
 			if err != nil {
 				b.Fatalf("error while querying objects: %v", err)
@@ -239,11 +243,11 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToX(b *testing.B) {
 	}
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToOne(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__Select__OneToOne(b *testing.B) {
 	b.StopTimer()
 
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkBook{}).
+		GetQuerySet(&FastAttrsBenchmarkBookModel{}).
 		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 		Select("*", "Author.*").
 		Limit(TOTAL_BOOKS * 2)
@@ -264,11 +268,11 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToOne(b *testing.B) {
 	}
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToX__InitInLoop(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__Select__OneToX__InitInLoop(b *testing.B) {
 
 	for b.Loop() {
 		var qs = queries.
-			GetQuerySet(&FastAttrsBenchmarkAuthor{}).
+			GetQuerySet(&FastAttrsBenchmarkAuthorModel{}).
 			WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 			Select("*", "Books.*").
 			Limit(TOTAL_COUNT * 2)
@@ -283,7 +287,7 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToX__InitInLoop(b *testin
 			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", COUNT, rowLen)
 		}
 
-		var chk *FastAttrsBenchmarkAuthor
+		var chk *FastAttrsBenchmarkAuthorModel
 		for row, err := range rows {
 			if err != nil {
 				b.Fatalf("error while querying objects: %v", err)
@@ -299,10 +303,10 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToX__InitInLoop(b *testin
 	}
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToOne__InitInLoop(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__Select__OneToOne__InitInLoop(b *testing.B) {
 	for b.Loop() {
 		var qs = queries.
-			GetQuerySet(&FastAttrsBenchmarkBook{}).
+			GetQuerySet(&FastAttrsBenchmarkBookModel{}).
 			WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 			Select("*", "Author.*").
 			Limit(TOTAL_BOOKS * 2)
@@ -319,11 +323,11 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Select__OneToOne__InitInLoop(b *test
 	}
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__Preload__OneToX(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__Preload__OneToX(b *testing.B) {
 	b.StopTimer()
 
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkAuthor{}).
+		GetQuerySet(&FastAttrsBenchmarkAuthorModel{}).
 		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 		Select("*").
 		Preload("Books").
@@ -343,7 +347,7 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Preload__OneToX(b *testing.B) {
 			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", COUNT, rowLen)
 		}
 
-		var chk *FastAttrsBenchmarkAuthor
+		var chk *FastAttrsBenchmarkAuthorModel
 		for row, err := range rows {
 			if err != nil {
 				b.Fatalf("error while querying objects: %v", err)
@@ -359,11 +363,11 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Preload__OneToX(b *testing.B) {
 	}
 }
 
-func BenchmarkFastAttrsQuerySetForeignKeys__Preload__OneToOne(b *testing.B) {
+func BenchmarkFastAttrsModelQuerySetForeignKeys__Preload__OneToOne(b *testing.B) {
 	b.StopTimer()
 
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkBook{}).
+		GetQuerySet(&FastAttrsBenchmarkBookModel{}).
 		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
 		Select("*").
 		SelectRelated("Author").
@@ -385,9 +389,9 @@ func BenchmarkFastAttrsQuerySetForeignKeys__Preload__OneToOne(b *testing.B) {
 	}
 }
 
-func TestFastAttrsQuerySetForeignKeys__NoPreload__Authors(t *testing.T) {
+func TestFastAttrsModelQuerySetForeignKeys__NoPreload__Authors(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkAuthor{}).
+		GetQuerySet(&FastAttrsBenchmarkAuthorModel{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Limit(COUNT * 2)
@@ -402,9 +406,9 @@ func TestFastAttrsQuerySetForeignKeys__NoPreload__Authors(t *testing.T) {
 	}
 }
 
-func TestFastAttrsQuerySetForeignKeys__NoPreload__Books(t *testing.T) {
+func TestFastAttrsModelQuerySetForeignKeys__NoPreload__Books(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkBook{}).
+		GetQuerySet(&FastAttrsBenchmarkBookModel{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Limit(TOTAL_COUNT * 4)
@@ -419,9 +423,9 @@ func TestFastAttrsQuerySetForeignKeys__NoPreload__Books(t *testing.T) {
 	}
 }
 
-func TestFastAttrsQuerySetForeignKeys__Select__OneToX(t *testing.T) {
+func TestFastAttrsModelQuerySetForeignKeys__Select__OneToX(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkAuthor{}).
+		GetQuerySet(&FastAttrsBenchmarkAuthorModel{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Books.*").
 		Limit(TOTAL_COUNT * 2)
@@ -447,9 +451,9 @@ func TestFastAttrsQuerySetForeignKeys__Select__OneToX(t *testing.T) {
 	}
 }
 
-func TestFastAttrsQuerySetForeignKeys__Select__OneToOne(t *testing.T) {
+func TestFastAttrsModelQuerySetForeignKeys__Select__OneToOne(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkBook{}).
+		GetQuerySet(&FastAttrsBenchmarkBookModel{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Author.*").
 		Limit(TOTAL_BOOKS * 2)
@@ -470,9 +474,9 @@ func TestFastAttrsQuerySetForeignKeys__Select__OneToOne(t *testing.T) {
 	}
 }
 
-func TestFastAttrsQuerySetForeignKeys__Preload__OneToX(t *testing.T) {
+func TestFastAttrsModelQuerySetForeignKeys__Preload__OneToX(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkAuthor{}).
+		GetQuerySet(&FastAttrsBenchmarkAuthorModel{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Preload("Books").
@@ -499,9 +503,9 @@ func TestFastAttrsQuerySetForeignKeys__Preload__OneToX(t *testing.T) {
 	}
 }
 
-func TestFastAttrsQuerySetForeignKeys__Preload__OneToOne(t *testing.T) {
+func TestFastAttrsModelQuerySetForeignKeys__Preload__OneToOne(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&FastAttrsBenchmarkBook{}).
+		GetQuerySet(&FastAttrsBenchmarkBookModel{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		SelectRelated("Author").

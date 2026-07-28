@@ -204,7 +204,7 @@ func compileScanPlan[T attrs.FieldDefinition](
 					panic(fmt.Errorf("field %q not found in %T", f.Name(), sampleRoot))
 				}
 
-				if field.IsPrimary() && plan.rootPrimaryEntryIdx == -1 {
+				if plan.rootPrimaryEntryIdx == -1 && field.IsPrimary() {
 					plan.rootPrimaryEntryIdx = len(plan.entries)
 				}
 
@@ -357,6 +357,7 @@ func (plan *scanPlan) apply(
 	root attrs.Definer,
 ) []*scannableField {
 	// Root slot is pre-defined
+
 	plan.models[0] = root
 	plan.defs[0] = attrs.Define(ctx, root)
 

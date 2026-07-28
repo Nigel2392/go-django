@@ -134,7 +134,7 @@ var errInitialised = errors.New(codeErrInitialised, "registry is not properly in
 // 2. The structField was not provided.
 // 3. Any path in the structfield index is nil (except for final.)
 // 4. If the value implements the [Binder] interface.
-func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, hasField bool, err error) {
+func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, typ reflect.Type, hasField bool, err error) {
 	t := modelInstance.Type()
 	modelInstance = modelInstance.Elem() // models should ALWAYS be pointers.
 
@@ -144,26 +144,26 @@ func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, 
 
 	m, ok := modelReg[t]
 	if !ok {
-		return val, true, errInitialised
+		return val, nil, true, errInitialised
 	}
 
 	if fieldName == "" {
 		if m.definitions == nil {
-			return val, true, errInitialised
+			return val, nil, true, errInitialised
 		}
 
 		fieldName = m.definitions.PrimaryField
 	}
 
 	if fieldName == "" {
-		return val, true, errors.FieldNull.Wrap(
+		return val, nil, true, errors.FieldNull.Wrap(
 			"Fieldname not provided and could not be inferred",
 		)
 	}
 
 	sf, ok := m.fieldsMap[fieldName]
 	if !ok {
-		return val, false, errors.FieldNotFound.Wrapf(
+		return val, nil, false, errors.FieldNotFound.Wrapf(
 			"Field %q was not found in model %T", fieldName,
 			modelInstance.Interface(),
 		)
@@ -174,7 +174,7 @@ func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, 
 	// if the field did not provide a structfield or it is nil, that is ok,
 	// but at least now we know that the field exists without any extra work.
 	if sf == nil {
-		return val, true, errors.FieldNull.Wrapf(
+		return val, nil, true, errors.FieldNull.Wrapf(
 			"Field %q in model %T does not allow for FastGet",
 			fieldName, modelInstance.Interface(),
 		)
@@ -184,14 +184,14 @@ func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, 
 	// it requires too much setup, and that is out of scope
 	// for this func.
 	if sf.Type.Implements(_binder) {
-		return val, true, errors.NotImplemented.Wrapf(
+		return val, sf.Type, true, errors.NotImplemented.Wrapf(
 			"value %T for field %q in model %T implements Binder, cannot use FastGet",
 			val.Interface(), fieldName, modelInstance.Interface(),
 		)
 	}
 
 	val, err = modelInstance.FieldByIndexErr(sf.Index)
-	return val, true, err
+	return val, sf.Type, true, err
 }
 
 // SetPrimaryKey sets the primary key field of a Definer.
@@ -208,6 +208,8 @@ func SetPrimaryKey(ctx context.Context, d Definer, value interface{}) error {
 
 	return f.SetValue(value, false)
 }
+
+var _bytesT = reflect.SliceOf(reflect.TypeOf(byte(0)))
 
 // PrimaryKey returns the primary key field of a Definer.
 //
@@ -244,7 +246,7 @@ typeSwitch:
 			goto typeSwitch
 		}
 
-		pk, exists, err := FastGet(reflect.ValueOf(obj), "")
+		pk, typ, exists, err := FastGet(reflect.ValueOf(obj), "")
 		if !exists {
 			panic("primary field does not exist")
 		}
@@ -258,7 +260,24 @@ typeSwitch:
 			panic("primary field value is not valid or suitable for use with PrimaryKey: " + err.Error())
 		}
 
-		obj = pk
+		// fast path for native types
+		switch pk.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+			reflect.Float32, reflect.Float64, reflect.String:
+			rV = pk
+			rT = typ
+			goto typeCheck
+		case reflect.Slice, reflect.Array:
+			if typ.Elem() == _bytesT || typ.Elem().ConvertibleTo(_bytesT) {
+				rV = pk
+				rT = typ
+				goto typeCheck
+			}
+		}
+
+		// pk returned might possibly be another definer type.
+		obj = pk.Interface()
 		goto typeSwitch
 
 	case Field:
@@ -317,6 +336,10 @@ typeCheck:
 		// Convert []byte to string for easier comparison and usage as a key
 		rV = rV.Convert(reflect.TypeFor[string]())
 		return rV.String()
+	}
+
+	if val == nil {
+		val = rV.Interface()
 	}
 
 	switch v := val.(type) {

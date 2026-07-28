@@ -2698,8 +2698,22 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			return 0, nil, err
 		}
 
+		var obj attrs.Definer
+		if plan.rootPrimaryEntryIdx >= 0 && plan.hasMultiRelations {
+			rootEntry := plan.entries[plan.rootPrimaryEntryIdx]
+			rootSlot := plan.modelSlots[rootEntry.slotIdx]
+			pk := attrs.PrimaryKey(ctx, row[rootSlot.pkRowIndex])
+			robj, ok := rows.objects.get(pk)
+			if ok {
+				obj = robj.object.obj
+			}
+		}
+
+		if obj == nil {
+			obj = reflect.New(reflect.TypeOf(qs.internals.Model.Object).Elem()).Interface().(attrs.Definer)
+		}
+
 		var (
-			obj          = reflect.New(reflect.TypeOf(qs.internals.Model.Object).Elem()).Interface().(attrs.Definer)
 			annotator, _ = obj.(DataModel)
 			annotations  = make(map[string]any)
 			datastore    ModelDataStore
