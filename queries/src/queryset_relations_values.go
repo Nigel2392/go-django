@@ -175,9 +175,10 @@ func (rl *RelRevFK[T]) AsList() []T {
 // This implements the [SettableThroughRelation] interface, which allows setting
 // the related object and its through object.
 type RelO2O[ModelType, ThroughModelType attrs.Definer] struct {
-	Parent        *ParentInfo // The parent model instance
-	Object        ModelType
-	ThroughObject ThroughModelType
+	Parent          *ParentInfo // The parent model instance
+	Object          ModelType
+	ThroughObject   ThroughModelType
+	relatedQuerySet *RelOneToOneQuerySet[ModelType]
 }
 
 func (rl *RelO2O[T1, T2]) ParentInfo() *ParentInfo {
@@ -204,6 +205,13 @@ func (rl *RelO2O[T1, T2]) Through() attrs.Definer {
 		return nil
 	}
 	return rl.ThroughObject
+}
+
+func (rl *RelO2O[T1, T2]) Objects() *RelOneToOneQuerySet[T1] {
+	if rl.relatedQuerySet == nil {
+		rl.relatedQuerySet = OneToOneQuerySet[T1](rl)
+	}
+	return rl.relatedQuerySet
 }
 
 func (rl *RelO2O[T1, T2]) SetValue(instance attrs.Definer, through attrs.Definer) {

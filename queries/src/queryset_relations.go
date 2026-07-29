@@ -178,7 +178,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 
 func (t *relatedQuerySet[T, T2]) createTargets(targets []T) ([]T, error) {
 	t.setup()
-	return t.originalQs.Clone().BulkCreate(targets)
+	return t.originalQs.Clone().WithContext(t.qs.Context()).BulkCreate(targets)
 	// return t.originalQs.Clone().WithContext(t.qs.context).BulkCreate(targets)
 }
 
@@ -371,6 +371,102 @@ func (t *relatedQuerySet[T, T2]) IterAll() (int, iter.Seq2[*Row[T], error], erro
 		panic("QuerySet is nil, cannot call IterAll()")
 	}
 	return t.qs.IterAll()
+}
+
+type RelOneToOneQuerySet[T attrs.Definer] struct {
+	backRef                                      ThroughRelationValue
+	*relatedQuerySet[T, *RelOneToOneQuerySet[T]] // Embedding the relatedQuerySet to inherit its methods
+}
+
+func OneToOneQuerySet[T attrs.Definer](backRef ThroughRelationValue) *RelOneToOneQuerySet[T] {
+	var parentInfo = backRef.ParentInfo()
+	var mQs = &RelOneToOneQuerySet[T]{
+		backRef: backRef,
+	}
+	mQs.relatedQuerySet = NewRelatedQuerySet[T](mQs, parentInfo)
+	return mQs
+}
+
+func (r *RelOneToOneQuerySet[T]) Clear(ctx context.Context) (bool, error) {
+	var ct int64
+	var throughModel = newThroughProxy(r.rel.Through())
+	var throughQs = GetQuerySet(throughModel.object).
+		WithContext(r.qs.Context()).
+		Filter(
+			expr.Q(
+				throughModel.sourceField.Name(),
+				attrs.Define(r.qs.Context(), r.source.Object).Primary().GetValue(),
+			),
+			expr.Expr(
+				throughModel.targetField.Name(), expr.LOOKUP_EXACT, Subquery(
+					r.qs.Select(r.qs.Meta().PrimaryKey().Name()).Limit(1),
+				),
+			),
+		)
+
+	ct, err := throughQs.Delete()
+	if err != nil {
+		return ct > 0, fmt.Errorf("failed to delete through objects: %w", err)
+	}
+
+	r.backRef.SetValue(nil, nil)
+	return ct > 0, nil
+}
+
+func (r *RelOneToOneQuerySet[T]) Load(ctx context.Context) error {
+	if r.backRef == nil {
+		return fmt.Errorf("back reference is nil, cannot load target")
+	}
+
+	r.setup()
+
+	row, err := r.qs.WithContext(ctx).Get()
+	if err != nil {
+		return fmt.Errorf("failed to load: %w", err)
+	}
+
+	r.backRef.SetValue(row.Object, row.Through)
+	return nil
+}
+
+func (r *RelOneToOneQuerySet[T]) SetTarget(target T) (created bool, deleted bool, err error) {
+	if r.backRef == nil {
+		return false, false, fmt.Errorf("back reference is nil, cannot set target")
+	}
+
+	r.setup()
+
+	tx, err := r.qs.GetOrCreateTransaction()
+	if err != nil {
+		return false, false, err
+	}
+
+	fmt.Printf("%v %T\n", tx, tx)
+
+	defer tx.Rollback(r.qs.Context())
+
+	deleted, err = r.Clear(r.qs.Context())
+	if err != nil {
+		return false, false, err
+	}
+
+	relations, _, err := r.createThroughObjects([]T{target})
+	if err != nil {
+		return false, deleted, fmt.Errorf("failed to create through objects: %w", err)
+	}
+
+	if len(relations) == 0 {
+		return false, deleted, fmt.Errorf("no relations created for targets %T", target)
+	}
+
+	if len(relations) > 1 {
+		return true, deleted, fmt.Errorf("too many relations created for target %T: %d", target, len(relations))
+	}
+
+	rel := relations[0]
+	r.backRef.SetValue(rel.Model(), rel.Through())
+	return true, deleted, tx.Commit(r.qs.Context())
+
 }
 
 type RelOneToManyQuerySet[T attrs.Definer] struct {

@@ -187,7 +187,7 @@ func Value(arg any) (driver.Value, error) {
 	}
 
 	var rVal = reflect.ValueOf(arg)
-	if !rVal.IsValid() || rVal.Kind() == reflect.Ptr && rVal.IsNil() {
+	if !rVal.IsValid() || rVal.Kind() == reflect.Pointer && rVal.IsNil() {
 		return nil, nil
 	}
 

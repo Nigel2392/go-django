@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Nigel2392/go-django/djester/quest"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/fields"
@@ -300,4 +301,95 @@ func TestQuerySetOneToOne__Preload__Reverse(t *testing.T) {
 			t.Fatalf("query returned nil or empty related row")
 		}
 	}
+}
+
+func TestQuerySetOneToOne__QuerySet(t *testing.T) {
+	var ctx, _ = quest.StartTransaction(t)
+	var src = models.Setup(ctx, &BenchmarkO2OMain{
+		Title: "TestQuerySetOneToOne__QuerySetAdd_Main",
+	})
+
+	var target = &BenchmarkO2OTarget{
+		Name: "TestQuerySetOneToOne__QuerySetAdd_Target",
+	}
+
+	if err := src.Save(ctx); err != nil {
+		t.Fatalf("Failed to save model %T: %v", src, err)
+	}
+
+	t.Run("Add", func(t *testing.T) {
+		created, deleted, err := src.Through.Objects().WithContext(ctx).SetTarget(target)
+		if err != nil {
+			t.Fatalf("Failed to save through relation on %T: %v", src, err)
+		}
+
+		if deleted {
+			t.Fatal("No objects should have been deleted, but they were.")
+		}
+
+		if !created {
+			t.Fatal("Object was not created")
+		}
+
+		if src.Through.Object == nil {
+			t.Fatalf("Object should have been set: %+v", src.Through)
+		}
+
+		if src.Through.ThroughObject == nil {
+			t.Fatalf("ThroughObject should have been set: %+v", src.Through)
+		}
+
+		if src.Through.Object.Name != "TestQuerySetOneToOne__QuerySetAdd_Target" {
+			t.Fatalf("Expected name %q, got %q", "TestQuerySetOneToOne__QuerySetAdd_Target", src.Through.Object.Name)
+		}
+
+		if src.Through.ThroughObject.TargetModel != uint32(target.ID) || target.ID == 0 {
+			t.Fatalf("ThroughObject should have been set with ID same as target model: %d != %d", src.Through.ThroughObject.TargetModel, target.ID)
+		}
+	})
+
+	t.Run("Load", func(t *testing.T) {
+		var newSrc = models.Setup(ctx, &BenchmarkO2OMain{
+			ID: src.ID,
+		})
+
+		err := newSrc.Load(ctx)
+		if err != nil {
+			t.Fatalf("Failed to load src %T: %v", newSrc, err)
+		}
+
+		if newSrc.Through.Object != nil {
+			t.Fatalf("Object should not have been set: %+v", newSrc.Through.Object)
+		}
+
+		if newSrc.Through.ThroughObject != nil {
+			t.Fatalf("ThroughObject should not have been set: %+v", newSrc.Through.ThroughObject)
+		}
+
+		err = newSrc.Through.Objects().Load(ctx)
+		if err != nil {
+			t.Fatalf("Failed to load through relation on %T: %v", newSrc, err)
+		}
+
+		if newSrc.Through.Object == nil {
+			t.Fatalf("Object should have been set: %+v", newSrc.Through)
+		}
+
+		if newSrc.Through.ThroughObject == nil {
+			t.Fatalf("ThroughObject should have been set: %+v", newSrc.Through)
+		}
+
+		if newSrc.Through.Object.Name != "TestQuerySetOneToOne__QuerySetAdd_Target" {
+			t.Fatalf("Expected name %q, got %q", "TestQuerySetOneToOne__QuerySetAdd_Target", newSrc.Through.Object.Name)
+		}
+
+		if newSrc.Through.ThroughObject.TargetModel != uint32(target.ID) || target.ID == 0 {
+			t.Fatalf("ThroughObject should have been set with ID same as target model: %d != %d", newSrc.Through.ThroughObject.TargetModel, target.ID)
+		}
+
+	})
+
+	t.Run("OverWrite", func(t *testing.T) {
+
+	})
 }

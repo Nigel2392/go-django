@@ -5,7 +5,6 @@ package testdb
 import (
 	"context"
 
-	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 )
 
@@ -39,7 +38,7 @@ func open() (which string, db drivers.Database) {
 	}
 
 	// set to false to avoid database locking issues in tests
-	queries.QUERYSET_CREATE_IMPLICIT_TRANSACTION = false
+	// queries.QUERYSET_CREATE_IMPLICIT_TRANSACTION = false
 
 	return ENGINE, sqlDB
 }

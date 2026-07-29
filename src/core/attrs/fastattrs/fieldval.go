@@ -562,13 +562,13 @@ func (r *ptrField[M, V]) get(val *V) V {
 
 	if bitch.Is(r.opts.flags, flagIsPtrBinder) {
 		if err := any(val).(attrs.Binder).BindToModel(r.obj, r); err != nil {
-			r.useOpts().bindError(err)
+			r.opts.bindError(err)
 		}
 	}
 
 	if bitch.Is(r.opts.flags, flagIsBinder) && !r.opts.isNil(r.val) {
 		if err := any(*val).(attrs.Binder).BindToModel(r.obj, r); err != nil {
-			r.useOpts().bindError(err)
+			r.opts.bindError(err)
 		}
 	}
 

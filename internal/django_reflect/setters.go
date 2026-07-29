@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/Nigel2392/go-django/internal/bitch"
 	"golang.org/x/exp/constraints"
@@ -40,7 +41,7 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 	var anyDest = any(dstPtr)
 	if flags.Is(SF_SQL_SCANNER) {
 		if scanner, ok := anyDest.(sql.Scanner); ok {
-			err := scanner.Scan(src)
+			err := scanner.Scan(ConvertToUniformType(src))
 			return err == nil, err
 		}
 	}
@@ -567,6 +568,13 @@ func ConvertToUniformType(val any) any {
 
 	case string:
 		return string(v)
+
+	case time.Time:
+		return v
+
+	case interface{ Time() time.Time }:
+		// see queries/src/drivers/types.go time types
+		return v.Time()
 	}
 
 	rv := reflect.ValueOf(val)
