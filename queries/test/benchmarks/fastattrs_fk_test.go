@@ -2,13 +2,10 @@ package benchmarks_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
 )
@@ -31,48 +28,31 @@ type FastAttrsBenchmarkAuthor struct {
 
 func (a *FastAttrsBenchmarkAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*FastAttrsBenchmarkAuthor, attrs.Field](ctx, a,
-		fastattrs.NewField(a, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor]{
-				Config:   *fast_fldCnfPrimary,
-				GetValue: func(obj *FastAttrsBenchmarkAuthor) interface{} { return obj.ID },
-				SetValue: func(obj *FastAttrsBenchmarkAuthor, value any) error {
-					switch v := value.(type) {
-					case uint64:
-						obj.ID = v
-					case int64:
-						obj.ID = uint64(v)
-					case int:
-						obj.ID = uint64(v)
-					default:
-						return fmt.Errorf("invalid ID type %T: %v", value, value)
-					}
-					return nil
-				},
-				Default: uint64(0),
+		fastattrs.Field(a, "ID", &a.ID, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, uint64] {
+			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, uint64]{
+				Config: *fast_fldCnfPrimary,
 			}
 		}),
-		fastattrs.NewField(a, "Name", func() fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkAuthor]{
-				Config:   attrs.FieldConfig{},
-				GetValue: func(obj *FastAttrsBenchmarkAuthor) interface{} { return obj.Name },
-				SetValue: func(obj *FastAttrsBenchmarkAuthor, value any) error {
-					switch v := value.(type) {
-					case string:
-						obj.Name = v
-					case []byte:
-						obj.Name = string(v)
-					default:
-						return fmt.Errorf("invalid Name type %T: %v", value, value)
-					}
-					return nil
-				},
-				Default: "",
+		fastattrs.Field(a, "Name", &a.Name, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string] {
+			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string]{
+				Config: attrs.FieldConfig{},
 			}
 		}),
-		fields.NewManyToManyField[*queries.RelRevFK[attrs.Definer]](a, "Books", &fields.FieldConfig{
-			ScanTo:    &a.Books,
-			IsReverse: true,
+		fastattrs.Field(a, "Books", &a.Books, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, *queries.RelRevFK[attrs.Definer]] {
+			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, *queries.RelRevFK[attrs.Definer]]{
+				//	Config: attrs.FieldConfig{
+				//		RelForeignKeyReverse: attrs.Relate(
+				//			&FastAttrsBenchmarkBook{},
+				//			"Author",
+				//			nil,
+				//		),
+				//	},
+			}
 		}),
+		//		fields.NewManyToManyField[*queries.RelRevFK[attrs.Definer]](a, "Books", &fields.FieldConfig{
+		//			ScanTo:    &a.Books,
+		//			IsReverse: true,
+		//		}),
 	).WithTableName("author_bench")
 }
 
@@ -84,67 +64,23 @@ type FastAttrsBenchmarkBook struct {
 
 func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*FastAttrsBenchmarkBook, attrs.Field](ctx, b,
-		fastattrs.NewField(b, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBook] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkBook]{
-				Config:   *fast_fldCnfPrimary,
-				GetValue: func(obj *FastAttrsBenchmarkBook) interface{} { return obj.ID },
-				SetValue: func(obj *FastAttrsBenchmarkBook, value any) error {
-					switch v := value.(type) {
-					case uint64:
-						obj.ID = v
-					case int64:
-						obj.ID = uint64(v)
-					case int:
-						obj.ID = uint64(v)
-					default:
-						return fmt.Errorf("invalid ID type %T: %v", value, value)
-					}
-					return nil
-				},
-				Default: uint64(0),
+		fastattrs.Field(b, "ID", &b.ID, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, uint64] {
+			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, uint64]{
+				Config: *fast_fldCnfPrimary,
 			}
 		}),
-		fastattrs.NewField(b, "Title", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBook] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkBook]{
-				Config:   attrs.FieldConfig{},
-				GetValue: func(obj *FastAttrsBenchmarkBook) interface{} { return obj.Title },
-				SetValue: func(obj *FastAttrsBenchmarkBook, value any) error {
-					switch v := value.(type) {
-					case string:
-						obj.Title = v
-					case []byte:
-						obj.Title = string(v)
-					default:
-						return fmt.Errorf("invalid Title type %T: %v", value, value)
-					}
-					return nil
-				},
-				Default: "",
+		fastattrs.Field(b, "Title", &b.Title, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string] {
+			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string]{
+				Config: attrs.FieldConfig{},
 			}
 		}),
-		fastattrs.NewField(b, "Author", func() fastattrs.FieldConfig[*FastAttrsBenchmarkBook] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkBook]{
-				Config: fast_fldCnfRelAuthor,
-				GetValue: func(obj *FastAttrsBenchmarkBook) interface{} {
-					return obj.Author
-				},
-				SetValue: func(obj *FastAttrsBenchmarkBook, value any) error {
-					switch v := value.(type) {
-					case int64:
-						obj.Author = &FastAttrsBenchmarkAuthor{
-							ID: uint64(v),
-						}
-					case *FastAttrsBenchmarkAuthor:
-						obj.Author = v
-					default:
-						return errors.TypeMismatch.Wrapf(
-							"%T does not match expected author type",
-							value,
-						)
-					}
-					return nil
-				},
+		fastattrs.Field(b, "Author", &b.Author, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor] {
+			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor]{
+				Config:  fast_fldCnfRelAuthor,
 				Default: fastattrs.NULL{},
+				New: func() *FastAttrsBenchmarkAuthor {
+					return &FastAttrsBenchmarkAuthor{}
+				},
 			}
 		}),
 	).WithTableName("book_bench")

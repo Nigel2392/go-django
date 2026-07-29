@@ -126,18 +126,19 @@ func getRelatedName(f Field, default_ string) string {
 
 func registerReverseRelation(
 	registerCtx context.Context,
+	final bool,
 	fromModel Definer,
 	fromField Field,
 	forward Relation,
 ) {
 
-	// Step 1: Get the target model and type
+	// Get the target model and type
 	// Create a new instance of the target target model
 	var targetModel = forward.Model()
 	var targetType = reflect.TypeOf(targetModel)
 	targetModel = NewObject[Definer](registerCtx, targetType.Elem())
 
-	// Step 2: Get or init ModelMeta for the target
+	//  Get or init ModelMeta for the target
 	meta, ok := modelReg[targetType]
 	if !ok {
 		RegisterModel(targetModel)
@@ -146,16 +147,14 @@ func registerReverseRelation(
 		meta.definitions = nil
 	}
 
-	// Step 3: Build reversed chain
-	// This is the relation that will be used to access the source model from the target model
 	var reversed = ReverseRelation(
 		fromModel,
 		fromField,
 		forward,
 	)
 
-	// Step 4: Determine a reverse name
-	// Prefer something explicit if available (you could add support for a "related_name" tag in field config)
+	// fmt.Printf("REV %s FOR %T -> %T.%s\n", reversed.Type(), fromModel, reversed.Model(), reversed.Field().Name())
+
 	var reverseAlias = getRelatedName(fromField, "")
 	if reverseAlias == "" {
 		reverseAlias = newReverseAlias(reversed)
@@ -168,29 +167,31 @@ func registerReverseRelation(
 		reverseAlias,
 	)
 
-	if _, ok := meta.stored[storageKey]; ok {
-		// Cannot register the same reverse relation twice
-		// No need to panic here - since the relation was already registered
-		// we can just skip it
-		return
+	if !final {
+		if _, ok := meta.stored[storageKey]; ok {
+			// Cannot register the same reverse relation twice
+			// No need to panic here - since the relation was already registered
+			// we can just skip it
+			return
+		}
+
+		// Store in reverseRelations
+		if rel, ok := meta.reverse.Get(reverseAlias); ok {
+			// Cannot register a reverse relation with the same name twice
+			// This is a programming error and can happen if you have two reverse relations
+			// from two different models to the same model with the same name
+			//
+			// e.g. if you have two models A and B, and both have a reverse relation to C with the same name
+			panic(fmt.Errorf(
+				"reverse relation %q from %T on %T was already registered by %T, please use a different related name",
+				reverseAlias, fromModel, targetModel, rel.Model(),
+			))
+		}
 	}
 
-	// Step 5: Store in reverseRelations
-	if rel, ok := meta.reverse.Get(reverseAlias); ok {
-		// Cannot register a reverse relation with the same name twice
-		// This is a programming error and can happen if you have two reverse relations
-		// from two different models to the same model with the same name
-		//
-		// e.g. if you have two models A and B, and both have a reverse relation to C with the same name
-		panic(fmt.Errorf(
-			"reverse relation %q from %T on %T was already registered by %T, please use a different related name",
-			reverseAlias, fromModel, targetModel, rel.Model(),
-		))
-	}
-
+	// fmt.Printf("REGISTER REV(final=%t) %s FOR %T -> %T.%s\n", final, reversed.Type(), fromModel, reversed.Model(), reversed.Field().Name())
 	meta.reverse.Set(reverseAlias, reversed)
 	meta.stored[storageKey] = nil
-
 	modelReg[targetType] = meta
 }
 
@@ -213,10 +214,10 @@ func RegisterModel(model Definer) {
 		return
 	}
 
-	registerModel(t, model)
+	registerModel(t, model, false, true)
 }
 
-func registerModel(t reflect.Type, model Definer) {
+func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			panic(fmt.Errorf(
@@ -231,14 +232,26 @@ func registerModel(t reflect.Type, model Definer) {
 	var registerContext = ContextWithFlags(
 		context.Background(), CtxFlagRegistering, true,
 	)
-	var meta = &modelMeta{
-		model:     NewObject[Definer](registerContext, model),
-		forward:   orderedmap.NewOrderedMap[string, Relation](),
-		reverse:   orderedmap.NewOrderedMap[string, Relation](),
-		stored:    make(map[string]any),
-		fieldsMap: make(map[string]*reflect.StructField),
+	//	var meta = &modelMeta{
+	//		model:     NewObject[Definer](registerContext, model),
+	//		forward:   orderedmap.NewOrderedMap[string, Relation](),
+	//		reverse:   orderedmap.NewOrderedMap[string, Relation](),
+	//		stored:    make(map[string]any),
+	//		fieldsMap: make(map[string]*reflect.StructField),
+	//	}
+	//	modelReg[t] = meta
+
+	var meta, ok = modelReg[t]
+	if !ok {
+		meta = &modelMeta{
+			model:     NewObject[Definer](registerContext, model),
+			forward:   orderedmap.NewOrderedMap[string, Relation](),
+			reverse:   orderedmap.NewOrderedMap[string, Relation](),
+			stored:    make(map[string]any),
+			fieldsMap: make(map[string]*reflect.StructField),
+		}
+		modelReg[t] = meta
 	}
-	modelReg[t] = meta
 
 	var defs = meta.model.FieldDefs(registerContext)
 	if defs == nil {
@@ -247,11 +260,13 @@ func registerModel(t reflect.Type, model Definer) {
 
 	// Send signal that the model is being registered
 	var staticDefs = wrapDefinitions(meta.model, defs)
-	OnBeforeModelRegister.Send(SignalModelMeta{
-		Definer:     meta.model,
-		Definitions: staticDefs,
-		Meta:        meta,
-	})
+	if sendSignals {
+		OnBeforeModelRegister.Send(SignalModelMeta{
+			Definer:     meta.model,
+			Definitions: staticDefs,
+			Meta:        meta,
+		})
+	}
 
 	if mInfo, ok := meta.model.(CanModelInfo); ok {
 		// If the model has a meta, we need to set it
@@ -270,26 +285,22 @@ func registerModel(t reflect.Type, model Definer) {
 			panic(fmt.Errorf("error creating meta: field %T has no name", field))
 		}
 
-		// fields can get a callback when the model they are defined on is registered
-		if registrar, ok := field.(CanOnModelRegister); ok {
-			var err = registrar.OnModelRegister(meta.model)
-			if err != nil {
-				panic(fmt.Errorf(
-					"field.OnModelRegister: error registering field %q on model %T: %w",
-					name, meta.model, err,
-				))
+		// final ensures this method can only be ran ONCE in the entire lifetime.
+		// See [ResetDefinitions]
+		if final {
+			// fields can get a callback when the model they are defined on is registered
+			if registrar, ok := field.(CanOnModelRegister); ok {
+				var err = registrar.OnModelRegister(meta.model, field)
+				if err != nil {
+					panic(fmt.Errorf(
+						"field.OnModelRegister: error registering field %q on model %T: %w",
+						name, meta.model, err,
+					))
+				}
 			}
 		}
 
 		var rel = field.Rel()
-		//if rel != nil && rel.Model() != nil {
-		//	md := rel.Model()
-		//	rt := reflect.TypeOf(md)
-		//	if _, ok := modelReg[rt]; !ok {
-		//		RegisterModel(md)
-		//	}
-		//}
-
 		var attrs = field.Attrs()
 		fieldAttrs[name] = attrs
 
@@ -337,13 +348,15 @@ func registerModel(t reflect.Type, model Definer) {
 
 			meta.stored[storageKey] = true
 
-			// Send signal that the through model is being registered
-			OnThroughModelRegister.Send(SignalThroughModelMeta{
-				Source:      meta.model,
-				Target:      rel.Model(),
-				ThroughInfo: through,
-				Meta:        throughMeta,
-			})
+			if sendSignals {
+				// Send signal that the through model is being registered
+				OnThroughModelRegister.Send(SignalThroughModelMeta{
+					Source:      meta.model,
+					Target:      rel.Model(),
+					ThroughInfo: through,
+					Meta:        throughMeta,
+				})
+			}
 		}
 
 	setRel:
@@ -354,7 +367,7 @@ func registerModel(t reflect.Type, model Definer) {
 		var canReverse, ok = field.(CanReverseRelate)
 		if !ok || canReverse.AllowReverseRelation() {
 			registerReverseRelation(
-				registerContext, model, field, rel,
+				registerContext, final, model, field, rel,
 			)
 		}
 	}
@@ -362,15 +375,19 @@ func registerModel(t reflect.Type, model Definer) {
 	// Store the field attributes in the meta
 	meta.stored[MetaStorageKeyAttrs] = fieldAttrs
 
-	// Set the model as setup
-	meta.setup = true
+	if final {
+		// Set the model as setup
+		meta.setup = true
+	}
 
-	// Send signal that the model has been registered
-	OnModelRegister.Send(SignalModelMeta{
-		Definer:     meta.model,
-		Definitions: staticDefs,
-		Meta:        meta,
-	})
+	if sendSignals {
+		// Send signal that the model has been registered
+		OnModelRegister.Send(SignalModelMeta{
+			Definer:     meta.model,
+			Definitions: staticDefs,
+			Meta:        meta,
+		})
+	}
 }
 
 type fieldAttributeContextKey struct {

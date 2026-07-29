@@ -215,6 +215,182 @@ func (t BLOB) String() string {
 	return string(t)
 }
 
+// Scan methods for 'native' types
+func (v *Text) Scan(src any) error {
+	switch srcV := src.(type) {
+	case string:
+		*v = Text(srcV)
+	case []byte:
+		*v = Text(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *String) Scan(src any) error {
+	switch srcV := src.(type) {
+	case string:
+		*v = String(srcV)
+	case []byte:
+		*v = String(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *Char) Scan(src any) error {
+	switch srcV := src.(type) {
+	case string:
+		*v = Char(srcV)
+	case []byte:
+		*v = Char(srcV)
+	case int:
+		*v = Char(byte(srcV))
+	case int8:
+		*v = Char(byte(srcV))
+	case int16:
+		*v = Char(byte(srcV))
+	case int32:
+		*v = Char(byte(srcV))
+	case int64:
+		*v = Char(byte(srcV))
+	case uint:
+		*v = Char(byte(srcV))
+	case uint8:
+		*v = Char(byte(srcV))
+	case uint16:
+		*v = Char(byte(srcV))
+	case uint32:
+		*v = Char(byte(srcV))
+	case uint64:
+		*v = Char(byte(srcV))
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *Int) Scan(src any) error {
+	switch srcV := src.(type) {
+	case int:
+		*v = Int(srcV)
+	case int64:
+		*v = Int(srcV)
+	case uint64:
+		*v = Int(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *Uint) Scan(src any) error {
+	switch srcV := src.(type) {
+	case int:
+		*v = Uint(srcV)
+	case int64:
+		*v = Uint(srcV)
+	case uint64:
+		*v = Uint(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *Float) Scan(src any) error {
+	switch srcV := src.(type) {
+	case float32:
+		*v = Float(srcV)
+	case float64:
+		*v = Float(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *Bool) Scan(src any) error {
+	switch srcV := src.(type) {
+	case int:
+		*v = srcV != 0
+	case int64:
+		*v = srcV != 0
+	case uint64:
+		*v = srcV != 0
+	case byte:
+		*v = srcV != 0
+	case bool:
+		*v = Bool(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *Bytes) Scan(src any) error {
+	switch srcV := src.(type) {
+	case string:
+		*v = Bytes(srcV)
+	case []byte:
+		*v = Bytes(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+func (v *BLOB) Scan(src any) error {
+	switch srcV := src.(type) {
+	case string:
+		*v = BLOB(srcV)
+	case []byte:
+		*v = BLOB(srcV)
+	case nil:
+		return nil
+	default:
+		return errors.TypeMismatch.Wrapf(
+			"Type %T does not match %T",
+			src, v,
+		)
+	}
+	return nil
+}
+
 // Complete shim for the ulid.ULID type
 
 func NewULID() ULID {

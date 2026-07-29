@@ -53,12 +53,10 @@ type BenchmarkM2MTarget struct {
 
 var (
 	fldCnfSrcId = &attrs.FieldConfig{
-		Column:        "source_id",
-		RelForeignKey: attrs.Relate(&BenchmarkM2MSource{}, "", nil),
+		Column: "source_id",
 	}
 	fldCnfTargetId = &attrs.FieldConfig{
-		Column:        "target_id",
-		RelForeignKey: attrs.Relate(&BenchmarkM2MTarget{}, "", nil),
+		Column: "target_id",
 	}
 
 	m2mRel = attrs.Relate(

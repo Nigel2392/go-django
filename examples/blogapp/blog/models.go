@@ -31,8 +31,7 @@ var (
 	_ models.SaveableObject   = (*BlogPage)(nil)
 	_ models.DeleteableObject = (*BlogPage)(nil)
 
-	_ attrs.Embedded           = (*OrderableMixin[*BlogImage])(nil)
-	_ attrs.FieldUnpackerMixin = (*OrderableMixin[*BlogImage])(nil)
+	_ attrs.Embedded = (*OrderableMixin[*BlogImage])(nil)
 )
 
 type BlogContext struct {

@@ -2,12 +2,10 @@ package benchmarks_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 
@@ -17,15 +15,6 @@ import (
 
 var (
 	fast_inline_fldCnfPrimary = &attrs.FieldConfig{Primary: true}
-
-	fast_inline_fldCnfSrcId = &attrs.FieldConfig{
-		Column:        "source_id",
-		RelForeignKey: attrs.Relate(&FastAttrsInlineBenchmarkM2MSource{}, "", nil),
-	}
-	fast_inline_fldCnfTargetId = &attrs.FieldConfig{
-		Column:        "target_id",
-		RelForeignKey: attrs.Relate(&FastAttrsInlineBenchmarkM2MTarget{}, "", nil),
-	}
 
 	fast_inline_m2mRel = attrs.Relate(
 		&FastAttrsInlineBenchmarkM2MTarget{},
@@ -50,47 +39,24 @@ type FastAttrsInlineBenchmarkM2MSource struct {
 
 func (m *FastAttrsInlineBenchmarkM2MSource) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		fastattrs.NewField(m, "ID", func() fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MSource] {
-			return fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MSource]{
-				Config:   *fast_inline_fldCnfPrimary,
-				GetValue: func(obj *FastAttrsInlineBenchmarkM2MSource) interface{} { return obj.ID },
-				SetValue: func(obj *FastAttrsInlineBenchmarkM2MSource, value any) error {
-					switch v := value.(type) {
-					case uint64:
-						obj.ID = v
-					case int64:
-						obj.ID = uint64(v)
-					case int:
-						obj.ID = uint64(v)
-					default:
-						return fmt.Errorf("invalid ID type %T: %v", value, value)
-					}
-					return nil
-				},
+		fastattrs.Field(m, "ID", &m.ID, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64]{
+				Config:  *fast_inline_fldCnfPrimary,
 				Default: uint64(0),
 			}
 		}),
-		fastattrs.NewField(m, "Title", func() fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MSource] {
-			return fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MSource]{
-				GetValue: func(obj *FastAttrsInlineBenchmarkM2MSource) interface{} { return obj.Title },
-				SetValue: func(obj *FastAttrsInlineBenchmarkM2MSource, value any) error {
-					switch v := value.(type) {
-					case string:
-						obj.Title = v
-					case []byte:
-						obj.Title = string(v)
-					default:
-						return fmt.Errorf("invalid Title type %T: %v", value, value)
-					}
-					return nil
-				},
-				Default: "",
-			}
+		fastattrs.Field(m, "Title", &m.Title, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, string] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, string]{}
 		}),
-		fields.NewManyToManyField[*queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]](m, "Target", &fields.FieldConfig{
-			ScanTo:      &m.Target,
-			ReverseName: "TargetReverse",
-			Rel:         fast_inline_m2mRel,
+		fastattrs.Field(m, "Target", &m.Target, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]]{
+				Config: attrs.FieldConfig{
+					RelManyToMany: fast_inline_m2mRel,
+					Attributes: map[string]interface{}{
+						attrs.AttrReverseAliasKey: "TargetReverse",
+					},
+				},
+			}
 		}),
 	).WithTableName("fast_m2m_source_bench")
 }
@@ -104,42 +70,13 @@ type FastAttrsInlineBenchmarkM2MTarget struct {
 
 func (m *FastAttrsInlineBenchmarkM2MTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		fastattrs.NewField(m, "ID", func() fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MTarget] {
-			return fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MTarget]{
-				Config:   *fast_inline_fldCnfPrimary,
-				GetValue: func(obj *FastAttrsInlineBenchmarkM2MTarget) interface{} { return obj.ID },
-				SetValue: func(obj *FastAttrsInlineBenchmarkM2MTarget, value any) error {
-					switch v := value.(type) {
-					case uint64:
-						obj.ID = v
-					case int64:
-						obj.ID = uint64(v)
-					case int:
-						obj.ID = uint64(v)
-					default:
-						return fmt.Errorf("invalid ID type %T: %v", value, value)
-					}
-					return nil
-				},
-				Default: uint64(0),
+		fastattrs.Field(m, "ID", &m.ID, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, uint64] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, uint64]{
+				Config: *fast_inline_fldCnfPrimary,
 			}
 		}),
-		fastattrs.NewField(m, "Name", func() fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MTarget] {
-			return fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MTarget]{
-				GetValue: func(obj *FastAttrsInlineBenchmarkM2MTarget) interface{} { return obj.Name },
-				SetValue: func(obj *FastAttrsInlineBenchmarkM2MTarget, value any) error {
-					switch v := value.(type) {
-					case string:
-						obj.Name = v
-					case []byte:
-						obj.Name = string(v)
-					default:
-						return fmt.Errorf("invalid Name type %T: %v", value, value)
-					}
-					return nil
-				},
-				Default: "",
-			}
+		fastattrs.Field(m, "Name", &m.Name, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, string] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, string]{}
 		}),
 	).WithTableName("fast_m2m_target_bench")
 }
@@ -152,58 +89,23 @@ type FastAttrsInlineBenchmarkM2MThrough struct {
 
 func (m *FastAttrsInlineBenchmarkM2MThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
-		fastattrs.NewField(m, "ID", func() fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MThrough] {
-			return fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MThrough]{
-				Config:   *fast_inline_fldCnfPrimary,
-				GetValue: func(obj *FastAttrsInlineBenchmarkM2MThrough) interface{} { return obj.ID },
-				SetValue: func(obj *FastAttrsInlineBenchmarkM2MThrough, value any) error {
-					switch v := value.(type) {
-					case uint64:
-						obj.ID = v
-					case int64:
-						obj.ID = uint64(v)
-					case int:
-						obj.ID = uint64(v)
-					}
-					return nil
-				},
-				Default: uint64(0),
+		fastattrs.Field(m, "ID", &m.ID, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
+				Config: *fast_inline_fldCnfPrimary,
 			}
 		}),
-		fastattrs.NewField(m, "SourceModel", func() fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MThrough] {
-			return fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MThrough]{
-				Config:   *fast_inline_fldCnfSrcId,
-				GetValue: func(obj *FastAttrsInlineBenchmarkM2MThrough) interface{} { return obj.SourceModel },
-				SetValue: func(obj *FastAttrsInlineBenchmarkM2MThrough, value any) error {
-					switch v := value.(type) {
-					case uint64:
-						obj.SourceModel = v
-					case int64:
-						obj.SourceModel = uint64(v)
-					case int:
-						obj.SourceModel = uint64(v)
-					}
-					return nil
+		fastattrs.Field(m, "SourceModel", &m.SourceModel, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
+				Config: attrs.FieldConfig{
+					Column: "source_id",
 				},
-				Default: uint64(0),
 			}
 		}),
-		fastattrs.NewField(m, "TargetModel", func() fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MThrough] {
-			return fastattrs.FieldConfig[*FastAttrsInlineBenchmarkM2MThrough]{
-				Config:   *fast_inline_fldCnfTargetId,
-				GetValue: func(obj *FastAttrsInlineBenchmarkM2MThrough) interface{} { return obj.TargetModel },
-				SetValue: func(obj *FastAttrsInlineBenchmarkM2MThrough, value any) error {
-					switch v := value.(type) {
-					case uint64:
-						obj.TargetModel = v
-					case int64:
-						obj.TargetModel = uint64(v)
-					case int:
-						obj.TargetModel = uint64(v)
-					}
-					return nil
+		fastattrs.Field(m, "TargetModel", &m.TargetModel, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
+			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
+				Config: attrs.FieldConfig{
+					Column: "target_id",
 				},
-				Default: uint64(0),
 			}
 		}),
 	).WithTableName("fast_m2m_through_bench")

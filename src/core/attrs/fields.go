@@ -35,7 +35,7 @@ var (
 	_modelFields = make(map[reflect.Type]map[string][]func(*FieldConfig))
 )
 
-func relFromConfig[T FieldDefinition](f T, cnf *FieldConfig) Relation {
+func relFromConfig(f FieldDefinition, cnf *FieldConfig) Relation {
 	var (
 		rel Relation
 		typ RelationType
@@ -353,7 +353,7 @@ func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 }
 
 // model is equal to instance_t
-func (f *FieldDef) OnModelRegister(model Definer) error {
+func (f *FieldDef) OnModelRegister(model Definer, outer FieldDefinition) error {
 
 	var typElem = f.instance_v_ptr.Type().Elem()
 	attrutils.AddStructField(typElem, f.fieldName, f.field_t)
@@ -956,6 +956,14 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		return assert.Fail("field %q is not editable", f.field_t.Name)
 	}
 
+	wasSet := django_reflect.RScanTo(f.field_v.Addr(), v, django_reflect.SF_CONVS)
+	if wasSet {
+		if err := f.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
 	if !ok {
 		if sqlScanner, ok := f.field_v.Addr().Interface().(sql.Scanner); ok {
@@ -1069,6 +1077,11 @@ func (f *FieldDef) Scan(value any) error {
 
 	if scanner, ok := f.field_v.Addr().Interface().(sql.Scanner); ok {
 		return scanner.Scan(value)
+	}
+
+	wasSet := django_reflect.RScanTo(f.field_v.Addr(), value, django_reflect.SF_CONVS)
+	if wasSet {
+		return nil
 	}
 
 	if rv.Type() == f.field_v.Type() || (f.field_t.Type.Kind() == reflect.Interface && rv.Type().Implements(f.field_t.Type)) {

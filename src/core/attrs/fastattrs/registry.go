@@ -3,15 +3,13 @@ package fastattrs
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 type optionsType = any
 
 var cachedOptions = make(map[reflect.Type]map[string]optionsType) // map for ReflectLessField options
 
-func AddOptions[T attrs.Definer](typ reflect.Type, name string, opts optionsType) {
+func AddOptions(typ reflect.Type, name string, opts optionsType) {
 	var optsMap, ok = cachedOptions[typ]
 	if !ok {
 		optsMap = make(map[string]optionsType)
@@ -21,23 +19,23 @@ func AddOptions[T attrs.Definer](typ reflect.Type, name string, opts optionsType
 	optsMap[name] = opts
 }
 
-func GetOptions[T attrs.Definer](typ reflect.Type, name string) (*reflectlessFieldOpts[T], bool) {
+func GetOptions[OPTIONS any](typ reflect.Type, name string) (opts OPTIONS, ok bool) {
 	optsMap, ok := cachedOptions[typ]
 	if !ok {
 		optsMap = make(map[string]optionsType)
 		cachedOptions[typ] = optsMap
 	}
 
-	opts, ok := optsMap[name]
+	optsV, ok := optsMap[name]
 	if !ok {
 		// panic(fmt.Sprintf("ReflectLessField options were not configured for field %q in type %s", name, typ))
-		return nil, false
+		return opts, false
 	}
 
-	o, ok := opts.(*reflectlessFieldOpts[T])
+	opts, ok = optsV.(OPTIONS)
 	if !ok {
-		panic(fmt.Sprintf("ReflectLessField options are not of type *reflectLessFieldOpts[T], got %T", opts))
+		panic(fmt.Sprintf("ReflectLessField options are not of type %T, got %T", opts, opts))
 	}
 
-	return o, true
+	return opts, true
 }

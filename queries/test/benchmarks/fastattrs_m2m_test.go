@@ -19,12 +19,10 @@ var (
 	fast_fldCnfPrimary = &attrs.FieldConfig{Primary: true}
 
 	fast_fldCnfSrcId = &attrs.FieldConfig{
-		Column:        "source_id",
-		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkM2MSource{}, "", nil),
+		Column: "source_id",
 	}
 	fast_fldCnfTargetId = &attrs.FieldConfig{
-		Column:        "target_id",
-		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkM2MTarget{}, "", nil),
+		Column: "target_id",
 	}
 
 	fast_m2mRel = attrs.Relate(

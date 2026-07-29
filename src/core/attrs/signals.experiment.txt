@@ -2,6 +2,7 @@ package attrs
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"slices"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/pkg/errors"
 )
 
@@ -70,7 +72,7 @@ var (
 	//	return ResetDefinitions.Send(nil)
 	//})
 
-	alreadyCalledOnModelRegister = make(map[reflect.Type]struct{})
+	// alreadyCalledOnModelRegister = make(map[reflect.Type]struct{})
 
 	// This makes sure to reset the static definitions after all models have been registered.
 	//
@@ -80,7 +82,7 @@ var (
 
 		if err := PreResetDefinitions.Send(a); err != nil {
 			panic(errors.Wrap(
-				err, "PreResetDefinitions",
+				err, "ResetDefinitions",
 			))
 		}
 
@@ -93,47 +95,223 @@ var (
 
 		slices.Reverse(graph)
 
+		var registerContext = ContextWithFlags(
+			context.Background(), CtxFlagRegistering, true,
+		)
+
 		for _, n := range graph {
 			if n.meta.model == nil {
 				panic("meta model is nil")
 			}
 
-			modelTyp := reflect.TypeOf(n.meta.model)
-			_, alreadyFinal := alreadyCalledOnModelRegister[modelTyp]
-			if !alreadyFinal {
-				alreadyCalledOnModelRegister[modelTyp] = struct{}{}
+			n.meta.forward = orderedmap.NewOrderedMap[string, Relation]()
+			n.meta.reverse = orderedmap.NewOrderedMap[string, Relation]()
+		}
+
+		for _, n := range graph {
+			if n.meta.model == nil {
+				panic("meta model is nil")
 			}
 
-			registerModel(
-				modelTyp,
-				NewObject[Definer](
-					ContextWithFlags(context.Background(), CtxFlagRegistering, true),
-					n.meta.model,
-				),
-				// final=true inside of this signal ensures that [CanOnModelRegister]
-				// interface methods get called exactly ONCE.
-				!alreadyFinal,
-				false,
+			var defs = n.meta.New(registerContext).FieldDefs(registerContext)
+			for _, field := range defs.Fields() {
+				var name = field.Name()
+				var rel = field.Rel()
+				if rel == nil {
+					continue
+				}
+
+				n.meta.forward.Set(
+					name, rel,
+				)
+			}
+		}
+
+		for _, n := range graph {
+			if n.meta.model == nil {
+				panic("meta model is nil")
+			}
+
+			var defs = n.meta.New(registerContext).FieldDefs(registerContext)
+			for _, field := range defs.Fields() {
+				var name = field.Name()
+				var rel = field.Rel()
+				if rel == nil {
+					continue
+				}
+
+				if rel.Through() != nil {
+					// If the relation has a through model, we need to register it
+					// This is used for many-to-many relations
+					var through = rel.Through()
+					if through.Model() == nil {
+						panic(fmt.Errorf("error creating meta: relation %q on %T has no through model", name, n.meta.model))
+					}
+
+					var throughMeta, ok = modelReg[reflect.TypeOf(through.Model())]
+					if !ok {
+						panic("expected throughMeta to be present")
+					}
+
+					var storageKey = fmt.Sprintf(
+						"through.%s",
+						throughMeta.ContentType().TypeName(),
+					)
+
+					if _, wasSent := n.meta.stored[storageKey]; wasSent {
+						goto setRel
+					}
+
+					throughMeta.stored["through.model"] = ThroughMeta{
+						IsThroughModel: true,
+						Source:         n.meta.model,
+						Target:         rel.Model(),
+						SourceField:    through.SourceField(),
+						TargetField:    through.TargetField(),
+					}
+
+					n.meta.stored[storageKey] = true
+
+					// Send signal that the through model is being registered
+					OnThroughModelRegister.Send(SignalThroughModelMeta{
+						Source:      n.meta.model,
+						Target:      rel.Model(),
+						ThroughInfo: through,
+						Meta:        throughMeta,
+					})
+				}
+
+			setRel:
+
+				var canReverse, ok = field.(CanReverseRelate)
+				if !ok || canReverse.AllowReverseRelation() {
+					registerReverseRelation(
+						registerContext, n.meta.model, field, rel,
+					)
+				}
+			}
+		}
+
+		for _, n := range graph {
+			n.meta.setup = true
+			n.meta.definitions = newStaticDefinitions(
+				n.meta.New(context.Background()),
 			)
 		}
 
 		for _, n := range graph {
-
 			if n.meta.model == nil {
 				panic("meta model is nil")
 			}
 
+			var defs = n.meta.New(registerContext).FieldDefs(registerContext)
+			for _, field := range defs.Fields() {
+				var name = field.Name()
+				var rel = field.Rel()
+				if rel == nil {
+					continue
+				}
+
+				n.meta.forward.Set(
+					name, rel,
+				)
+			}
+		}
+
+		for _, n := range graph {
+			if n.meta.model == nil {
+				panic("meta model is nil")
+			}
+
+			var defs = n.meta.New(registerContext).FieldDefs(registerContext)
+			for _, field := range defs.Fields() {
+				var name = field.Name()
+				var rel = field.Rel()
+				if rel == nil {
+					continue
+				}
+
+				if rel.Through() != nil {
+					// If the relation has a through model, we need to register it
+					// This is used for many-to-many relations
+					var through = rel.Through()
+					if through.Model() == nil {
+						panic(fmt.Errorf("error creating meta: relation %q on %T has no through model", name, n.meta.model))
+					}
+
+					var throughMeta, ok = modelReg[reflect.TypeOf(through.Model())]
+					if !ok {
+						panic("expected throughMeta to be present")
+					}
+
+					var storageKey = fmt.Sprintf(
+						"through.%s",
+						throughMeta.ContentType().TypeName(),
+					)
+
+					if _, wasSent := n.meta.stored[storageKey]; wasSent {
+						goto setRev
+					}
+
+					throughMeta.stored["through.model"] = ThroughMeta{
+						IsThroughModel: true,
+						Source:         n.meta.model,
+						Target:         rel.Model(),
+						SourceField:    through.SourceField(),
+						TargetField:    through.TargetField(),
+					}
+
+					n.meta.stored[storageKey] = true
+
+					// Send signal that the through model is being registered
+					OnThroughModelRegister.Send(SignalThroughModelMeta{
+						Source:      n.meta.model,
+						Target:      rel.Model(),
+						ThroughInfo: through,
+						Meta:        throughMeta,
+					})
+				}
+
+			setRev:
+				var canReverse, ok = field.(CanReverseRelate)
+				if !ok || canReverse.AllowReverseRelation() {
+					registerReverseRelation(
+						registerContext, n.meta.model, field, rel,
+					)
+				}
+			}
+		}
+
+		for _, n := range graph {
+			var defs = n.meta.New(registerContext).FieldDefs(registerContext)
+			for _, field := range defs.Fields() {
+				name := field.Name()
+				// fields can get a callback when the model they are defined on is registered
+				registrar, ok := field.(CanOnModelRegister)
+				if !ok {
+					continue
+				}
+
+				var err = registrar.OnModelRegister(n.meta.model, field)
+				if err != nil {
+					panic(fmt.Errorf(
+						"field.OnModelRegister: error registering field %q on model %T: %w",
+						name, n.meta.model, err,
+					))
+				}
+			}
+		}
+
+		for _, n := range graph {
+			n.meta.setup = true
 			n.meta.definitions = newStaticDefinitions(
-				NewObject[Definer](
-					ContextWithFlags(context.Background(), CtxFlagRegistering, true),
-					n.meta.model,
-				),
+				n.meta.New(context.Background()),
 			)
 		}
 
 		if err := PostResetDefinitions.Send(a); err != nil {
 			return errors.Wrap(
-				err, "PostResetDefinitions",
+				err, "ResetDefinitions",
 			)
 		}
 

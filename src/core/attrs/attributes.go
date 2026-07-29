@@ -194,10 +194,105 @@ func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, 
 	return val, sf.Type, true, err
 }
 
+// A shortcut to try and set a value without calling and having to set up the [Definitions].
+//
+// The modelInstance should be a pointer to your model.
+//
+// If the field exists, hasField will be true, but the field does not define a StructField
+// suitable for retrieval without instantiating the [Definitions] first.
+//
+// If an empty string is provided as the fieldName, this function will use the primary
+// field instead.
+func FastSet(modelInstance reflect.Value, fieldName string, src any) (wasSet, hasField bool, err error) {
+	t := modelInstance.Type()
+	modelInstance = modelInstance.Elem() // models should ALWAYS be pointers.
+
+	if modelInstance.Kind() != reflect.Struct {
+		panic("expected struct type for *modelMeta.FastGet")
+	}
+
+	m, ok := modelReg[t]
+	if !ok {
+		return false, true, errInitialised
+	}
+
+	if fieldName == "" {
+		if m.definitions == nil {
+			return false, true, errInitialised
+		}
+
+		fieldName = m.definitions.PrimaryField
+	}
+
+	if fieldName == "" {
+		return false, true, errors.FieldNull.Wrap(
+			"Fieldname not provided and could not be inferred",
+		)
+	}
+
+	sf, ok := m.fieldsMap[fieldName]
+	if !ok {
+		return false, false, errors.FieldNotFound.Wrapf(
+			"Field %q was not found in model %T", fieldName,
+			modelInstance.Interface(),
+		)
+	}
+
+	// fast path to know if the field is at least present in the model
+	// fieldName will always be a valid mapkey if a field was defined.
+	// if the field did not provide a structfield or it is nil, that is ok,
+	// but at least now we know that the field exists without any extra work.
+	if sf == nil {
+		return false, true, errors.FieldNull.Wrapf(
+			"Field %q in model %T does not allow for FastSet",
+			fieldName, modelInstance.Interface(),
+		)
+	}
+
+	// if type is binder type we cannot continue.
+	// it requires too much setup, and that is out of scope
+	// for this func.
+	if sf.Type.Implements(_binder) {
+		return false, true, errors.NotImplemented.Wrapf(
+			"value %s for field %q in model %T implements Binder, cannot use FastSet",
+			sf.Type, fieldName, modelInstance.Interface(),
+		)
+	}
+
+	dstV, err := modelInstance.FieldByIndexErr(sf.Index)
+	if err != nil {
+		return false, true, err
+	}
+
+	wasSet = django_reflect.RScanTo(dstV.Addr(), src, django_reflect.SF_DEFAULT)
+
+	return wasSet, true, nil
+}
+
 // SetPrimaryKey sets the primary key field of a Definer.
 //
 // If the primary key field is not found, this function will panic.
 func SetPrimaryKey(ctx context.Context, d Definer, value interface{}) error {
+
+	if d == nil {
+		panic("cannot set primary key on nil model")
+	}
+
+	model := reflect.ValueOf(d)
+	wasSet, _, err := FastSet(model, "", value)
+	if errors.FieldNull.Is(err) || errInitialised.Is(err) {
+		goto definePrim
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if wasSet {
+		return nil
+	}
+
+definePrim:
 	var f = Define(ctx, d).Primary()
 	if f == nil {
 		assert.Fail(

@@ -36,7 +36,7 @@ func RegisterModel[T attrs.Definer](register func(addField func(string, FieldCon
 
 	var rt = reflect.TypeFor[T]()
 	for head := fieldMap.Front(); head != nil; head = head.Next() {
-		AddOptions[T](rt, head.Key, fieldConfigToOptions(head.Key, head.Value))
+		AddOptions(rt, head.Key, fieldConfigToOptions(head.Key, head.Value))
 	}
 }
 
@@ -123,7 +123,7 @@ type ReflectlessField[T attrs.Definer] struct {
 type NULL struct{}
 
 func NewField[T attrs.Definer](obj T, name string, cnf func() FieldConfig[T]) attrs.Field {
-	var opts, ok = GetOptions[T](reflect.TypeOf(obj), name)
+	var opts, ok = GetOptions[*reflectlessFieldOpts[T]](reflect.TypeOf(obj), name)
 	if !ok && cnf == nil {
 		panic(fmt.Sprintf("options were not configured for field %q in type %T", name, obj))
 	}
@@ -149,7 +149,7 @@ func (r *ReflectlessField[T]) useOpts() *reflectlessFieldOpts[T] {
 	if r.confFunc != nil {
 		r.opts = fieldConfigToOptions(r.fieldName, r.confFunc())
 
-		AddOptions[T](
+		AddOptions(
 			reflect.TypeOf(r.obj),
 			r.fieldName,
 			r.opts,
@@ -159,9 +159,9 @@ func (r *ReflectlessField[T]) useOpts() *reflectlessFieldOpts[T] {
 	return r.opts
 }
 
-func (r *ReflectlessField[T]) OnModelRegister(model attrs.Definer) error {
+func (r *ReflectlessField[T]) OnModelRegister(model attrs.Definer, outer attrs.FieldDefinition) error {
 	if r.opts == nil && r.confFunc != nil {
-		AddOptions[T](
+		AddOptions(
 			reflect.TypeOf(r.obj),
 			r.fieldName,
 			fieldConfigToOptions(r.fieldName, r.confFunc()),

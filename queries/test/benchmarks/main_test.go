@@ -94,10 +94,10 @@ func TestMain(m *testing.M) {
 
 	attrs.RegisterModel(&BenchmarkAuthorModel{})
 	attrs.RegisterModel(&BenchmarkBookModel{})
-	attrs.RegisterModel(&FastAttrsBenchmarkAuthor{})
 	attrs.RegisterModel(&FastAttrsBenchmarkBook{})
-	attrs.RegisterModel(&FastAttrsBenchmarkAuthorModel{})
+	attrs.RegisterModel(&FastAttrsBenchmarkAuthor{})
 	attrs.RegisterModel(&FastAttrsBenchmarkBookModel{})
+	attrs.RegisterModel(&FastAttrsBenchmarkAuthorModel{})
 	attrs.RegisterModel(&FastAttrsBenchmarkO2ONoThroughMain{})
 	attrs.RegisterModel(&FastAttrsBenchmarkO2ONoThroughTarget{})
 	attrs.RegisterModel(&FastAttrsInlineBenchmarkM2MThrough{})
