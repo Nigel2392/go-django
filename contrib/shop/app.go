@@ -61,13 +61,20 @@ func NewAppConfig() (django.AppConfig, error) {
 	))
 
 	SHOP.ModelObjects = []attrs.Definer{
-		&models.Product{},
-		&models.ProductSku{},
-		&models.Cart{},
+		// Cart
 		&models.CartItem{},
-		&models.Order{},
+		&models.Cart{},
+
+		// Orders
 		&models.OrderItem{},
+		&models.Order{},
+
+		// Payments
 		&models.Payment{},
+
+		// Products
+		&models.ProductSku{},
+		&models.Product{},
 	}
 
 	SHOP.TemplateConfig = tpl.MergeConfig(
