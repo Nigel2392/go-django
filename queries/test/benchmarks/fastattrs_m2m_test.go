@@ -11,8 +11,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 
-	// Assuming fastattrs is importable here based on your structure
-	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
+	// Assuming fattrs is importable here based on your structure
+	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 )
 
 var (
@@ -36,9 +36,9 @@ var (
 )
 
 func init() {
-	// Register Source Model with fastattrs
-	fastattrs.RegisterModel(func(addField func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkM2MSource])) {
-		addField("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MSource]{
+	// Register Source Model with fattrs
+	fattrs.RegisterModel(func(addField func(string, fattrs.FieldConfig[*FastAttrsBenchmarkM2MSource])) {
+		addField("ID", fattrs.FieldConfig[*FastAttrsBenchmarkM2MSource]{
 			Config:   *fast_fldCnfPrimary,
 			GetValue: func(obj *FastAttrsBenchmarkM2MSource) interface{} { return obj.ID },
 			SetValue: func(obj *FastAttrsBenchmarkM2MSource, value any) error {
@@ -56,7 +56,7 @@ func init() {
 			},
 			Default: uint64(0),
 		})
-		addField("Title", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MSource]{
+		addField("Title", fattrs.FieldConfig[*FastAttrsBenchmarkM2MSource]{
 			GetValue: func(obj *FastAttrsBenchmarkM2MSource) interface{} { return obj.Title },
 			SetValue: func(obj *FastAttrsBenchmarkM2MSource, value any) error {
 				switch v := value.(type) {
@@ -73,9 +73,9 @@ func init() {
 		})
 	})
 
-	// Register Target Model with fastattrs
-	fastattrs.RegisterModel(func(addField func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget])) {
-		addField("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget]{
+	// Register Target Model with fattrs
+	fattrs.RegisterModel(func(addField func(string, fattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget])) {
+		addField("ID", fattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget]{
 			Config:   *fast_fldCnfPrimary,
 			GetValue: func(obj *FastAttrsBenchmarkM2MTarget) interface{} { return obj.ID },
 			SetValue: func(obj *FastAttrsBenchmarkM2MTarget, value any) error {
@@ -93,7 +93,7 @@ func init() {
 			},
 			Default: uint64(0),
 		})
-		addField("Name", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget]{
+		addField("Name", fattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget]{
 			GetValue: func(obj *FastAttrsBenchmarkM2MTarget) interface{} { return obj.Name },
 			SetValue: func(obj *FastAttrsBenchmarkM2MTarget, value any) error {
 				switch v := value.(type) {
@@ -110,9 +110,9 @@ func init() {
 		})
 	})
 
-	// Register Through Model with fastattrs
-	fastattrs.RegisterModel(func(addField func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough])) {
-		addField("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
+	// Register Through Model with fattrs
+	fattrs.RegisterModel(func(addField func(string, fattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough])) {
+		addField("ID", fattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
 			Config:   *fast_fldCnfPrimary,
 			GetValue: func(obj *FastAttrsBenchmarkM2MThrough) interface{} { return obj.ID },
 			SetValue: func(obj *FastAttrsBenchmarkM2MThrough, value any) error {
@@ -128,7 +128,7 @@ func init() {
 			},
 			Default: uint64(0),
 		})
-		addField("SourceModel", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
+		addField("SourceModel", fattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
 			Config:   *fast_fldCnfSrcId,
 			GetValue: func(obj *FastAttrsBenchmarkM2MThrough) interface{} { return obj.SourceModel },
 			SetValue: func(obj *FastAttrsBenchmarkM2MThrough, value any) error {
@@ -144,7 +144,7 @@ func init() {
 			},
 			Default: uint64(0),
 		})
-		addField("TargetModel", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
+		addField("TargetModel", fattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
 			Config:   *fast_fldCnfTargetId,
 			GetValue: func(obj *FastAttrsBenchmarkM2MThrough) interface{} { return obj.TargetModel },
 			SetValue: func(obj *FastAttrsBenchmarkM2MThrough, value any) error {
@@ -175,8 +175,8 @@ type FastAttrsBenchmarkM2MSource struct {
 }
 
 func (m *FastAttrsBenchmarkM2MSource) FieldDefs(ctx context.Context) attrs.Definitions {
-	return m.Model.Define(ctx, m, fastattrs.NewField(m, "ID", nil),
-		fastattrs.NewField(m, "Title", nil),
+	return m.Model.Define(ctx, m, fattrs.NewField(m, "ID", nil),
+		fattrs.NewField(m, "Title", nil),
 		fields.NewManyToManyField[*queries.RelM2M[*FastAttrsBenchmarkM2MTarget, *FastAttrsBenchmarkM2MThrough]](m, "Target", &fields.FieldConfig{
 			ScanTo:      &m.Target,
 			ReverseName: "TargetReverse",
@@ -192,8 +192,8 @@ type FastAttrsBenchmarkM2MTarget struct {
 }
 
 func (m *FastAttrsBenchmarkM2MTarget) FieldDefs(ctx context.Context) attrs.Definitions {
-	return m.Model.Define(ctx, m, fastattrs.NewField(m, "ID", nil),
-		fastattrs.NewField(m, "Name", nil)).WithTableName("fast_m2m_target_bench")
+	return m.Model.Define(ctx, m, fattrs.NewField(m, "ID", nil),
+		fattrs.NewField(m, "Name", nil)).WithTableName("fast_m2m_target_bench")
 }
 
 type FastAttrsBenchmarkM2MThrough struct {
@@ -203,9 +203,9 @@ type FastAttrsBenchmarkM2MThrough struct {
 }
 
 func (m *FastAttrsBenchmarkM2MThrough) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.Make(ctx, m, fastattrs.NewField(m, "ID", nil),
-		fastattrs.NewField(m, "SourceModel", nil),
-		fastattrs.NewField(m, "TargetModel", nil),
+	return attrs.Make(ctx, m, fattrs.NewField(m, "ID", nil),
+		fattrs.NewField(m, "SourceModel", nil),
+		fattrs.NewField(m, "TargetModel", nil),
 	).WithTableName("fast_m2m_through_bench")
 }
 

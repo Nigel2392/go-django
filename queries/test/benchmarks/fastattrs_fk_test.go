@@ -7,7 +7,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 )
 
 var (
@@ -28,18 +28,18 @@ type FastAttrsBenchmarkAuthor struct {
 
 func (a *FastAttrsBenchmarkAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*FastAttrsBenchmarkAuthor, attrs.Field](ctx, a,
-		fastattrs.Field(a, "ID", &a.ID, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, uint64] {
-			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, uint64]{
+		fattrs.Field(a, "ID", &a.ID, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, uint64] {
+			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, uint64]{
 				Config: *fast_fldCnfPrimary,
 			}
 		}),
-		fastattrs.Field(a, "Name", &a.Name, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string] {
-			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string]{
+		fattrs.Field(a, "Name", &a.Name, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string] {
+			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string]{
 				Config: attrs.FieldConfig{},
 			}
 		}),
-		fastattrs.Field(a, "Books", &a.Books, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, *queries.RelRevFK[attrs.Definer]] {
-			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, *queries.RelRevFK[attrs.Definer]]{
+		fattrs.Field(a, "Books", &a.Books, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, *queries.RelRevFK[attrs.Definer]] {
+			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, *queries.RelRevFK[attrs.Definer]]{
 				//	Config: attrs.FieldConfig{
 				//		RelForeignKeyReverse: attrs.Relate(
 				//			&FastAttrsBenchmarkBook{},
@@ -64,20 +64,20 @@ type FastAttrsBenchmarkBook struct {
 
 func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*FastAttrsBenchmarkBook, attrs.Field](ctx, b,
-		fastattrs.Field(b, "ID", &b.ID, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, uint64] {
-			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, uint64]{
+		fattrs.Field(b, "ID", &b.ID, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, uint64] {
+			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, uint64]{
 				Config: *fast_fldCnfPrimary,
 			}
 		}),
-		fastattrs.Field(b, "Title", &b.Title, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string] {
-			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string]{
+		fattrs.Field(b, "Title", &b.Title, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string] {
+			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string]{
 				Config: attrs.FieldConfig{},
 			}
 		}),
-		fastattrs.Field(b, "Author", &b.Author, func() fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor] {
-			return fastattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor]{
+		fattrs.Field(b, "Author", &b.Author, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor] {
+			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor]{
 				Config:  fast_fldCnfRelAuthor,
-				Default: fastattrs.NULL{},
+				Default: fattrs.NULL{},
 				New: func() *FastAttrsBenchmarkAuthor {
 					return &FastAttrsBenchmarkAuthor{}
 				},

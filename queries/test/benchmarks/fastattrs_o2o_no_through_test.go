@@ -10,7 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 )
 
 type FastAttrsBenchmarkO2ONoThroughTarget struct {
@@ -22,8 +22,8 @@ type FastAttrsBenchmarkO2ONoThroughTarget struct {
 
 func (t *FastAttrsBenchmarkO2ONoThroughTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		fastattrs.NewField(t, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
+		fattrs.NewField(t, "ID", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget] {
+			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
 				Config:   *fast_fldCnfPrimary,
 				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget) interface{} { return obj.ID },
 				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget, value any) error {
@@ -42,8 +42,8 @@ func (t *FastAttrsBenchmarkO2ONoThroughTarget) FieldDefs(ctx context.Context) at
 				Default: uint64(0),
 			}
 		}),
-		fastattrs.NewField(t, "Name", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
+		fattrs.NewField(t, "Name", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget] {
+			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
 				Config:   attrs.FieldConfig{},
 				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget) interface{} { return obj.Name },
 				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget, value any) error {
@@ -72,8 +72,8 @@ type FastAttrsBenchmarkO2ONoThroughMain struct {
 
 func (t *FastAttrsBenchmarkO2ONoThroughMain) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		fastattrs.NewField(t, "ID", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
+		fattrs.NewField(t, "ID", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
+			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
 				Config:   *fast_fldCnfPrimary,
 				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} { return obj.ID },
 				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
@@ -92,8 +92,8 @@ func (t *FastAttrsBenchmarkO2ONoThroughMain) FieldDefs(ctx context.Context) attr
 				Default: uint64(0),
 			}
 		}),
-		fastattrs.NewField(t, "Title", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
+		fattrs.NewField(t, "Title", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
+			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
 				Config:   attrs.FieldConfig{},
 				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} { return obj.Title },
 				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
@@ -110,8 +110,8 @@ func (t *FastAttrsBenchmarkO2ONoThroughMain) FieldDefs(ctx context.Context) attr
 				Default: "",
 			}
 		}),
-		fastattrs.NewField(t, "Target", func() fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
-			return fastattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
+		fattrs.NewField(t, "Target", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
+			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
 				Config: attrs.FieldConfig{
 					Column:      "target_id",
 					RelOneToOne: attrs.Relate(&FastAttrsBenchmarkO2ONoThroughTarget{}, "", nil),
@@ -138,7 +138,7 @@ func (t *FastAttrsBenchmarkO2ONoThroughMain) FieldDefs(ctx context.Context) attr
 					}
 					return nil
 				},
-				Default: fastattrs.NULL{},
+				Default: fattrs.NULL{},
 			}
 		}),
 	).WithTableName("o2o_nt_main_bench")

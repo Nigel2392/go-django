@@ -252,31 +252,7 @@ func NewAppConfig() django.AppConfig {
 		}
 
 		iconHTML = icons.DefsHTML()
-		AdminSite.Route.Use(func(next mux.Handler) mux.Handler {
-			return mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
-				var vars = mux.Vars(r)
-				var appNameSlice = vars["app_name"]
-				var appName string
-				if len(appNameSlice) == 0 || appNameSlice[0] == "" {
-					appName = "admin"
-				} else {
-					appName = appNameSlice[0]
-				}
-
-				var djangoApp, ok = django.Global.Apps.Get(appName)
-				if !ok {
-					logger.Errorf(
-						"AdminSite.Route.Use: app %q not found in django.Global.Apps, falling back to AdminSite",
-						appName,
-					)
-					djangoApp = AdminSite
-				}
-
-				next.ServeHTTP(w, r.WithContext(django.ContextWithApp(
-					r.Context(), djangoApp,
-				)))
-			})
-		})
+		AdminSite.Route.Use(AppMiddleware)
 
 		// First initialize routes which do not require authentication
 		AdminSite.Route.Get(

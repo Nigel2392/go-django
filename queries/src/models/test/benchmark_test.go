@@ -15,8 +15,8 @@ func init() {
 	attrs.RegisterModel(&BasicModel{})
 	attrs.RegisterModel(&ComplexModel{})
 
-	//	fastattrs.RegisterModel[*BasicNonReflectModel](func(addField func(string, fastattrs.FieldConfig[T])) {
-	//		addField("ID", fastattrs.FieldConfig[*BasicNonReflectModel]{
+	//	fattrs.RegisterModel[*BasicNonReflectModel](func(addField func(string, fattrs.FieldConfig[T])) {
+	//		addField("ID", fattrs.FieldConfig[*BasicNonReflectModel]{
 	//			GetValue: func(obj *BasicNonReflectModel) interface{} {
 	//				return obj.ID
 	//			},

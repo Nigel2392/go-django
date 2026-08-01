@@ -40,8 +40,8 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 	)
 
 	var app, ok = django.AppFromContext(ctx)
-	if ok {
-		// logger.Debugf("Translating %q in app %s", v, app.Name())
+	if !ok {
+		app = translatorApp
 	}
 
 	if t.appTranslations != nil {

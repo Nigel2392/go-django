@@ -9,8 +9,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 
-	// Assuming fastattrs is importable here based on your structure
-	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
+	// Assuming fattrs is importable here based on your structure
+	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 )
 
 var (
@@ -39,17 +39,17 @@ type FastAttrsInlineBenchmarkM2MSource struct {
 
 func (m *FastAttrsInlineBenchmarkM2MSource) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		fastattrs.Field(m, "ID", &m.ID, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64]{
+		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64]{
 				Config:  *fast_inline_fldCnfPrimary,
 				Default: uint64(0),
 			}
 		}),
-		fastattrs.Field(m, "Title", &m.Title, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, string] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, string]{}
+		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, string] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, string]{}
 		}),
-		fastattrs.Field(m, "Target", &m.Target, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]]{
+		fattrs.Field(m, "Target", &m.Target, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]]{
 				Config: attrs.FieldConfig{
 					RelManyToMany: fast_inline_m2mRel,
 					Attributes: map[string]interface{}{
@@ -70,13 +70,13 @@ type FastAttrsInlineBenchmarkM2MTarget struct {
 
 func (m *FastAttrsInlineBenchmarkM2MTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		fastattrs.Field(m, "ID", &m.ID, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, uint64] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, uint64]{
+		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, uint64] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, uint64]{
 				Config: *fast_inline_fldCnfPrimary,
 			}
 		}),
-		fastattrs.Field(m, "Name", &m.Name, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, string] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, string]{}
+		fattrs.Field(m, "Name", &m.Name, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, string] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MTarget, string]{}
 		}),
 	).WithTableName("fast_m2m_target_bench")
 }
@@ -89,20 +89,20 @@ type FastAttrsInlineBenchmarkM2MThrough struct {
 
 func (m *FastAttrsInlineBenchmarkM2MThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
-		fastattrs.Field(m, "ID", &m.ID, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
+		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
 				Config: *fast_inline_fldCnfPrimary,
 			}
 		}),
-		fastattrs.Field(m, "SourceModel", &m.SourceModel, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
+		fattrs.Field(m, "SourceModel", &m.SourceModel, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
 				Config: attrs.FieldConfig{
 					Column: "source_id",
 				},
 			}
 		}),
-		fastattrs.Field(m, "TargetModel", &m.TargetModel, func() fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
-			return fastattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
+		fattrs.Field(m, "TargetModel", &m.TargetModel, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
+			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
 				Config: attrs.FieldConfig{
 					Column: "target_id",
 				},

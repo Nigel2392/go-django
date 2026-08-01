@@ -140,7 +140,7 @@ type AppConfig interface {
 type Application struct {
 	Settings    Settings
 	Apps        *orderedmap.OrderedMap[string, AppConfig]
-	apps        []func() AppConfig
+	apps        []func() (AppConfig, error)
 	Mux         *mux.Mux
 	Log         logger.Log
 	Commands    command.Registry
@@ -199,7 +199,7 @@ func App(opts ...Option) *Application {
 	if Global == nil {
 		Global = &Application{
 			Apps: orderedmap.NewOrderedMap[string, AppConfig](),
-			apps: make([]func() AppConfig, 0),
+			apps: make([]func() (AppConfig, error), 0),
 			Mux:  mux.New(),
 			Commands: command.NewRegistry(
 				"django",
@@ -240,14 +240,17 @@ func (a *Application) Config(key string) interface{} {
 	return ConfigGet[interface{}](a.Settings, key)
 }
 
-func (a *Application) newAppRegisterFunc(appType any) func() AppConfig {
-	return func() AppConfig {
-		var app AppConfig
+func (a *Application) newAppRegisterFunc(appType any) func() (AppConfig, error) {
+	return func() (app AppConfig, err error) {
 		switch v := appType.(type) {
 		case AppConfig:
 			app = v
 		case func() AppConfig:
 			app = v()
+
+		case func() (AppConfig, error):
+			app, err = v()
+
 		default:
 			var rVal = reflect.ValueOf(appType)
 
@@ -257,19 +260,28 @@ func (a *Application) newAppRegisterFunc(appType any) func() AppConfig {
 				rVal.Type().NumIn() == 0 || rVal.Type().NumIn() == 1 && rVal.Type().In(0).IsVariadic(),
 				"Invalid type, must be variadic func(...args) AppConfig or func() AppConfig",
 			)
-			assert.True(rVal.Type().NumOut() == 1, "Invalid type, must return django.AppConfig")
 
-			var retVal = rVal.Call(nil)
+			var retValList = rVal.Call(nil)
 
-			assert.True(len(retVal) == 1, "Invalid return type")
+			var (
+				appVal any
+				err    error
+			)
+			switch len(retValList) {
+			case 2:
+				appVal = retValList[0].Interface()
+				err, _ = retValList[1].Interface().(error)
+			case 1:
+				appVal = retValList[0].Interface()
+			}
 
-			var vInt = retVal[0].Interface()
-
-			assert.False(vInt == nil, "Invalid return type")
+			if err != nil {
+				return nil, err
+			}
 
 			var ok bool
-			app, ok = vInt.(AppConfig)
-			assert.True(ok, "Invalid return type")
+			app, ok = appVal.(AppConfig)
+			assert.True(ok, "Invalid return type: %T", appVal)
 		}
 
 		var appName = app.Name()
@@ -278,7 +290,7 @@ func (a *Application) newAppRegisterFunc(appType any) func() AppConfig {
 		var _, ok = a.Apps.Get(appName)
 		assert.False(ok, "App %s already registered", appName)
 
-		return app
+		return app, err
 	}
 }
 
@@ -724,7 +736,11 @@ func (a *Application) Initialize() error {
 	a.Commands.Register(runChecksCommand)
 
 	for _, appFunc := range a.apps {
-		var app = appFunc()
+		var app, err = appFunc()
+		if err != nil {
+			return fmt.Errorf("Initialize: %w", err)
+		}
+
 		a.Apps.Set(app.Name(), app)
 	}
 
