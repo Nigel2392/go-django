@@ -40,7 +40,7 @@ func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*ProductSku, decimal.Decimal]{
 				Config: attrs.FieldConfig{
 					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 19,
+						attrs.AttrPrecisionKey: 13,
 						attrs.AttrScaleKey:     4,
 					},
 				},
