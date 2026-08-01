@@ -5,11 +5,13 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/shopspring/decimal"
 )
 
 type ProductSku struct {
 	ID      uint64
 	Product *Product
+	Price   decimal.Decimal
 }
 
 func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -31,6 +33,16 @@ func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
 					},
 					Null:  false,
 					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "Price", &m.Price, func() fattrs.PtrFieldConfig[*ProductSku, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*ProductSku, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 19,
+						attrs.AttrScaleKey:     4,
+					},
 				},
 			}
 		}),

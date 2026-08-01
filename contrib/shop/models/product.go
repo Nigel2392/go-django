@@ -6,6 +6,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/gosimple/slug"
 )
 
 type Product struct {
@@ -38,6 +39,9 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					MinLength: 2,
 					MaxLength: 75,
+				},
+				Default: func(p *Product) string {
+					return slug.Make(p.Title)
 				},
 			}
 		}),
