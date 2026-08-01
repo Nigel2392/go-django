@@ -118,7 +118,7 @@ func TestSpecificQuerySet(t *testing.T) {
 		django.APPVAR_DATABASE: db,
 	}))
 
-	var tables = quest.Table[*testing.T](nil,
+	var tables = quest.Table[*testing.T](t,
 		&Author{},
 		&GenericComment[CommentWithAuthor]{},
 		&CommentWithAuthor{},

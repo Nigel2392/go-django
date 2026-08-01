@@ -1,0 +1,79 @@
+{
+  "lazy_dependencies": [
+    "users.User"
+  ],
+  "table": {
+    "table": "revisions_revision",
+    "model": "github.com/Nigel2392/go-django/contrib/revisions.Revision",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "go_type": "int64",
+        "db_type": "INT",
+        "default": 0
+      },
+      {
+        "name": "ObjectID",
+        "column": "object_id",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "ContentType",
+        "column": "content_type",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Data",
+        "column": "data",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "User",
+        "column": "user_id",
+        "use_in_db": true,
+        "nullable": true,
+        "relation": {
+          "type": "ManyToOne",
+          "model": {
+            "content_type": null,
+            "lazy_model_key": "users.User"
+          }
+        },
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": null
+      },
+      {
+        "name": "CreatedAt",
+        "column": "created_at",
+        "use_in_db": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

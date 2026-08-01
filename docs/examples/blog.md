@@ -61,12 +61,12 @@ It is also required for pages to adhere to the [attrs.Definer](../attrs/interfac
 package blog
 
 import (
-    "github.com/Nigel2392/go-django/src/contrib/editor"
-    "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+    "github.com/Nigel2392/go-django/contrib/editor"
+    "github.com/Nigel2392/go-django/contrib/pages/page_models"
     "github.com/Nigel2392/go-django/src/core/attrs"
 
     // Import the required package for working with SQLite3
-    _ "github.com/Nigel2392/go-django/src/contrib/pages/backend-sqlite"
+    _ "github.com/Nigel2392/go-django/contrib/pages/backend-sqlite"
 )
 
 type BlogPage struct {
@@ -196,9 +196,9 @@ import (
     "github.com/Nigel2392/go-django/queries/src/drivers"
     django "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/apps"
-    "github.com/Nigel2392/go-django/src/contrib/admin"
-    "github.com/Nigel2392/go-django/src/contrib/pages"
-    "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+    "github.com/Nigel2392/go-django/contrib/admin"
+    "github.com/Nigel2392/go-django/contrib/pages"
+    "github.com/Nigel2392/go-django/contrib/pages/page_models"
     "github.com/Nigel2392/go-django/src/core/contenttypes"
     "github.com/Nigel2392/go-django/src/core/trans"
 )
@@ -332,14 +332,14 @@ import (
     "github.com/yourname/yourproject/blog"
     "github.com/Nigel2392/go-django/queries/src/drivers"
     django "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/src/contrib/admin"
-    "github.com/Nigel2392/go-django/src/contrib/auth"
-    "github.com/Nigel2392/go-django/src/contrib/editor"
-    "github.com/Nigel2392/go-django/src/contrib/pages"
+    "github.com/Nigel2392/go-django/contrib/admin"
+    "github.com/Nigel2392/go-django/contrib/auth"
+    "github.com/Nigel2392/go-django/contrib/editor"
+    "github.com/Nigel2392/go-django/contrib/pages"
 
-    "github.com/Nigel2392/go-django/src/contrib/session"
+    "github.com/Nigel2392/go-django/contrib/session"
 
-    _ "github.com/Nigel2392/go-django/src/contrib/pages/backend-sqlite"
+    _ "github.com/Nigel2392/go-django/contrib/pages/backend-sqlite"
     _ "github.com/mattn/go-sqlite3"
 )
 ```

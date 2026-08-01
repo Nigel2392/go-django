@@ -5,10 +5,10 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/pages"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
-	"github.com/Nigel2392/go-django/src/contrib/admin"
-	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"

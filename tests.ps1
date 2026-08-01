@@ -1,7 +1,7 @@
 $dirname = Split-Path -Parent $MyInvocation.MyCommand.Path
 $dirname = Split-Path -Leaf $dirname
 
-$BASE_TEST_DIR = "./src/... ./queries/..."
+$BASE_TEST_DIR = "./src/... ./queries/... ./contrib/..."
 $DOCKER_COMPOSE_FILE = "./test-databases.docker-compose.yml"
 
 # Reset test docker containers

@@ -70,7 +70,10 @@ func Table[T TB](t T, model ...attrs.Definer) *DBTables[T] {
 		attrs.RegisterModel(m)
 	}
 
-	attrs.ResetDefinitions.Send(nil)
+	if err := attrs.ResetDefinitions.Send(nil); err != nil {
+		t.Fatalf("Error during ResetDefinitions signal: %v", err)
+		return nil
+	}
 
 	for i, m := range model {
 		table.tables[i] = migrator.NewModelTable(m)

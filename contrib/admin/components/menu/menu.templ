@@ -1,0 +1,292 @@
+package menu
+
+import (
+	"context"
+	"strings"
+	"bytes"
+	"github.com/Nigel2392/go-django/contrib/admin/icons"
+)
+import "strconv"
+import "slices"
+import "github.com/Nigel2392/go-django/src/core/assert"
+
+type ctxKey string
+
+const depthKey ctxKey = "menu-depth"
+
+func GetMenuDepthValue(ctx context.Context) int64 {
+	var depth = ctx.Value(depthKey)
+	var depthInt int64
+	if depth != nil {
+		depthInt = depth.(int64)
+	}
+	return depthInt
+}
+
+func SetMenuDepth(ctx context.Context, depth int64) context.Context {
+	return context.WithValue(ctx, depthKey, depth)
+}
+
+var (
+	_ MenuItem = (*BaseItem)(nil)
+	_ MenuItem = (*Item)(nil)
+	_ MenuItem = (*SubmenuItem)(nil)
+	_ MenuItem = (*DropdownItem)(nil)
+)
+
+type Menu struct {
+	ID string
+	Classes []string
+	ItemClasses []string
+	Items []MenuItem
+}
+
+func (m *Menu) HTML() string {
+	var ctx = context.Background()
+	var buf = new(bytes.Buffer)
+	m.Component().Render(ctx, buf)
+	return buf.String()
+}
+
+func (m *Menu) MenuItems() []MenuItem {
+	var shallowCopy = make([]MenuItem, 0, len(m.Items))
+	for _, item := range m.Items {
+		if !item.IsShown() {
+			continue
+		}
+		shallowCopy = append(shallowCopy, item)
+	}
+
+	 slices.SortStableFunc(shallowCopy, func(a, b MenuItem) int {
+		if a.Order() < b.Order() {
+			return -1
+		} else if a.Order() > b.Order() {
+			return 1
+		}
+		return 0
+	})
+
+	return shallowCopy
+}
+
+templ (m *Menu) Component() {
+	<div class={ append(m.Classes, "menu") } if m.ID != "" { id={ m.ID } }>
+
+		for _, item := range m.MenuItems() {
+			<div class={ append(m.ItemClasses, "menu-item") }>
+				@item.Component()
+			</div>
+		}
+
+	</div>
+}
+
+type BaseItem struct {
+	ID string
+	ItemName string
+	Hidden bool
+	Classes []string
+	Ordering int
+	Logo templ.Component
+	Label string
+}
+
+func (i *BaseItem) Name() string {
+	if i.ItemName == "" {
+		if i.ID != "" {
+			return i.ID
+		}
+		
+		if i.Label != "" {
+			var name = i.Label
+			name = strings.ReplaceAll(name, " ", "-")
+			name = strings.ToLower(name)
+			return name
+		}
+	}
+	return i.ItemName
+}
+
+func (i *BaseItem) IsShown() bool {
+	return !i.Hidden
+}
+
+func (i *BaseItem) Order() int {
+	return i.Ordering
+}
+
+func (i *BaseItem) firstLogoLetter() string {
+	for _, r := range []string{i.Label, i.ItemName, i.ID} {
+		if r != "" {
+			var runes = []rune(r)
+			return strings.ToUpper(string(runes[0]))
+		}
+	}
+	return "?"
+}
+
+templ (i *BaseItem) getLogo() {
+	if i.Logo != nil {
+		@i.Logo
+		{{ return nil }}
+	}
+	<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="icon menu-item-icon--empty" fill="currentColor" viewBox="0 0 16 16">
+	  	<circle cx="8" cy="8" r="8" fill="#6c757d" class="menu-item-icon--empty-circle"/>
+	  	<text x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="12" fill="currentColor" font-family="Arial, sans-serif" class="menu-item-icon--empty-text">
+			{ i.firstLogoLetter() }
+		</text>
+	</svg>
+}
+
+templ (i *BaseItem) Inner(hideLogo bool) {
+	{{ var depthStr = strconv.FormatInt(GetMenuDepthValue(ctx), 10) }}
+	<div class="menu-item-logo" data-depth={ depthStr }>
+		if !hideLogo {
+			@i.getLogo()
+		}
+	</div>
+	<div class="menu-item-label" data-depth={ depthStr }>
+		{i.Label}
+	</div>
+}
+
+templ (i *BaseItem) Component() {
+	{{ assert.False(i.Label == "", "menu item must have a label")}}
+	<div class={ strings.Join(append(i.Classes, "menu-item-content"), " ") } if i.ID != "" { id={ i.ID } } data-depth={ strconv.FormatInt(GetMenuDepthValue(ctx), 10) }>
+		@i.Inner(GetMenuDepthValue(ctx) > 0)
+	</div>
+}
+
+type Item struct {
+	BaseItem
+	Link func() string
+	LinkID string
+	LinkClasses []string
+}
+
+func (i *Item) Order() int {
+	return i.Ordering
+}
+
+templ (i *Item) Component() {
+	{{ assert.False(i.Label == "", "menu item must have a label")}}
+	<a class={ strings.Join(append(i.LinkClasses, "menu-item-link"), " ") } if i.ID != "" { id={ i.LinkID } } href={ templ.SafeURL(i.Link()) }>
+		@i.BaseItem.Component()
+	</a>
+}
+
+type SubmenuItem struct {
+	BaseItem
+	MenuID string
+	MenuClasses []string
+	Menu *Menu
+}
+
+func (s *SubmenuItem) IsShown() bool {
+	return !s.Hidden && len(s.Menu.MenuItems()) > 0
+}
+
+css depthCss(i int64) {
+	--menu-depth: { strconv.FormatInt(-1 * i, 10) };
+}
+
+templ (s *SubmenuItem) Component() {
+	{{ assert.False(s.Menu == nil, "submenu item must have a menu")}}
+	{{ if s.MenuClasses == nil { s.MenuClasses = []string{} } }}
+
+	{{ var depthInt = GetMenuDepthValue(ctx) }}
+	{{ var depthStr = strconv.FormatInt(depthInt, 10) }}
+	<div data-controller="menu" class={ strings.Join(s.MenuClasses, " "), "submenu-menu-item menu-item", depthCss(depthInt) } if s.ID != "" { id={ s.MenuID } } aria-expanded="false">
+
+		<div class="menu-item-content" data-action="click->menu#toggle" data-depth={ depthStr }>
+			<div class="submenu-item-text">
+				@s.BaseItem.Inner(depthInt > 0)
+			</div>
+			<button class="menu-item-toggle">
+				@icons.Icon("icon-arrow-right", map[string]string{
+					"class": "menu-item-toggle-icon",
+				})
+			</button>
+		</div>
+
+		{{ ctx = SetMenuDepth(ctx, depthInt + 1) }}
+
+		<div class="menu-item-menu-wrapper">
+			<div class="menu-item-menu">
+				if s.Logo != nil || s.Label != "" {
+					<div class="menu-header">
+
+						if s.Logo != nil {
+							<div class="menu-logo">
+								@s.Logo
+							</div>
+						}
+
+						if s.Label != "" {
+						
+							{{ var text = s.Label }}
+							if text != "" {
+								<div class="menu-text">
+									{s.Label}
+								</div>
+							}
+						}
+					</div>
+				}
+				<div class="menu-item-menu-content">
+					@s.Menu.Component()
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+type DropdownItem SubmenuItem
+
+func (d *DropdownItem) Order() int {
+	return d.Ordering
+}
+
+func (d *DropdownItem) IsShown() bool {
+	var hidden = d.Hidden
+	if hidden {
+		return false
+	}
+
+	for _, item := range d.Menu.Items {
+		if item.IsShown() {
+			return true
+		}
+	}
+
+	return false
+}
+
+templ (s *DropdownItem) Component() {
+	{{ assert.False(s.Menu == nil, "dropdown item must have a menu")}}
+	{{ if s.MenuClasses == nil { s.MenuClasses = []string{} } }}
+
+	{{ var depthInt = GetMenuDepthValue(ctx) }}
+	<div data-controller="accordion" class={ strings.Join(s.MenuClasses, " "), "accordion-menu-item menu-item", depthCss(depthInt) } if s.ID != "" { id={ s.MenuID } } aria-expanded="false">
+
+		<div class="menu-item-content" data-action="click->accordion#toggle click->sidebar#open" data-depth={ strconv.FormatInt(depthInt, 10) }>
+			<div class="accordion-item-text">
+				@s.BaseItem.Inner(depthInt > 0)
+			</div>
+			<button class="menu-item-toggle">
+				<svg xmlns="http://www.w3.org/2000/svg" class="menu-item-toggle-icon" fill="currentColor" viewBox="0 0 16 16">
+				  	<path fill-rule="evenodd" d="M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5"/>
+				</svg>
+			</button>
+		</div>
+
+		<div class="menu-item-accordion-content">
+			{{ ctx = SetMenuDepth(ctx, depthInt + 1) }}
+			@s.Menu.Component()
+		</div>
+	</div>
+}
+
+func (d *DropdownItem) Name() string {
+	return d.Label
+}

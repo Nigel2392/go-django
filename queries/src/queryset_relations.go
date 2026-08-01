@@ -388,7 +388,19 @@ func OneToOneQuerySet[T attrs.Definer](backRef ThroughRelationValue) *RelOneToOn
 }
 
 func (r *RelOneToOneQuerySet[T]) Clear(ctx context.Context) (bool, error) {
-	var ct int64
+
+	var throughIdsResult, err = r.qs.
+		Select(r.qs.Meta().PrimaryKey().Name()).
+		ValuesList()
+	if err != nil {
+		return false, fmt.Errorf("failed to get through object ID: %w", err)
+	}
+
+	if len(throughIdsResult) == 0 {
+		return false, nil
+	}
+
+	var id = throughIdsResult[0][0]
 	var throughModel = newThroughProxy(r.rel.Through())
 	var throughQs = GetQuerySet(throughModel.object).
 		WithContext(r.qs.Context()).
@@ -398,13 +410,12 @@ func (r *RelOneToOneQuerySet[T]) Clear(ctx context.Context) (bool, error) {
 				attrs.Define(r.qs.Context(), r.source.Object).Primary().GetValue(),
 			),
 			expr.Expr(
-				throughModel.targetField.Name(), expr.LOOKUP_EXACT, Subquery(
-					r.qs.Select(r.qs.Meta().PrimaryKey().Name()).Limit(1),
-				),
+				throughModel.targetField.Name(), expr.LOOKUP_EXACT, id,
 			),
 		)
 
-	ct, err := throughQs.Delete()
+	var ct int64
+	ct, err = throughQs.Delete()
 	if err != nil {
 		return ct > 0, fmt.Errorf("failed to delete through objects: %w", err)
 	}
@@ -440,8 +451,6 @@ func (r *RelOneToOneQuerySet[T]) SetTarget(target T) (created bool, deleted bool
 	if err != nil {
 		return false, false, err
 	}
-
-	fmt.Printf("%v %T\n", tx, tx)
 
 	defer tx.Rollback(r.qs.Context())
 

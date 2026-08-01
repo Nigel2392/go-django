@@ -70,7 +70,7 @@ import (
     "context"
     "github.com/Nigel2392/mux/middleware/authentication"
     "github.com/Nigel2392/go-django/src/core/logger"
-    auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+    auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 )
 
 var contextWithUser = authentication.ContextWithUser(

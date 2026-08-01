@@ -14,33 +14,33 @@
       "src/forms/assets_static_src/**/*.ts",
       "src/forms/assets_static_src/**/*.tsx",
 
-      "src/contrib/blocks/assets/static_src/**/*.js",
-      "src/contrib/blocks/assets/static_src/**/*.ts",
-      "src/contrib/blocks/assets/static_src/**/*.tsx",
+      "contrib/blocks/assets/static_src/**/*.js",
+      "contrib/blocks/assets/static_src/**/*.ts",
+      "contrib/blocks/assets/static_src/**/*.tsx",
 
-      "src/contrib/admin/static_src/**/*.js",
-      "src/contrib/admin/static_src/**/*.ts",
-      "src/contrib/admin/static_src/**/*.tsx",
+      "contrib/admin/static_src/**/*.js",
+      "contrib/admin/static_src/**/*.ts",
+      "contrib/admin/static_src/**/*.tsx",
 
-      "src/contrib/admin/chooser/static_src/**/*.js",
-      "src/contrib/admin/chooser/static_src/**/*.ts",
-      "src/contrib/admin/chooser/static_src/**/*.tsx",
+      "contrib/admin/chooser/static_src/**/*.js",
+      "contrib/admin/chooser/static_src/**/*.ts",
+      "contrib/admin/chooser/static_src/**/*.tsx",
 
-      "src/contrib/pages/static_src/**/*.js",
-      "src/contrib/pages/static_src/**/*.ts",
-      "src/contrib/pages/static_src/**/*.tsx",
+      "contrib/pages/static_src/**/*.js",
+      "contrib/pages/static_src/**/*.ts",
+      "contrib/pages/static_src/**/*.tsx",
 
-      "src/contrib/editor/static_src/**/*.js",
-      "src/contrib/editor/static_src/**/*.ts",
-      "src/contrib/editor/static_src/**/*.tsx",
+      "contrib/editor/static_src/**/*.js",
+      "contrib/editor/static_src/**/*.ts",
+      "contrib/editor/static_src/**/*.tsx",
 
-      "src/contrib/editor/features/links/static_src/**/*.js",
-      "src/contrib/editor/features/links/static_src/**/*.ts",
-      "src/contrib/editor/features/links/static_src/**/*.tsx",
+      "contrib/editor/features/links/static_src/**/*.js",
+      "contrib/editor/features/links/static_src/**/*.ts",
+      "contrib/editor/features/links/static_src/**/*.tsx",
   
-      "src/contrib/editor/features/images/static_src/**/*.js",
-      "src/contrib/editor/features/images/static_src/**/*.ts",
-      "src/contrib/editor/features/images/static_src/**/*.tsx",
+      "contrib/editor/features/images/static_src/**/*.js",
+      "contrib/editor/features/images/static_src/**/*.ts",
+      "contrib/editor/features/images/static_src/**/*.tsx",
     ],
     "exclude": [
       "node_modules",
@@ -49,28 +49,28 @@
       "src/forms/assets_static_src/**/*.test.ts",
       "src/forms/assets_static_src/**/*.test.tsx",
 
-      "src/contrib/blocks/assets/static_src/**/*.test.js",
-      "src/contrib/blocks/assets/static_src/**/*.test.ts",
-      "src/contrib/blocks/assets/static_src/**/*.test.tsx",
+      "contrib/blocks/assets/static_src/**/*.test.js",
+      "contrib/blocks/assets/static_src/**/*.test.ts",
+      "contrib/blocks/assets/static_src/**/*.test.tsx",
 
-      "src/contrib/editor/features/images/static_src/**/*.test.js",
-      "src/contrib/editor/features/images/static_src/**/*.test.ts",
-      "src/contrib/editor/features/images/static_src/**/*.test.tsx",
+      "contrib/editor/features/images/static_src/**/*.test.js",
+      "contrib/editor/features/images/static_src/**/*.test.ts",
+      "contrib/editor/features/images/static_src/**/*.test.tsx",
 
-      "src/contrib/admin/static_src/**/*.test.js",
-      "src/contrib/admin/static_src/**/*.test.ts",
-      "src/contrib/admin/static_src/**/*.test.tsx",
+      "contrib/admin/static_src/**/*.test.js",
+      "contrib/admin/static_src/**/*.test.ts",
+      "contrib/admin/static_src/**/*.test.tsx",
 
-      "src/contrib/admin/chooser/static_src/**/*.test.js",
-      "src/contrib/admin/chooser/static_src/**/*.test.ts",
-      "src/contrib/admin/chooser/static_src/**/*.test.tsx",
+      "contrib/admin/chooser/static_src/**/*.test.js",
+      "contrib/admin/chooser/static_src/**/*.test.ts",
+      "contrib/admin/chooser/static_src/**/*.test.tsx",
 
-      "src/contrib/pages/static_src/**/*.test.js",
-      "src/contrib/pages/static_src/**/*.test.ts",
-      "src/contrib/pages/static_src/**/*.test.tsx",
+      "contrib/pages/static_src/**/*.test.js",
+      "contrib/pages/static_src/**/*.test.ts",
+      "contrib/pages/static_src/**/*.test.tsx",
 
-      "src/contrib/editor/static_src/**/*.test.js",
-      "src/contrib/editor/static_src/**/*.test.ts",
-      "src/contrib/editor/static_src/**/*.test.tsx"
+      "contrib/editor/static_src/**/*.test.js",
+      "contrib/editor/static_src/**/*.test.ts",
+      "contrib/editor/static_src/**/*.test.tsx"
     ]
 }

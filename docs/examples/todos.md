@@ -34,9 +34,9 @@ import (
 
     "github.com/Nigel2392/go-django/queries/src/drivers"
     "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/src/contrib/admin"
-    "github.com/Nigel2392/go-django/src/contrib/auth"
-    "github.com/Nigel2392/go-django/src/contrib/session"
+    "github.com/Nigel2392/go-django/contrib/admin"
+    "github.com/Nigel2392/go-django/contrib/auth"
+    "github.com/Nigel2392/go-django/contrib/session"
 )
 
 //go:embed assets/*

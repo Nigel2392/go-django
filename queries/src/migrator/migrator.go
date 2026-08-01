@@ -28,10 +28,6 @@ type CanColumnDBType interface {
 	DBType(*Column) dbtype.Type
 }
 
-type CanSQL[T any] interface {
-	SQL(T) (string, []any)
-}
-
 type CanMigrate interface {
 	CanMigrate() bool
 }

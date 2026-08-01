@@ -1,0 +1,71 @@
+{
+  "dependencies": [
+    "openauth2:Permission:0001_create_table.mig"
+  ],
+  "table": {
+    "table": "auth_groups",
+    "model": "github.com/Nigel2392/go-django/contrib/auth/users.Group",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": 0
+      },
+      {
+        "name": "Name",
+        "column": "name",
+        "use_in_db": true,
+        "max_length": 255,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Description",
+        "column": "description",
+        "use_in_db": true,
+        "max_length": 1024,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Permissions",
+        "column": "id",
+        "relation": {
+          "type": "ManyToMany",
+          "model": {
+            "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.Permission",
+            "lazy_model_key": ""
+          },
+          "field": "ID",
+          "through": {
+            "model": {
+              "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.GroupPermission",
+              "lazy_model_key": ""
+            },
+            "source_field": "GroupID",
+            "target_field": "PermissionID"
+          }
+        },
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": null
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

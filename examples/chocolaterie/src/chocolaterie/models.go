@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/Nigel2392/go-django/contrib/editor"
+	"github.com/Nigel2392/go-django/contrib/pages"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
-	"github.com/Nigel2392/go-django/src/contrib/editor"
-	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"

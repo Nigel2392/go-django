@@ -154,7 +154,7 @@ This directive allows you to specify that some fields are read-only.
 CREATE TABLE notes (
     id          SERIAL PRIMARY KEY,
     body        TEXT NOT NULL,
-    user_id     BIGINT UNSIGNED NOT NULL COMMENT 'fk:users=github.com/Nigel2392/go-django/src/contrib/auth/auth-models.User',
+    user_id     BIGINT UNSIGNED NOT NULL COMMENT 'fk:users=github.com/Nigel2392/go-django/contrib/auth/auth-models.User',
     ticket_id   BIGINT UNSIGNED NOT NULL COMMENT 'fk:tickets',
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

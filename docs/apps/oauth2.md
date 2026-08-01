@@ -42,8 +42,8 @@ import (
     "golang.org/x/oauth2/google"
     "golang.org/x/oauth2/github"
     "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/src/contrib/session"
-    "github.com/Nigel2392/go-django/src/contrib/openauth2"
+    "github.com/Nigel2392/go-django/contrib/session"
+    "github.com/Nigel2392/go-django/contrib/openauth2"
 )
 
 
@@ -204,10 +204,10 @@ import (
     "context"
 
     "github.com/Nigel2392/go-django/queries/src/drivers"
-    "github.com/Nigel2392/go-django/src/contrib/session"
-    "github.com/Nigel2392/go-django/src/contrib/messages"
-    "github.com/Nigel2392/go-django/src/contrib/openauth2"
-    "github.com/Nigel2392/go-django/src/contrib/admin"
+    "github.com/Nigel2392/go-django/contrib/session"
+    "github.com/Nigel2392/go-django/contrib/messages"
+    "github.com/Nigel2392/go-django/contrib/openauth2"
+    "github.com/Nigel2392/go-django/contrib/admin"
 
     _ "github.com/mattn/go-sqlite3"
 )

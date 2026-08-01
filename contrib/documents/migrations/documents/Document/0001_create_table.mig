@@ -1,0 +1,72 @@
+{
+  "table": {
+    "table": "document",
+    "model": "github.com/Nigel2392/go-django/contrib/documents.Document",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "go_type": "uint32",
+        "db_type": "UINT",
+        "default": 0
+      },
+      {
+        "name": "Title",
+        "column": "title",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Path",
+        "column": "path",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "CreatedAt",
+        "column": "created_at",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
+      },
+      {
+        "name": "FileSize",
+        "column": "file_size",
+        "use_in_db": true,
+        "go_type": "database/sql.NullInt32",
+        "db_type": "INT",
+        "default": {
+          "Int32": 0,
+          "Valid": false
+        }
+      },
+      {
+        "name": "FileHash",
+        "column": "file_hash",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

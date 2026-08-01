@@ -20,8 +20,8 @@ import (
     "github.com/Nigel2392/mux"
     "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/apps"
-    "github.com/Nigel2392/go-django/src/contrib/messages"
-    "github.com/Nigel2392/go-django/src/contrib/session"
+    "github.com/Nigel2392/go-django/contrib/messages"
+    "github.com/Nigel2392/go-django/contrib/session"
 )
 
 func main() {
@@ -85,7 +85,7 @@ package main
 
 import (
     "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/src/contrib/messages"
+    "github.com/Nigel2392/go-django/contrib/messages"
     "net/http"
 )
 

@@ -14,22 +14,24 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
-// orderedSet is a lightweight ordered unique collection.
+// orderedMap is a lightweight ordered unique collection.
 // It preserves insertion order via a slice and provides
 // O(1) deduplication via a map from key to slice index.
-type orderedSet[V any] struct {
-	entries []V
-	index   map[any]int
+type orderedMap[V any] struct {
+	entries   []V
+	index     map[any]int
+	overwrite bool
 }
 
-func newOrderedSet[V any](cap int) *orderedSet[V] {
-	return &orderedSet[V]{
-		entries: make([]V, 0, cap),
-		index:   make(map[any]int, cap),
+func newOrderedMap[V any](overwritable bool, cap int) *orderedMap[V] {
+	return &orderedMap[V]{
+		overwrite: overwritable,
+		entries:   make([]V, 0, cap),
+		index:     make(map[any]int, cap),
 	}
 }
 
-func (s *orderedSet[V]) get(key any) (V, bool) {
+func (s *orderedMap[V]) get(key any) (V, bool) {
 	idx, ok := s.index[key]
 	if !ok {
 		var zero V
@@ -38,24 +40,46 @@ func (s *orderedSet[V]) get(key any) (V, bool) {
 	return s.entries[idx], true
 }
 
-func (s *orderedSet[V]) set(key any, value V) {
+func (s *orderedMap[V]) set(key any, value V) bool {
 	if idx, ok := s.index[key]; ok {
-		s.entries[idx] = value
-		return
+		if s.overwrite {
+			s.entries[idx] = value
+			return true
+		}
+		return false
 	}
 	s.index[key] = len(s.entries)
 	s.entries = append(s.entries, value)
+	return true
 }
 
-func (s *orderedSet[V]) length() int {
+func (s *orderedMap[V]) length() int {
 	return len(s.entries)
+}
+
+type orderedSet[V any] struct {
+	orderedMap[V]
+}
+
+func newOrderedSet[V any](cap int) *orderedSet[V] {
+	return &orderedSet[V]{
+		orderedMap: orderedMap[V]{
+			overwrite: false,
+			entries:   make([]V, 0, cap),
+			index:     make(map[any]int, cap),
+		},
+	}
+}
+
+func (s *orderedSet[V]) set(key V) bool {
+	return s.orderedMap.set(key, key)
 }
 
 // objectRelation contains metadata about the list of related objects and
 // the relation type itself.
 type objectRelation struct {
 	relTyp  attrs.RelationType
-	objects *orderedSet[*object]
+	objects *orderedMap[*object]
 }
 
 // An object is a representation of a model instance in the rows structure.
@@ -105,7 +129,7 @@ type rows[T attrs.Definer] struct {
 
 	rootMapping    map[any]any            // rootMapping is used to map root object unique values to their pks
 	seen           map[string]*seenObject // seen is used to deduplicate relations
-	objects        *orderedSet[*rootObject]
+	objects        *orderedMap[*rootObject]
 	preloadMapping map[string]struct{}
 	forEach        func(attrs.Definer) error
 	qs             *QuerySet[T]
@@ -113,7 +137,7 @@ type rows[T attrs.Definer] struct {
 }
 
 type seenObject struct {
-	pks     []any
+	pks     *orderedSet[any]
 	objects map[any][]*object
 }
 
@@ -130,7 +154,7 @@ func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error
 	)
 
 	var r = &rows[T]{
-		objects:            newOrderedSet[*rootObject](0),
+		objects:            newOrderedMap[*rootObject](true, 0),
 		possibleDuplicates: make([]*scannableField, 0),
 		rootMapping:        make(map[any]any, 0),
 		hasMultiRelations:  false,
@@ -273,14 +297,15 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 			var seenM, ok = r.seen[""]
 			if !ok {
 				seenM = &seenObject{
-					pks:     make([]any, 0, 1),
+					pks:     newOrderedSet[any](0),
 					objects: make(map[any][]*object, 0),
 				}
 				r.seen[""] = seenM
 			}
 
-			seenM.pks = append(seenM.pks, pk)
-			seenM.objects[pk] = append(seenM.objects[pk], root.object)
+			if seenM.pks.set(pk) {
+				seenM.objects[pk] = append(seenM.objects[pk], root.object)
+			}
 		}
 	}
 
@@ -323,7 +348,7 @@ chainLoop:
 		if !ok {
 			next = &objectRelation{
 				relTyp:  part.relTyp,
-				objects: newOrderedSet[*object](0),
+				objects: newOrderedMap[*object](true, 0),
 			}
 			current.relations[part.chain] = next
 		}
@@ -354,13 +379,15 @@ chainLoop:
 					var seenM, ok = r.seen[part.chain]
 					if !ok {
 						seenM = &seenObject{
-							pks:     make([]any, 0, 1),
+							pks:     newOrderedSet[any](0),
 							objects: make(map[any][]*object, 0),
 						}
 						r.seen[part.chain] = seenM
 					}
-					seenM.pks = append(seenM.pks, part.uniqueValue)
-					seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
+
+					if seenM.pks.set(part.uniqueValue) {
+						seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
+					}
 				}
 			}
 		}
@@ -382,7 +409,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 		))
 	}
 
-	if len(seenObj.pks) == 0 {
+	if seenObj.pks.length() == 0 {
 		// cannot query this preload, no primary keys found
 		// return to avoid unnecessary queries
 		return nil
@@ -444,7 +471,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 				FieldColumn:  throughObject.sourceField,
 			},
 			ConditionB: expr.TableColumn{
-				Values: []any{seenObj.pks},
+				Values: []any{seenObj.pks.entries},
 			},
 		}
 
@@ -472,7 +499,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 		// the PK list is not actually the primary keys of the related objects,
 		// but the primary keys of the parent objects - change the pk list accordingly.
 		if preload.Rel.Type() == attrs.RelManyToOne || preload.Rel.Type() == attrs.RelOneToOne && preload.Rel.Through() == nil {
-			pks = make([]any, 0, len(seenObj.pks))
+			pks = newOrderedSet[any](0)
 
 			var zeroCount int
 			for _, objs := range seenObj.objects {
@@ -500,7 +527,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 						continue
 					}
 
-					pks = append(pks, val)
+					pks.set(val)
 				}
 			}
 
@@ -513,14 +540,14 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 		}
 
 		assert.True(
-			len(pks) > 0,
+			pks.length() > 0,
 			"failed to build preload for preload %v", preload.Chain,
 		)
 
 		subQueryset.internals.Where = append(subQueryset.internals.Where, expr.Expr(
 			targetField.Name(),
 			expr.LOOKUP_IN,
-			pks,
+			pks.entries,
 		))
 	}
 
@@ -551,7 +578,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 		seenM, ok = r.seen[preload.Path]
 		if !ok {
 			seenM = &seenObject{
-				pks:     make([]any, 0, 1),
+				pks:     newOrderedSet[any](0),
 				objects: make(map[any][]*object, 0),
 			}
 			r.seen[preload.Path] = seenM
@@ -620,7 +647,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 		}
 
 		if seenM != nil {
-			seenM.pks = append(seenM.pks, primaryVal)
+			seenM.pks.set(primaryVal)
 			seenM.objects[primaryVal] = append(seenM.objects[primaryVal], obj)
 		}
 
@@ -635,7 +662,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			if !ok {
 				relationMap = &objectRelation{
 					relTyp:  preload.Rel.Type(),
-					objects: newOrderedSet[*object](0),
+					objects: newOrderedMap[*object](true, 0),
 				}
 				parentObj.relations[preload.FieldName] = relationMap
 			}

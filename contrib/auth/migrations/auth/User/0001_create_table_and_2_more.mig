@@ -1,0 +1,209 @@
+{
+  "dependencies": [
+    "auth:Group:0001_create_table.mig",
+    "auth:Permission:0001_create_table.mig"
+  ],
+  "table": {
+    "table": "auth_users",
+    "model": "github.com/Nigel2392/go-django/contrib/auth.User",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": 0
+      },
+      {
+        "name": "Email",
+        "column": "email",
+        "use_in_db": true,
+        "min_length": 3,
+        "max_length": 255,
+        "go_type": "*github.com/Nigel2392/go-django/queries/src/drivers.Email",
+        "db_type": "STRING",
+        "default": null
+      },
+      {
+        "name": "Username",
+        "column": "username",
+        "use_in_db": true,
+        "min_length": 3,
+        "max_length": 16,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "FirstName",
+        "column": "first_name",
+        "use_in_db": true,
+        "max_length": 75,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "LastName",
+        "column": "last_name",
+        "use_in_db": true,
+        "max_length": 75,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Password",
+        "column": "password",
+        "use_in_db": true,
+        "max_length": 255,
+        "go_type": "*github.com/Nigel2392/go-django/contrib/auth.Password",
+        "db_type": "STRING",
+        "default": null
+      },
+      {
+        "name": "CreatedAt",
+        "column": "created_at",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
+      },
+      {
+        "name": "UpdatedAt",
+        "column": "updated_at",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
+      },
+      {
+        "name": "IsAdministrator",
+        "column": "is_administrator",
+        "use_in_db": true,
+        "go_type": "bool",
+        "db_type": "BOOL",
+        "default": false
+      },
+      {
+        "name": "IsActive",
+        "column": "is_active",
+        "use_in_db": true,
+        "go_type": "bool",
+        "db_type": "BOOL",
+        "default": false
+      },
+      {
+        "name": "LastLogin",
+        "column": "last_login",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
+      },
+      {
+        "name": "Groups",
+        "column": "id",
+        "relation": {
+          "type": "ManyToMany",
+          "model": {
+            "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.Group",
+            "lazy_model_key": ""
+          },
+          "field": "ID",
+          "through": {
+            "model": {
+              "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.UserGroup",
+              "lazy_model_key": ""
+            },
+            "source_field": "UserID",
+            "target_field": "GroupID"
+          }
+        },
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": null
+      },
+      {
+        "name": "Permissions",
+        "column": "id",
+        "relation": {
+          "type": "ManyToMany",
+          "model": {
+            "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.Permission",
+            "lazy_model_key": ""
+          },
+          "field": "ID",
+          "through": {
+            "model": {
+              "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.UserPermission",
+              "lazy_model_key": ""
+            },
+            "source_field": "UserID",
+            "target_field": "PermissionID"
+          }
+        },
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": null
+      }
+    ],
+    "indexes": [
+      {
+        "name": "auth_users_email_idx",
+        "type": "btree",
+        "columns": [
+          "Email"
+        ],
+        "unique": true
+      },
+      {
+        "name": "auth_users_username_idx",
+        "type": "btree",
+        "columns": [
+          "Username"
+        ],
+        "unique": true
+      }
+    ],
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "auth_users_email_idx",
+          "type": "btree",
+          "columns": [
+            "Email"
+          ],
+          "unique": true
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "auth_users_username_idx",
+          "type": "btree",
+          "columns": [
+            "Username"
+          ],
+          "unique": true
+        }
+      }
+    }
+  ]
+}

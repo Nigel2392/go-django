@@ -62,9 +62,9 @@ module.exports = [
         ]),
     },
     {
-        entry: './src/contrib/editor/features/images/static_src/image.ts',
+        entry: './contrib/editor/features/images/static_src/image.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/editor/features/images/static/images/editorjs/'),
+            'path': path.resolve(__dirname, 'contrib/editor/features/images/static/images/editorjs/'),
             'filename': 'image.js'
         },
         ...baseConfig([
@@ -72,9 +72,9 @@ module.exports = [
         ]),
     },
     {
-        entry: './src/contrib/editor/features/images/static_src/images.ts',
+        entry: './contrib/editor/features/images/static_src/images.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/editor/features/images/static/images/editorjs/'),
+            'path': path.resolve(__dirname, 'contrib/editor/features/images/static/images/editorjs/'),
             'filename': 'images.js'
         },
         ...baseConfig([
@@ -82,17 +82,17 @@ module.exports = [
         ]),
     },
     {
-        entry: './src/contrib/admin/chooser/static_src/index.ts',
+        entry: './contrib/admin/chooser/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/admin/chooser/assets/static/chooser/js/'),
+            'path': path.resolve(__dirname, 'contrib/admin/chooser/assets/static/chooser/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),
     },
     {
-        entry: './src/contrib/admin/static_src/index.ts',
+        entry: './contrib/admin/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/admin/assets/static/admin/js/'),
+            'path': path.resolve(__dirname, 'contrib/admin/assets/static/admin/js/'),
             'filename': 'index.js'
         },
         ...baseConfig([
@@ -112,33 +112,33 @@ module.exports = [
         ]),
     },
     {
-        entry: './src/contrib/pages/static_src/index.ts',
+        entry: './contrib/pages/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/pages/assets/static/pages/admin/js/'),
+            'path': path.resolve(__dirname, 'contrib/pages/assets/static/pages/admin/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),
     },
     {
-        entry: './src/contrib/blocks/assets/static_src/index.ts',
+        entry: './contrib/blocks/assets/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/blocks/assets/static/blocks/js/'),
+            'path': path.resolve(__dirname, 'contrib/blocks/assets/static/blocks/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),
     },
     {
-        entry: './src/contrib/editor/static_src/index.ts',
+        entry: './contrib/editor/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/editor/static/editorjs/js/'),
+            'path': path.resolve(__dirname, 'contrib/editor/static/editorjs/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),
     },
     {
-        entry: './src/contrib/editor/features/links/static_src/index.ts',
+        entry: './contrib/editor/features/links/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/editor/features/links/static/links/editorjs/'),
+            'path': path.resolve(__dirname, 'contrib/editor/features/links/static/links/editorjs/'),
             'filename': 'index.js'
         },
         ...baseConfig([

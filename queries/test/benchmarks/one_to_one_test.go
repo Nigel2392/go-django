@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Nigel2392/go-django/djester/quest"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/fields"
@@ -304,8 +303,8 @@ func TestQuerySetOneToOne__Preload__Reverse(t *testing.T) {
 }
 
 func TestQuerySetOneToOne__QuerySet(t *testing.T) {
-	var ctx, _ = quest.StartTransaction(t)
-	var src = models.Setup(ctx, &BenchmarkO2OMain{
+	// var ctx, _ = quest.StartTransaction(t)
+	var src = models.Setup(t.Context(), &BenchmarkO2OMain{
 		Title: "TestQuerySetOneToOne__QuerySetAdd_Main",
 	})
 
@@ -313,12 +312,12 @@ func TestQuerySetOneToOne__QuerySet(t *testing.T) {
 		Name: "TestQuerySetOneToOne__QuerySetAdd_Target",
 	}
 
-	if err := src.Save(ctx); err != nil {
+	if err := src.Save(t.Context()); err != nil {
 		t.Fatalf("Failed to save model %T: %v", src, err)
 	}
 
 	t.Run("Add", func(t *testing.T) {
-		created, deleted, err := src.Through.Objects().WithContext(ctx).SetTarget(target)
+		created, deleted, err := src.Through.Objects().WithContext(t.Context()).SetTarget(target)
 		if err != nil {
 			t.Fatalf("Failed to save through relation on %T: %v", src, err)
 		}
@@ -349,11 +348,11 @@ func TestQuerySetOneToOne__QuerySet(t *testing.T) {
 	})
 
 	t.Run("Load", func(t *testing.T) {
-		var newSrc = models.Setup(ctx, &BenchmarkO2OMain{
+		var newSrc = models.Setup(t.Context(), &BenchmarkO2OMain{
 			ID: src.ID,
 		})
 
-		err := newSrc.Load(ctx)
+		err := newSrc.Load(t.Context())
 		if err != nil {
 			t.Fatalf("Failed to load src %T: %v", newSrc, err)
 		}
@@ -366,7 +365,7 @@ func TestQuerySetOneToOne__QuerySet(t *testing.T) {
 			t.Fatalf("ThroughObject should not have been set: %+v", newSrc.Through.ThroughObject)
 		}
 
-		err = newSrc.Through.Objects().Load(ctx)
+		err = newSrc.Through.Objects().Load(t.Context())
 		if err != nil {
 			t.Fatalf("Failed to load through relation on %T: %v", newSrc, err)
 		}
@@ -386,10 +385,6 @@ func TestQuerySetOneToOne__QuerySet(t *testing.T) {
 		if newSrc.Through.ThroughObject.TargetModel != uint32(target.ID) || target.ID == 0 {
 			t.Fatalf("ThroughObject should have been set with ID same as target model: %d != %d", newSrc.Through.ThroughObject.TargetModel, target.ID)
 		}
-
-	})
-
-	t.Run("OverWrite", func(t *testing.T) {
 
 	})
 }

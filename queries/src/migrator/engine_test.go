@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django/contrib/auth/users"
 	_ "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	testsql "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/pkg/errors"
 )

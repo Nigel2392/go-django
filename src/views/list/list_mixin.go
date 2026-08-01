@@ -12,7 +12,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/src/contrib/messages"
+	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/ctx"

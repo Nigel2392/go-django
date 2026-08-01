@@ -1,6 +1,7 @@
 $dirname = Split-Path -Parent $MyInvocation.MyCommand.Path
 $dirname = Split-Path -Leaf $dirname
 
+$BASE_TEST_DIR = "./src/... ./queries/... ./contrib/..."
 $DOCKER_COMPOSE_FILE = "./test-databases.docker-compose.yml"
 
 # Ensure gocovmerge is available for the final merge step
@@ -73,6 +74,8 @@ if ($testsToRun.Count -eq 0) {
     $testsToRun = $Databases
 }
 
+docker-compose -f "$DOCKER_COMPOSE_FILE" down
+
 $upString = ""
 foreach ($Database in $testsToRun) {
     # Check if the argument is a valid Docker database type
@@ -96,12 +99,6 @@ if (-not $flags.runTests) {
     exit 0
 }
 
-# Define the exact 4 test permutations you provided
-$pkgQueries = "github.com/Nigel2392/go-django/queries/..."
-$pkgSrc = "github.com/Nigel2392/go-django/src/..."
-$dirQueries = "./queries/..."
-$dirSrc = "./src/..."
-
 # Run tests for each database type
 foreach ($Database in $testsToRun) {
     
@@ -111,19 +108,18 @@ foreach ($Database in $testsToRun) {
 
     # RUN TEST
     $file = "coverage/cover.${Database}.out"
-    $cmd = "go test -p=1 -tags=`"testing_auth test $Database`" -coverpkg=`"github.com/Nigel2392/go-django/...`" ./... ./queries/... ./djester/... -coverprofile=`"$file`" --timeout=30s"
+    $cmd = "go test -p=1 -tags=`"testing_auth test $Database`" -coverpkg=`"github.com/Nigel2392/go-django/...`" $BASE_TEST_DIR -coverprofile=`"$file`" --timeout=30s"
     
     if ($flags.verbose) { $cmd += " -v" }
     if ($flags.failslow -ne $true) { $cmd += " -failfast" }
 
-    Write-Host "--- $($run.name) ---"
+    Write-Host "--- ${Database} ---"
     Write-Host "Command: $cmd"
     
     Invoke-Expression $cmd
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Tests failed during '$($run.name)' on $Database."
-        Write-Host "You can fix the error and run '.\generate-coverage.ps1 resume' to pick up from this exact spot."
+        Write-Host "Tests failed on $Database."
         exit $LASTEXITCODE
     }
     
