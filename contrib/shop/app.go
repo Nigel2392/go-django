@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/signals"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -24,7 +25,7 @@ var SHOP = &ShopAppConfig{
 	ADMIN_ROUTE: admin.AdminSite.Route.Any(
 		"products/", nil, "products",
 	),
-	SIGNALS: newSignalManager(),
+	SIGNALS: signals.NewManager(),
 }
 
 func NewAppConfig() (django.AppConfig, error) {
