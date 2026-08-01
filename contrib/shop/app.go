@@ -85,6 +85,7 @@ func NewAppConfig() (django.AppConfig, error) {
 	)
 
 	SHOP.Routing = func(m mux.Multiplexer) {
+
 	}
 
 	SHOP.Init = func(settings django.Settings, db drivers.Database) error {

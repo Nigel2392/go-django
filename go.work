@@ -8,6 +8,7 @@ use (
 	./djester
 	./examples/blogapp
 	./examples/chocolaterie
+	./examples/commerce
 	./examples/formsapp
 	./examples/openauth2app
 	./examples/server_errors

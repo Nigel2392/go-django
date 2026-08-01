@@ -43,6 +43,8 @@ func TestStatusText(t *testing.T) {
 
 			if chkStatus := PAYSTATE.StringOf(t.Context(), status); chkStatus != string(trans) {
 				t.Fatalf("%q did not match proper translation: %q", status, chkStatus)
+			} else {
+				t.Logf("StatusText: %q", chkStatus)
 			}
 		})
 	}

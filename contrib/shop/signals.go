@@ -5,6 +5,13 @@ import (
 	"github.com/Nigel2392/go-signals"
 )
 
+var (
+	productPool = signals.NewPool[*ProductSignalData]()
+	cartPool    = signals.NewPool[*CartSignalData]()
+	orderPool   = signals.NewPool[*OrderSignalData]()
+	paymentPool = signals.NewPool[*PaymentSignalData]()
+)
+
 type PaymentSignalData struct {
 	Payment  *models.Payment
 	RawBytes []byte
@@ -41,13 +48,6 @@ type SignalManager struct {
 	Orders   ModelSignalManager[*OrderSignalData]
 	Payment  PaymentSignalManager
 }
-
-var (
-	productPool = signals.NewPool[*ProductSignalData]()
-	cartPool    = signals.NewPool[*CartSignalData]()
-	orderPool   = signals.NewPool[*OrderSignalData]()
-	paymentPool = signals.NewPool[*PaymentSignalData]()
-)
 
 func newSignalManager() SignalManager {
 	return SignalManager{
