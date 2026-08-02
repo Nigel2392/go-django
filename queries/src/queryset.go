@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -3593,6 +3594,30 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				))
 			}
 
+			autoNowAdd, okNowAdd := atts[attrs.AttrAutoNowAddKey]
+			autoNow, okNow := atts[attrs.AttrAutoNowKey]
+			if okNowAdd || okNow {
+				var autoNowAdd = autoNowAdd.(bool)
+				var autoNow = autoNow.(bool)
+				var now = time.Now()
+				if okNowAdd && autoNowAdd {
+					value = now
+				}
+
+				if okNow && autoNow {
+					value = now
+				}
+
+				if autoNow || autoNowAdd {
+					if err := field.Scan(now); err != nil {
+						return nil, errors.ValueError.WithCause(fmt.Errorf(
+							"Error scanning auto-generated time value into field %q: %w",
+							field.Name(), err,
+						))
+					}
+				}
+			}
+
 			var rVal = reflect.ValueOf(value)
 			if value == nil && !field.AllowNull() ||
 				rVal.Kind() == reflect.Ptr && rVal.IsNil() && !field.AllowNull() {
@@ -3977,6 +4002,17 @@ func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
 					err, "failed to get value for field %q in %T",
 					field.Name(), obj,
 				))
+			}
+
+			v, ok = atts[attrs.AttrAutoNowKey]
+			if ok && v.(bool) {
+				value = time.Now()
+				if err := field.Scan(value); err != nil {
+					return nil, errors.ValueError.WithCause(fmt.Errorf(
+						"Error scanning auto-generated time value into field %q: %w",
+						field.Name(), err,
+					))
+				}
 			}
 
 			if value == nil && !field.AllowNull() {

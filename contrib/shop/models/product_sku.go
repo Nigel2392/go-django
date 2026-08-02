@@ -11,7 +11,9 @@ import (
 type ProductSku struct {
 	ID      uint64
 	Product *Product
+	Title   string
 	Price   decimal.Decimal
+	Stock   uint64
 }
 
 func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -19,7 +21,33 @@ func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*ProductSku, uint64] {
 			return fattrs.PtrFieldConfig[*ProductSku, uint64]{
 				Config: attrs.FieldConfig{
-					Primary: true,
+					Primary:  true,
+					ReadOnly: true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*ProductSku, string] {
+			return fattrs.PtrFieldConfig[*ProductSku, string]{
+				Config: attrs.FieldConfig{
+					MinLength: 2,
+					MaxLength: 75,
+				},
+			}
+		}),
+		fattrs.Field(m, "Price", &m.Price, func() fattrs.PtrFieldConfig[*ProductSku, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*ProductSku, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 13,
+						attrs.AttrScaleKey:     4,
+					},
+				},
+			}
+		}),
+		fattrs.Field(m, "Stock", &m.Stock, func() fattrs.PtrFieldConfig[*ProductSku, uint64] {
+			return fattrs.PtrFieldConfig[*ProductSku, uint64]{
+				Config: attrs.FieldConfig{
+					MinValue: 0,
 				},
 			}
 		}),
@@ -33,16 +61,6 @@ func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
 					},
 					Null:  false,
 					Blank: false,
-				},
-			}
-		}),
-		fattrs.Field(m, "Price", &m.Price, func() fattrs.PtrFieldConfig[*ProductSku, decimal.Decimal] {
-			return fattrs.PtrFieldConfig[*ProductSku, decimal.Decimal]{
-				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
 				},
 			}
 		}),

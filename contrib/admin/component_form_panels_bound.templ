@@ -602,7 +602,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelfor
             </div>
         }
 
-        if !(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) && (!p.Panel.DisallowAdd || !p.Panel.DisallowRemove) {
+        if (!(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) || p.Panel.MinNum < p.Panel.MaxNum || p.Panel.MaxNum == 0) && (!p.Panel.DisallowAdd || !p.Panel.DisallowRemove) {
             <div class="modelform-panel__forms__panel__controls">
                 <div class="modelform-panel__forms__panel__controls__group">
                     if !p.Panel.DisallowAdd {
@@ -667,7 +667,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
         @p.renderSingleFormPanel(newForm, contenttypes.NewContentType(newForm.Instance()).Model(), "__SLUGIFY(__PREFIX__)__")
     </template>
     
-    if !(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) && !p.Panel.DisallowAdd {
+    if (!(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) || p.Panel.MinNum < p.Panel.MaxNum || p.Panel.MaxNum == 0) && !p.Panel.DisallowAdd {
         <div class="modelform-panel__forms__controls">
             <button type="button" class="modelform-panel__form__controls--add modelform-panel__button" data-action="click->inline-panel#addFormAction" data-inline-panel-index-param={ 0 } data-inline-panel-where-param="start" title={ trans.T(ctx, "Add") }>
                 @icons.Icon("icon-plus", map[string]string{
@@ -739,6 +739,11 @@ func (p *BoundModelFormPanel[TARGET, FORM]) Component() templ.Component {
 	if mgmt := p.FormSet.ManagementForm(); mgmt != nil {
 		mgmtPrefix = mgmt.PrefixName("__FIELD__")
 	}
+
+    var max = p.Panel.MaxNum
+    if max == 0 {
+        max = 100
+    }
 
 	return PanelComponent{
 		Classname: cls,

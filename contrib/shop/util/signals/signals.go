@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-signals"
 )
 
@@ -20,7 +21,7 @@ type BaseSignal struct {
 
 type PaymentSignalData struct {
 	BaseSignal
-	Payment  *models.Payment
+	Payment  *payments.Payment
 	RawBytes []byte
 }
 

@@ -157,6 +157,12 @@ const (
 
 	// AttrUploadToKey (string) is the upload path base for a file field.
 	AttrUploadToKey = "field.upload_to"
+
+	// AttrAutoNowAddKey (bool) is similar do django's auto_now_add.
+	AttrAutoNowAddKey = "field.auto_now_add"
+
+	// AttrAutoNowKey (bool) is similar do django's auto_now.
+	AttrAutoNowKey = "field.auto_now"
 )
 
 // Definer is the interface that wraps the FieldDefs method.

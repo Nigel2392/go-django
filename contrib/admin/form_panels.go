@@ -801,31 +801,31 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 		}
 
 		var form modelforms.ModelForm[TARGET]
+
 		if p.Form != nil {
 			form = p.Form()
 		} else {
+
 			var modelDef = FindDefinition(p.TargetType)
-			except.Assert(
-				modelDef != nil,
-				http.StatusInternalServerError,
-				"ModelFormPanel: no model definition found for type %T",
-				p.TargetType,
-			)
-
-			var opts FormViewOptions
-			if isNew {
-				opts = modelDef.AddView
+			if modelDef == nil {
+				form = modelforms.NewBaseModelForm(ctx, target)
+				form.SetInstance(target)
 			} else {
-				opts = modelDef.EditView
-			}
+				var opts FormViewOptions
+				if isNew {
+					opts = modelDef.AddView
+				} else {
+					opts = modelDef.EditView
+				}
 
-			form = GetAdminForm(
-				target,
-				opts,
-				modelDef._app,
-				modelDef,
-				r,
-			)
+				form = GetAdminForm(
+					target,
+					opts,
+					modelDef._app,
+					modelDef,
+					r,
+				)
+			}
 		}
 
 		var initialData = make(map[string]any)
@@ -836,31 +836,34 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 				var pk = attrs.PrimaryKey(ctx, source)
 				if !fields.IsZero(pk) {
 					initialData[fieldName] = pk
+
+					form.AddField(fieldName, &formfields.ForeignKeyFormField{
+						BaseRelationField: formfields.BaseRelationField{
+							BaseField: fields.NewField(
+								fields.Widget(formfields.ModelSelectWidget(
+									false, "", chooser.BaseChooserOptions{
+										TargetObject: source,
+										GetPrimaryKey: func(ctx context.Context, i interface{}) interface{} {
+											return attrs.PrimaryKey(ctx, i.(attrs.Definer))
+										},
+										Queryset: func(ctx context.Context) ([]interface{}, error) {
+											return []interface{}{source}, nil
+										},
+									},
+									nil,
+								)),
+								fields.Hide(true),
+							),
+							Field:    revField,
+							Relation: revField.Rel(),
+						},
+					})
+
 				} else {
+					form.DeleteField(fieldName)
 					logger.Warnf("ModelFormPanel: source instance has zero primary key; related object may not be saved correctly")
 				}
 
-				form.AddField(fieldName, &formfields.ForeignKeyFormField{
-					BaseRelationField: formfields.BaseRelationField{
-						BaseField: fields.NewField(
-							fields.Widget(formfields.ModelSelectWidget(
-								false, "", chooser.BaseChooserOptions{
-									TargetObject: source,
-									GetPrimaryKey: func(ctx context.Context, i interface{}) interface{} {
-										return attrs.PrimaryKey(ctx, i.(attrs.Definer))
-									},
-									Queryset: func(ctx context.Context) ([]interface{}, error) {
-										return []interface{}{source}, nil
-									},
-								},
-								nil,
-							)),
-							fields.Hide(true),
-						),
-						Field:    revField,
-						Relation: revField.Rel(),
-					},
-				})
 			} else {
 				assert.Fail(
 					"ModelFormPanel: reverse field not found for one-to-many relation on field %s",
@@ -975,7 +978,13 @@ func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, 
 	}
 
 	var rel = field.Rel()
+
+	if attrs.IsZero(attrs.PrimaryKey(ctx, source)) {
+		goto createDefaultList
+	}
+
 	if rel.Type() == attrs.RelOneToMany {
+
 		var qs = queries.OneToManyQuerySet[TARGET](&queries.RelRevFK[attrs.Definer]{
 			Parent: &queries.ParentInfo{
 				Object: source,
@@ -983,7 +992,7 @@ func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, 
 			},
 		})
 
-		var rows, err = qs.WithContext(ctx).OrderBy().All()
+		rows, err := qs.WithContext(ctx).OrderBy().All()
 		if err != nil {
 			return nil, nil, errors.Wrapf(
 				err, "Error fetching related objects for field %q", fieldName,
@@ -998,6 +1007,7 @@ func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, 
 		return field, list, nil
 	}
 
+createDefaultList:
 	var _null TARGET
 	var value = field.GetValue()
 	var targetList = make([]TARGET, 0)
@@ -1076,6 +1086,11 @@ func (m *ModelFormPanel[TARGET, FORM]) validate(rel attrs.Relation, base int, li
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField, formSets FormSetObject) BoundPanel {
+
+	if m.MaxNum == 0 {
+		m.MaxNum = 100
+	}
+
 	var field, targetList, err = getRelatedList[TARGET](r, ctx, instance, m.FieldName)
 	if err != nil {
 		except.Fail(

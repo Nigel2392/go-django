@@ -3,10 +3,15 @@ package shop
 import (
 	"embed"
 	"io/fs"
+	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -14,19 +19,24 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux"
 )
 
 //go:embed assets/**
 var assetFilesystem embed.FS
 
+type ShopAppConfig = app.ShopAppConfig
+
 var SHOP = &ShopAppConfig{
 	DBRequiredAppConfig: apps.NewDBAppConfig("shop"),
 	ADMIN_ROUTE: admin.AdminSite.Route.Any(
-		"products/", nil, "products",
+		"shop/", nil, "shop",
 	),
 	SIGNALS: signals.NewManager(),
 }
+
+var NewHandler = app.ShopToHttpHandler(SHOP)
 
 func NewAppConfig() (django.AppConfig, error) {
 	if SHOP == nil || SHOP.IsReady() {
@@ -71,7 +81,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		&models.Order{},
 
 		// Payments
-		&models.Payment{},
+		&payments.Payment{},
 
 		// Products
 		&models.ProductSku{},
@@ -92,11 +102,33 @@ func NewAppConfig() (django.AppConfig, error) {
 		admin.AdminSite.TemplateConfig,
 	)
 
+	SHOP.ADMIN_MENU = func(r *http.Request) []menu.MenuItem {
+		return []menu.MenuItem{
+			&menu.Item{
+				BaseItem: menu.BaseItem{
+					ItemName: "index",
+					Label:    trans.T(r.Context(), "Home"),
+				},
+				Link: func() string {
+					return django.Reverse("admin:shop:home")
+				},
+			},
+		}
+	}
+
 	SHOP.Routing = func(m mux.Multiplexer) {
+		m.Get("home", NewHandler(adminviews.Home), "home")
+
+		products := m.Get("products/", nil, "products")
+		products.Get("add/", NewHandler(adminviews.ViewAddProduct), "add")
+		products.Post("add/", NewHandler(adminviews.ViewAddProduct))
+		products.Get("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct), "edit")
+		products.Post("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct))
 
 	}
 
 	SHOP.Init = func(settings django.Settings, db drivers.Database) error {
+
 		return nil
 	}
 

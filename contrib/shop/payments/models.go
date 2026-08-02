@@ -1,9 +1,9 @@
-package models
+package payments
 
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django/contrib/shop/paystate"
+	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -13,8 +13,10 @@ import (
 var _ queries.ActsBeforeCreate = (*Payment)(nil)
 
 type Payment struct {
-	ID    drivers.ULID
-	State paystate.PayState
+	ID        drivers.ULID
+	State     paystate.PayState
+	CreatedAt drivers.Timestamp
+	UpdatedAt drivers.Timestamp
 }
 
 func (m *Payment) BeforeCreate(ctx context.Context) error {
@@ -37,6 +39,28 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 					MinLength: 2,
 					Null:      false,
 					Blank:     false,
+				},
+			}
+		}),
+		fattrs.Field(m, "CreatedAt", &m.CreatedAt, func() fattrs.PtrFieldConfig[*Payment, drivers.Timestamp] {
+			return fattrs.PtrFieldConfig[*Payment, drivers.Timestamp]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]any{
+						attrs.AttrAutoNowAddKey: true,
+					},
+					Null:  false,
+					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "UpdatedAt", &m.UpdatedAt, func() fattrs.PtrFieldConfig[*Payment, drivers.Timestamp] {
+			return fattrs.PtrFieldConfig[*Payment, drivers.Timestamp]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]any{
+						attrs.AttrAutoNowKey: true,
+					},
+					Null:  false,
+					Blank: false,
 				},
 			}
 		}),

@@ -160,6 +160,7 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 
 		var _, ok = meta.Reverse(field.Name())
 		if ok {
+			// fmt.Printf("SKIPPING REVERSE RELATION FOR %T %q\n", field.Instance(), field.Name())
 			// This is a reverse relation, skip it.
 			continue
 		}

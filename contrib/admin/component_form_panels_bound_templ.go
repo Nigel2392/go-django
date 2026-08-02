@@ -1703,7 +1703,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				return templ_7745c5c3_Err
 			}
 		}
-		if !(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) && (!p.Panel.DisallowAdd || !p.Panel.DisallowRemove) {
+		if (!(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) || p.Panel.MinNum < p.Panel.MaxNum || p.Panel.MaxNum == 0) && (!p.Panel.DisallowAdd || !p.Panel.DisallowRemove) {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "<div class=\"modelform-panel__forms__panel__controls\"><div class=\"modelform-panel__forms__panel__controls__group\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1940,7 +1940,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if !(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) && !p.Panel.DisallowAdd {
+		if (!(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) || p.Panel.MinNum < p.Panel.MaxNum || p.Panel.MaxNum == 0) && !p.Panel.DisallowAdd {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 104, "<div class=\"modelform-panel__forms__controls\"><button type=\"button\" class=\"modelform-panel__form__controls--add modelform-panel__button\" data-action=\"click->inline-panel#addFormAction\" data-inline-panel-index-param=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -2084,6 +2084,11 @@ func (p *BoundModelFormPanel[TARGET, FORM]) Component() templ.Component {
 	var mgmtPrefix = ""
 	if mgmt := p.FormSet.ManagementForm(); mgmt != nil {
 		mgmtPrefix = mgmt.PrefixName("__FIELD__")
+	}
+
+	var max = p.Panel.MaxNum
+	if max == 0 {
+		max = 100
 	}
 
 	return PanelComponent{

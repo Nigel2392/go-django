@@ -6,6 +6,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/mail"
 	"reflect"
 	"slices"
@@ -155,6 +156,7 @@ type FieldDef struct {
 	// directlyInteractible bool
 }
 
+var _ERROR = reflect.TypeOf((*error)(nil)).Elem()
 var _DEFINER = reflect.TypeOf((*Definer)(nil)).Elem()
 var _globalConf = &FieldConfig{}
 
@@ -495,10 +497,9 @@ func (f *FieldDef) Attrs() map[string]interface{} {
 	}
 
 createAttrs:
-	attrs = f.attrDef.Attributes
-	if attrs == nil {
-		attrs = make(map[string]interface{})
-	}
+
+	attrs = make(map[string]interface{})
+	maps.Copy(attrs, f.attrDef.Attributes)
 	attrs[AttrNameKey] = f.Name()
 	attrs[AttrMaxLengthKey] = f.attrDef.MaxLength
 	attrs[AttrMinLengthKey] = f.attrDef.MinLength
@@ -669,11 +670,38 @@ func (f *FieldDef) GetDefault() interface{} {
 	if f.attrDef.Default != nil {
 		var v = reflect.ValueOf(f.attrDef.Default)
 		if v.IsValid() && v.Kind() == reflect.Func {
-			var out = v.Call([]reflect.Value{f.instance_v_ptr})
-			assert.Gt(out, 0, "Default function did not return a value")
-			var outVal = out[0].Interface()
+
+			var typ = v.Type()
+			var out []reflect.Value
+			switch typ.NumIn() {
+			case 1:
+				out = v.Call([]reflect.Value{f.instance_v_ptr})
+			case 0:
+				out = v.Call([]reflect.Value{})
+			default:
+				assert.Fail("Invalid function type %T for GetDefault function", f.attrDef.Default)
+			}
+
+			var outVal reflect.Value
+			var numOut = typ.NumOut()
+			switch {
+			case numOut == 0:
+				assert.Fail("No return value for GetDefault function: %T", f.attrDef.Default)
+			case numOut == 1:
+				outVal = out[0]
+			case numOut == 2 && out[1].Type().Implements(_ERROR):
+				outVal = out[0]
+				err := out[1].Interface().(error)
+				if err != nil {
+					assert.Fail("Error retrieving default value: %v", err)
+				}
+			default:
+				assert.Fail("Invalid function type %T for GetDefault function", f.attrDef.Default)
+			}
+
+			var val = outVal.Interface()
 			assert.Err(BindValueToModel(
-				f.Instance(), f, outVal,
+				f.Instance(), f, val,
 			))
 			return outVal
 		}

@@ -62,7 +62,7 @@ var (
 
 func ptrConf_Value_CheckNil[VALUE any](v *VALUE) bool {
 	val := reflect.ValueOf(*v)
-	return val.IsNil()
+	return !val.IsValid() || val.IsNil()
 }
 
 func ptrConf_Value_NeverNil[VALUE any](v *VALUE) bool {
@@ -189,7 +189,6 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 		reflect.Interface,
 		reflect.Map,
 		reflect.Slice,
-		reflect.Array,
 		reflect.Chan,
 		reflect.Func:
 		opts.isNil = ptrConf_Value_CheckNil
@@ -283,7 +282,7 @@ func (r *ptrField[M, V]) CanMigrate() bool {
 }
 
 func (r *ptrField[M, V]) AllowDBEdit() bool {
-	return bitch.Is(r.opts.flags, flagHasColumn)
+	return bitch.Is(r.opts.flags, flagHasColumn) && !bitch.Is(r.opts.flags, F_IS_REVERSE_FLD)
 }
 
 func (r *ptrField[M, V]) IsReverse() bool {
@@ -585,6 +584,14 @@ func (r *ptrField[M, V]) GetValue() interface{} {
 
 func (r *ptrField[M, V]) GetDefault() interface{} {
 	def := r.useOpts().getDefault(r.obj)
+	if r.opts.isNil(&def) && (bitch.Is(r.useOpts().flags, flagIsBinder) || bitch.Is(r.opts.flags, flagIsPtrBinder)) {
+		if r.opts.newValue != nil {
+			def = r.opts.newValue()
+		} else {
+			var newV = reflect.New(r.opts.typ.Elem())
+			def = newV.Interface().(V)
+		}
+	}
 	return r.get(&def)
 }
 

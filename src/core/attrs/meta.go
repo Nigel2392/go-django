@@ -167,14 +167,22 @@ func registerReverseRelation(
 		reverseAlias,
 	)
 
-	if !final {
-		if _, ok := meta.stored[storageKey]; ok {
-			// Cannot register the same reverse relation twice
-			// No need to panic here - since the relation was already registered
-			// we can just skip it
-			return
-		}
+	if _, ok := meta.stored[storageKey]; ok {
+		// Cannot register the same reverse relation twice
+		// No need to panic here - since the relation was already registered
+		// we can just skip it
+		return
+	}
 
+	// if forward already exists, we are doing redundant work by adding it to reverse
+	// this creates logical errors
+	// it happens because registration is a two-step process
+	// (registerModel is called multiple times)
+	if _, ok := meta.forward.Get(reverseAlias); ok {
+		return
+	}
+
+	if !final {
 		// Store in reverseRelations
 		if rel, ok := meta.reverse.Get(reverseAlias); ok {
 			// Cannot register a reverse relation with the same name twice
@@ -360,9 +368,14 @@ func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) 
 		}
 
 	setRel:
-		meta.forward.Set(
-			name, rel,
-		)
+		// if reverse already exists, we are doing redundant work by adding it to fwd
+		// this creates logical errors, it happens because registration is a two-step process
+		// (registerModel is called multiple times)
+		if !meta.reverse.Has(name) {
+			meta.forward.Set(
+				name, rel,
+			)
+		}
 
 		var canReverse, ok = field.(CanReverseRelate)
 		if !ok || canReverse.AllowReverseRelation() {
