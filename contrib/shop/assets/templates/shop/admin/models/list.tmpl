@@ -1,0 +1,59 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ .Page.Title }}{{ end }}
+
+{{ define "extra_css" }}
+
+    <link rel="stylesheet" href="{{ static "shop/admin/css/index.css" }}">
+
+    {{ if .Data.filter_form }}
+        {{ $Media := .Data.filter_form.Media }}
+        {{ range $css := $Media.CSS }}
+            {{ $css }}
+        {{ end }}
+    {{ end }}
+
+    {{ if .Data.view_list.Media }}
+        {{ $Media := .Data.view_list.Media }}
+        {{ range $css := $Media.CSS }}
+            {{ $css }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+
+{{ define "extra_js" }}
+
+    <script src="{{ static "shop/admin/js/index.js" }}"></script>
+
+    {{ if .Data.filter_form }}
+        {{ $Media := .Data.filter_form.Media }}
+        {{ range $js := $Media.JS }}
+            {{ $js }}
+        {{ end }}
+    {{ end }}
+
+    {{ if .Data.view_list.Media }}
+        {{ $Media := .Data.view_list.Media }}
+        {{ range $js := $Media.JS }}
+            {{ $js }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+
+{{ define "content" }}
+
+    <div class="list-root">
+
+        <div class="list-wrapper">
+            <div class="list-wrapper__content">
+                {{ $list := (.Get "view_list") }}
+                {{ safe $list.Render }}
+            </div>
+
+            <div class="list-paginator">
+                {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
+            </div>
+        </div>
+    </div>
+
+{{ end }}

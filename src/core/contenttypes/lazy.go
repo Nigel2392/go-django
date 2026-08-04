@@ -16,7 +16,7 @@ var lazyRegistry = make(map[string]*LazyRegistry)
 //
 // If no type names are provided, it will load the default model, which is the model that comes first in alphabetical order of the type names.
 //
-// This can be useful in many cases, for example in [./src/contrib/auth/users/baseuser.go] to load custom definitions of the user model,
+// This can be useful in many cases, for example in [./contrib/auth/users/baseuser.go] to load custom definitions of the user model,
 // allowing for apps to not depend on a single user model.
 //
 // This type must be instantiated using [NewLazyRegistry] and passing a function that checks if the content type definition is valid for the lazy registry,

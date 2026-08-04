@@ -96,10 +96,17 @@ func (c *ContentTypeDefinition) Name() string {
 	return rTyp.Name()
 }
 
+type labeler interface {
+	Label(ctx context.Context) string
+}
+
 // Returns the model's human-readable name.
 func (p *ContentTypeDefinition) Label(ctx context.Context) string {
 	if p.GetLabel != nil {
 		return p.GetLabel(ctx)
+	}
+	if l, ok := p.ContentObject.(labeler); ok {
+		return l.Label(ctx)
 	}
 	return trans.T(ctx, p.Name())
 }

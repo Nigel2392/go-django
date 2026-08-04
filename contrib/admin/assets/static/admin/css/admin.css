@@ -664,6 +664,17 @@ flex-direction is set to row above 70em.
 .panel:not(:has(.panel)):has(.panel__heading) {
     margin-bottom: 1rem;
 }
+.compact .panel:not(:has(.panel)):has(.panel__heading) {
+    display: flex;
+    justify-content: start;
+}
+.compact .panel:not(:has(.panel)):has(.panel__heading) .panel__body {
+    flex: 1 1 auto;
+}
+.compact .panel:not(:has(.panel)):has(.panel__heading) .panel__heading {
+    min-width: 6rem;
+    text-align: center;
+}
 .panel__heading label:not(.default-label),
 .form-field label:not(.default-label) {
     color: hsl( 254.3 50.4% 24.5% );

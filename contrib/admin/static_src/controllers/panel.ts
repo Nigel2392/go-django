@@ -142,9 +142,10 @@ class TitlePanelController extends Controller<HTMLElement> {
     }
 
     declare outputidsValue: string[];
+    declare hasOutputidsValue: boolean;
 
     connect() {
-        if (this.outputidsValue.length === 0) {
+        if (!this.hasOutputidsValue || this.outputidsValue.length === 0) {
             console.error("No output IDs found for title panel controller");
             this.disconnect();
             return;
@@ -166,6 +167,7 @@ class TitlePanelController extends Controller<HTMLElement> {
 
             return elem;
         });
+
         if (outputs.length === 0) {
             console.error("No output found for panel title controller");
             this.disconnect();
@@ -173,6 +175,10 @@ class TitlePanelController extends Controller<HTMLElement> {
         }
 
         let inputs = this.element.querySelectorAll("[data-panel-input-id]");
+        if (inputs.length === 0) {
+            inputs = this.element.querySelectorAll("input");
+        }
+
         if (inputs.length === 0) {
             console.error("No input found for panel title controller");
             this.disconnect();
@@ -195,7 +201,7 @@ class TitlePanelController extends Controller<HTMLElement> {
 
         this.outputidsValue.forEach(id => {
             const output = document.getElementById(id) as any;
-            if (!output || !output.shouldSlugify) {
+            if ((!output || !output.shouldSlugify) && output?.value != "") {
                 return;
             }
 

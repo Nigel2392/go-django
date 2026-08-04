@@ -7,20 +7,24 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/shopspring/decimal"
 )
 
 type Product struct {
-	ID      uint64
-	Title   string
-	Slug    string
-	Ranking uint64
-	Skus    *queries.RelRevFK[*ProductSku]
+	ID       uint64
+	Title    string
+	Slug     string
+	Ranking  uint64
+	PriceMax decimal.Decimal
+	Skus     *queries.RelRevFK[*ProductSku]
 }
 
 func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
-		admin.FieldPanel("Title"),
+		admin.TitlePanel(admin.FieldPanel("Title")).
+			WithOutputFields("Slug"),
 		admin.FieldPanel("Slug"),
 		admin.FieldPanel("Ranking"),
 
@@ -43,9 +47,12 @@ func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
 
 func (m *Product) EditPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
-		admin.FieldPanel("ID"),
-		admin.FieldPanel("Title"),
-		admin.FieldPanel("Slug"),
+		admin.TitlePanel(admin.FieldPanel("Title")).
+			WithOutputFields("Slug"),
+		admin.RowPanel(
+			admin.FieldPanel("Slug"),
+			admin.FieldPanel("ID"),
+		),
 		admin.FieldPanel("Ranking"),
 
 		&admin.ModelFormPanel[*ProductSku, modelforms.ModelForm[*ProductSku]]{
@@ -66,7 +73,7 @@ func (m *Product) EditPanels(ctx context.Context) []admin.Panel {
 }
 
 func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.Make(ctx, m,
+	return attrs.Make[*Product, attrs.Field](ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Product, uint64] {
 			return fattrs.PtrFieldConfig[*Product, uint64]{
 				Config: attrs.FieldConfig{
@@ -87,6 +94,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					MinLength: 2,
 					MaxLength: 75,
+					ReadOnly:  true,
 				},
 			}
 		}),
@@ -100,9 +108,12 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Skus", &m.Skus, func() fattrs.PtrFieldConfig[*Product, *queries.RelRevFK[*ProductSku]] {
 			return fattrs.PtrFieldConfig[*Product, *queries.RelRevFK[*ProductSku]]{
 				Config: attrs.FieldConfig{
+					Label:    trans.S("Product SKUs"),
+					HelpText: trans.S("Variations on this product."),
 					ReadOnly: true,
 				},
 			}
 		}),
+		// fields.NewVirtualField[decimal.Decimal](m, &m.PriceMax, "PriceMax", expr.AVG("Skus.Price")),
 	)
 }

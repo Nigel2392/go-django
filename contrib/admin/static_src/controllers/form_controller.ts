@@ -118,13 +118,17 @@ class FormController extends Controller<HTMLFormElement> {
 
             if (!anchor || !anchor.matches(this.linkSelectorValue)) return;
 
-            const ok = window.confirm(this.confirmMessageValue);
-            if (!ok) {
-                e.preventDefault();
-                e.stopPropagation();
-            } else {
-                // user confirmed navigation: remove guards to avoid double prompts
-                this.teardown();
+            if (anchor.href.startsWith("#")) return;
+
+            if (this.hasConfirmMessageValue) {
+                const ok = window.confirm(this.confirmMessageValue);
+                if (!ok) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                } else {
+                    // user confirmed navigation: remove guards to avoid double prompts
+                    this.teardown();
+                }
             }
         };
 

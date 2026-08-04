@@ -23,6 +23,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/shopspring/decimal"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -840,6 +841,8 @@ func (f *FieldDef) FormField() fields.Field {
 		formField = fields.JSONField[map[string]interface{}](opts...)
 	case mail.Address:
 		formField = fields.EmailField(opts...)
+	case decimal.Decimal:
+		formField = fields.DecimalField(opts...)
 	case sql.NullBool:
 		formField = fields.SQLNullField[bool](opts...)
 	case sql.NullByte:

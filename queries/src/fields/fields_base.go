@@ -2,6 +2,7 @@ package fields
 
 import (
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -461,6 +462,8 @@ var baseReflectKinds = (func() []reflect.Kind {
 	return kinds
 })()
 
+var _SQL_SCANNER = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+
 func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 	var (
 		rV = reflect.ValueOf(v)
@@ -480,6 +483,10 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 	}
 
 	if rT != e._Type {
+
+		if e.val.Addr().Type().Implements(_SQL_SCANNER) {
+			return e.val.Addr().Interface().(sql.Scanner).Scan(v)
+		}
 
 		// check if the value implements the Definer interface
 		// if it is the definer interface itself, the value cannot be created, we skip this.

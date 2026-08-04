@@ -28,7 +28,7 @@ type PaymentSignalData struct {
 type ProductSignalData struct {
 	BaseSignal
 	Product *models.Product
-	Sku     *models.ProductSku
+	Skus    []*models.ProductSku
 }
 
 type OrderSignalData struct {

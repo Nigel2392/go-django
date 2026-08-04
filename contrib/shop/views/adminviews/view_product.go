@@ -6,23 +6,67 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
+	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews/generic"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	djmodels "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 )
+
+var ViewProductList = generic.ListViewConfig[*models.Product]{
+	ListTitle: trans.S("Product List"),
+	Model:     &models.Product{},
+	PerPage:   50,
+	Filters: []filters.FilterSpec[*models.Product]{
+		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
+			SpecName:  "search",
+			FormField: fields.CharField(fields.HelpText(trans.S("Search by title or URL path"))),
+			Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*models.Product]) (*queries.QuerySet[*models.Product], error) {
+				if fields.IsZero(value) {
+					return object, nil
+				}
+
+				return object.Filter(expr.Or(
+					expr.Q("Title__icontains", value),
+					expr.Q("Slug__icontains", value),
+					expr.Q("Skus.Title__icontains", value),
+				)), nil
+			},
+		},
+	},
+	GetColumns: func(r *http.Request) ([]list.ListColumn[*models.Product], error) {
+
+		var cols = []list.ListColumn[*models.Product]{
+			list.FieldColumn[*models.Product](
+				trans.S("Product ID"),
+				"ID",
+			),
+			list.FieldColumn[*models.Product](
+				trans.S("Title"),
+				"Title",
+			),
+		}
+
+		return cols, nil
+	},
+}
 
 type productSkuFormset interface {
 	Forms() ([]modelforms.ModelForm[*models.ProductSku], error)
@@ -56,25 +100,47 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			return err
 		}
 
-		fs, ok := flist[0].(productSkuFormset)
-		if !ok {
-			return errors.TypeMismatch.Wrapf(
-				"form %T does not implement productSkuFormset",
-				form,
-			)
+		var (
+			skuFormSet productSkuFormset
+		)
+
+		for _, form := range flist {
+			switch f := form.(type) {
+			case productSkuFormset:
+				skuFormSet = f
+			default:
+				except.Fail(
+					http.StatusInternalServerError,
+					"unhandled form type",
+				)
+			}
 		}
 
-		skuForms, err := fs.Forms()
+		skuForms, err := skuFormSet.Forms()
 		if err != nil {
 			return err
 		}
 
+		var skus = make([]*models.ProductSku, 0, len(skuForms))
 		for _, form := range skuForms {
-			fmt.Printf("%T %T %v\n", form, form.Instance(), form.Instance())
 
+			sku := form.Instance()
+			sku.Product = p
+			skus = append(skus, sku)
+
+			form.CleanedData()["Product"] = p
+
+			_, err = form.Save()
+			if err != nil {
+				return err
+			}
 		}
 
-		return nil
+		return shop.SIGNALS.Products.Created.Send(&signals.ProductSignalData{
+			BaseSignal: signals.BaseSignal{Context: r.Context()},
+			Product:    p,
+			Skus:       skus,
+		})
 	}
 
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
@@ -175,33 +241,49 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			return err
 		}
 
-		fs, ok := flist[0].(productSkuFormset)
-		if !ok {
-			return errors.TypeMismatch.Wrapf(
-				"form %T does not implement productSkuFormset",
-				form,
-			)
+		var (
+			skuFormSet productSkuFormset
+		)
+
+		for _, form := range flist {
+			switch f := form.(type) {
+			case productSkuFormset:
+				skuFormSet = f
+			default:
+				panic("unhandled form type")
+			}
 		}
 
-		skuForms, err := fs.Forms()
+		skuForms, err := skuFormSet.Forms()
 		if err != nil {
 			return err
 		}
 
+		var skus = make([]*models.ProductSku, 0, len(skuForms))
 		for _, form := range skuForms {
+
+			sku := form.Instance()
+			sku.Product = p
+			skus = append(skus, sku)
+
+			form.CleanedData()["Product"] = p
+
 			if !form.HasChanged() {
 				continue
 			}
 
-			var sku = form.Instance()
-			sku.Product = p
-
-			if _, err = form.Save(); err != nil {
+			_, err = form.Save()
+			if err != nil {
 				return err
 			}
 		}
 
-		return nil
+		return shop.SIGNALS.Products.Updated.Send(&signals.ProductSignalData{
+			BaseSignal: signals.BaseSignal{Context: r.Context()},
+			Product:    p,
+			Skus:       skus,
+		})
+
 	}
 
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
@@ -220,7 +302,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				context.Set("BackURL", backURL)
 				context.Set("PostURL", django.Reverse("admin:shop:products:edit", productRow.Object.ID))
 				context.SetPage(admin.PageOptions{
-					TitleFn: trans.S("Add new product"),
+					TitleFn: trans.S("Change product"),
 				})
 
 				return context, nil
@@ -244,7 +326,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				"instance is nil after form submission",
 			)
 
-			messages.Success(r, "Product added")
+			messages.Success(r, "Product changed")
 
 			http.Redirect(w, r, django.Reverse("admin:shop:products"), http.StatusSeeOther)
 		},

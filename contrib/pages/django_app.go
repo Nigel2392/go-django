@@ -182,6 +182,9 @@ func NewAppConfig() django.AppConfig {
 				ContentObject:  &PageNode{},
 				GetLabel:       trans.S("Page"),
 				GetDescription: trans.S("A page in a hierarchical page tree- structure."),
+				Aliases: []string{
+					"github.com/Nigel2392/go-django/src/contrib/pages.PageNode",
+				},
 				GetInstanceLabel: func(a any) string {
 					var page, ok = a.(*PageNode)
 					if !ok {

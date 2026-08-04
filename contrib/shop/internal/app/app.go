@@ -19,7 +19,7 @@ type HttpShopHandler interface {
 	ServeHTTP(http.ResponseWriter, *http.Request, *ShopAppConfig)
 }
 
-func ShopToHttpHandler(shop *ShopAppConfig) func(func(http.ResponseWriter, *http.Request, *ShopAppConfig)) http.Handler {
+func ShopToHttpHandlerBuilder(shop *ShopAppConfig) func(func(http.ResponseWriter, *http.Request, *ShopAppConfig)) http.Handler {
 	return func(f func(http.ResponseWriter, *http.Request, *ShopAppConfig)) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			f(w, r, shop)

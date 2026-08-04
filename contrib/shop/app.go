@@ -36,7 +36,7 @@ var SHOP = &ShopAppConfig{
 	SIGNALS: signals.NewManager(),
 }
 
-var NewHandler = app.ShopToHttpHandler(SHOP)
+var NewHandler = app.ShopToHttpHandlerBuilder(SHOP)
 
 func NewAppConfig() (django.AppConfig, error) {
 	if SHOP == nil || SHOP.IsReady() {
@@ -113,13 +113,22 @@ func NewAppConfig() (django.AppConfig, error) {
 					return django.Reverse("admin:shop:home")
 				},
 			},
+			&menu.Item{
+				BaseItem: menu.BaseItem{
+					ItemName: "products",
+					Label:    trans.T(r.Context(), "Products"),
+				},
+				Link: func() string {
+					return django.Reverse("admin:shop:products")
+				},
+			},
 		}
 	}
 
 	SHOP.Routing = func(m mux.Multiplexer) {
 		m.Get("home", NewHandler(adminviews.Home), "home")
 
-		products := m.Get("products/", nil, "products")
+		products := m.Get("products/", NewHandler(adminviews.ViewProductList.ServeHTTP), "products")
 		products.Get("add/", NewHandler(adminviews.ViewAddProduct), "add")
 		products.Post("add/", NewHandler(adminviews.ViewAddProduct))
 		products.Get("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct), "edit")

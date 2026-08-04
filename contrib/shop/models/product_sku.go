@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/shopspring/decimal"
 )
 
@@ -14,6 +15,10 @@ type ProductSku struct {
 	Title   string
 	Price   decimal.Decimal
 	Stock   uint64
+}
+
+func (m *ProductSku) Label(ctx context.Context) string {
+	return trans.T(ctx, "Product SKU")
 }
 
 func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {

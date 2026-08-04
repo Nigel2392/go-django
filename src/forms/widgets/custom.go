@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strconv"
@@ -116,7 +117,13 @@ func NewDecimalInput(attrs map[string]string, decimalPlaces int) Widget {
 	}
 
 	if decimalPlaces == 0 {
-		decimalPlaces = 3
+		decimalPlaces = 2
+	}
+
+	if decimalPlaces > 0 {
+		attrs["step"] = fmt.Sprintf(
+			".%s1", strings.Repeat("0", decimalPlaces-1),
+		)
 	}
 
 	return &DecimalWidget{
@@ -146,9 +153,9 @@ func (d *DecimalWidget) ValueToForm(value interface{}) interface{} {
 	}
 	switch val := value.(type) {
 	case decimal.Decimal:
-		return val.String()
+		return val.StringFixed(2)
 	case float32, float64:
-		return decimal.NewFromFloat(val.(float64)).String()
+		return decimal.NewFromFloat(val.(float64)).StringFixed(2)
 	default:
 		return value
 	}

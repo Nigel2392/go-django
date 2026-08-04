@@ -81,6 +81,10 @@ templ PanelBody() {
     </div>
 }
 
+templ labelTextComponent(text any) {
+    <label>@TextComponent(text)</label>
+}
+
 func TextComponent(text any) templ.Component {
     if text == nil {
         return nil
@@ -664,7 +668,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
     <template class="modelform-panel__empty-form" data-inline-panel-target="template">
         {{ var newForm = p.FormSet.NewForm(ctx) }}
         {{ newForm.SetPrefix(p.FormSet.PrefixName("__INDEX__")) }}
-        @p.renderSingleFormPanel(newForm, contenttypes.NewContentType(newForm.Instance()).Model(), "__SLUGIFY(__PREFIX__)__")
+        @p.renderSingleFormPanel(newForm, contenttypes.DefinitionForObject(newForm.Instance()).Label(ctx), "__SLUGIFY(__PREFIX__)__")
     </template>
     
     if (!(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) || p.Panel.MinNum < p.Panel.MaxNum || p.Panel.MaxNum == 0) && !p.Panel.DisallowAdd {
@@ -714,7 +718,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
 
     <div class="modelform-panel__forms" data-inline-panel-target="forms">
         for _, form := range formList {
-            @p.renderSingleFormPanel(form, contenttypes.NewContentType(form.Instance()).Model(), slug.Make(form.Prefix()))
+            @p.renderSingleFormPanel(form, contenttypes.DefinitionForObject(form.Instance()).Label(ctx), slug.Make(form.Prefix()))
         }
     </div>
 }
@@ -746,13 +750,14 @@ func (p *BoundModelFormPanel[TARGET, FORM]) Component() templ.Component {
     }
 
 	return PanelComponent{
-		Classname: cls,
-		PanelId:   BuildPanelID("modelform-panel", nil, slug.Make(p.SourceField.Name())),
-		Heading:   TextComponent(p.SourceField.Label),
-		HelpText:  TextComponent(p.SourceField.HelpText),
-		Body:      p.formsComponent(),
-		Errors:    p.FormSet.ErrorList(),
-		Attrs: templ.Attributes{
+		Classname:      cls,
+        AllowPanelLink: true,
+		PanelId:        BuildPanelID("modelform-panel", nil, slug.Make(p.SourceField.Name())),
+		Heading:        labelTextComponent(p.SourceField.Label),
+		HelpText:       TextComponent(p.SourceField.HelpText),
+		Body:           p.formsComponent(),
+		Errors:         p.FormSet.ErrorList(),
+		Attrs:          templ.Attributes{
 			"data-controller":                     "inline-panel",
 			"data-inline-panel-prefix-value":      p.Panel.formPrefix("__INDEX__"), // matches replace stmt in javascript
 			"data-inline-panel-mgmt-prefix-value": mgmtPrefix,                      // matches replace stmt in javascript
