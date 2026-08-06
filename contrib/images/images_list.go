@@ -2,6 +2,7 @@ package images
 
 import (
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -14,7 +15,7 @@ import (
 var _ admin.StringRenderer = &SearchComponent{}
 
 type SearchComponent struct {
-	View    *admin.BoundSearchView
+	View    *searches.BoundSearchView
 	Objects []attrs.Definer
 }
 

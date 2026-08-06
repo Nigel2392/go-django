@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
@@ -19,6 +20,7 @@ const (
 	RegisterGlobalMediaHook    = "admin:register_global_media"
 	RegisterNavBreadCrumbHook  = "admin:register_breadcrumb"
 	RegisterNavActionHook      = "admin:register_nav_action"
+	RegisterSearchHook         = "admin:register_search"
 
 	RegisterHomePageBreadcrumbHook   = "admin:home:register_breadcrumb"
 	RegisterHomePageActionHook       = "admin:home:register_action"
@@ -48,6 +50,7 @@ type (
 	RegisterMediaHookFunc          = func(adminSite *AdminApplication) media.Media
 	RegisterBreadCrumbHookFunc     = func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
 	RegisterNavActionHookFunc      = func(r *http.Request, adminSite *AdminApplication) []Action
+	RegisterSearchHookFunc         = func(r *http.Request, adminSite *AdminApplication) searches.SearchOptions
 
 	RegisterHomePageBreadcrumbHookFunc   = func(*http.Request, *AdminApplication, []BreadCrumb) []BreadCrumb
 	RegisterHomePageActionHookFunc       = func(*http.Request, *AdminApplication, []Action) []Action

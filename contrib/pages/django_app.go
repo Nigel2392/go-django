@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	"github.com/Nigel2392/go-django/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/revisions"
@@ -401,7 +402,7 @@ func NewAppConfig() django.AppConfig {
 						Models:       chooser.WrapModels(req.Context(), def, results),
 					}
 				},
-				SearchFields: []admin.SearchField{
+				SearchFields: []searches.SearchField{
 					{
 						Name:   "Title",
 						Lookup: expr.LOOKUP_ICONTANS,

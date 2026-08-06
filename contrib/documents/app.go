@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -137,7 +138,7 @@ func NewAppConfig(opts *Options) django.AppConfig {
 				QuerySet: func(r *http.Request, model *Document) (*queries.QuerySet[*Document], error) {
 					return queries.GetQuerySet(model).OrderBy("-CreatedAt"), nil
 				},
-				SearchFields: []admin.SearchField{
+				SearchFields: []searches.SearchField{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},

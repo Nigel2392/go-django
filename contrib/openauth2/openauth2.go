@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/contrib/admin/components/columns"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	autherrors "github.com/Nigel2392/go-django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/contrib/auth/users"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -260,7 +261,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 					},
 					ListView: admin.ListViewOptions{
 						PerPage: 20,
-						Search: &admin.SearchOptions{
+						Search: &searches.SearchOptions{
 							ListFields: []string{
 								"UniqueIdentifier",
 								"Provider",
@@ -272,7 +273,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 								"UpdatedAt",
 							},
 
-							Fields: []admin.SearchField{
+							Fields: []searches.SearchField{
 								{
 									Name:   "ID",
 									Lookup: expr.LOOKUP_EXACT,
@@ -413,7 +414,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 						"IsActive",
 						"CreatedAt",
 					},
-					SearchFields: []admin.SearchField{
+					SearchFields: []searches.SearchField{
 						{
 							Name:   "ID",
 							Lookup: expr.LOOKUP_EXACT,

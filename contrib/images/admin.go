@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -204,12 +205,12 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 			},
 		},
 		ListView: admin.ListViewOptions{
-			Search: &admin.SearchOptions{
-				Fields: []admin.SearchField{
+			Search: &searches.SearchOptions{
+				Fields: []searches.SearchField{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},
-				GetList: func(b *admin.BoundSearchView, list []attrs.Definer, _ []list.ListColumn[attrs.Definer]) (admin.StringRenderer, error) {
+				GetList: func(b *searches.BoundSearchView, list []attrs.Definer, _ []list.ListColumn[attrs.Definer]) (admin.StringRenderer, error) {
 					return &SearchComponent{View: b, Objects: list}, nil
 				},
 			},

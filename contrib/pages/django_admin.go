@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/components/columns"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -72,7 +73,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 				"Children",
 			},
 		},
-		Search: &admin.SearchOptions{
+		Search: &searches.SearchOptions{
 			Searchable: func(req *http.Request) bool {
 				return permissions.HasPermission(req, "pages:list")
 			},

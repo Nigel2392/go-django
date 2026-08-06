@@ -45,6 +45,12 @@ func FindDefinition(model any, appName ...string) *ModelDefinition {
 		modelTypeName = cType.Model()
 	case string:
 		modelTypeName = m
+	case contenttypes.GenericContentType:
+		if app == "" {
+			app = m.AppLabel()
+		}
+
+		modelTypeName = m.Model()
 	default:
 		panic(fmt.Sprintf(
 			"FindDefinition requires a model of type attrs.Definer or string, got %T",

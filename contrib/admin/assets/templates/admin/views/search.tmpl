@@ -4,13 +4,13 @@
 
 {{ define "extra_css" }}
     <link rel="stylesheet" href="{{ static "admin/css/search.css" }}">
-    {{ range $css := .Page.Media.CSS }}
+    {{ range $css := .Data.media.CSS }}
         {{ $css }}
     {{ end }}
 {{ end }}
 
 {{ define "extra_js" }}
-    {{ range $js := .Page.Media.JS }}
+    {{ range $js := .Data.media.JS }}
         {{ $js }}
     {{ end }}
 {{ end }}
@@ -37,9 +37,9 @@
                     <span class="searchable-models__separator noselect">|</span>
                 {{ end }}
                 
-                {{ $isActive := (and (eq $model.GetName $data.model.GetName) (eq $model.App.Name $data.app.Name)) }}
-                <a class="link {{ if $isActive }}secondary{{ else }}warning{{ end }}" href="{{ url "admin:search" }}?global-search={{ $searchQuery|urlquery }}&content_type={{ $model.TypeName|urlquery }}">
-                    {{ $model.PluralLabel $req.Context }}
+                {{ $isActive := (eq $model.ContentType.ShortTypeName $data.ctype) }}
+                <a class="link {{ if $isActive }}secondary{{ else }}warning{{ end }}" href="{{ url "admin:search" }}?global-search={{ $searchQuery|urlquery }}&content_type={{ $model.ContentType|urlquery }}">
+                    {{ call $model.PluralLabel $req.Context }}
                 </a>
             {{ end }}
         </div>

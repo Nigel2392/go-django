@@ -138,6 +138,8 @@ func NewAppConfig() (django.AppConfig, error) {
 
 	SHOP.Init = func(settings django.Settings, db drivers.Database) error {
 
+		// admin.RegisterSearchHook
+
 		return nil
 	}
 

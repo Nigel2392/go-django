@@ -1,35 +1,10 @@
-package admin
+package searches
 
 import (
-	"net/http"
 	"strings"
 
-	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/views/list"
 )
-
-type SearchOptions struct {
-	PerPage        int
-	Fields         []SearchField
-	ListFields     []string
-	GetEditLink    func(req *http.Request, id any) string
-	Searchable     func(req *http.Request) bool
-	QuerySet       func(req *http.Request) *queries.QuerySet[attrs.Definer]
-	SearchQuerySet func(req *http.Request, qs *queries.QuerySet[attrs.Definer], query string) *queries.QuerySet[attrs.Definer]
-	GetList        func(b *BoundSearchView, list []attrs.Definer, columns []list.ListColumn[attrs.Definer]) (StringRenderer, error)
-}
-
-func (so *SearchOptions) CanSearch(r *http.Request) bool {
-	if so == nil {
-		return false
-	}
-	if so.Searchable == nil {
-		return true
-	}
-	return (len(so.Fields) > 0 || so.SearchQuerySet != nil) && so.Searchable(r)
-}
 
 type SearchField struct {
 	Name            string

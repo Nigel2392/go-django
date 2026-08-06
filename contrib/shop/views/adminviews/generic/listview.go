@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/filters"
@@ -30,6 +31,7 @@ type ListViewConfig[T attrs.Definer] struct {
 	GetQuerySet        func(r *http.Request) *queries.QuerySet[T]
 	GetPageBreadCrumbs func(r *http.Request) []admin.BreadCrumb
 	GetPageActions     func(r *http.Request) []admin.Action
+	GetHeaderActions   func(r *http.Request) []components.ShowableComponent
 	GetPageSidePanels  func(r *http.Request) *menu.SidePanels
 }
 
@@ -45,6 +47,13 @@ func (l ListViewConfig[T]) getPageActions(r *http.Request) []admin.Action {
 		return l.GetPageActions(r)
 	}
 	return []admin.Action{}
+}
+
+func (l ListViewConfig[T]) getHeaderActions(r *http.Request) []components.ShowableComponent {
+	if l.GetHeaderActions != nil {
+		return l.GetHeaderActions(r)
+	}
+	return []components.ShowableComponent{}
 }
 
 func (l ListViewConfig[T]) getPageSidePanels(r *http.Request) *menu.SidePanels {
@@ -159,11 +168,12 @@ func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, sho
 			}
 
 			context.SetPage(admin.PageOptions{
-				TitleFn:     l.ListTitle,
-				SubtitleFn:  l.ListSubtitle,
-				BreadCrumbs: l.getPageBreadCrumbs(r),
-				Actions:     l.getPageActions(r),
-				SidePanels:  panel,
+				TitleFn:       l.ListTitle,
+				SubtitleFn:    l.ListSubtitle,
+				BreadCrumbs:   l.getPageBreadCrumbs(r),
+				Actions:       l.getPageActions(r),
+				HeaderActions: l.getHeaderActions(r),
+				SidePanels:    panel,
 			})
 
 			return context, nil

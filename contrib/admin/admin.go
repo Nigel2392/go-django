@@ -10,12 +10,13 @@ import (
 	"io/fs"
 	"net/http"
 	"runtime/debug"
-	"slices"
 
 	cmpts "github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	autherrors "github.com/Nigel2392/go-django/contrib/auth/auth_errors"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/components"
@@ -32,6 +33,7 @@ import (
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -284,7 +286,7 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		AdminSite.Route.Get(
-			"search/", views.Serve(&SearchView{}),
+			"search/", views.Serve(SearchView),
 			"search", // admin:search
 		)
 
@@ -539,23 +541,82 @@ func (a *AdminApplication) Check(ctx context.Context, settings django.Settings) 
 	return messages
 }
 
-func (a *AdminApplication) SearchableModels(r *http.Request) []*ModelDefinition {
-	var models []*ModelDefinition
+func (a *AdminApplication) SearchableModels(r *http.Request) []*searches.SearchOptions {
+	var search = make([]*searches.SearchOptions, 0)
 	for front := a.Apps.Front(); front != nil; front = front.Next() {
 		var app = front.Value
 		for modelFront := app.Models.Front(); modelFront != nil; modelFront = modelFront.Next() {
 			var model = modelFront.Value
 			if model.ListView.Search != nil && model.ListView.Search.CanSearch(r) {
-				models = append(models, model)
+
+				s := model.ListView.Search
+				setupSearchWithModel(r, s, model)
+				search = append(search, s)
 			}
 		}
 	}
 
-	slices.SortStableFunc(models, func(a, b *ModelDefinition) int {
-		return a.App().Options.MenuOrder - b.App().Options.MenuOrder
-	})
+	return search
+}
 
-	return models
+func setupSearchWithModel(r *http.Request, s *searches.SearchOptions, model *ModelDefinition) {
+	if s.ContentType() != nil {
+		return
+	}
+
+	if s.Model == nil {
+		s.Model = model.Model
+	}
+	if s.PerPage == 0 {
+		s.PerPage = int(model.ListView.PerPage)
+	}
+	if len(s.ListFields) == 0 {
+		s.ListFields = model.ListView.Fields
+	}
+	if s.Order == 0 {
+		s.Order = model.App().Options.MenuOrder
+	}
+
+	app := model.App()
+	if s.GetEditLink == nil {
+		s.GetEditLink = func(req *http.Request, id any) string {
+			return django.Reverse(
+				"admin:apps:model:edit",
+				app.Name,
+				model.GetName(),
+				attrs.ToString(id),
+			)
+		}
+	}
+	if s.PluralLabel == nil {
+		s.PluralLabel = model.PluralLabel
+	}
+	if s.QuerySet == nil && model.ListView.GetQuerySet != nil {
+		s.QuerySet = func(req *http.Request) *queries.QuerySet[attrs.Definer] {
+			return model.ListView.GetQuerySet(AdminSite, app, model)
+		}
+	}
+	if s.GetList == nil && model.ListView.GetList != nil {
+		s.GetList = func(b *searches.BoundSearchView, list []attrs.Definer, columns []list.ListColumn[attrs.Definer]) (StringRenderer, error) {
+			return model.ListView.GetList(r, AdminSite, app, model, list)
+		}
+	}
+	if s.GetColumn == nil {
+		s.GetColumn = func(ctx context.Context, opts *searches.SearchOptions, field string) list.ListColumn[attrs.Definer] {
+			return model.GetColumn(ctx, model.ListView, field)
+		}
+	}
+	if len(s.Prefetch.PrefetchRelated) == 0 {
+		s.Prefetch.PrefetchRelated = model.ListView.Prefetch.PrefetchRelated
+	}
+	if len(s.Prefetch.SelectRelated) == 0 {
+		s.Prefetch.SelectRelated = model.ListView.Prefetch.SelectRelated
+	}
+	if s.AllowEdit == nil {
+		s.AllowEdit = func(req *http.Request) bool {
+			return !model.DisallowEdit
+		}
+	}
 }
 
 func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handler {

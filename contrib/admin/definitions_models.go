@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/internal/sets"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -21,44 +22,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 )
 
-type Prefetch struct {
-	SelectRelated   []string
-	PrefetchRelated []any
-}
-
-func (p *Prefetch) Merge(other Prefetch) {
-	var (
-		thisSelectMap   = make(map[string]struct{})
-		thisPrefetchMap = make(map[any]struct{})
-	)
-
-	for _, s := range p.SelectRelated {
-		thisSelectMap[s] = struct{}{}
-	}
-	for _, s := range p.PrefetchRelated {
-		thisPrefetchMap[s] = struct{}{}
-	}
-
-	var selectRelated = make([]string, len(p.SelectRelated), len(thisSelectMap)+len(other.SelectRelated))
-	var prefetchRelated = make([]any, len(p.PrefetchRelated), len(thisPrefetchMap)+len(other.PrefetchRelated))
-	copy(selectRelated, p.SelectRelated)
-	copy(prefetchRelated, p.PrefetchRelated)
-
-	for _, s := range other.SelectRelated {
-		if _, ok := thisSelectMap[s]; !ok {
-			selectRelated = append(selectRelated, s)
-		}
-	}
-
-	for _, s := range other.PrefetchRelated {
-		if _, ok := thisPrefetchMap[s]; !ok {
-			prefetchRelated = append(prefetchRelated, s)
-		}
-	}
-
-	p.SelectRelated = selectRelated
-	p.PrefetchRelated = prefetchRelated
-}
+type Prefetch = searches.Prefetch
 
 // Basic options for a model-based view which includes a form.
 type ViewOptions struct {
@@ -144,7 +108,7 @@ type ListViewOptions struct {
 	Filters []filters.FilterSpec[attrs.Definer]
 
 	// Search are options to configure the search functionality for the list view.
-	Search *SearchOptions
+	Search *searches.SearchOptions
 
 	// GetList returns a new StringRenderer which can render the results of the list view.
 	GetList func(r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, results []attrs.Definer) (list.StringRenderer, error)

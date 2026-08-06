@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
@@ -51,8 +52,18 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 			},
 		},
 	},
+	GetHeaderActions: func(r *http.Request) []components.ShowableComponent {
+		var actions = make([]components.ShowableComponent, 0)
+		actions = append(actions, components.LinkConfig{
+			Text: trans.S("Add new product"),
+			Type: components.ClassTypeSecondary,
+			URL: func(ctx context.Context) string {
+				return django.Reverse("admin:shop:products:add")
+			},
+		})
+		return actions
+	},
 	GetColumns: func(r *http.Request) ([]list.ListColumn[*models.Product], error) {
-
 		var cols = []list.ListColumn[*models.Product]{
 			list.FieldColumn[*models.Product](
 				trans.S("Product ID"),

@@ -34,6 +34,22 @@ func (c *BaseContentType[T]) DBType() dbtype.Type {
 	return dbtype.Text
 }
 
+// GenericContentType is an interface that defines the methods that a content type must implement.
+//
+// A content type is a type that represents a model in the database.
+//
+// It does not represent individual instances of the model.
+//
+// It is used to store information about a model, such as its human-readable name,
+// description, and aliases.
+type GenericContentType interface {
+	PkgPath() string
+	AppLabel() string
+	TypeName() string
+	ShortTypeName() string
+	Model() string
+}
+
 // ContentType is an interface that defines the methods that a content type must implement.
 //
 // A content type is a type that represents a model in the database.
@@ -43,11 +59,7 @@ func (c *BaseContentType[T]) DBType() dbtype.Type {
 // It is used to store information about a model, such as its human-readable name,
 // description, and aliases.
 type ContentType interface {
-	PkgPath() string
-	AppLabel() string
-	TypeName() string
-	ShortTypeName() string
-	Model() string
+	GenericContentType
 	New() interface{}
 }
 

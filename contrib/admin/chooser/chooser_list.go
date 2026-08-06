@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -71,7 +71,7 @@ type ChooserListPage[T attrs.Definer] struct {
 	Filter func(qs *queries.QuerySet[T], req *http.Request, searchValue string) *queries.QuerySet[T]
 
 	// SearchFields are the fields to search in the list view.
-	SearchFields []admin.SearchField
+	SearchFields []searches.SearchField
 
 	// NewList returns a new list object to render in the list view.
 	NewList func(req *http.Request, results []T, def *ChooserDefinition[T]) any

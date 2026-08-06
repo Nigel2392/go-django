@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/components/columns"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -274,8 +275,8 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 					},
 				},
 			},
-			Search: &admin.SearchOptions{
-				Fields: []admin.SearchField{
+			Search: &searches.SearchOptions{
+				Fields: []searches.SearchField{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},

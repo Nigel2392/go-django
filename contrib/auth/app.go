@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	autherrors "github.com/Nigel2392/go-django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/contrib/auth/users"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -253,7 +254,7 @@ func NewAppConfig() django.AppConfig {
 					BulkActions: []admin.BulkAction{
 						admin.BulkActionDelete,
 					},
-					Search: &admin.SearchOptions{
+					Search: &searches.SearchOptions{
 						ListFields: []string{
 							"Email",
 							"Username",
@@ -263,7 +264,7 @@ func NewAppConfig() django.AppConfig {
 							"CreatedAt",
 							"UpdatedAt",
 						},
-						Fields: []admin.SearchField{
+						Fields: []searches.SearchField{
 							{
 								Name:   "Username",
 								Lookup: expr.LOOKUP_ICONTANS,
@@ -350,7 +351,7 @@ func NewAppConfig() django.AppConfig {
 				return instance.Email.Address
 			},
 			ListPage: &chooser.ChooserListPage[*User]{
-				SearchFields: []admin.SearchField{
+				SearchFields: []searches.SearchField{
 					{
 						Name:   "Username",
 						Lookup: expr.LOOKUP_ICONTANS,

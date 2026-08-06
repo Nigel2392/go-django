@@ -1,133 +1,6 @@
 package components
 
-import (
-    "fmt"
-	"github.com/Nigel2392/go-django/src/core/trans"
-	"context"
-)
-
-type ClassType uint8
-
-const (
-    ClassTypePrimary ClassType = 1 << iota
-    ClassTypeSecondary
-    ClassTypeSuccess
-    ClassTypeInfo
-    ClassTypeWarning
-    ClassTypeDanger
-    ClassTypeHollow
-)
-
-type ButtonConfig struct {
-	Text  func(context.Context) string
-    Icon templ.Component
-    Type ClassType
-	Attrs map[string]any
-}
-
-func NewButton(text any, args ...interface{}) templ.Component {
-
-	var (
-		iconComponent templ.Component
-		type_ 	   ClassType = 0
-		attrs      map[string]any
-	)
-loop:
-	for _, arg := range args {
-		switch t := arg.(type) {
-        case templ.Component:
-			iconComponent = t
-		case string:
-            if t == "" {
-			    continue loop
-            }
-			iconComponent = templ.Raw(t)
-		case ClassType:
-			type_ |= t
-		case int:
-			type_ |= ClassType(t)
-		case uint:
-			type_ |= ClassType(t)
-		case map[string]any:
-			attrs = t
-		case nil, any:
-			continue loop
-		default:
-			panic(fmt.Sprintf("Unknown type: %T\n", t))
-		}
-	}
-
-	var cfg = ButtonConfig{
-		Text: trans.GetTextFunc(text),
-		Icon: iconComponent,
-		Type: type_,
-		Attrs: attrs,
-	}
-
-
-	return Button(cfg)
-}
-
-
-func ButtonPrimary(text string, icon any, hollow ...bool) templ.Component {
-	var h = false
-	if len(hollow) > 0 && hollow[0] {
-		h = true
-	}
-	var typ = ClassTypePrimary
-	if h {
-		typ |= ClassTypeHollow
-	}
-	return NewButton(text, icon, typ)
-}
-
-func ButtonSecondary(text string, icon any, hollow ...bool) templ.Component {
-	var h = false
-	if len(hollow) > 0 && hollow[0] {
-		h = true
-	}
-	var typ = ClassTypeSecondary
-	if h {
-		typ |= ClassTypeHollow
-	}
-	return NewButton(text, icon, typ)
-}
-
-func ButtonSuccess(text string, icon any, hollow ...bool) templ.Component {
-	var h = false
-	if len(hollow) > 0 && hollow[0] {
-		h = true
-	}
-	var typ = ClassTypeSuccess
-	if h {
-		typ |= ClassTypeHollow
-	}
-	return NewButton(text, icon, typ)
-}
-
-func ButtonDanger(text string, icon any, hollow ...bool) templ.Component {
-	var h = false
-	if len(hollow) > 0 && hollow[0] {
-		h = true
-	}
-	var typ = ClassTypeDanger
-	if h {
-		typ |= ClassTypeHollow
-	}
-	return NewButton(text, icon, typ)
-}
-
-func ButtonWarning(text string, icon any, hollow ...bool) templ.Component {
-	var h = false
-	if len(hollow) > 0 && hollow[0] {
-		h = true
-	}
-	var typ = ClassTypeWarning
-	if h {
-		typ |= ClassTypeHollow
-	}
-	return NewButton(text, icon, typ)
-}
+import "context"
 
 templ Button(config ButtonConfig) {
     <button { templ.Attributes(config.Attrs)... } class={ 
@@ -149,14 +22,32 @@ templ Button(config ButtonConfig) {
     </button>
 }
 
+func hrefWithCtx(fn func() string) func(context.Context) string {
+    return func(c context.Context) string {
+        return fn()
+    }
+}
+
 templ Link(config ButtonConfig, href func() string) {
-	if href == nil {
+    @renderLinkConfig(LinkConfig{
+        URL:   hrefWithCtx(href),
+	    Text:  config.Text,
+        Icon:  config.Icon,
+        Type:  config.Type,
+        Attrs: config.Attrs,
+        Hidden: config.Hidden,
+    })
+}
+
+templ renderLinkConfig(config LinkConfig) {
+	if config.URL == nil {
 		panic("Link requires a href function")
 	}
+
 	if config.Text == nil && config.Icon == nil {
 		panic("Link requires either Text or Icon to be set")
 	}
-	<a { templ.Attributes(config.Attrs)... } href={ templ.URL(href()) } class={
+	<a { templ.Attributes(config.Attrs)... } href={ templ.URL(config.URL(ctx)) } class={
 		"button",
 		templ.KV("primary", config.Type & ClassTypePrimary != 0),
 		templ.KV("secondary", config.Type & ClassTypeSecondary != 0),

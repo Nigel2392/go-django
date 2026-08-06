@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -130,7 +131,7 @@ func NewAppConfig(opts *Options) django.AppConfig {
 			},
 			ListPage: &chooser.ChooserListPage[*Image]{
 				Template: "images/images_chooser_list.tmpl",
-				SearchFields: []admin.SearchField{
+				SearchFields: []searches.SearchField{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},
