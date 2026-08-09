@@ -270,6 +270,14 @@ func (r *ptrField[M, V]) OnModelRegister(model attrs.Definer, outer attrs.FieldD
 	return nil
 }
 
+func (r *ptrField[M, V]) Embedded() bool {
+	var f, ok = r.useOpts().FieldDefinition.(attrs.Embedder)
+	if ok {
+		return f.Embedded()
+	}
+	return false
+}
+
 func (r *ptrField[M, V]) ForSelectAll() bool {
 	if bitch.Is(r.opts.flags, F_IS_REVERSE_FLD) {
 		return false

@@ -735,6 +735,20 @@ func (f *FieldDef) GetDefault() interface{} {
 		}
 	}
 
+	if f.attrDef.Default == nil {
+		return nil
+	}
+
+	//	// required to make sure through models dont get a
+	//	// default zero value for their source or target fields
+	//	if f.attrDef.Default == nil {
+	//		var meta = ThroughModelMeta(f.Instance())
+	//		switch f.Name() {
+	//		case meta.SourceField, meta.TargetField:
+	//			return nil
+	//		}
+	//	}
+
 	// if f.directlyInteractible {
 	var typForNew = f.field_t.Type
 	if f.field_t.Type.Kind() == reflect.Ptr {
@@ -1307,7 +1321,7 @@ func (f *FieldDef) driverValue() (driver.Value, error) {
 		v = v.Elem()
 	}
 
-	if IsZero(v) {
+	if IsZero(v) && f.attrDef.Default != nil {
 		return f._driverValue(f.GetDefault())
 	}
 
