@@ -26,6 +26,7 @@ type ListViewConfig[T attrs.Definer] struct {
 	ListTitle          func(context.Context) string
 	ListSubtitle       func(context.Context) string
 	Filters            []filters.FilterSpec[T]
+	GetEditLink        func(r *http.Request, v T) string
 	GetColumns         func(r *http.Request) ([]list.ListColumn[T], error)
 	GetListActions     func(r *http.Request) ([]*columns.ListAction[T], error)
 	GetQuerySet        func(r *http.Request) *queries.QuerySet[T]
@@ -104,6 +105,14 @@ func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, sho
 		}
 	}
 
+	if l.GetEditLink != nil {
+		cols[0] = list.TitleFieldColumn(
+			cols[0], func(r *http.Request, defs attrs.Definitions, row T) string {
+				return l.GetEditLink(r, row)
+			},
+		)
+	}
+
 	var amount = l.PerPage
 	if amount == 0 {
 		amount = 25
@@ -141,7 +150,7 @@ func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, sho
 		DefaultAmount:   int(amount),
 		Model:           l.Model,
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-		BaseTemplateKey: admin.BASE_KEY,
+		BaseTemplateKey: "shop",
 		TemplateName:    "shop/admin/models/list.tmpl",
 		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[T], viewCtx ctx.Context) (ctx.Context, error) {
 			var context = admin.NewContext(

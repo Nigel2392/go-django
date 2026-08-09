@@ -1,0 +1,17 @@
+#content#content:has(> .shop__header__components) > #content__header#content__header {
+    padding: 1em 2.25em;
+}
+.shop__header__components {
+    border-bottom: 1px dashed var(--border-color);
+    box-shadow: 0px 0 3px rgba(0, 0, 0, 0.4);
+    position: relative;
+}
+.shop__header__components *:is(a, button, input, select) {
+    color: var(--text-color);
+    background-color: transparent;
+    border: none;
+    margin: 0;
+}
+.shop__header__components *:is(a, button, input, select) + .shop__header__components *:is(a, button, input, select) {
+    margin-inline-start:0.375rem;
+}

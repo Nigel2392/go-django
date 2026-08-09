@@ -90,21 +90,21 @@
             {{ block "content_node" . }}
                 <div id="content">
                     {{ block "content_root" . }}
-                        <div id="content__header">
-                            {{ block "header_root" . }}
+                        {{ block "header_root" . }}
+                            <div id="content__header">
                                 {{ block "header" . }}
                                     {{ $Page := (.Get "Page") }}
                                     {{ if $Page }}
                                         {{ $Title := $Page.Title }}
                                         {{ $Subtitle := $Page.Subtitle }}
-
+                                
                                         {{ if (and (or $Title $Subtitle)) }}
                                             {{ component "admin.header" 1 $Title $Subtitle $Page.GetHeaderComponents }}
                                         {{ end }}
                                     {{ end }}
                                 {{ end }}
-                            {{ end }}
-                        </div>
+                            </div>
+                        {{ end }}
                         <div id="content__body">
                             {{ block "content" . }}{{ end }}
                         </div>

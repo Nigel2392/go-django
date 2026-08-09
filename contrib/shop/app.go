@@ -92,6 +92,9 @@ func NewAppConfig() (django.AppConfig, error) {
 		&tpl.Config{
 			AppName: "shop",
 			FS:      tplFS,
+			Bases: []string{
+				"shop/admin/shop_base.tmpl",
+			},
 			Matches: filesystem.MatchAnd(
 				filesystem.MatchPrefix("shop/"),
 				filesystem.MatchOr(
@@ -140,7 +143,9 @@ func NewAppConfig() (django.AppConfig, error) {
 
 		// admin.RegisterSearchHook
 
-		return nil
+		// always run the sync on startup
+		// /mostly/ handled in DB
+		return models.Products().SyncProducts()
 	}
 
 	return SHOP, nil

@@ -1,0 +1,23 @@
+{{ template "base" . }}
+
+
+{{ define "header_root" }}
+    {{ $Page := (.Get "Page") }}
+    {{ if $Page }}
+        <div id="content__header">
+            {{ $Title := $Page.Title }}
+            {{ $Subtitle := $Page.Subtitle }}
+            {{ if (and (or $Title $Subtitle)) }}
+                {{ component "admin.header" 1 $Title $Subtitle }}
+            {{ end }}
+        </div>
+        {{ $components := $Page.GetHeaderComponents }}
+        {{ if $components }}
+            <div class="shop__header__components">
+                {{ range $component := $components }}
+                    {{ templ $component }}
+                {{ end }}
+            </div>
+        {{ end }}
+    {{ end }}
+{{ end }}

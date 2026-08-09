@@ -3,7 +3,9 @@ package adminviews
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"net/http"
+	"strconv"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/components"
@@ -29,12 +31,25 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/shopspring/decimal"
 )
 
 var ViewProductList = generic.ListViewConfig[*models.Product]{
 	ListTitle: trans.S("Product List"),
 	Model:     &models.Product{},
 	PerPage:   50,
+	GetEditLink: func(r *http.Request, v *models.Product) string {
+		return django.Reverse("admin:shop:products:edit", v.ID)
+	},
+	GetQuerySet: func(r *http.Request) *queries.QuerySet[*models.Product] {
+		return queries.GetQuerySet(&models.Product{}).Select("*").Annotate(
+			"LowestStock", queries.Subquery(queries.GetQuerySet(&models.ProductSku{}).
+				Select(expr.MIN("Stock")).
+				Filter("Product.ID", expr.OuterRef("ID")).
+				OrderBy("Stock").
+				Limit(1)),
+		)
+	},
 	Filters: []filters.FilterSpec[*models.Product]{
 		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
 			SpecName:  "search",
@@ -73,6 +88,24 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 				trans.S("Title"),
 				"Title",
 			),
+			list.FieldColumn[*models.Product](
+				trans.S("Skus"),
+				"SkuCount",
+			),
+			list.HTMLFieldColumn[*models.Product](
+				trans.S("Lowest Stock"),
+				"LowestStock",
+				func(r *http.Request, defs attrs.Definitions, row *models.Product) template.HTML {
+					return template.HTML(strconv.Itoa(row.LowestStock))
+				},
+			),
+			list.HTMLFieldColumn(
+				trans.S("Price (max)"),
+				"PriceMax",
+				func(r *http.Request, defs attrs.Definitions, row *models.Product) template.HTML {
+					return template.HTML(fmt.Sprintf("€ %s", row.PriceMax))
+				},
+			),
 		}
 
 		return cols, nil
@@ -96,15 +129,6 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 	form.Load()
 
 	form.Form.SaveInstance = func(ctx context.Context, p *models.Product) error {
-
-		saved, err := djmodels.SaveModel(ctx, p)
-		if err == nil && !saved {
-			err = fmt.Errorf("model %T not saved", p)
-		}
-
-		if err != nil {
-			return err
-		}
 
 		flist, err := form.FormSet().Forms()
 		if err != nil {
@@ -132,19 +156,30 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			return err
 		}
 
+		var priceMax decimal.Decimal
 		var skus = make([]*models.ProductSku, 0, len(skuForms))
 		for _, form := range skuForms {
 
 			sku := form.Instance()
-			sku.Product = p
 			skus = append(skus, sku)
 
-			form.CleanedData()["Product"] = p
-
-			_, err = form.Save()
-			if err != nil {
-				return err
+			if sku.Price.GreaterThan(priceMax) {
+				priceMax = sku.Price
 			}
+
+			form.CleanedData()["Product"] = p
+		}
+
+		p.SkuCount = len(skus)
+		p.PriceMax = priceMax
+
+		saved, err := djmodels.SaveModel(ctx, p)
+		if err == nil && !saved {
+			err = fmt.Errorf("model %T not saved", p)
+		}
+
+		if _, err := form.FormSet().Save(); err != nil {
+			return err
 		}
 
 		return shop.SIGNALS.Products.Created.Send(&signals.ProductSignalData{
@@ -157,7 +192,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: admin.BASE_KEY,
+			BaseTemplateKey: "shop",
 			TemplateName:    "shop/products/admin/add.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = admin.NewContext(req, admin.AdminSite, nil)
@@ -238,15 +273,6 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 
 	form.Form.SaveInstance = func(ctx context.Context, p *models.Product) error {
 
-		saved, err := djmodels.SaveModel(ctx, p)
-		if err == nil && !saved {
-			err = fmt.Errorf("model %T not saved", p)
-		}
-
-		if err != nil {
-			return err
-		}
-
 		flist, err := form.FormSet().Forms()
 		if err != nil {
 			return err
@@ -270,23 +296,30 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			return err
 		}
 
+		var priceMax decimal.Decimal
 		var skus = make([]*models.ProductSku, 0, len(skuForms))
 		for _, form := range skuForms {
 
 			sku := form.Instance()
-			sku.Product = p
 			skus = append(skus, sku)
 
+			if sku.Price.GreaterThan(priceMax) {
+				priceMax = sku.Price
+			}
+
 			form.CleanedData()["Product"] = p
+		}
 
-			if !form.HasChanged() {
-				continue
-			}
+		p.SkuCount = len(skus)
+		p.PriceMax = priceMax
 
-			_, err = form.Save()
-			if err != nil {
-				return err
-			}
+		saved, err := djmodels.SaveModel(ctx, p)
+		if err == nil && !saved {
+			err = fmt.Errorf("model %T not saved", p)
+		}
+
+		if _, err := form.FormSet().Save(); err != nil {
+			return err
 		}
 
 		return shop.SIGNALS.Products.Updated.Send(&signals.ProductSignalData{
@@ -300,7 +333,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: admin.BASE_KEY,
+			BaseTemplateKey: "shop",
 			TemplateName:    "shop/products/admin/edit.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = admin.NewContext(req, admin.AdminSite, nil)

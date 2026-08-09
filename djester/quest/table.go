@@ -114,7 +114,7 @@ func (t *DBTables[T]) Create() {
 			fmt.Printf("Creating table: %s\n", table.TableName())
 		}
 
-		err := t.schema.CreateTable(drivers.SetLogSQLContext(context.Background(), false), table, t.IfNotExists)
+		err := t.schema.CreateTable(context.Background(), table, t.IfNotExists)
 		if err != nil {
 			t.fatalf("Failed to create table (%s): %v", table.ModelName(), err)
 			return
