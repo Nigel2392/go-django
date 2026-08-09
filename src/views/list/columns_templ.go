@@ -1127,14 +1127,22 @@ func HTMLColumn[T attrs.Definer](header func(ctx context.Context) string, getHTM
 	}
 }
 
-func HTMLFieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string) ListColumn[T] {
+func HTMLFieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string, getHTML ...func(r *http.Request, defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
+
 	var fc = &fieldColumn[T, any]{header: header, fieldName: fieldName}
-	return &htmlColumn[T]{
-		fieldColumn: fc,
-		getHTML: func(r *http.Request, defs attrs.Definitions, row T) template.HTML {
+	var gHtml func(r *http.Request, defs attrs.Definitions, row T) template.HTML
+	if len(getHTML) > 0 {
+		gHtml = getHTML[0]
+	} else {
+		gHtml = func(r *http.Request, defs attrs.Definitions, row T) template.HTML {
 			var val = fc.data(r, defs, row)
 			return template.HTML(attrs.ToString(val))
-		},
+		}
+	}
+
+	return &htmlColumn[T]{
+		fieldColumn: fc,
+		getHTML:     gHtml,
 	}
 }
 
@@ -1178,7 +1186,7 @@ func (c *linkColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T
 			var templ_7745c5c3_Var27 templ.SafeURL
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinURLErrs(url)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 643, Col: 15}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 651, Col: 15}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -1348,7 +1356,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.formName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 715, Col: 110}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 723, Col: 110}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
 		if templ_7745c5c3_Err != nil {
@@ -1361,7 +1369,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(attrs.ToString(attrs.PrimaryKey(r.Context(), row)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 715, Col: 171}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 723, Col: 171}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 		if templ_7745c5c3_Err != nil {
@@ -1476,7 +1484,7 @@ func (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, ro
 		var templ_7745c5c3_Var33 string
 		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.ResolveAttributeValue(c.fieldColumn.fieldName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 766, Col: 123}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 774, Col: 123}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
 		if templ_7745c5c3_Err != nil {
@@ -1587,7 +1595,7 @@ func (c *listEditableColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 835, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 843, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {

@@ -619,14 +619,22 @@ func HTMLColumn[T attrs.Definer](header func(ctx context.Context) string, getHTM
 	}
 }
 
-func HTMLFieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string) ListColumn[T] {
+func HTMLFieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string, getHTML ...func(r *http.Request, defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
+
 	var fc = &fieldColumn[T, any]{header: header, fieldName: fieldName}
-	return &htmlColumn[T]{
-		fieldColumn: fc,
-		getHTML: func(r *http.Request, defs attrs.Definitions, row T) template.HTML {
+	var gHtml func(r *http.Request, defs attrs.Definitions, row T) template.HTML
+	if len(getHTML) > 0 {
+		gHtml = getHTML[0]
+	} else {
+		gHtml = func(r *http.Request, defs attrs.Definitions, row T) template.HTML {
 			var val = fc.data(r, defs, row)
 			return template.HTML(attrs.ToString(val))
-		},
+		}
+	}
+
+	return &htmlColumn[T]{
+		fieldColumn: fc,
+		getHTML: gHtml,
 	}
 }
 
