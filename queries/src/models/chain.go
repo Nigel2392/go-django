@@ -164,7 +164,7 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 				controlsSave = newControlSaver.ControlsEmbedderSaving()
 			}
 
-			base.proxies = append(base.proxies, &BaseModelProxy{
+			var proxy = &BaseModelProxy{
 				prev:            base,
 				rootField:       &field,
 				directField:     &field,
@@ -172,7 +172,14 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 				targetFieldName: targetFieldName,
 				controlsSaving:  controlsSave,
 				next:            buildModelChain(field.Type),
-			})
+			}
+
+			if (ctypeFieldName == "" || targetFieldName == "") && proxy.next != nil {
+				proxy.cTypeFieldName = proxy.next.base.Tag.Get("ctype")
+				proxy.targetFieldName = proxy.next.base.Tag.Get("target")
+			}
+
+			base.proxies = append(base.proxies, proxy)
 
 		case isModelField(field):
 			assert.True(
@@ -236,7 +243,8 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 
 						// editor might complain, but there is no dereference here.
 						// see the assert a few lines back.
-						base.proxies = append(base.proxies, &BaseModelProxy{
+
+						var proxy = &BaseModelProxy{
 							rootField:       &field,
 							directField:     &subField,
 							prev:            base,
@@ -244,7 +252,14 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 							targetFieldName: targetFieldName,
 							controlsSaving:  controlsSave,
 							next:            buildModelChain(subField.Type),
-						})
+						}
+
+						if (ctypeFieldName == "" || targetFieldName == "") && proxy.next != nil {
+							proxy.cTypeFieldName = proxy.next.base.Tag.Get("ctype")
+							proxy.targetFieldName = proxy.next.base.Tag.Get("target")
+						}
+
+						base.proxies = append(base.proxies, proxy)
 						break structLoop
 					case subField.Type.Kind() == reflect.Struct && reflect.PointerTo(subField.Type).Implements(_MODEL_IFACE):
 						field.Index = append(field.Index, subField.Index...)

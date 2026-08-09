@@ -1354,11 +1354,8 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	// these are fields that can be / should be saved before the model itself is saved.
 	// If returned error is NoChanges, all is ok.
 	for _, field := range saveBeforeSelf {
-		if err := saveField(ctx, &cnf, field, saveRegularField); err != nil && !errors.Is(err, errors.NoChanges) {
-			return errors.SaveFailed.WithCause(fmt.Errorf(
-				"failed to save field %q in model %T: %w",
-				field.Name(), cnf.this, err,
-			))
+		if err := saveField(ctx, "before", &cnf, field, saveRegularField); err != nil && !errors.Is(err, errors.NoChanges) {
+			return err
 		}
 	}
 
@@ -1409,7 +1406,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	// This is useful for fields that depend on the model's primary key or other fields.
 	// If returned error is NoChanges, all is ok.
 	for _, field := range saveAfterSelf {
-		if err := saveField(ctx, &cnf, field, saveDependantField); err != nil && !errors.Is(err, errors.NoChanges) {
+		if err := saveField(ctx, "after", &cnf, field, saveDependantField); err != nil && !errors.Is(err, errors.NoChanges) {
 			return err
 		}
 	}
@@ -1493,7 +1490,7 @@ func saveDependantField(ctx context.Context, cnf *SaveConfig, field queries.Save
 	return field.Save(ctx, cnf.this)
 }
 
-func saveField[T attrs.FieldDefinition](ctx context.Context, cnf *SaveConfig, field T, save func(ctx context.Context, cnf *SaveConfig, field T) error) error {
+func saveField[T attrs.FieldDefinition](ctx context.Context, action string, cnf *SaveConfig, field T, save func(ctx context.Context, cnf *SaveConfig, field T) error) error {
 	var err error
 
 	if saver, ok := any(field).(T); ok {
@@ -1503,14 +1500,14 @@ func saveField[T attrs.FieldDefinition](ctx context.Context, cnf *SaveConfig, fi
 	if err != nil {
 		if !errors.Is(err, errors.NotImplemented) {
 			return fmt.Errorf(
-				"failed to save field %q in model %T: %w",
-				field.Name(), cnf.this, err,
+				"%ssave failed field %T(%q) in model %T: %w",
+				action, field, field.Name(), cnf.this, err,
 			)
 		}
 
 		logger.Warnf(
-			"field %q (%T) in model %T is not saveable, skipping: %v",
-			field.Name(), field, cnf.this, err,
+			"(%s) field %T(%q) in model %T is not saveable, skipping: %v",
+			action, field, field.Name(), cnf.this, err,
 		)
 	}
 

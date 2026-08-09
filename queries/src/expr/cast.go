@@ -105,20 +105,23 @@ var (
 type castExpr struct {
 	funcEntry *CastFuncEntry
 	typ       CastType
-	col       NamedExpression
+	col       Expression
 	args      []any
 	used      bool
 }
 
 func (c *castExpr) FieldName() string {
-	return c.col.FieldName()
+	if n, ok := c.col.(NamedExpression); ok {
+		return n.FieldName()
+	}
+	return ""
 }
 
 func (c *castExpr) Clone() Expression {
 	return &castExpr{
 		typ:       c.typ,
 		funcEntry: c.funcEntry,
-		col:       c.col.Clone().(NamedExpression),
+		col:       c.col.Clone(),
 		args:      slices.Clone(c.args),
 		used:      c.used,
 	}
@@ -130,7 +133,7 @@ func (c *castExpr) Resolve(inf *ExpressionInfo) Expression {
 	}
 	var nE = c.Clone().(*castExpr)
 	nE.used = true
-	nE.col = nE.col.Resolve(inf).(NamedExpression)
+	nE.col = nE.col.Resolve(inf)
 
 	var funcEntry, ok = casts.global[c.typ]
 	if !ok {
@@ -178,7 +181,7 @@ func (c *castExpr) SQL(sb builder.Builder) {
 }
 
 func Cast(typ CastType, col any, value ...any) NamedExpression {
-	var exprs = expressionFromInterface[NamedExpression](col, false)
+	var exprs = expressionFromInterface[Expression](col, false)
 	if len(exprs) == 0 {
 		panic(ErrCastTypeNoColumnProvided)
 	}

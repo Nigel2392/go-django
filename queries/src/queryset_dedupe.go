@@ -125,7 +125,8 @@ type rootObject struct {
 type rows[T attrs.Definer] struct {
 	anyOfRootScannable *scannableField   // any scannable field that can be used to retrieve the root object
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
-	hasMultiRelations  bool              // if the rows have multi-valued relations
+	annotationFields   []string
+	hasMultiRelations  bool // if the rows have multi-valued relations
 
 	rootMapping    map[any]any            // rootMapping is used to map root object unique values to their pks
 	seen           map[string]*seenObject // seen is used to deduplicate relations
@@ -156,6 +157,7 @@ func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error
 	var r = &rows[T]{
 		objects:            newOrderedMap[*rootObject](true, 0),
 		possibleDuplicates: make([]*scannableField, 0),
+		annotationFields:   make([]string, 0),
 		rootMapping:        make(map[any]any, 0),
 		hasMultiRelations:  false,
 		forEach:            forEach,
@@ -169,6 +171,16 @@ func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error
 			r.preloadMapping[preload.ParentPath] = struct{}{}
 		}
 	}
+
+	var annotationFields = make([]string, 0)
+	var meta = attrs.GetModelMeta(qs.internals.Model.Object)
+	for _, annotation := range qs.internals.Annotations.Keys() {
+		if _, ok := meta.Definitions().Field(annotation); ok {
+			annotationFields = append(annotationFields, annotation)
+		}
+	}
+
+	r.annotationFields = annotationFields
 
 	// add possible duplicate fields to the list
 	//
@@ -776,6 +788,14 @@ func (r *rows[T]) compile(ctx context.Context) (count int, rowIter iter.Seq2[*Ro
 			// Annotate the object if it implements the Annotator interface
 			if annotator, ok := obj.object.obj.(Annotator); ok {
 				annotator.Annotate(obj.annotations)
+			}
+
+			for _, fldName := range r.annotationFields {
+				fld, _ := obj.object.fieldDefs.Field(fldName)
+				if err := fld.Scan(obj.annotations[fldName]); err != nil {
+					yield(nil, fmt.Errorf("failed to scan annotation %q for object: %w", fldName, err))
+					return
+				}
 			}
 
 			// If the definer implements ThroughModelSetter, we set the through model directly on the object.

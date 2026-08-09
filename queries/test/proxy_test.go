@@ -23,12 +23,12 @@ func init() {
 }
 
 type ProxyModel struct {
-	models.Model
-	ID          int64
-	TargetID    int64
-	TargetCType string
-	Title       string
-	Description string
+	models.Model `ctype:"TargetCType" target:"TargetID"`
+	ID           int64
+	TargetID     int64
+	TargetCType  string
+	Title        string
+	Description  string
 }
 
 func (b *ProxyModel) FieldDefs(ctx context.Context) attrs.Definitions {

@@ -16,13 +16,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
-const (
-	// sqlite3 memory database for testing
-	TABLE_PAGE               = "CREATE TABLE IF NOT EXISTS page (id INTEGER PRIMARY KEY, title TEXT, description TEXT, page_id INTEGER, page_content_type TEXT);"
-	TABLE_BLOG_PAGE          = "CREATE TABLE IF NOT EXISTS blog_page (page_id INTEGER PRIMARY KEY, author TEXT, tags TEXT, category TEXT, category_content_type TEXT);"
-	TABLE_BLOG_PAGE_CATEGORY = "CREATE TABLE IF NOT EXISTS blog_page_category (category TEXT PRIMARY KEY, page_id INTEGER, category_content_type TEXT);"
-)
-
 func init() {
 	attrs.RegisterModel(&Page{})
 	attrs.RegisterModel(&BlogPage{})

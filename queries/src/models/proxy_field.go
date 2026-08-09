@@ -70,6 +70,10 @@ func (f *proxyField) AllowReverseRelation() bool {
 	return false
 }
 
+func (f *proxyField) ColumnName() string {
+	return ""
+}
+
 func (f *proxyField) AllowDBEdit() bool {
 	if f.cnf == nil {
 		return false
