@@ -31,7 +31,7 @@
         "use_in_db": true,
         "go_type": "github.com/Nigel2392/go-django/src/core/logger.LogLevel",
         "db_type": "INT",
-        "default": 0
+        "default": null
       },
       {
         "name": "Timestamp",
@@ -39,7 +39,7 @@
         "use_in_db": true,
         "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Timestamp",
         "db_type": "TIMESTAMP",
-        "default": "0001-01-01T00:00:00Z"
+        "default": null
       },
       {
         "name": "User",

@@ -11,7 +11,7 @@
         "auto": true,
         "go_type": "uint32",
         "db_type": "UINT",
-        "default": 0
+        "default": null
       },
       {
         "name": "Title",
@@ -38,7 +38,7 @@
         "nullable": true,
         "go_type": "time.Time",
         "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "default": null
       },
       {
         "name": "FileSize",
@@ -46,10 +46,7 @@
         "use_in_db": true,
         "go_type": "database/sql.NullInt32",
         "db_type": "INT",
-        "default": {
-          "Int32": 0,
-          "Valid": false
-        }
+        "default": null
       },
       {
         "name": "FileHash",

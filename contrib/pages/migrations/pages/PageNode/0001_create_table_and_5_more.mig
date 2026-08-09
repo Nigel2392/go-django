@@ -11,7 +11,7 @@
         "auto": true,
         "go_type": "int64",
         "db_type": "INT",
-        "default": 0
+        "default": null
       },
       {
         "name": "Title",
@@ -81,7 +81,7 @@
         "nullable": true,
         "go_type": "int64",
         "db_type": "INT",
-        "default": 0
+        "default": null
       },
       {
         "name": "ContentType",
@@ -99,7 +99,7 @@
         "nullable": true,
         "go_type": "time.Time",
         "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "default": null
       },
       {
         "name": "LatestRevisionCreatedAt",
@@ -108,7 +108,7 @@
         "nullable": true,
         "go_type": "time.Time",
         "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "default": null
       },
       {
         "name": "CreatedAt",
@@ -116,7 +116,7 @@
         "use_in_db": true,
         "go_type": "time.Time",
         "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "default": null
       },
       {
         "name": "UpdatedAt",
@@ -124,7 +124,7 @@
         "use_in_db": true,
         "go_type": "time.Time",
         "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "default": null
       }
     ],
     "indexes": [
