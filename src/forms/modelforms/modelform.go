@@ -154,6 +154,17 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 }
 
 func (f *BaseModelForm[T]) Instance() T {
+	if f.Cleaned != nil {
+		f.SaveFields(f.Context(), f.Cleaned, func(ctx context.Context, formField forms.Field, field attrs.Field, fieldName string, value any) (err error) {
+			if err = field.SetValue(value, true); err != nil {
+				f.AddError(
+					fieldName,
+					err,
+				)
+			}
+			return err
+		})
+	}
 	return f.Model
 }
 
@@ -265,7 +276,6 @@ func (f *BaseModelForm[T]) Load() {
 
 	var initialData = make(map[string]interface{})
 	var fieldDefs = attrs.Define(f.Context(), model)
-
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
@@ -337,18 +347,7 @@ func (f *BaseModelForm[T]) Context() context.Context {
 	return f.context
 }
 
-func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
-	if f.Errors != nil && f.Errors.Len() > 0 {
-		return nil, errs.Error("the form cannot be saved because it has errors")
-	}
-
-	if f.Cleaned == nil {
-		except.Assert(f.Cleaned != nil, 500, "You must call forms.IsValid() before saving the form")
-	}
-
-	var err error
-	var ctx = f.Context()
-	var cleaned = f.CleanedData()
+func (f *BaseModelForm[T]) SaveFields(ctx context.Context, cleaned map[string]any, saveField func(context.Context, forms.Field, attrs.Field, string, any) error) error {
 	for _, fieldname := range f.ModelFields {
 		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
 			continue
@@ -372,23 +371,45 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 			continue
 		}
 
-		if saver, ok := formField.(ModelFieldSaver); ok {
-			if err := saver.SaveField(ctx, field, value); err != nil {
-				f.AddError(
-					fieldname,
-					err,
-				)
-				return cleaned, err
-			}
-		} else {
-			if err := field.SetValue(value, true); err != nil {
-				f.AddError(
-					fieldname,
-					err,
-				)
-				return cleaned, err
-			}
+		if err := saveField(ctx, formField, field, fieldname, value); err != nil {
+			f.AddError(
+				fieldname,
+				err,
+			)
+			return err
 		}
+	}
+
+	return nil
+}
+
+func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
+	if f.Errors != nil && f.Errors.Len() > 0 {
+		return nil, errs.Error("the form cannot be saved because it has errors")
+	}
+
+	if f.Cleaned == nil {
+		except.Assert(f.Cleaned != nil, 500, "You must call forms.IsValid() before saving the form")
+	}
+
+	var ctx = f.Context()
+	var cleaned = f.CleanedData()
+	var err = f.SaveFields(ctx, cleaned, func(ctx context.Context, formField forms.Field, field attrs.Field, fieldName string, value any) (err error) {
+		if saver, ok := formField.(ModelFieldSaver); ok {
+			err = saver.SaveField(ctx, field, value)
+		} else {
+			err = field.SetValue(value, true)
+		}
+		if err != nil {
+			f.AddError(
+				fieldName,
+				err,
+			)
+		}
+		return err
+	})
+	if err != nil {
+		return cleaned, err
 	}
 
 	if f.SaveInstance != nil {
