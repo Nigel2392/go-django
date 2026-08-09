@@ -386,13 +386,13 @@ func TestPageNode(t *testing.T) {
 
 		t.Run("AddChildren", func(t *testing.T) {
 
-			t.Logf("Adding child node to root: %+v", childNode)
-
 			var err = qs.AddChildren(rootNode, childNode)
 			if err != nil {
 				t.Fatal(err)
 				return
 			}
+
+			t.Logf("Added child node to root: %+v", childNode)
 
 			if rootNode.Path != "001" {
 				t.Fatalf("expected Path 001, got %s", rootNode.Path)
@@ -1135,12 +1135,14 @@ ORDER BY level DESC;`
 		for rows.Next() {
 			var node = pages.PageNode{}
 			var level int64
+			var nullId sql.NullInt64
 			var nullTime sql.NullTime
-			if err := rows.Scan(&node.PK, &node.Title, &node.Path, &node.Depth, &node.Numchild, &node.UrlPath, &node.Slug, &node.StatusFlags, &node.PageID, &node.ContentType, &nullTime, &node.CreatedAt, &node.UpdatedAt, &level); err != nil {
+			if err := rows.Scan(&node.PK, &node.Title, &node.Path, &node.Depth, &node.Numchild, &node.UrlPath, &node.Slug, &node.StatusFlags, &nullId, &node.ContentType, &nullTime, &node.CreatedAt, &node.UpdatedAt, &level); err != nil {
 				t.Fatal(err)
 				return
 			}
 
+			node.PageID = nullId.Int64
 			node.LatestRevisionCreatedAt = nullTime.Time
 			node.Annotations = make(map[string]any)
 			node.Annotations["level"] = level

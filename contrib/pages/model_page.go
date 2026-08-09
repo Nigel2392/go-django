@@ -36,11 +36,11 @@ type PageNode struct {
 	PK                      int64      `json:"id" attrs:"primary;readonly;column=id"`
 	Title                   string     `json:"title"`
 	Path                    string     `json:"path" attrs:"blank"`
-	Depth                   int64      `json:"depth" attrs:"blank"`
-	Numchild                int64      `json:"numchild" attrs:"blank"`
+	Depth                   int64      `json:"depth" attrs:"blank;default=0"`
+	Numchild                int64      `json:"numchild" attrs:"blank;default=0"`
 	UrlPath                 string     `json:"url_path" attrs:"readonly;blank"`
 	Slug                    string     `json:"slug"`
-	StatusFlags             StatusFlag `json:"status_flags" attrs:"null;blank"`
+	StatusFlags             StatusFlag `json:"status_flags" attrs:"null;blank;default=0"`
 	PageID                  int64      `json:"page_id" attrs:"null;blank"`
 	ContentType             string     `json:"content_type" attrs:"null;blank"`
 	PublishedAt             time.Time  `json:"published_at" attrs:"null;blank"`

@@ -301,8 +301,13 @@ func (qs *PageQuerySet) Search(query string) *PageQuerySet {
 
 func (qs *PageQuerySet) GetChildNodes(node *PageNode, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
 
-	return qs.Children(node.Path, node.Depth).
-		Filter("StatusFlags__bitand", statusFlags).
+	qs = qs.Children(node.Path, node.Depth)
+
+	if statusFlags != 0 {
+		qs = qs.Filter("StatusFlags__bitand", statusFlags)
+	}
+
+	return qs.
 		Limit(int(limit)).
 		Offset(int(offset)).
 		OrderBy("Path").
@@ -310,8 +315,14 @@ func (qs *PageQuerySet) GetChildNodes(node *PageNode, statusFlags StatusFlag, of
 }
 
 func (qs *PageQuerySet) GetDescendants(path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-	return qs.Descendants(path, depth).
-		Filter("StatusFlags__bitand", statusFlags).
+
+	qs = qs.Descendants(path, depth)
+
+	if statusFlags != 0 {
+		qs = qs.Filter("StatusFlags__bitand", statusFlags)
+	}
+
+	return qs.
 		Limit(int(limit)).
 		Offset(int(offset)).
 		OrderBy("Path").

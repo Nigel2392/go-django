@@ -1,5 +1,7 @@
 package pages
 
+import "database/sql/driver"
+
 type StatusFlag int64
 
 const (
@@ -20,4 +22,8 @@ const (
 
 func (f StatusFlag) Is(flag StatusFlag) bool {
 	return f&flag == flag
+}
+
+func (f StatusFlag) Value() (driver.Value, error) {
+	return int64(f), nil
 }
