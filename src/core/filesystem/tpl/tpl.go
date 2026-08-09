@@ -68,7 +68,10 @@ func MergeConfig(dst, src *Config) *Config {
 		src.FS,
 	)
 
-	dst.Bases = append(dst.Bases, src.Bases...)
+	var nb = make([]string, 0, len(dst.Bases)+len(src.Bases))
+	nb = append(nb, src.Bases...)
+	nb = append(nb, dst.Bases...)
+	dst.Bases = nb
 
 	switch {
 	case dst.Matches == nil:
