@@ -78,12 +78,12 @@ func (m *PostgresSchemaEditor) RemoveMigration(ctx context.Context, appName stri
 }
 
 func (m *PostgresSchemaEditor) QueryRow(ctx context.Context, query string, args ...any) drivers.SQLRow {
-	return m.db.QueryRowContext(ctx, query, args...)
+	return migrator.DbFromContext(ctx, m.db).QueryRowContext(ctx, query, args...)
 }
 
 func (m *PostgresSchemaEditor) Execute(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	// logger.Debugf("PostgresSchemaEditor.ExecContext:\n%s", query)
-	return m.db.ExecContext(ctx, query, args...)
+	return migrator.DbFromContext(ctx, m.db).ExecContext(ctx, query, args...)
 }
 
 func (m *PostgresSchemaEditor) CreateTable(ctx context.Context, table migrator.Table, ifNotExists bool) error {

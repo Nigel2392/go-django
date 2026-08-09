@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/mattn/go-sqlite3"
 )
@@ -57,18 +58,18 @@ func NewSQLiteSchemaEditor(db drivers.Database) *SQLiteSchemaEditor {
 
 func (m *SQLiteSchemaEditor) query(ctx context.Context, query string, args ...any) (drivers.SQLRows, error) {
 	// logger.Debugf("SQLiteSchemaEditor.QueryContext:\n%s", query)
-	rows, err := m.db.QueryContext(ctx, query, args...)
+	rows, err := migrator.DbFromContext(ctx, m.db).QueryContext(ctx, query, args...)
 	return rows, err
 }
 
 func (m *SQLiteSchemaEditor) queryRow(ctx context.Context, query string, args ...any) drivers.SQLRow {
 	// logger.Debugf("SQLiteSchemaEditor.QueryRowContext:\n%s", query)
-	return m.db.QueryRowContext(ctx, query, args...)
+	return migrator.DbFromContext(ctx, m.db).QueryRowContext(ctx, query, args...)
 }
 
 func (m *SQLiteSchemaEditor) Execute(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	// logger.Debugf("SQLiteSchemaEditor.ExecContext:\n%s", query)
-	result, err := m.db.ExecContext(ctx, query, args...)
+	result, err := migrator.DbFromContext(ctx, m.db).ExecContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -557,6 +558,8 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 			}
 		case nil:
 			w.WriteString("NULL")
+		default:
+			logger.Errorf("Unknown default type for column %q: %T", col.Name, col.Default)
 		}
 	}
 

@@ -27,7 +27,7 @@ func (a *ActionType) UnmarshalJSON(data []byte) error {
 }
 
 const (
-	ActionCreateTable ActionType = iota + 1
+	ActionCreateTable ActionType = 1 << iota
 	ActionDropTable
 	ActionRenameTable
 	ActionAddIndex

@@ -62,7 +62,7 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	}
 
 	if canMigrator, ok := field.(CanMigrate); ok {
-		attrUseInDB = canMigrator.CanMigrate()
+		attrUseInDB = attrUseInDB && canMigrator.CanMigrate()
 	}
 
 	if attrs.IsEmbeddedField(field) {
@@ -160,6 +160,7 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 			dflt = nil // zero value, no default
 		}
 	}
+
 	var nullable = field.AllowNull()
 	nullable = nullable || (rel != nil && rel.TargetField != nil && rel.TargetField.AllowNull())
 	if drivers.FieldType(field).Kind() == reflect.String && !attrUnique {
@@ -167,6 +168,10 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		if attrs.IsZero(dflt) {
 			dflt = ""
 		}
+	}
+
+	if field.Name() == "" {
+		panic(fmt.Sprintf("field (%T)%v has name %q", field, field, field))
 	}
 
 	var col = Column{
@@ -287,17 +292,20 @@ func (c *Column) HasDefault() bool {
 		}
 		rv = rv.Elem()
 	}
+
 	switch rv.Kind() {
 	case reflect.String:
 		return rv.String() != ""
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return rv.Int() != 0
+		return !c.Primary && c.Rel == nil || rv.Int() != 0
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return rv.Uint() != 0
+		return !c.Primary && c.Rel == nil || rv.Uint() != 0
 	case reflect.Float32, reflect.Float64:
-		return rv.Float() != 0.0
+		return !c.Primary && c.Rel == nil || rv.Float() != 0.0
 	case reflect.Array, reflect.Slice, reflect.Map:
 		return rv.Len() > 0
+	case reflect.Invalid:
+		return false
 	}
 	return true
 }

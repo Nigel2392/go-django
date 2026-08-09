@@ -307,6 +307,8 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 	}
 	defer transaction.Rollback(ctx)
 
+	ctx = ContextWithDb(ctx, transaction)
+
 	for _, n := range graph {
 
 		if n.mig.migrated {

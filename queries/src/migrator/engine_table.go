@@ -337,6 +337,11 @@ func (t *ModelTable) Diff(other *ModelTable) (added, removed []Column, diffs []C
 
 	for head := other.Fields.Front(); head != nil; head = head.Next() {
 		var col = head.Value
+		if !col.UseInDB {
+			// really doesnt matter, continue
+			continue
+		}
+
 		var _, ok = t.Fields.Get(col.Name)
 		if !ok {
 			removed = append(removed, col)
@@ -345,10 +350,19 @@ func (t *ModelTable) Diff(other *ModelTable) (added, removed []Column, diffs []C
 	}
 
 	for head := t.Fields.Front(); head != nil; head = head.Next() {
+
 		var col = head.Value
 		var otherCol, ok = other.Fields.Get(col.Name)
-		if !ok {
+
+		// only add columns that are used in db
+		if !ok && col.UseInDB {
 			added = append(added, col)
+			continue
+		}
+
+		if !col.UseInDB {
+			// really doesnt matter
+			// continue so the below check doesnt trigger
 			continue
 		}
 

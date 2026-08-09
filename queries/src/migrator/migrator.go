@@ -106,3 +106,17 @@ func CheckCanMigrate(obj any) bool {
 
 	return true
 }
+
+type transactionContextKey struct{}
+
+func DbFromContext(ctx context.Context, defaultDb drivers.DB) drivers.DB {
+	var db, ok = ctx.Value(transactionContextKey{}).(drivers.DB)
+	if ok {
+		return db
+	}
+	return defaultDb
+}
+
+func ContextWithDb(ctx context.Context, db drivers.DB) context.Context {
+	return context.WithValue(ctx, transactionContextKey{}, db)
+}

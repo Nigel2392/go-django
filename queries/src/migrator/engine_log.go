@@ -37,7 +37,7 @@ func (e *MigrationEngineConsoleLog) Log(action ActionType, file *MigrationFile, 
 	case ActionAddField:
 		fmt.Fprintf(&msg, "Add field %s.%s on table %s", model, column.New.Name, tableName)
 	case ActionAlterField:
-		fmt.Fprintf(&msg, "Alter field %s on table %s for model %s", column.Old.Name, tableName, model)
+		fmt.Fprintf(&msg, "Alter field %s on table %s for model %s", column.New.Name, tableName, model)
 	case ActionRemoveField:
 		fmt.Fprintf(&msg, "Remove field %s on table %s for model %s", column.Old.Name, tableName, model)
 	}

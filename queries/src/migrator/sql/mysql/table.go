@@ -71,7 +71,7 @@ func (m *MySQLSchemaEditor) Setup(ctx context.Context) error {
 	if m.tablesCreated {
 		return nil
 	}
-	_, err := m.db.ExecContext(ctx, createTableMigrations)
+	_, err := migrator.DbFromContext(ctx, m.db).ExecContext(ctx, createTableMigrations)
 	if err != nil {
 		return err
 	}
@@ -104,12 +104,12 @@ func (m *MySQLSchemaEditor) RemoveMigration(ctx context.Context, appName, modelN
 
 func (m *MySQLSchemaEditor) queryRow(ctx context.Context, query string, args ...any) drivers.SQLRow {
 	// logger.Debugf("MySQLSchemaEditor.QueryRowContext:\n%s", query)
-	return m.db.QueryRowContext(ctx, query, args...)
+	return migrator.DbFromContext(ctx, m.db).QueryRowContext(ctx, query, args...)
 }
 
 func (m *MySQLSchemaEditor) Execute(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	// logger.Debugf("MySQLSchemaEditor.ExecContext:\n%s", query)
-	result, err := m.db.ExecContext(ctx, query, args...)
+	result, err := migrator.DbFromContext(ctx, m.db).ExecContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
