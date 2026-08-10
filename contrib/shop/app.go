@@ -9,7 +9,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -54,7 +53,7 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Deps = []string{
-		"session", "auth", "admin",
+		"session", "auth", "admin", "editor",
 	}
 
 	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
@@ -81,7 +80,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		&models.Order{},
 
 		// Payments
-		&payments.Payment{},
+		&models.Payment{},
 
 		// Products
 		&models.ProductSku{},

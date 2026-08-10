@@ -197,12 +197,17 @@ templ (p PanelComponent) Component() {
 
 type WidgetPanelComponent struct {
     BoundField forms.BoundField
+    Classname string
 }
 
 func (p WidgetPanelComponent) Render(ctx context.Context, w io.Writer) error {
+    var className = "panel-default collapsible"
+    if p.Classname != "" {
+        className = className + " "+ p.Classname
+    }
     var panelComponent = PanelComponent{
         Attrs:     nil,
-        Classname: "panel-default collapsible",
+        Classname: className,
         AllowPanelLink: true,
         PanelId:   BuildPanelID("", nil, slug.Make(p.BoundField.Name())),
         Hidden:    p.BoundField.Hidden(),
@@ -239,13 +244,19 @@ type BoundFormPanel[T forms.Form, P Panel] struct {
 }
 
 func (p *BoundFormPanel[T, P]) Render() template.HTML {
+    defer func(){
+        if err := recover(); err != nil {
+            logger.Errorf("Error in %T: %v: %s", p, err, string(debug.Stack()))
+        }
+    }()
+
     var b bytes.Buffer
     p.Component().Render(p.Context, &b)
     return template.HTML(b.String())
 }
 
 templ (p *BoundFormPanel[T, P]) Component() {
-    @WidgetPanelComponent{ BoundField: p.BoundField }
+    @WidgetPanelComponent{ BoundField: p.BoundField, Classname: p.Panel.ClassName() }
 }
 
 type BoundTitlePanel[T forms.Form, P Panel] struct {
@@ -430,6 +441,12 @@ type boundTabbedPanel struct {
 }
 
 func (p *boundTabbedPanel) Render() template.HTML {
+    defer func(){
+        if err := recover(); err != nil {
+            logger.Errorf("Error in %T: %v: %s", p, err, string(debug.Stack()))
+        }
+    }()
+
     var b bytes.Buffer
     p.Component().Render(p.context, &b)
     return template.HTML(b.String())
@@ -472,6 +489,12 @@ type BoundJSONDetailPanel struct {
 }
 
 func (p *BoundJSONDetailPanel) Render() template.HTML {
+    defer func(){
+        if err := recover(); err != nil {
+            logger.Errorf("Error in %T: %v: %s", p, err, string(debug.Stack()))
+        }
+    }()
+
     var b bytes.Buffer
     p.Component().Render(p.Request.Context(), &b)
     return template.HTML(b.String())
@@ -558,6 +581,11 @@ func (p *BoundModelFormPanel[TARGET, FORM]) Hidden() bool {
 }
 
 func (p *BoundModelFormPanel[TARGET, FORM]) Render() template.HTML {
+    defer func(){
+        if err := recover(); err != nil {
+            logger.Errorf("Error in %T: %v: %s", p, err, string(debug.Stack()))
+        }
+    }()
     p.validate()
     var b bytes.Buffer
     p.Component().Render(p.Context, &b)

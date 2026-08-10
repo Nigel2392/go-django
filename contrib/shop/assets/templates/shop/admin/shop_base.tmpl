@@ -17,7 +17,46 @@
                 {{ range $component := $components }}
                     {{ templ $component }}
                 {{ end }}
+
+                {{ block "filter_form" . }}
+                    <form method="get" action="{{ .Request.URL.Path }}" class="form filter-form">
+
+                        {{ $hasAmountQuery := (not (not (.Request.URL.Query.Get (.Data.view_amount_param)))) }}
+                        <input type="hidden" name={{ .Data.view_page_param }} value="{{ (.Data.view_paginator_object).PageNum }}">
+                        {{ if $hasAmountQuery }}
+                            <input type="hidden" name="{{ .Data.view_amount_param }}" value="{{ call .Request.URL.Query.Get (.Data.view_amount_param) }}">
+                        {{ end }}
+
+                        
+                        {{ range $Field := .Data.filter_form.Fields }}        
+                            <div class="form-field">
+                                {{ $Field.Field }}
+                            </div>
+                        {{ end }}
+                        
+                        <div class="buttons">
+                            <input class="button secondary hollow" type="submit" value="{{ T "Submit" }}">
+                            {{ if .Request.URL.RawQuery }}
+                                {{ $extra := "" }}
+                                {{ if $hasAmountQuery }}
+                                    {{ $extra = printf "&%s=%s" .Data.view_amount_param (call .Request.URL.Query.Get .Data.view_amount_param) }}
+                                {{ end }}
+                                <a href="{{ (printf "%s?%s=%d%s" .Request.URL.Path .Data.view_page_param (.Data.view_paginator_object).PageNum $extra) | safe }}" class="button danger hollow sm">{{ T "Clear all" }}</a>
+                            {{ end }}
+                        </div>
+                    </form>
+                {{ end }}
             </div>
+
+            {{ $errorList := .Data.filter_form.ErrorList }}
+            {{ if (gt (len $errorList) 0) }}
+                <ul class="error-list">
+                    {{ range $Error := $errorList }}
+                        <li class="error"><p>{{ $Error }}</p></li>
+                    {{ end }}
+                </ul>
+            {{ end }}
+
         {{ end }}
     {{ end }}
 {{ end }}

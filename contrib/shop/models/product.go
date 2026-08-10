@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/editor"
+	_ "github.com/Nigel2392/go-django/contrib/editor/features"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -144,73 +146,95 @@ func (qs *ProductQuery) SyncProducts(products ...*Product) error {
 }
 
 type Product struct {
-	ID          uint64
-	Title       string
-	Slug        string
-	Ranking     uint64
-	PriceMax    decimal.Decimal
-	SkuCount    int
+	ID      uint64
+	Title   string
+	Slug    string
+	Ranking uint64
+	Editor  *editor.EditorJSBlockData
+	Skus    *queries.RelRevFK[*ProductSku]
+
+	// Should be synchronised periodically
+	PriceMax decimal.Decimal
+	SkuCount int
+
+	// Used in product admin list
 	LowestStock int
-	Skus        *queries.RelRevFK[*ProductSku]
 }
 
 func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
-		admin.TitlePanel(admin.FieldPanel("Title")).
-			WithOutputFields("Slug"),
-		admin.FieldPanel("Slug"),
-		admin.FieldPanel("Ranking"),
-
-		&admin.ModelFormPanel[*ProductSku, modelforms.ModelForm[*ProductSku]]{
-			TargetType: &ProductSku{},
-			FieldName:  "Skus",
-			Classname:  "collapsible",
-			// SubClassname: "collapsed",
-			MinNum:         1,
-			DisallowAdd:    false,
-			DisallowRemove: false,
-			Panels: []admin.Panel{
-				admin.FieldPanel("Title"),
-				admin.FieldPanel("Price"),
-				admin.FieldPanel("Stock"),
-			},
-		},
+		admin.TabbedPanel(
+			admin.PanelTab(
+				trans.S("Product"),
+				admin.TitlePanel(admin.FieldPanel("Title")).
+					WithOutputFields("Slug"),
+				admin.FieldPanel("Slug"),
+				admin.FieldPanel("Ranking"),
+				admin.FieldPanel("Editor").Class("fullsize"),
+			),
+			admin.PanelTab(
+				trans.S("SKUs"),
+				&admin.ModelFormPanel[*ProductSku, modelforms.ModelForm[*ProductSku]]{
+					TargetType: &ProductSku{},
+					FieldName:  "Skus",
+					Classname:  "collapsible",
+					// SubClassname: "collapsed",
+					MinNum:         1,
+					DisallowAdd:    false,
+					DisallowRemove: false,
+					Panels: []admin.Panel{
+						admin.FieldPanel("Title"),
+						admin.FieldPanel("Price"),
+						admin.FieldPanel("Stock"),
+					},
+				},
+			),
+		),
 	}
 }
 
 func (m *Product) EditPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
-		admin.TitlePanel(admin.FieldPanel("Title")).
-			WithOutputFields("Slug"),
-		admin.RowPanel(
-			admin.FieldPanel("Slug"),
-			admin.FieldPanel("ID"),
+		admin.TabbedPanel(
+			admin.PanelTab(
+				trans.S("Product"),
+				admin.TitlePanel(admin.FieldPanel("Title")).
+					WithOutputFields("Slug"),
+				admin.RowPanel(
+					admin.FieldPanel("Slug"),
+					admin.FieldPanel("ID"),
+				),
+				admin.FieldPanel("Ranking"),
+				admin.FieldPanel("Editor").Class("fullsize"),
+			),
+			admin.PanelTab(
+				trans.S("SKUs"),
+				&admin.ModelFormPanel[*ProductSku, modelforms.ModelForm[*ProductSku]]{
+					TargetType: &ProductSku{},
+					FieldName:  "Skus",
+					Classname:  "collapsible",
+					// SubClassname: "collapsed",
+					MinNum:         1,
+					DisallowAdd:    false,
+					DisallowRemove: false,
+					Panels: []admin.Panel{
+						admin.FieldPanel("Title"),
+						admin.FieldPanel("Price"),
+						admin.FieldPanel("Stock"),
+					},
+				},
+			),
 		),
-		admin.FieldPanel("Ranking"),
-
-		&admin.ModelFormPanel[*ProductSku, modelforms.ModelForm[*ProductSku]]{
-			TargetType: &ProductSku{},
-			FieldName:  "Skus",
-			Classname:  "collapsible",
-			// SubClassname: "collapsed",
-			MinNum:         1,
-			DisallowAdd:    false,
-			DisallowRemove: false,
-			Panels: []admin.Panel{
-				admin.FieldPanel("Title"),
-				admin.FieldPanel("Price"),
-				admin.FieldPanel("Stock"),
-			},
-		},
 	}
 }
 
 func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.Make(ctx, m,
+	return attrs.Make[*Product, attrs.Field](ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Product, uint64] {
 			return fattrs.PtrFieldConfig[*Product, uint64]{
 				Config: attrs.FieldConfig{
-					Primary: true,
+					Primary:  true,
+					ReadOnly: true,
 				},
 			}
 		}),
@@ -242,6 +266,16 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 					},
 				},
 			}
+		}),
+		editor.NewField(m, "Editor", editor.FieldConfig{
+			Label:    trans.S("Description"),
+			HelpText: trans.S("Describe your product"),
+			Default:  &editor.EditorJSBlockData{},
+			Features: []string{
+				"paragraph",
+				"text-align",
+				"list",
+			},
 		}),
 		fattrs.Field(m, "SkuCount", &m.SkuCount, func() fattrs.PtrFieldConfig[*Product, int] {
 			return fattrs.PtrFieldConfig[*Product, int]{

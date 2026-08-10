@@ -1,19 +1,23 @@
-package payments
+package models
 
 import (
 	"context"
 
+	"github.com/Nigel2392/go-django/contrib/shop/internal/prov"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/shopspring/decimal"
 )
 
 var _ queries.ActsBeforeCreate = (*Payment)(nil)
 
 type Payment struct {
 	ID        drivers.ULID
+	Amount    decimal.Decimal
+	Provider  prov.BaseProvider
 	State     paystate.PayState
 	CreatedAt drivers.Timestamp
 	UpdatedAt drivers.Timestamp
@@ -30,6 +34,15 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*Payment, drivers.ULID]{
 				Config: attrs.FieldConfig{
 					Primary: true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Provider", &m.Provider, func() fattrs.PtrFieldConfig[*Payment, prov.BaseProvider] {
+			return fattrs.PtrFieldConfig[*Payment, prov.BaseProvider]{
+				Config: attrs.FieldConfig{
+					MinLength: 2,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}),

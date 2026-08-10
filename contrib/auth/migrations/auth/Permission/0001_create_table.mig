@@ -1,7 +1,4 @@
 {
-  "dependencies": [
-    "auth:Group:0001_create_table.mig"
-  ],
   "table": {
     "table": "auth_permissions",
     "model": "github.com/Nigel2392/go-django/contrib/auth/users.Permission",
@@ -39,22 +36,6 @@
       {
         "name": "GroupPermissions",
         "column": "id",
-        "relation": {
-          "type": "ManyToMany",
-          "model": {
-            "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.Group",
-            "lazy_model_key": ""
-          },
-          "field": "ID",
-          "through": {
-            "model": {
-              "content_type": "github.com/Nigel2392/go-django/contrib/auth/users.GroupPermission",
-              "lazy_model_key": ""
-            },
-            "source_field": "PermissionID",
-            "target_field": "GroupID"
-          }
-        },
         "go_type": "uint64",
         "db_type": "UINT",
         "default": null

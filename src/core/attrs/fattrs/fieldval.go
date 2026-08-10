@@ -47,7 +47,7 @@ type ptrFieldOpts[MODEL attrs.Definer, VALUE any] struct {
 	typ           reflect.Type
 	flags         fieldFlag
 	validateValue func(obj MODEL, value VALUE) error
-	getDefault    func(obj MODEL) VALUE
+	getDefault    func(obj MODEL) *VALUE
 	newValue      func() VALUE
 	bindError     func(error)
 	isNil         func(*VALUE) bool
@@ -174,14 +174,17 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 	}
 
 	switch _default := conf.Default.(type) {
-	case func(MODEL) VALUE:
+	case func(MODEL) *VALUE:
 		opts.getDefault = _default
 	case func(attrs.Definer) VALUE:
-		opts.getDefault = func(obj MODEL) VALUE {
-			return _default(obj)
+		opts.getDefault = func(obj MODEL) *VALUE {
+			d := _default(obj)
+			return &d
 		}
-	default:
+	case nil:
 		opts.getDefault = ptrConf_Default_Zero
+	default:
+		panic(fmt.Sprintf("Invalid default type %T", _default))
 	}
 
 	switch rT.Kind() {
@@ -592,15 +595,22 @@ func (r *ptrField[M, V]) GetValue() interface{} {
 
 func (r *ptrField[M, V]) GetDefault() interface{} {
 	def := r.useOpts().getDefault(r.obj)
-	if r.opts.isNil(&def) && (bitch.Is(r.useOpts().flags, flagIsBinder) || bitch.Is(r.opts.flags, flagIsPtrBinder)) {
+
+	if def == nil {
+		return nil
+	}
+
+	if r.opts.isNil(def) && (bitch.Is(r.useOpts().flags, flagIsBinder) || bitch.Is(r.opts.flags, flagIsPtrBinder)) {
 		if r.opts.newValue != nil {
-			def = r.opts.newValue()
+			d := r.opts.newValue()
+			def = &d
 		} else {
 			var newV = reflect.New(r.opts.typ.Elem())
-			def = newV.Interface().(V)
+			d := newV.Interface().(V)
+			def = &d
 		}
 	}
-	return r.get(&def)
+	return r.get(def)
 }
 
 func (r *ptrField[M, V]) Validate() error {

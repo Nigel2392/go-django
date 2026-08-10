@@ -23,6 +23,7 @@ import (
 type ListViewConfig[T attrs.Definer] struct {
 	Model              T
 	PerPage            int
+	UsePanelFilters    bool
 	ListTitle          func(context.Context) string
 	ListSubtitle       func(context.Context) string
 	Filters            []filters.FilterSpec[T]
@@ -158,7 +159,7 @@ func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, sho
 			)
 
 			var panel = l.getPageSidePanels(r)
-			if len(l.Filters) > 0 {
+			if l.UsePanelFilters && len(l.Filters) > 0 {
 				if panel == nil {
 					panel = &menu.SidePanels{
 						Panels: []menu.SidePanel{},

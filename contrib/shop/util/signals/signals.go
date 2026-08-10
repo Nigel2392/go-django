@@ -2,9 +2,15 @@ package signals
 
 import (
 	"context"
+	"maps"
+	"net"
+	"net/http"
+	"time"
 
+	"github.com/Nigel2392/go-django/contrib/auth/users"
+	"github.com/Nigel2392/go-django/contrib/shop/internal/prov"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-signals"
 )
 
@@ -16,24 +22,58 @@ var (
 )
 
 type BaseSignal struct {
-	Context context.Context
+	Context   context.Context
+	Timestamp time.Time
+	User      users.User
+	IPAddr    net.IP
+	Meta      map[string]any
+}
+
+func NewBaseSignal(ctx context.Context, r *http.Request, user users.User, meta map[string]any) BaseSignal {
+	var (
+		ipAddr = django.GetIP(r)
+		netIp  = net.ParseIP(ipAddr)
+		newM   = make(map[string]any)
+	)
+
+	maps.Copy(newM, meta)
+
+	newM["request"] = map[string]any{
+		"method":     r.Method,
+		"user_agent": r.UserAgent(),
+		"url":        r.URL,
+	}
+
+	return BaseSignal{
+		Context:   ctx,
+		Timestamp: time.Now(),
+		User:      user,
+		IPAddr:    netIp,
+		Meta:      meta,
+	}
 }
 
 type PaymentSignalData struct {
 	BaseSignal
-	Payment  *payments.Payment
+	Provider prov.BaseProvider
+	Last     *models.Payment
+	Payment  *models.Payment
+	Order    *models.Order
 	RawBytes []byte
 }
 
 type ProductSignalData struct {
 	BaseSignal
+	Last    *models.Product
 	Product *models.Product
 	Skus    []*models.ProductSku
 }
 
 type OrderSignalData struct {
 	BaseSignal
-	Order *models.Order
+	Last    *models.Order
+	Current *models.Order
+	Reason  string
 }
 
 type CartSignalData struct {

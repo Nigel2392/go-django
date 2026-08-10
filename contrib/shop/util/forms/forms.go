@@ -10,7 +10,7 @@ import (
 
 func NewAdminForm[MODEL attrs.Definer](r *http.Request, instance MODEL, getPanels func(MODEL) []admin.Panel) *admin.AdminForm[*modelforms.BaseModelForm[MODEL], MODEL] {
 	var panels = getPanels(instance)
-	var form = modelforms.NewBaseModelForm[MODEL](r.Context(), instance)
+	var form = modelforms.NewBaseModelForm(r.Context(), instance)
 	var adminForm = admin.NewAdminForm(r, form, panels...)
 	return adminForm
 }

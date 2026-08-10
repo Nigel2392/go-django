@@ -615,6 +615,13 @@ type CanReverseRelate interface {
 	AllowReverseRelation() bool
 }
 
+// IsReverseRelate is an interface for fields to indicate that the relation belonging
+// to the field is a reverse relation
+type CanIsReverse interface {
+	Field
+	IsReverse() bool
+}
+
 // An unbound field constructor is an object that can bind a field to a model.
 //
 // This is only called in [Define].

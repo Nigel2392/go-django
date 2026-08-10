@@ -15,6 +15,7 @@ var _ queries.ActsBeforeCreate = (*Order)(nil)
 
 type Order struct {
 	ID         drivers.ULID
+	Payment    *Payment
 	OrderItems *queries.RelRevFK[*OrderItem]
 }
 
@@ -48,6 +49,14 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					Primary:  true,
 					ReadOnly: true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Payment", &m.Payment, func() fattrs.PtrFieldConfig[*Order, *Payment] {
+			return fattrs.PtrFieldConfig[*Order, *Payment]{
+				Config: attrs.FieldConfig{
+					Column:        "payment_id",
+					RelForeignKey: attrs.Relate(&Payment{}, "", nil),
 				},
 			}
 		}),

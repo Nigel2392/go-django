@@ -2,6 +2,7 @@ package migrator
 
 import (
 	"context"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -83,9 +84,14 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 
 	var rel *MigrationRelation
 	var fRel = field.Rel()
-	if fRel != nil {
-		var model *MigrationModel
+	var isRev bool
+	if f, ok := field.(attrs.CanIsReverse); ok && f.IsReverse() {
+		isRev = true
+	}
 
+	if fRel != nil && !isRev {
+
+		var model *MigrationModel
 		if typ, ok := fRel.(attrs.LazyRelation); ok {
 			var modelKey = typ.ModelKey()
 			if modelKey != "" {
@@ -159,6 +165,17 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		} else {
 			dflt = nil // zero value, no default
 		}
+	}
+
+	if def, ok := dflt.(driver.Valuer); ok {
+		d, err := def.Value()
+		if err == nil {
+			dflt = d
+		}
+	}
+
+	if d, ok := dflt.([]byte); ok {
+		dflt = string(d)
 	}
 
 	var nullable = field.AllowNull()

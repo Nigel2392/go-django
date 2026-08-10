@@ -52,8 +52,10 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 	},
 	Filters: []filters.FilterSpec[*models.Product]{
 		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
-			SpecName:  "search",
-			FormField: fields.CharField(fields.HelpText(trans.S("Search by title or URL path"))),
+			SpecName: "search",
+			FormField: fields.CharField(
+				fields.Placeholder("Search..."),
+			),
 			Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*models.Product]) (*queries.QuerySet[*models.Product], error) {
 				if fields.IsZero(value) {
 					return object, nil

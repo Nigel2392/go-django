@@ -3,12 +3,16 @@ package payments
 import (
 	"context"
 
-	"github.com/elliotchance/orderedmap/v2"
+	"github.com/Nigel2392/go-django/contrib/shop/internal/prov"
+	"github.com/Nigel2392/go-django/contrib/shop/models"
 )
 
 type PaymentProvider interface {
-	Name() string
-	Label(context.Context) string
+	prov.BasePaymentProvider
+
+	CreateTransaction(ctx context.Context, order *models.Order) (*models.Payment, error)
+	ParseWebhook(ctx context.Context, rawPayload []byte) (*PaymentSignalPayload, error)
+	Cancel(ctx context.Context, payment *models.Payment) error
 }
 
 type PaymentSignalPayload struct {
@@ -20,7 +24,6 @@ type PaymentSignalPayload struct {
 	RawPayload    []byte
 }
 
-type Payments struct {
-	Prodivers []PaymentProvider
-	providers *orderedmap.OrderedMap[string, PaymentProvider]
+func RegisterProvider(p PaymentProvider) {
+	prov.Payments.Set(p.ProviderID(), p)
 }

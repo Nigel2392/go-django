@@ -5,11 +5,22 @@
     border-bottom: 1px dashed var(--border-color);
     box-shadow: 0px 0 3px rgba(0, 0, 0, 0.4);
     position: relative;
+    display: flex;
+    flex-direction: row;
 }
-.shop__header__components *:is(a, button, input, select) {
+.shop__header__components .filter-form {
+    display: flex;
+    flex-direction: row;
+    margin-left: 5rem;
+    border-left: 1px dashed var(--border-color);
+}
+.shop__header__components.shop__header__components *:is(a, button, input, select) {
     color: var(--text-color);
     background-color: transparent;
+    border-radius: unset;
     border: none;
+    border-right: 1px dashed var(--border-color);
+    height: 100%;
     margin: 0;
 }
 .shop__header__components *:is(a, button, input, select) + .shop__header__components *:is(a, button, input, select) {

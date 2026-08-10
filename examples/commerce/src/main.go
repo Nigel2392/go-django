@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/auth"
+	"github.com/Nigel2392/go-django/contrib/editor"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
@@ -51,6 +52,7 @@ func main() {
 			auditlogs.NewAppConfig,
 			reports.NewAppConfig,
 			migrator.NewAppConfig,
+			editor.NewAppConfig,
 			shop.NewAppConfig,
 		),
 	)
