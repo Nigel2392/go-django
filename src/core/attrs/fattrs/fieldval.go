@@ -176,15 +176,47 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 	switch _default := conf.Default.(type) {
 	case func(MODEL) *VALUE:
 		opts.getDefault = _default
+
+	case func(attrs.Definer) *VALUE:
+		opts.getDefault = func(obj MODEL) *VALUE {
+			d := _default(obj)
+			return d
+		}
+
+	case func(MODEL) VALUE:
+		opts.getDefault = func(obj MODEL) *VALUE {
+			d := _default(obj)
+			return &d
+		}
+
 	case func(attrs.Definer) VALUE:
 		opts.getDefault = func(obj MODEL) *VALUE {
 			d := _default(obj)
 			return &d
 		}
-	case nil:
+
+	case *VALUE:
+		opts.getDefault = func(obj MODEL) *VALUE {
+			if _default == nil {
+				var z VALUE
+				return &z
+			}
+			d := *_default
+			return &d
+		}
+
+	case VALUE:
+		opts.getDefault = func(obj MODEL) *VALUE {
+			v := _default
+			return &v
+		}
+
+	case nil, NULL:
 		opts.getDefault = ptrConf_Default_Zero
+
 	default:
 		panic(fmt.Sprintf("Invalid default type %T", _default))
+
 	}
 
 	switch rT.Kind() {

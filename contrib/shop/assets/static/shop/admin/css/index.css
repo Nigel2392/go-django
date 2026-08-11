@@ -1,6 +1,9 @@
 #content#content:has(> .shop__header__components) > #content__header#content__header {
     padding: 1em 2.25em;
 }
+#main #content-wrapper #content__body:has(> .shop__header__components) {
+    padding: 0.5em 2.25em;
+}
 .shop__header__components {
     border-bottom: 1px dashed var(--border-color);
     box-shadow: 0px 0 3px rgba(0, 0, 0, 0.4);
