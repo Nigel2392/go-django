@@ -3,6 +3,7 @@ package attrs
 import (
 	"context"
 	"fmt"
+	"iter"
 	"reflect"
 	"strings"
 
@@ -80,6 +81,23 @@ func (m *modelMeta) Storage(key string) (any, bool) {
 }
 
 var modelReg = make(map[reflect.Type]*modelMeta)
+
+func IterModelMeta() (iter.Seq2[Definer, ModelMeta], error) {
+	var graph, err = buildDependencyGraph(modelReg)
+	if err != nil {
+		return nil, err
+	}
+
+	var iter = func(yield func(Definer, ModelMeta) bool) {
+		for _, v := range graph {
+			if !yield(v.meta.Model(), v.meta) {
+				return
+			}
+		}
+	}
+
+	return iter, nil
+}
 
 func newReverseAlias(rev Relation) string {
 	var name string

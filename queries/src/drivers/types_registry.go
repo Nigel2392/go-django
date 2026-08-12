@@ -46,7 +46,7 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 		return FieldType(fieldDefs.Primary())
 	}
 
-	return field.Type()
+	return fTyp
 }
 
 // DBType returns the database type of the field definition.

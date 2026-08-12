@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -55,6 +56,8 @@ func (d *Dependency) UnmarshalJSON(data []byte) error {
 }
 
 type MigrationFile struct {
+	fileName string `json:"-"` // migration's file name
+
 	// The name of the application for this migration.
 	//
 	// This is used to identify the application that the migration is for.
@@ -148,6 +151,9 @@ func (m *MigrationFile) addAction(actionType ActionType, table *Changed[*ModelTa
 }
 
 func (m *MigrationFile) FileName() string {
+	if m.fileName != "" {
+		return m.fileName
+	}
 	return generateMigrationFileName(m)
 }
 
@@ -377,6 +383,8 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 				action.Index.Old.table = n.mig.Table
 				action.Index.New.table = n.mig.Table
 				err = m.SchemaEditor.RenameIndex(ctx, n.mig.Table, action.Index.Old.Name(), action.Index.New.Name())
+			case ActionExecGoCode:
+				err = ExecMigrateFunc(ctx, m, n.mig.fileName, n.mig.Table)
 			// case ActionAlterUniqueTogether:
 			// 	err = m.SchemaEditor.AlterUniqueTogether(action.Table.New, action.Field.New.Unique)
 			// case ActionAlterIndexTogether:
@@ -387,7 +395,7 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 
 			if err != nil {
 				return errors.Wrapf(
-					err, "failed to apply migration %q", n.mig.Name,
+					err, "failed to apply migration %q", n.mig.FileName(),
 				)
 			}
 		}
@@ -1031,6 +1039,20 @@ func latestFromMap(m map[string]map[string][]*MigrationFile, appName, modelName 
 		return nil
 	}
 
+	var _latestTable *ModelTable
+	for i, mig := range modelMigrations {
+		if i == 0 {
+			_latestTable = mig.Table
+			continue
+		}
+
+		if mig.Table == nil {
+			mig.Table = _latestTable
+		} else {
+			_latestTable = mig.Table
+		}
+	}
+
 	return modelMigrations[len(modelMigrations)-1]
 }
 
@@ -1106,7 +1128,10 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 		apps = e.apps.Keys()
 	}
 
-	var migrations = make([]*MigrationFile, 0)
+	var (
+		migrations   = make([]*MigrationFile, 0)
+		lastTableMap = make(map[reflect.Type]*ModelTable)
+	)
 	for _, appName := range apps {
 		app, ok := e.apps.Get(appName)
 		if !ok || app == nil {
@@ -1141,7 +1166,9 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 			}
 
 			migrationFiles, err := e.readMigrationDirFS(
-				fSys, modelMigrationPath, appName, cType.Model(),
+				fSys, modelMigrationPath,
+				appName, cType.Model(),
+				reflect.TypeOf(model), lastTableMap,
 			)
 			if err != nil {
 				return nil, errors.Wrapf(
@@ -1219,7 +1246,9 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 
 			var filesDir = filepath.Join(workingPath, modelMigrationDir.Name())
 			migrationFiles, err := e.readMigrationDirFS(
-				mfs, filesDir, appMigrationDir.Name(), modelMigrationDir.Name(),
+				mfs, filesDir,
+				appMigrationDir.Name(), modelMigrationDir.Name(),
+				reflect.TypeOf(model), lastTableMap,
 			)
 			if err != nil {
 				return nil, errors.Wrapf(
@@ -1245,7 +1274,7 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 	return migrations, nil
 }
 
-func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelName string) ([]*MigrationFile, error) {
+func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelName string, typ reflect.Type, lastTableMap map[reflect.Type]*ModelTable) ([]*MigrationFile, error) {
 	dirPath = filepath.FromSlash(dirPath)
 	dirPath = filepath.ToSlash(dirPath)
 
@@ -1296,17 +1325,28 @@ func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelN
 			)
 		}
 
-		migrations = append(migrations, &MigrationFile{
-			Name:             name,
-			AppName:          appName,
-			ModelName:        modelName,
-			Order:            orderNum,
-			Table:            migrationFile.Table,
-			Actions:          migrationFile.Actions,
-			Dependencies:     migrationFile.Dependencies,
-			LazyDependencies: migrationFile.LazyDependencies,
-			ContentType:      contenttypes.NewContentType(migrationFile.Table.Object),
-		})
+		migrationFile.fileName = file.Name()
+		migrationFile.Name = name
+		migrationFile.AppName = appName
+		migrationFile.ModelName = modelName
+		migrationFile.Order = orderNum
+
+		switch {
+		case migrationFile.Table == nil:
+			migrationFile.Table = lastTableMap[typ]
+		case migrationFile.Table != nil && migrationFile.Table.Object != nil:
+			lastTableMap[typ] = migrationFile.Table
+		}
+
+		if migrationFile.Table == nil {
+			return nil, fmt.Errorf("Table is nil for migration %q", migrationFile.fileName)
+		}
+
+		migrationFile.ContentType = contenttypes.NewContentType(
+			migrationFile.Table.Object,
+		)
+
+		migrations = append(migrations, migrationFile)
 	}
 
 	return migrations, nil

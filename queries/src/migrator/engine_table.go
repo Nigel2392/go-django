@@ -263,7 +263,6 @@ func (t *ModelTable) UnmarshalJSON(data []byte) error {
 
 			var goType, ok = drivers.TypeFromString(col.GOType)
 			if !ok {
-
 				var dbType, ok = dbtype.NewFromString(col.DBType)
 				if !ok {
 					return fmt.Errorf("unknown db type %q for column %q", col.DBType, col.Name)
@@ -272,13 +271,23 @@ func (t *ModelTable) UnmarshalJSON(data []byte) error {
 				goType = drivers.DBToDefaultGoType(dbType)
 			}
 
-			var scanToVal = reflect.New(goType)
-			var scanTo = scanToVal.Interface()
-			if err := json.Unmarshal(col.Default, scanTo); err != nil {
-				return fmt.Errorf("could not unmarshal default value for column %q: %w (%s)", col.Name, err, col.Default)
+			var isPtr = goType.Kind() == reflect.Pointer
+			if isPtr {
+				goType = goType.Elem()
 			}
 
-			col.Column.Default = scanToVal.Elem().Interface()
+			var jsonData = col.Default
+			var scanToVal = reflect.New(goType)
+			var scanTo = scanToVal.Interface()
+			if err := json.Unmarshal(jsonData, scanTo); err != nil {
+				return fmt.Errorf("could not unmarshal default value for column %T %q: %w (%s)", scanTo, col.Name, err, string(jsonData))
+			}
+
+			if isPtr {
+				col.Column.Default = scanToVal.Interface()
+			} else {
+				col.Column.Default = scanToVal.Elem().Interface()
+			}
 		}
 
 		t.Fields.Set(col.Name, col.Column)
@@ -327,15 +336,15 @@ func (t *ModelTable) Indexes() []Index {
 	return t.Index
 }
 
-func (t *ModelTable) Diff(other *ModelTable) (added, removed []Column, diffs []Changed[Column]) {
-	if t == nil && other == nil {
+func (t *ModelTable) Diff(old *ModelTable) (added, removed []Column, diffs []Changed[Column]) {
+	if t == nil && old == nil {
 		return nil, nil, nil
 	}
-	if t == nil || other == nil {
+	if t == nil || old == nil {
 		return nil, nil, nil
 	}
 
-	for head := other.Fields.Front(); head != nil; head = head.Next() {
+	for head := old.Fields.Front(); head != nil; head = head.Next() {
 		var col = head.Value
 		if !col.UseInDB {
 			// really doesnt matter, continue
@@ -352,7 +361,7 @@ func (t *ModelTable) Diff(other *ModelTable) (added, removed []Column, diffs []C
 	for head := t.Fields.Front(); head != nil; head = head.Next() {
 
 		var col = head.Value
-		var otherCol, ok = other.Fields.Get(col.Name)
+		var oldCol, ok = old.Fields.Get(col.Name)
 
 		// only add columns that are used in db
 		if !ok && col.UseInDB {
@@ -366,9 +375,9 @@ func (t *ModelTable) Diff(other *ModelTable) (added, removed []Column, diffs []C
 			continue
 		}
 
-		if !col.Equals(&otherCol) {
+		if !col.Equals(&oldCol) {
 			diffs = append(diffs, Changed[Column]{
-				Old: otherCol,
+				Old: oldCol,
 				New: col,
 			})
 		}

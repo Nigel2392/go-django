@@ -2,7 +2,6 @@ package migrator
 
 import (
 	"context"
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -167,16 +166,9 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		}
 	}
 
-	if def, ok := dflt.(driver.Valuer); ok {
-		d, err := def.Value()
-		if err == nil {
-			dflt = d
-		}
-	}
-
-	if d, ok := dflt.([]byte); ok {
-		dflt = string(d)
-	}
+	//	if d, ok := dflt.([]byte); ok {
+	//		dflt = string(d)
+	//	}
 
 	var nullable = field.AllowNull()
 	nullable = nullable || (rel != nil && rel.TargetField != nil && rel.TargetField.AllowNull())
@@ -253,16 +245,16 @@ func (c *Column) FieldType() reflect.Type {
 	return drivers.FieldType(c.Field)
 }
 
-func jsonCompare(a, b interface{}) (bool, error) {
+func jsonCompare(newDefault, oldDefault interface{}) (bool, error) {
 
 	var (
 		aBytes, bBytes []byte
 		err            error
 	)
-	if aBytes, err = json.Marshal(a); err != nil {
+	if aBytes, err = json.Marshal(newDefault); err != nil {
 		return false, err
 	}
-	if bBytes, err = json.Marshal(b); err != nil {
+	if bBytes, err = json.Marshal(oldDefault); err != nil {
 		return false, err
 	}
 	var (
@@ -327,78 +319,89 @@ func (c *Column) HasDefault() bool {
 	return true
 }
 
-func (c *Column) Equals(other *Column) bool {
+func (c *Column) ChangeList(other *Column) []string {
 	if c == nil && other == nil {
-		return true
+		return []string{}
 	}
 	if (c == nil) != (other == nil) {
-		return false
+		return []string{"*"}
 	}
+
+	var l = make([]string, 0)
 	if c.Name != other.Name {
-		return false
+		l = append(l, "Name")
 	}
 	if c.Column != other.Column {
-		return false
+		l = append(l, "Column")
 	}
 	if c.MinLength != other.MinLength {
-		return false
+		l = append(l, "MinLength")
 	}
 	if c.MaxLength != other.MaxLength {
-		return false
+		l = append(l, "MaxLength")
 	}
 	if c.MinValue != other.MinValue {
-		return false
+		l = append(l, "MinValue")
 	}
 	if c.MaxValue != other.MaxValue {
-		return false
+		l = append(l, "MaxValue")
 	}
 	if c.Unique != other.Unique {
-		return false
+		l = append(l, "Unique")
 	}
 	if c.Nullable != other.Nullable {
-		return false
+		l = append(l, "Nullable")
 	}
 	if c.Primary != other.Primary {
-		return false
+		l = append(l, "Primary")
 	}
 	if c.Auto != other.Auto {
-		return false
+		l = append(l, "Auto")
 	}
 	if c.DBType() != other.DBType() {
-		return false
+		l = append(l, "DBType")
+	}
+
+	var _default = c.Default
+	if (_default == nil) != (other.Default == nil) {
+		l = append(l, "Default")
+		// skip json compare check
+		goto checkRevAlias
+	}
+
+	if _default == nil {
+		goto checkRevAlias
 	}
 
 	if equal, err := jsonCompare(c.Default, other.Default); err != nil {
 		if !EqualDefaultValue(c.Default, other.Default) {
-			return false
+			l = append(l, "Default")
 		}
 	} else if !equal {
-		return false
+		l = append(l, "Default")
 	}
 
-	//if !EqualDefaultValue(c.Default, other.Default) {
-	//	return false
-	//}
-
+checkRevAlias:
 	if c.ReverseAlias != other.ReverseAlias {
-		return false
+		l = append(l, "ReverseAlias")
 	}
 	if (c.Rel == nil) != (other.Rel == nil) {
-		return false
+		l = append(l, "Rel")
 	}
 	if c.Rel != nil {
-
 		var other = other.Rel
 		if c.Rel.Type != other.Type {
-			return false
+			l = append(l, "Rel:Type")
 		}
+
 		if (c.Rel.TargetModel == nil) != (other.TargetModel == nil) {
-			return false
+			l = append(l, "Rel:TargetModel")
+			return l
 		}
 
 		if c.Rel.TargetModel != nil {
 			if !c.Rel.TargetModel.Equals(other.TargetModel) {
-				return false
+				l = append(l, "Rel:TargetModel")
 			}
 			//if c.Rel.TargetModel.TypeName() != other.TargetModel.TypeName() {
 			//	return false
@@ -406,24 +409,25 @@ func (c *Column) Equals(other *Column) bool {
 		}
 
 		if (c.Rel.TargetField == nil) != (other.TargetField == nil) {
-			return false
+			l = append(l, "Rel:TargetField")
+			return l
 		}
 
 		if c.Rel.TargetField != nil {
 			if c.Rel.TargetField.Name() != other.TargetField.Name() {
-				return false
+				l = append(l, "Rel:TargetField:Name")
 			}
 
 			if c.Rel.TargetField.ColumnName() != other.TargetField.ColumnName() {
-				return false
+				l = append(l, "Rel:TargetField:ColumnName")
 			}
 
 			if c.Rel.TargetField.AllowNull() != other.TargetField.AllowNull() {
-				return false
+				l = append(l, "Rel:TargetField:AllowNull")
 			}
 
 			if c.Rel.TargetField.IsPrimary() != other.TargetField.IsPrimary() {
-				return false
+				l = append(l, "Rel:TargetField:IsPrimary")
 			}
 
 			var (
@@ -433,14 +437,19 @@ func (c *Column) Equals(other *Column) bool {
 
 			if ok1 && ok2 {
 				if c1.GetDefault() != c2.GetDefault() {
-					return false
+					l = append(l, "Rel:TargetField:GetDefault")
 				}
 			}
 
 			if c.Rel.TargetField.Type() != other.TargetField.Type() {
-				return false
+				l = append(l, "Rel:TargetField:Type")
 			}
 		}
 	}
-	return true
+
+	return l
+}
+
+func (c *Column) Equals(other *Column) bool {
+	return len(c.ChangeList(other)) == 0
 }

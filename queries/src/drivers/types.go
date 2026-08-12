@@ -450,7 +450,7 @@ func (t UUID) MarshalJSON() ([]byte, error) {
 	if t.IsZero() {
 		return json.Marshal(nil)
 	}
-	return json.Marshal(uuid.UUID(t).String())
+	return json.Marshal(uuid.UUID(t))
 }
 
 func (t *UUID) UnmarshalJSON(data []byte) error {
@@ -600,7 +600,7 @@ func (t timeType) MarshalJSON() ([]byte, error) {
 
 func (t *timeType) UnmarshalJSON(data []byte) error {
 	var _t time.Time
-	if err := _t.UnmarshalJSON(data); err != nil {
+	if err := json.Unmarshal(data, &_t); err != nil {
 		return errors.Wrap(err, "failed to unmarshal timeType")
 	}
 	*t = timeType(_t)
@@ -622,15 +622,8 @@ func (t *Timestamp) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t Timestamp) Value() (driver.Value, error) {
 	return t.Time(), nil
 }
-func (t Timestamp) MarshalJSON() ([]byte, error) { return (time.Time)(t).MarshalJSON() }
-func (t *Timestamp) UnmarshalJSON(data []byte) error {
-	var _t time.Time
-	if err := _t.UnmarshalJSON(data); err != nil {
-		return errors.Wrap(err, "failed to unmarshal Timestamp")
-	}
-	*t = Timestamp(_t)
-	return nil
-}
+func (t Timestamp) MarshalJSON() ([]byte, error)     { return (time.Time)(t).MarshalJSON() }
+func (t *Timestamp) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, (*time.Time)(t)) }
 
 func CurrentLocalTime() LocalTime {
 	return LocalTime(time.Now().Local().Truncate(time.Second))
@@ -650,14 +643,7 @@ func (t LocalTime) Value() (driver.Value, error) {
 func (t LocalTime) MarshalJSON() ([]byte, error) {
 	return (time.Time)(t).MarshalJSON()
 }
-func (t *LocalTime) UnmarshalJSON(data []byte) error {
-	var _t time.Time
-	if err := _t.UnmarshalJSON(data); err != nil {
-		return errors.Wrap(err, "failed to unmarshal LocalTime")
-	}
-	*t = LocalTime(_t)
-	return nil
-}
+func (t *LocalTime) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, (*time.Time)(t)) }
 
 func CurrentDateTime() DateTime {
 	return DateTime(time.Now().UTC().Truncate(time.Second))
@@ -677,14 +663,7 @@ func (t DateTime) Value() (driver.Value, error) {
 func (t DateTime) MarshalJSON() ([]byte, error) {
 	return (time.Time)(t).MarshalJSON()
 }
-func (t *DateTime) UnmarshalJSON(data []byte) error {
-	var _t time.Time
-	if err := _t.UnmarshalJSON(data); err != nil {
-		return errors.Wrap(err, "failed to unmarshal DateTime")
-	}
-	*t = DateTime(_t)
-	return nil
-}
+func (t *DateTime) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, (*time.Time)(t)) }
 
 func MustParseEmail(addr string) *Email {
 	a, err := mail.ParseAddress(addr)

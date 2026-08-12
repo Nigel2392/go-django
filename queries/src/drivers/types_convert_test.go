@@ -22,17 +22,17 @@ func TestRegisterGoType(t *testing.T) {
 		}
 	}()
 
-	// should panic with nil
-	drivers.RegisterGoType("nilType", nil)
-
 	// register a real type
 	typ := reflect.TypeOf(Dummy{})
 	drivers.RegisterGoType("Dummy", typ)
 
-	got, ok := drivers.TypeFromString("github.com/Nigel2392/go-django/queries/src/drivers_test.Dummy")
+	got, ok := drivers.TypeFromString("Dummy")
 	if !ok || got != typ {
 		t.Errorf("expected %v, got %v", typ, got)
 	}
+
+	// should panic with nil
+	drivers.RegisterGoType("nilType", nil)
 }
 
 func TestStringForType(t *testing.T) {
@@ -52,7 +52,7 @@ func TestStringForType(t *testing.T) {
 func TestTypeFromString(t *testing.T) {
 	dbtype.Lock() // required by internal guard
 	typ := reflect.TypeOf(decimal.Decimal{})
-	drivers.RegisterGoType(drivers.StringForType(typ), typ)
+	drivers.RegisterGoType(typ)
 
 	str := drivers.StringForType(typ)
 	got, ok := drivers.TypeFromString(str)

@@ -1,12 +1,16 @@
 package drivers
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
 	"sync"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-signals"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -28,20 +32,40 @@ var (
 // OR
 // for types which have been migrated to another package,
 // but the old type name is still used in migration files.
-func RegisterGoType(typeName string, typ any) {
-	var t reflect.Type
-	switch v := typ.(type) {
-	case reflect.Type:
-		t = v
-	default:
-		t = reflect.TypeOf(v)
+func RegisterGoType(typ any, typObj ...any) {
+	var (
+		tNm string
+		rT  reflect.Type
+	)
+
+	if len(typObj) > 1 {
+		panic("too many arguments")
 	}
 
-	if t == nil {
+	if len(typObj) > 0 {
+		s, ok := typ.(string)
+		if !ok {
+			panic("first argument must be a string if typObj variadic argument is provided.")
+		}
+
+		tNm = s
+		typ = typObj[0]
+	} else {
+		tNm = StringForType(typ)
+	}
+
+	switch v := typ.(type) {
+	case reflect.Type:
+		rT = v
+	default:
+		rT = reflect.TypeOf(v)
+	}
+
+	if rT == nil {
 		panic("cannot register nil type")
 	}
 
-	registeredTypeConversions[typeName] = t
+	registeredTypeConversions[tNm] = rT
 }
 
 func StringForType(i any) string {
@@ -136,6 +160,30 @@ func DBToDefaultGoType(dbType dbtype.Type) reflect.Type {
 
 	return reflect.TypeOf(scanTo).Elem()
 }
+
+var _, _ = attrs.PostResetDefinitions.Listen(func(s signals.Signal[any], a any) error {
+	definitions, err := attrs.IterModelMeta()
+	if err != nil {
+		return errors.Wrap(err, "drivers.PostResetDefinitions.Listen: failed to iterate ModelMeta")
+	}
+
+	for _, meta := range definitions {
+		var fields = attrs.Define(context.Background(), meta.Model()).Fields()
+		for _, field := range fields {
+
+			var typ = FieldType(field)
+			var defTyp = field.GetDefault()
+			if defTyp != nil && reflect.TypeOf(defTyp) != typ {
+				RegisterGoType(defTyp)
+			}
+			if typ != nil {
+				RegisterGoType(typ)
+			}
+		}
+	}
+
+	return nil
+})
 
 func registerTypeConversions() {
 	registerGoDBTypeConversions.Do(func() {
