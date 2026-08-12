@@ -84,8 +84,9 @@ func RegisterHandlerForObject(handler EntryHandler, contentType contenttypes.Con
 	registry.handlersCtyp[typ] = m
 }
 
-func RegisterDefinition(typ string, definition Definition) {
+func RegisterDefinition(typ string, definition Definition) Definition {
 	registry.definitions[typ] = definition
+	return definition
 }
 
 func Define(r *http.Request, l LogEntry) *BoundDefinition {

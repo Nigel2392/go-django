@@ -3,7 +3,7 @@ module github.com/Nigel2392/go-django/examples/chocolaterie
 go 1.26.3
 
 require (
-	github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
+	github.com/Nigel2392/mux v1.6.1
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/shopspring/decimal v1.4.0
 )

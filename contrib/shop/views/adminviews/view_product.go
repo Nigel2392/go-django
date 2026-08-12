@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/components"
+	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
@@ -37,7 +38,6 @@ import (
 var ViewProductList = generic.ListViewConfig[*models.Product]{
 	ListTitle: trans.S("Product List"),
 	Model:     &models.Product{},
-	PerPage:   50,
 	GetEditLink: func(r *http.Request, v *models.Product) string {
 		return django.Reverse("admin:shop:products:edit", v.ID)
 	},
@@ -68,27 +68,42 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 				)), nil
 			},
 		},
+		//	generic.FilterSpecAmount[*models.Product]("amount", AMOUNT_OPTIONS,
+		//		generic.OptFilterSpecApplyAmount(false),
+		//	),
 	},
 	GetHeaderActions: func(r *http.Request) []components.ShowableComponent {
+
+		var amount, _ = strconv.Atoi(r.URL.Query().Get("amount"))
+		if amount < 1 {
+			amount = 25
+		}
+
 		var actions = make([]components.ShowableComponent, 0)
+		actions = append(actions, generic.AmountHeaderAction(
+			r, amount, "admin:shop:products", nil,
+		))
+
 		actions = append(actions, components.LinkConfig{
-			Text: trans.S("Add new product"),
+			Text: trans.S("Add"),
+			Icon: icons.Icon("icon-plus", map[string]string{}),
 			Type: components.ClassTypeSecondary,
 			URL: func(ctx context.Context) string {
 				return django.Reverse("admin:shop:products:add")
 			},
 		})
+
 		return actions
 	},
 	GetColumns: func(r *http.Request) ([]list.ListColumn[*models.Product], error) {
 		var cols = []list.ListColumn[*models.Product]{
 			list.FieldColumn[*models.Product](
-				trans.S("Product ID"),
-				"ID",
-			),
-			list.FieldColumn[*models.Product](
 				trans.S("Title"),
 				"Title",
+			),
+			list.FieldColumn[*models.Product](
+				trans.S("Product ID"),
+				"ID",
 			),
 			list.FieldColumn[*models.Product](
 				trans.S("Skus"),
@@ -185,7 +200,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 		}
 
 		return shop.SIGNALS.Products.Created.Send(&signals.ProductSignalData{
-			BaseSignal: signals.BaseSignal{Context: r.Context()},
+			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
 			Product:    p,
 			Skus:       skus,
 		})
@@ -325,7 +340,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		}
 
 		return shop.SIGNALS.Products.Updated.Send(&signals.ProductSignalData{
-			BaseSignal: signals.BaseSignal{Context: r.Context()},
+			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
 			Product:    p,
 			Skus:       skus,
 		})

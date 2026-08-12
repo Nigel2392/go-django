@@ -6,7 +6,6 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/auth/users"
-	"github.com/Nigel2392/go-django/contrib/session"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -14,12 +13,14 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 )
 
-var _ queries.ActsBeforeCreate = (*Cart)(nil)
+var (
+	_ queries.ActsBeforeCreate = (*Cart)(nil)
+)
 
 type Cart struct {
 	ID        drivers.ULID
 	User      users.User
-	Session   *session.Session
+	Session   string
 	CartItems *queries.RelRevFK[*CartItem]
 	CreatedAt time.Time
 }
@@ -72,13 +73,12 @@ func (m *Cart) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Session", &m.Session, func() fattrs.PtrFieldConfig[*Cart, *session.Session] {
-			return fattrs.PtrFieldConfig[*Cart, *session.Session]{
+		fattrs.Field(m, "Session", &m.Session, func() fattrs.PtrFieldConfig[*Cart, string] {
+			return fattrs.PtrFieldConfig[*Cart, string]{
 				Config: attrs.FieldConfig{
-					Column:        "session_id",
-					ReadOnly:      true,
-					Null:          true,
-					RelForeignKey: attrs.Relate(&session.Session{}, "", nil),
+					Column:   "session_id",
+					ReadOnly: true,
+					Null:     true,
 				},
 			}
 		}),

@@ -11,6 +11,7 @@ import (
 )
 
 func TestDjester(t *testing.T) {
+
 	d := &djester.Tester{
 		Settings: map[string]any{},
 		Flags: []django.AppFlag{

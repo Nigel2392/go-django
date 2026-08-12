@@ -1,11 +1,9 @@
 package auditlogs
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
@@ -29,12 +27,12 @@ var (
 
 type EntryFilter interface {
 	Type() string
-	EntryFilter(message *Entry) bool
+	EntryFilter(message LogEntry) bool
 }
 
 type EntryHandler interface {
 	Type() string
-	Handle(w io.Writer, message *Entry) error
+	Handle(message DBCreateLogEntry) (DBCreateLogEntry, error)
 }
 
 type LogEntryAction interface {
@@ -68,7 +66,7 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 	}
 
 	var user = authentication.UserFromContext(ctx).(users.User)
-	var entry = models.Setup(ctx, &Entry{
+	var baseEntry = models.Setup(ctx, &Entry{
 		Typ:  drivers.String(entryType),
 		Lvl:  level,
 		Time: drivers.CurrentTimestamp(),
@@ -79,7 +77,6 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 	var (
 		filtersForTyp  []EntryFilter
 		handlersForTyp []EntryHandler
-		output         *bytes.Buffer = new(bytes.Buffer)
 		err            error
 		ok             bool
 	)
@@ -94,11 +91,11 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 			primary     = defs.Primary()
 		)
 
-		entry.Obj = forObject
-		entry.ObjID = drivers.JSON[any]{
+		baseEntry.Obj = forObject
+		baseEntry.ObjID = drivers.JSON[any]{
 			Data: primary.GetValue(),
 		}
-		entry.CType = contentType
+		baseEntry.CType = contentType
 
 		filtersForTyp, ok = filtersMap[pkgPath]
 		if !ok {
@@ -125,6 +122,7 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		handlersForTyp = append(handlersForTyp, handlers...)
 	}
 
+	var entry DBCreateLogEntry = baseEntry
 	if len(filtersForTyp) == 0 && len(handlersForTyp) == 0 {
 		err = fmt.Errorf(
 			"no filters or handlers registered for entry type %q",
@@ -143,7 +141,7 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 	}
 
 	for _, handler := range handlersForTyp {
-		if err := handler.Handle(output, entry); err != nil {
+		if entry, err = handler.Handle(entry); err != nil {
 			return uuid.Nil, err
 		}
 	}

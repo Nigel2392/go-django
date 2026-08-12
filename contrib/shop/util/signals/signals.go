@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-signals"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 var (
@@ -29,12 +30,21 @@ type BaseSignal struct {
 	Meta      map[string]any
 }
 
+type Signal[T any] = signals.Signal[T]
+
 func NewBaseSignal(ctx context.Context, r *http.Request, user users.User, meta map[string]any) BaseSignal {
 	var (
 		ipAddr = django.GetIP(r)
 		netIp  = net.ParseIP(ipAddr)
 		newM   = make(map[string]any)
 	)
+
+	if user == nil && r != nil {
+		u, ok := authentication.Retrieve(r).(users.User)
+		if ok {
+			user = u
+		}
+	}
 
 	maps.Copy(newM, meta)
 
@@ -71,9 +81,10 @@ type ProductSignalData struct {
 
 type OrderSignalData struct {
 	BaseSignal
-	Last    *models.Order
-	Current *models.Order
-	Reason  string
+	Last       *models.Order
+	Current    *models.Order
+	OrderItems []*models.OrderItem
+	Reason     string
 }
 
 type CartSignalData struct {

@@ -388,6 +388,7 @@ func OneToOneQuerySet[T attrs.Definer](backRef ThroughRelationValue) *RelOneToOn
 }
 
 func (r *RelOneToOneQuerySet[T]) Clear(ctx context.Context) (bool, error) {
+	r.qs = r.qs.WithContext(ctx)
 
 	var throughIdsResult, err = r.qs.
 		Select(r.qs.Meta().PrimaryKey().Name()).

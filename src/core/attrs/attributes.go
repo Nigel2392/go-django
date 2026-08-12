@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -139,7 +140,7 @@ func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, 
 	modelInstance = modelInstance.Elem() // models should ALWAYS be pointers.
 
 	if modelInstance.Kind() != reflect.Struct {
-		panic("expected struct type for *modelMeta.FastGet")
+		panic(fmt.Sprintf("expected struct type for *modelMeta.FastGet, got %s", modelInstance.Kind()))
 	}
 
 	m, ok := modelReg[t]
@@ -499,21 +500,75 @@ func Get[T any](ctx context.Context, d any, name string) T {
 		return *(new(T))
 	}
 
-	var f, ok = defs.Field(name)
-	if !ok {
-
-		var method, ok = Method[T](d, name)
-		if ok {
-			return method
+	var ok bool
+	var field Field
+	var path = strings.Split(name, ".")
+	for i := 0; i < len(path); i++ {
+		part := path[i]
+		field, ok = defs.Field(part)
+		if i == len(path)-1 {
+			break
 		}
 
-		assert.Fail(
-			"get (%T): no field named %q",
-			d, name,
-		)
+		// walk deeper into field chain
+		if ok {
+			var v = field.GetValue()
+
+			// allocate new value of field type
+			if v == nil {
+				typ := field.Type()
+				isPtr := false
+				if typ.Kind() == reflect.Pointer {
+					typ = typ.Elem()
+					isPtr = true
+				}
+
+				rV := reflect.New(typ)
+				if !isPtr {
+					rV = rV.Elem()
+				}
+
+				v = rV.Interface()
+			}
+
+			if d, ok := v.(Definer); ok {
+				defs = Define(ctx, d)
+			} else {
+				assert.Fail(
+					"get (%T): Definer type required to walk path %v, got %T",
+					d, name, v,
+				)
+			}
+			continue
+		}
+
+		if !ALLOW_METHOD_CHECKS {
+			assert.Fail(
+				"get (%T): no field or method named %q",
+				d, name,
+			)
+			break // assert should panic, semantic break
+		}
+
+		// Fallback to method handling
+		method, ok := Method[any](d, part)
+		if !ok {
+			assert.Fail(
+				"get (%T): no field or method named %q",
+				d, name,
+			)
+		}
+
+		if ok && i == len(path)-1 {
+			return method.(T)
+		}
+
+		if d, ok := any(method).(Definer); ok {
+			defs = Define(ctx, d)
+		}
 	}
 
-	var v = f.GetValue()
+	var v = field.GetValue()
 	switch t := v.(type) {
 	case T:
 		return t

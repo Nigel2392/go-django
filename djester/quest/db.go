@@ -1,5 +1,5 @@
-//go:build test
-// +build test
+//go:build test && mysql_local
+// +build test,mysql_local
 
 package quest
 

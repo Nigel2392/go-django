@@ -362,14 +362,13 @@ func (c *Column) ChangeList(other *Column) []string {
 		l = append(l, "DBType")
 	}
 
-	var _default = c.Default
-	if (_default == nil) != (other.Default == nil) {
+	if (c.HasDefault()) != (other.HasDefault()) {
 		l = append(l, "Default")
 		// skip json compare check
 		goto checkRevAlias
 	}
 
-	if _default == nil {
+	if c.Default == nil {
 		goto checkRevAlias
 	}
 
@@ -387,6 +386,7 @@ checkRevAlias:
 	}
 	if (c.Rel == nil) != (other.Rel == nil) {
 		l = append(l, "Rel")
+		return l
 	}
 	if c.Rel != nil {
 		var other = other.Rel

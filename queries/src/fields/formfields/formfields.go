@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -85,10 +86,12 @@ func init() {
 				}, true
 			case attrs.RelOneToOne:
 				return &OneToOneFormField{
-					BaseRelationField: BaseRelationField{
-						BaseField: django_formfields.NewField(opts...),
-						Field:     f,
-						Relation:  rel,
+					ForeignKeyFormField: ForeignKeyFormField{
+						BaseRelationField: BaseRelationField{
+							BaseField: django_formfields.NewField(opts...),
+							Field:     f,
+							Relation:  rel,
+						},
 					},
 				}, true
 			case attrs.RelOneToMany:
@@ -114,18 +117,18 @@ func (f *ForeignKeyFormField) HasChanged(initial, data interface{}) bool {
 		b, ok2 = data.(attrs.Definer)
 	)
 
-	if ok1 && ok2 {
+	if ok1 && ok2 && (!django_reflect.IsZero(a) && !django_reflect.IsZero(b)) {
 		var pkA = attrs.PrimaryKey(context.Background(), a)
 		var pkB = attrs.PrimaryKey(context.Background(), b)
 		return f.BaseField.HasChanged(pkA, pkB)
 	}
 
-	if ok1 && !ok2 {
+	if ok1 && !ok2 && !django_reflect.IsZero(a) {
 		var pkA = attrs.PrimaryKey(context.Background(), a)
 		return f.BaseField.HasChanged(pkA, data)
 	}
 
-	if !ok1 && ok2 {
+	if !ok1 && ok2 && !django_reflect.IsZero(b) {
 		var pkB = attrs.PrimaryKey(context.Background(), b)
 		return f.BaseField.HasChanged(initial, pkB)
 	}
@@ -195,21 +198,30 @@ func (f *ForeignKeyFormField) Widget() widgets.Widget {
 	return f.BaseField.FormWidget
 }
 
-var _ modelforms.ModelFieldSaver = (*ManyToManyFormField)(nil)
+var _ modelforms.AfterModelFieldSaver = (*ManyToManyFormField)(nil)
 
 type ManyToManyFormField struct {
 	BaseRelationField
 }
 
-func (o *ManyToManyFormField) SaveField(ctx context.Context, field attrs.Field, value interface{}) error {
+func (o *ManyToManyFormField) SaveField(ctx context.Context, field attrs.Field, value interface{}, model attrs.Definer) error {
 	if o.Relation == nil {
 		return errors.ValueError.Wrap("relation is nil")
 	}
 
+	var defs = attrs.Define(ctx, model)
+	var fld, ok = defs.Field(o.Field.Name())
+	if !ok {
+		return errors.FieldNotFound.Wrapf(
+			"Field %q not found in model %T",
+			o.Field.Name(), model,
+		)
+	}
+
 	var backRef = queries.RelM2M[attrs.Definer, attrs.Definer]{
 		Parent: &queries.ParentInfo{
-			Object: o.Field.Instance(),
-			Field:  o.Field.(attrs.Field),
+			Object: model,
+			Field:  fld,
 		},
 	}
 
@@ -225,7 +237,7 @@ func (o *ManyToManyFormField) SaveField(ctx context.Context, field attrs.Field, 
 		return nil
 	}
 
-	var objects, ok = value.([]attrs.Definer)
+	objects, ok := value.([]attrs.Definer)
 	if !ok {
 		return errors.TypeMismatch.Wrapf(
 			"Value %v (%T) is not a []attrs.Definer",
@@ -259,5 +271,53 @@ func (o *ManyToManyFormField) Widget() widgets.Widget {
 }
 
 type OneToOneFormField struct {
-	BaseRelationField
+	ForeignKeyFormField
+}
+
+func (o *OneToOneFormField) SaveField(ctx context.Context, field attrs.Field, value interface{}, model attrs.Definer) error {
+	if o.Relation == nil {
+		return errors.ValueError.Wrap("relation is nil")
+	}
+
+	var defs = attrs.Define(ctx, model)
+	var fld, ok = defs.Field(o.Field.Name())
+	if !ok {
+		return errors.FieldNotFound.Wrapf(
+			"Field %q not found in model %T",
+			o.Field.Name(), model,
+		)
+	}
+
+	var backRef = queries.RelO2O[attrs.Definer, attrs.Definer]{
+		Parent: &queries.ParentInfo{
+			Object: model,
+			Field:  fld,
+		},
+	}
+
+	if value == nil {
+		var _, err = backRef.Objects().Clear(ctx)
+
+		if err != nil && !errors.Is(err, errors.NoChanges) {
+			return errors.Wrapf(err, "failed to clear targets for %s", o.Field.Name())
+		}
+
+		return nil
+	}
+
+	objects, ok := value.(attrs.Definer)
+	if !ok {
+		return errors.TypeMismatch.Wrapf(
+			"Value %v (%T) is not a []attrs.Definer",
+			value, value,
+		)
+	}
+
+	var _, _, err = backRef.Objects().
+		WithContext(ctx).
+		SetTarget(objects)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set targets for %s", o.Field.Name())
+	}
+	return nil
 }

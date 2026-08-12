@@ -1,23 +1,31 @@
 package shop
 
 import (
+	"context"
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/contrib/admin/icons"
+	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
+	"github.com/Nigel2392/go-django/contrib/shop/internal/logging"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux"
 )
@@ -70,6 +78,10 @@ func NewAppConfig() (django.AppConfig, error) {
 		),
 	))
 
+	icons.Register(staticFS,
+		"shop/admin/icons/funnel.svg",
+	)
+
 	SHOP.ModelObjects = []attrs.Definer{
 		// Cart
 		&models.CartItem{},
@@ -86,6 +98,15 @@ func NewAppConfig() (django.AppConfig, error) {
 		&models.ProductSku{},
 		&models.Product{},
 	}
+
+	migrator.RegisterMigrateFunc(&models.Product{}, "0003_exec_test.mig", func(ctx context.Context, me *migrator.MigrationEngine, mt *migrator.ModelTable) error {
+		var _, err = queries.GetQuerySet(&models.Product{}).Select("*").All()
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("Enough testing now.")
+	})
 
 	SHOP.TemplateConfig = tpl.MergeConfig(
 		&tpl.Config{
@@ -124,6 +145,15 @@ func NewAppConfig() (django.AppConfig, error) {
 					return django.Reverse("admin:shop:products")
 				},
 			},
+			&menu.Item{
+				BaseItem: menu.BaseItem{
+					ItemName: "orders",
+					Label:    trans.T(r.Context(), "Orders"),
+				},
+				Link: func() string {
+					return django.Reverse("admin:shop:orders")
+				},
+			},
 		}
 	}
 
@@ -136,6 +166,9 @@ func NewAppConfig() (django.AppConfig, error) {
 		products.Get("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct), "edit")
 		products.Post("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct))
 
+		orders := m.Get("orders/", NewHandler(adminviews.ViewOrderList.ServeHTTP), "orders")
+		orders.Get("edit/<<order_id>>/", NewHandler(adminviews.ViewEditOrder), "edit")
+		orders.Post("edit/<<order_id>>/", NewHandler(adminviews.ViewEditOrder))
 	}
 
 	SHOP.Init = func(settings django.Settings, db drivers.Database) error {
@@ -146,6 +179,25 @@ func NewAppConfig() (django.AppConfig, error) {
 		// /mostly/ handled in DB
 		return models.Products().SyncProducts()
 	}
+
+	auditlogs.RegisterDefinition("shop:product:add", logging.NewShopLogDefinition())
+	auditlogs.RegisterDefinition("shop:product:edit", logging.NewShopLogDefinition())
+
+	SHOP.SIGNALS.Products.Created.Listen(func(s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
+		_, err := auditlogs.Log(psd.Context, "shop:product:add", logger.INF, psd.Product, map[string]any{
+			"title":    psd.Product.Title,
+			"skuCount": len(psd.Skus),
+		})
+		return err
+	})
+
+	SHOP.SIGNALS.Products.Updated.Listen(func(s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
+		_, err := auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product, map[string]any{
+			"title":    psd.Product.Title,
+			"skuCount": len(psd.Skus),
+		})
+		return err
+	})
 
 	return SHOP, nil
 }

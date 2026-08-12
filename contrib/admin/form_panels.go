@@ -988,7 +988,7 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 				return forms[0]
 			},
 			DefaultForms: func(ctx context.Context, max, min int) ([]modelforms.ModelForm[TARGET], error) {
-				var _, targetList, err = getRelatedList[TARGET](r, ctx, instance, m.FieldName)
+				var _, targetList, err = getRelatedList[TARGET](ctx, instance, m.FieldName)
 				if err != nil {
 					return nil, err
 				}
@@ -1011,7 +1011,7 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 	return f
 }
 
-func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, source attrs.Definer, fieldName string) (attrs.Field, []TARGET, error) {
+func getRelatedList[TARGET attrs.Definer](ctx context.Context, source attrs.Definer, fieldName string) (attrs.Field, []TARGET, error) {
 	var defs = attrs.Define(ctx, source)
 	field, ok := defs.Field(fieldName)
 	if !ok {
@@ -1021,13 +1021,25 @@ func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, 
 	}
 
 	var rel = field.Rel()
-
+	var relType = rel.Type()
 	if attrs.IsZero(attrs.PrimaryKey(ctx, source)) {
 		goto createDefaultList
 	}
 
-	if rel.Type() == attrs.RelOneToMany {
+	switch {
+	case relType == attrs.RelManyToOne,
+		relType == attrs.RelOneToOne &&
+			rel.Field().IsPrimary() &&
+			rel.Through() == nil:
 
+		var v = field.GetValue()
+		if v != nil {
+			var list = make([]TARGET, 1)
+			list[0] = v.(TARGET)
+			return field, list, nil
+		}
+
+	case relType == attrs.RelOneToMany:
 		var qs = queries.OneToManyQuerySet[TARGET](&queries.RelRevFK[attrs.Definer]{
 			Parent: &queries.ParentInfo{
 				Object: source,
@@ -1103,14 +1115,14 @@ func (m *ModelFormPanel[TARGET, FORM]) validate(rel attrs.Relation, base int, li
 
 	switch rel.Type() {
 	case attrs.RelManyToOne, attrs.RelOneToOne:
-		if m.MinNum > 1 {
+		if m.MinNum > 1 || m.MinNum < 0 {
 			m.MinNum = 1
-			logger.Warnf("ModelFormPanel.Bind: MinNum > 1 for ManyToOne or OneToOne relation; setting MinNum to 1")
+			logger.Warnf("ModelFormPanel.Bind: m.MinNum > 1 || m.MinNum < 0 for ManyToOne or OneToOne relation; setting MinNum to 1")
 		}
 
-		if m.MaxNum > 1 {
+		if m.MaxNum > 1 || m.MaxNum < 0 {
 			m.MaxNum = 1
-			logger.Warnf("ModelFormPanel.Bind: MaxNum > 1 for ManyToOne or OneToOne relation; setting MaxNum to 1")
+			logger.Warnf("ModelFormPanel.Bind: m.MaxNum > 1 || m.MaxNum < 0 for ManyToOne or OneToOne relation; setting MaxNum to 1")
 		}
 
 		if m.Extra > 1 {
@@ -1134,7 +1146,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		m.MaxNum = 100
 	}
 
-	var field, targetList, err = getRelatedList[TARGET](r, ctx, instance, m.FieldName)
+	var field, targetList, err = getRelatedList[TARGET](ctx, instance, m.FieldName)
 	if err != nil {
 		except.Fail(
 			http.StatusInternalServerError,

@@ -745,3 +745,71 @@ func TestMethod(t *testing.T) {
 		})
 	})
 }
+
+type TestModel1 struct {
+	Model *TestModel2
+}
+
+func (f *TestModel1) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
+		attrs.NewField(f, "Model", nil),
+	)
+}
+
+type TestModel2 struct {
+	NextModel *TestModel3
+}
+
+func (f *TestModel2) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
+		attrs.NewField(f, "NextModel", nil),
+	)
+}
+
+type TestModel3 struct {
+	FinalModel *TestEmbeddedModelFields
+}
+
+func (f *TestModel3) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
+		attrs.NewField(f, "FinalModel", nil),
+	)
+}
+
+func TestEmbeddedGet(t *testing.T) {
+	var (
+		TM = &TestModel1{
+			Model: &TestModel2{
+				NextModel: &TestModel3{
+					FinalModel: &TestEmbeddedModelFields{
+						ID:   1,
+						Name: "Embedded Name 1",
+						Test: &TestModelFields{
+							ID:   1,
+							Name: "Deeply Embedded 1",
+						},
+					},
+				},
+			},
+		}
+	)
+
+	t.Run("TestGetNestLevel-1", func(t *testing.T) {
+		var v = attrs.Get[*TestModel2](t.Context(), TM, "Model")
+		if v != TM.Model {
+			t.Fatalf("Expected value to be %T (TM.Model), %v != %v", &TestModel2{}, v, TM.Model)
+		}
+	})
+	t.Run("TestGetNestLevel-2", func(t *testing.T) {
+		var v = attrs.Get[*TestModel3](t.Context(), TM, "Model.NextModel")
+		if v != TM.Model.NextModel {
+			t.Fatalf("Expected value to be %T (TM.Model.NextModel), %v != %v", &TestModel3{}, v, TM.Model.NextModel)
+		}
+	})
+	t.Run("TestGetNestLevel-3", func(t *testing.T) {
+		var v = attrs.Get[*TestEmbeddedModelFields](t.Context(), TM, "Model.NextModel.FinalModel")
+		if v != TM.Model.NextModel.FinalModel {
+			t.Fatalf("Expected value to be %T (TM.Model.NextModel.FinalModel), %v != %v", &TestEmbeddedModelFields{}, v, TM.Model.NextModel.FinalModel)
+		}
+	})
+}

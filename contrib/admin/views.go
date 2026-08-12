@@ -249,6 +249,8 @@ continueView:
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: BASE_KEY,
 		TemplateName:    "admin/views/models/list.tmpl",
+		AmountParam:     "amount",
+		PageParam:       "page",
 		Mixins: func(r *http.Request, v *list.View[attrs.Definer]) []views.View {
 			if !permissions.HasObjectPermission(r, model.NewInstance(), "admin:export") {
 				return nil

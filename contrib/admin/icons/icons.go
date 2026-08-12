@@ -74,7 +74,7 @@ func (i *icon) HTML() template.HTML {
 
 func Component(name string) func(c context.Context, w io.Writer) error {
 	var icon, ok = registry.icons.Get(name)
-	assert.True(ok, "icons: %s is not a registered icon", name)
+	assert.True(ok, "icons: %s is not a registered icon in %v", name, registry.icons.Keys())
 
 	return func(c context.Context, w io.Writer) error {
 		_, err := w.Write([]byte(icon.HTML()))

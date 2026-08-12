@@ -471,7 +471,16 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 	)
 
 	if !rV.IsValid() || rT == nil {
-		rV = reflect.New(e._Type).Elem()
+		var typ = e._Type
+		var isPtr bool
+		if typ.Kind() == reflect.Pointer {
+			typ = typ.Elem()
+			isPtr = true
+		}
+		rV = reflect.New(typ)
+		if !isPtr {
+			rV = rV.Elem()
+		}
 		rT = rV.Type()
 	}
 
@@ -594,7 +603,7 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 		return nil
 	}
 
-	return fmt.Errorf("value %v (%T) is not of type %s", v, v, typeName(e._Type))
+	return fmt.Errorf("value %v (%T) is not of type %s", v, v, e._Type)
 }
 
 func (e *DataModelField[T]) Value() (driver.Value, error) {

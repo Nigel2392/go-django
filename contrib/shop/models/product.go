@@ -243,6 +243,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					MinLength: 2,
 					MaxLength: 75,
+					Blank:     false,
 				},
 			}
 		}),

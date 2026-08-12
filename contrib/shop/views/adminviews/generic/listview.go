@@ -22,7 +22,6 @@ import (
 
 type ListViewConfig[T attrs.Definer] struct {
 	Model              T
-	PerPage            int
 	UsePanelFilters    bool
 	ListTitle          func(context.Context) string
 	ListSubtitle       func(context.Context) string
@@ -114,11 +113,6 @@ func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, sho
 		)
 	}
 
-	var amount = l.PerPage
-	if amount == 0 {
-		amount = 25
-	}
-
 	var qs *queries.QuerySet[T]
 	if l.GetQuerySet != nil {
 		qs = l.GetQuerySet(r)
@@ -148,7 +142,10 @@ func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, sho
 
 	var view = &list.View[T]{
 		ListColumns:     cols,
-		DefaultAmount:   int(amount),
+		AmountParam:     "amount",
+		PageParam:       "page",
+		DefaultAmount:   AMOUNT_OPTIONS[0],
+		MaxAmount:       AMOUNT_OPTIONS[len(AMOUNT_OPTIONS)-1],
 		Model:           l.Model,
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "shop",

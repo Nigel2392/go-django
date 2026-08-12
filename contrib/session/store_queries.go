@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -31,19 +32,31 @@ type Session struct {
 
 func (s *Session) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, s,
-		attrs.Unbound("Token", &attrs.FieldConfig{
-			Primary:   true,
-			Null:      false,
-			Column:    "token",
-			MaxLength: 43,
+		fattrs.Field(s, "Token", &s.Token, func() fattrs.PtrFieldConfig[*Session, drivers.Char] {
+			return fattrs.PtrFieldConfig[*Session, drivers.Char]{
+				Config: attrs.FieldConfig{
+					Primary:   true,
+					Null:      false,
+					Column:    "token",
+					MaxLength: 43,
+				},
+			}
 		}),
-		attrs.Unbound("Data", &attrs.FieldConfig{
-			Null:   false,
-			Column: "data",
+		fattrs.Field(s, "Data", &s.Data, func() fattrs.PtrFieldConfig[*Session, drivers.Bytes] {
+			return fattrs.PtrFieldConfig[*Session, drivers.Bytes]{
+				Config: attrs.FieldConfig{
+					Null:   false,
+					Column: "data",
+				},
+			}
 		}),
-		attrs.Unbound("Expiry", &attrs.FieldConfig{
-			Null:   false,
-			Column: "expiry",
+		fattrs.Field(s, "Expiry", &s.Expiry, func() fattrs.PtrFieldConfig[*Session, int64] {
+			return fattrs.PtrFieldConfig[*Session, int64]{
+				Config: attrs.FieldConfig{
+					Null:   false,
+					Column: "expiry",
+				},
+			}
 		}),
 	).WithTableName("sessions")
 }

@@ -371,23 +371,23 @@ func (m *SQLiteSchemaEditor) AlterField(
 		if c.Name == oldCol.Name {
 			newTable.Fields.Set(newCol.Name, newCol)
 			columnNamesDst = append(columnNamesDst, fmt.Sprintf("`%s`", newCol.Column))
-			if oldCol.Nullable {
-				columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("NULL AS `%s`", oldCol.Column))
-			} else {
-				switch oldCol.Field.Type().Kind() {
+
+			if oldCol.Nullable && !newCol.Nullable {
+				// Apply default only if existing data is NULL
+				switch newCol.Field.Type().Kind() {
 				case reflect.String:
-					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("'' AS `%s`", oldCol.Column))
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("0 AS `%s`", oldCol.Column))
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("0 AS `%s`", oldCol.Column))
+					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("COALESCE(`%s`, '') AS `%s`", oldCol.Column, oldCol.Column))
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+					reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+					reflect.Bool:
+					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("COALESCE(`%s`, 0) AS `%s`", oldCol.Column, oldCol.Column))
 				case reflect.Float32, reflect.Float64:
-					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("0.0 AS `%s`", oldCol.Column))
-				case reflect.Bool:
-					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("0 AS `%s`", oldCol.Column))
+					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("COALESCE(`%s`, 0.0) AS `%s`", oldCol.Column, oldCol.Column))
 				default:
-					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("NULL AS `%s`", oldCol.Column))
+					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("`%s`", oldCol.Column))
 				}
+			} else {
+				columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("`%s`", oldCol.Column))
 			}
 		} else {
 			newTable.Fields.Set(c.Name, *c)

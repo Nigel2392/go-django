@@ -11,52 +11,75 @@
                 {{ component "admin.header" 1 $Title $Subtitle }}
             {{ end }}
         </div>
-        {{ $components := $Page.GetHeaderComponents }}
-        {{ if $components }}
-            <div class="shop__header__components">
-                {{ range $component := $components }}
-                    {{ templ $component }}
-                {{ end }}
 
-                {{ block "filter_form" . }}
-                    <form method="get" action="{{ .Request.URL.Path }}" class="form filter-form">
+        <div class="shop__header__components__wrap">
 
-                        {{ $hasAmountQuery := (not (not (.Request.URL.Query.Get (.Data.view_amount_param)))) }}
-                        <input type="hidden" name={{ .Data.view_page_param }} value="{{ (.Data.view_paginator_object).PageNum }}">
-                        {{ if $hasAmountQuery }}
-                            <input type="hidden" name="{{ .Data.view_amount_param }}" value="{{ call .Request.URL.Query.Get (.Data.view_amount_param) }}">
-                        {{ end }}
+            {{ $components := $Page.GetHeaderComponents }}
+            {{ if $components }}
+                <div class="shop__header__components">
+                    {{ range $component := $components }}
+                        {{ templ $component }}
+                    {{ end }}
 
-                        
-                        {{ range $Field := .Data.filter_form.Fields }}        
-                            <div class="form-field">
-                                {{ $Field.Field }}
-                            </div>
-                        {{ end }}
-                        
-                        <div class="buttons">
-                            <input class="button secondary hollow" type="submit" value="{{ T "Submit" }}">
-                            {{ if .Request.URL.RawQuery }}
-                                {{ $extra := "" }}
-                                {{ if $hasAmountQuery }}
-                                    {{ $extra = printf "&%s=%s" .Data.view_amount_param (call .Request.URL.Query.Get .Data.view_amount_param) }}
-                                {{ end }}
-                                <a href="{{ (printf "%s?%s=%d%s" .Request.URL.Path .Data.view_page_param (.Data.view_paginator_object).PageNum $extra) | safe }}" class="button danger hollow sm">{{ T "Clear all" }}</a>
+                </div>
+            {{ end }}
+
+            {{ block "filter_form" . }}
+                {{ if .Data.filter_form }}
+                    <div class="shop__header__components__form">
+                        <form method="get" action="{{ .Request.URL.Path }}" class="form filter-form">
+                            
+                            {{ $hasAmountQuery := (not (not (.Request.URL.Query.Get .Data.view_amount_param))) }}
+                            <input type="hidden" name={{ .Data.view_page_param }} value="{{ (.Data.view_paginator_object).PageNum }}">
+                            {{ if $hasAmountQuery }}
+                                <input type="hidden" name="{{ .Data.view_amount_param }}" value="{{ .Request.URL.Query.Get .Data.view_amount_param }}">
                             {{ end }}
-                        </div>
-                    </form>
-                {{ end }}
-            </div>
+                        
+                            <div class="buttons">
+                                <button class="button secondary hollow" type="submit" data-controller="tooltip" data-tooltip-content-value="{{ T "Filter Results" }}" data-tooltip-placement-value="bottom">
+                                    {{ icon "icon-funnel" }}
+                                </button>
+                                {{ if .Request.URL.RawQuery }}
+                                    {{ $extra := "" }}
+                                    {{ if $hasAmountQuery }}
+                                        {{ $extra = printf "&%s=%s" .Data.view_amount_param (.Request.URL.Query.Get .Data.view_amount_param) }}
+                                    {{ end }}
+                                    <a
+                                        href="{{ (printf "%s?%s=%d%s" .Request.URL.Path .Data.view_page_param (.Data.view_paginator_object).PageNum $extra) | safe }}"
+                                        class="button danger hollow sm"
+                                        data-controller="tooltip"
+                                        data-tooltip-content-value="{{ T "Clear Filters" }}"
+                                        data-tooltip-placement-value="bottom">
 
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+                                        </svg>
+                                    </a>
+                                {{ end }}
+                            </div>
+                        
+                            {{ range $Field := .Data.filter_form.Fields }}        
+                                <div class="form-field">
+                                    {{ $Field.Field }}
+                                </div>
+                            {{ end }}
+                            
+                        </form>
+                    </div>
+                {{ end }}
+            {{ end }}
+        </div>
+        
+        {{ if .Data.filter_form }}
             {{ $errorList := .Data.filter_form.ErrorList }}
-            {{ if (gt (len $errorList) 0) }}
+            {{ if (gt (len .Data.filter_form.ErrorList) 0) }}
                 <ul class="error-list">
                     {{ range $Error := $errorList }}
                         <li class="error"><p>{{ $Error }}</p></li>
                     {{ end }}
                 </ul>
             {{ end }}
-
         {{ end }}
+
     {{ end }}
 {{ end }}

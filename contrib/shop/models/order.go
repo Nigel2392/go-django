@@ -27,6 +27,26 @@ func (m *Order) BeforeCreate(ctx context.Context) error {
 func (m *Order) EditPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
 		admin.FieldPanel("ID"),
+		&admin.ModelFormPanel[*Payment, modelforms.ModelForm[*Payment]]{
+			TargetType:     &Payment{},
+			FieldName:      "Payment",
+			Classname:      "collapsible",
+			MinNum:         1,
+			DisallowAdd:    true,
+			DisallowRemove: true,
+			Panels: []admin.Panel{
+				admin.FieldPanel("Amount"),
+				// admin.FieldPanel("Provider"),
+				admin.FieldPanel("State"),
+				admin.FieldPanel("CreatedAt"),
+				admin.FieldPanel("UpdatedAt"),
+				//	Amount
+				//	Provider
+				//	State
+				//	CreatedAt
+				//	UpdatedAt
+			},
+		},
 		&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
 			TargetType: &OrderItem{},
 			FieldName:  "OrderItems",

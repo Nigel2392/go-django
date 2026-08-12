@@ -31,6 +31,11 @@ type LogEntry interface {
 	Data() map[string]interface{}
 }
 
+type DBCreateLogEntry interface {
+	LogEntry
+	Create(context.Context) error
+}
+
 type Entry struct {
 	models.Model
 	Id    drivers.UUID                         `db:"id" json:"id"`

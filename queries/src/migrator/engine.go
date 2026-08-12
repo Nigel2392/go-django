@@ -316,17 +316,8 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 	ctx = ContextWithDb(ctx, transaction)
 
 	for _, n := range graph {
-
 		if n.mig.migrated {
 			logger.Debugf("migration %s:%s:%s has already been applied, skipping", n.mig.AppName, n.mig.ModelName, n.mig.FileName())
-			continue
-		}
-
-		if has, err := m.SchemaEditor.HasMigration(ctx, n.mig.AppName, n.mig.ModelName, n.mig.FileName()); err != nil {
-			logger.Errorf("failed to check if migration %q has been applied: %v", n.mig.FileName(), err)
-			continue
-		} else if has {
-			logger.Infof("migration %s has already been applied", n.mig.FileName())
 			continue
 		}
 
@@ -1024,7 +1015,7 @@ func (m *MigrationEngine) storeMigration(mig *MigrationFile) {
 	m.storeDependency(mig)
 }
 
-func latestFromMap(m map[string]map[string][]*MigrationFile, appName, modelName string) *MigrationFile {
+func latestFromMap(m map[string]map[string][]*MigrationFile, appName, modelName string) (file *MigrationFile) {
 	if m == nil {
 		return nil
 	}
@@ -1039,17 +1030,28 @@ func latestFromMap(m map[string]map[string][]*MigrationFile, appName, modelName 
 		return nil
 	}
 
-	var _latestTable *ModelTable
-	for i, mig := range modelMigrations {
-		if i == 0 {
-			_latestTable = mig.Table
-			continue
-		}
+	var (
+		firstTableIndex int
+		_firstTable     *ModelTable
+		_latestTable    *ModelTable
+	)
 
+	for i, mig := range modelMigrations {
 		if mig.Table == nil {
 			mig.Table = _latestTable
 		} else {
 			_latestTable = mig.Table
+		}
+
+		if _firstTable == nil && _latestTable != nil {
+			firstTableIndex = i
+			_firstTable = _latestTable
+		}
+	}
+
+	if firstTableIndex != 0 && firstTableIndex < len(modelMigrations) {
+		for i := firstTableIndex; i >= 0; i-- {
+			modelMigrations[i].Table = _firstTable
 		}
 	}
 

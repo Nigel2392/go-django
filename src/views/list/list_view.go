@@ -91,6 +91,7 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 	if orderParam == "" {
 		orderParam = "order"
 	}
+
 	orderValues := r.URL.Query()[orderParam]
 	if len(orderValues) > 0 {
 		var validOrders []string

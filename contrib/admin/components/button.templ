@@ -16,7 +16,12 @@ templ Button(config ButtonConfig) {
         if config.Icon != nil {
             @config.Icon
         }
-        if config.Text != nil {
+        switch {
+        case config.Text != nil && config.Icon != nil:
+            <span class="text">
+                { config.Text(ctx) }
+            </span>
+        case config.Text != nil:
             { config.Text(ctx) }
         }
     </button>
@@ -57,10 +62,17 @@ templ renderLinkConfig(config LinkConfig) {
 		templ.KV("info", config.Type & ClassTypeInfo != 0),
 		templ.KV("hollow", config.Type & ClassTypeHollow != 0),
 	}>
-		if config.Icon != nil {
-			@config.Icon
-		}
-        if config.Text != nil {
+
+	    if config.Icon != nil {
+	    	@config.Icon
+	    }
+    
+        switch {
+        case config.Text != nil && config.Icon != nil:
+            <span class="text">
+                { config.Text(ctx) }
+            </span>
+        case config.Text != nil:
             { config.Text(ctx) }
         }
 	</a>

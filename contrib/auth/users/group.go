@@ -16,7 +16,7 @@ type Group struct {
 	Name         string                                         `json:"name"`
 	Description  string                                         `json:"description"`
 	Permissions  *queries.RelM2M[*Permission, *GroupPermission] `json:"-"`
-	UserGroups   *queries.RelM2M[attrs.Definer, attrs.Definer]  `json:"-"`
+	UserGroups   *queries.RelM2M[User, *UserGroup]              `json:"-"`
 }
 
 func (g *Group) String() string {
@@ -55,6 +55,26 @@ func (g *Group) FieldDefs(ctx context.Context) attrs.Definitions {
 						This:   &GroupPermission{},
 						Source: "GroupID",
 						Target: "PermissionID",
+					},
+				),
+			},
+		),
+		fields.NewManyToManyField[*queries.RelM2M[User, *UserGroup]](
+			g, "UserGroups", &fields.FieldConfig{
+				DataModelFieldConfig: fields.DataModelFieldConfig{
+					Label:    trans.S("Users"),
+					HelpText: trans.S("The users this permission is assigned to."),
+				},
+				ScanTo:            &g.UserGroups,
+				IsReverse:         true,
+				NoReverseRelation: true,
+				Rel: attrs.RelatedDeferred(
+					attrs.RelManyToOne,
+					MODEL_KEY,
+					"", &attrs.ThroughModel{
+						This:   &UserGroup{},
+						Source: "GroupID",
+						Target: "UserID",
 					},
 				),
 			},

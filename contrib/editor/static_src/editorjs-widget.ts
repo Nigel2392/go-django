@@ -76,8 +76,8 @@ class EditorJSWidget {
     
                 this.editor.save().then((outputData) => {
                     this.element.value = JSON.stringify(outputData);
-                    savedForm = true;
                     (e.target as any).click();
+                    savedForm = true;
                 }).catch((reason) => {
                     alert(`Failed to save EditorJS data: ${reason}`);
                 });

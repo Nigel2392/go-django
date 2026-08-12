@@ -36,6 +36,10 @@ type ModelFieldSaver interface {
 	SaveField(ctx context.Context, field attrs.Field, value interface{}) error
 }
 
+type AfterModelFieldSaver interface {
+	SaveField(ctx context.Context, field attrs.Field, value interface{}, model attrs.Definer) error
+}
+
 type modelFormFlag int
 
 const (
@@ -356,10 +360,10 @@ func (f *BaseModelForm[T]) SaveFields(ctx context.Context, cleaned map[string]an
 		var field, ok = f.Definition.Field(fieldname)
 		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
 
-		if !field.AllowEdit() {
-			cleaned[fieldname] = f.BaseForm.Initial[fieldname]
-			continue
-		}
+		//	if !field.AllowEdit() {
+		//		cleaned[fieldname] = f.BaseForm.Initial[fieldname]
+		//		continue
+		//	}
 
 		value, ok := cleaned[fieldname]
 		if !ok {
@@ -395,9 +399,11 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 	var ctx = f.Context()
 	var cleaned = f.CleanedData()
 	var err = f.SaveFields(ctx, cleaned, func(ctx context.Context, formField forms.Field, field attrs.Field, fieldName string, value any) (err error) {
-		if saver, ok := formField.(ModelFieldSaver); ok {
-			err = saver.SaveField(ctx, field, value)
-		} else {
+		switch fld := formField.(type) {
+		case ModelFieldSaver:
+			err = fld.SaveField(ctx, field, value)
+		case AfterModelFieldSaver:
+		default:
 			err = field.SetValue(value, true)
 		}
 		if err != nil {
@@ -424,6 +430,22 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 		//	err = instance.Save(ctx)
 		//}
 	}
+	if err != nil {
+		return cleaned, err
+	}
+
+	err = f.SaveFields(ctx, cleaned, func(ctx context.Context, formField forms.Field, field attrs.Field, fieldName string, value any) (err error) {
+		if saver, ok := formField.(AfterModelFieldSaver); ok {
+			err = saver.SaveField(ctx, field, value, f.Model)
+		}
+		if err != nil {
+			f.AddError(
+				fieldName,
+				err,
+			)
+		}
+		return err
+	})
 	if err != nil {
 		return cleaned, err
 	}

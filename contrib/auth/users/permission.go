@@ -12,11 +12,11 @@ import (
 
 type Permission struct {
 	models.Model     `table:"auth_permissions" json:"-"`
-	ID               uint64                                        `json:"id"`
-	Name             string                                        `json:"name"`
-	Description      string                                        `json:"description"`
-	GroupPermissions *queries.RelM2M[*Group, *GroupPermission]     `json:"-"`
-	UserPermissions  *queries.RelM2M[attrs.Definer, attrs.Definer] `json:"-"`
+	ID               uint64                                    `json:"id"`
+	Name             string                                    `json:"name"`
+	Description      string                                    `json:"description"`
+	GroupPermissions *queries.RelM2M[*Group, *GroupPermission] `json:"-"`
+	UserPermissions  *queries.RelM2M[User, *UserPermission]    `json:"-"`
 }
 
 func (p *Permission) String() string {
@@ -55,6 +55,26 @@ func (p *Permission) FieldDefs(ctx context.Context) attrs.Definitions {
 						This:   &GroupPermission{},
 						Source: "PermissionID",
 						Target: "GroupID",
+					},
+				),
+			},
+		),
+		fields.NewManyToManyField[*queries.RelM2M[User, *UserPermission]](
+			p, "UserPermissions", &fields.FieldConfig{
+				DataModelFieldConfig: fields.DataModelFieldConfig{
+					Label:    trans.S("Users"),
+					HelpText: trans.S("The users this permission is assigned to."),
+				},
+				ScanTo:            &p.UserPermissions,
+				IsReverse:         true,
+				NoReverseRelation: true,
+				Rel: attrs.RelatedDeferred(
+					attrs.RelManyToOne,
+					MODEL_KEY,
+					"", &attrs.ThroughModel{
+						This:   &UserPermission{},
+						Source: "PermissionID",
+						Target: "UserID",
 					},
 				),
 			},

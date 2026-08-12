@@ -62,6 +62,8 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		Model:           &PageNode{},
 		ListColumns:     cols,
 		DefaultAmount:   int(amount),
+		AmountParam:     "amount",
+		PageParam:       "page",
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,
 		TemplateName:    "pages/admin/admin_root_list.tmpl",

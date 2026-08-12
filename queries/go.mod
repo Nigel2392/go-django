@@ -6,7 +6,7 @@ require (
 	github.com/Nigel2392/errors v1.0.0
 	github.com/Nigel2392/go-signals v1.1.1
 	github.com/Nigel2392/goldcrest v1.0.4
-	github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
+	github.com/Nigel2392/mux v1.6.1
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/uuid v1.6.0
