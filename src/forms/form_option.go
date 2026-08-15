@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-signals"
 )
 
 type multipartFileHeader struct {
@@ -97,19 +98,34 @@ func WithInitial(initial map[string]interface{}) func(Form) {
 
 func OnValid(funcs ...func(Form)) func(Form) {
 	return func(f Form) {
-		f.OnValid(funcs...)
+		f.OnValid().Listen(func(s signals.Signal[Form], f Form) error {
+			for _, fn := range funcs {
+				fn(f)
+			}
+			return nil
+		})
 	}
 }
 
 func OnInvalid(funcs ...func(Form)) func(Form) {
 	return func(f Form) {
-		f.OnInvalid(funcs...)
+		f.OnInvalid().Listen(func(s signals.Signal[Form], f Form) error {
+			for _, fn := range funcs {
+				fn(f)
+			}
+			return nil
+		})
 	}
 }
 
 func OnFinalize(funcs ...func(Form)) func(Form) {
 	return func(f Form) {
-		f.OnFinalize(funcs...)
+		f.OnFinalize().Listen(func(s signals.Signal[Form], f Form) error {
+			for _, fn := range funcs {
+				fn(f)
+			}
+			return nil
+		})
 	}
 }
 

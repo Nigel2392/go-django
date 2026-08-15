@@ -2,3 +2,6 @@
     color: hsl( 0 100% 50% );
     text-decoration: line-through;
 }
+.file-input-preview {
+    max-height: 200px;
+}

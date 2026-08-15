@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"reflect"
 	"time"
 
@@ -202,6 +203,8 @@ func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
 
 type FileStorageField struct {
 	*BaseField
+	IsImageField   bool
+	DisallowClear  bool
 	StorageBackend mediafiles.Backend
 	StorageEngine  string
 	Extensions     []string // Allowed file extensions
@@ -231,6 +234,15 @@ func FileField(engine string, opts ...func(Field)) *FileStorageField {
 	return f
 }
 
+func ImageFileField(engine string, opts ...func(Field)) *FileStorageField {
+	var f = &FileStorageField{
+		IsImageField:  true,
+		BaseField:     NewField(opts...),
+		StorageEngine: engine,
+	}
+	return f
+}
+
 func (i *FileStorageField) ValueToGo(value interface{}) (interface{}, error) {
 	return i.Widget().ValueToGo(value)
 }
@@ -252,18 +264,21 @@ func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
 		)
 	}
 
-	if file.File == nil {
-		return mediafiles.Open(file.Name)
-	}
-
 	var storage = f.StorageBackend
 	if storage == nil {
 		storage, ok = mediafiles.RetrieveBackend(f.StorageEngine)
 		assert.True(ok, "Storage engine %q not found", f.StorageEngine)
 	}
 
+	if file.File == nil {
+		return storage.Open(file.Name)
+	}
+
 	if f.UploadTo == nil {
 		f.UploadTo = func(fileObject *widgets.FileObject) string {
+			if f.IsImageField {
+				return filepath.Join("images", fileObject.Name)
+			}
 			return fileObject.Name
 		}
 	}
@@ -281,7 +296,15 @@ func (f *FileStorageField) Widget() widgets.Widget {
 	if f.FormWidget != nil {
 		return f.FormWidget
 	}
-	return widgets.NewFileInput(f.Attributes, f.Extensions, f.Validators...)
+
+	var w *widgets.FileWidget
+	if f.IsImageField {
+		w = widgets.NewImageFileInput(f.Attributes, f.Extensions, f.Validators...)
+	} else {
+		w = widgets.NewFileInput(f.Attributes, f.Extensions, f.Validators...)
+	}
+	w.DisallowClear = f.DisallowClear
+	return w
 }
 
 type Encoder interface {

@@ -61,6 +61,12 @@ func NewBoundFormField(ctx context.Context, renderer FormRenderer, w Widget, f F
 		Renderer:    renderer,
 	}
 
+	if tryWidgetBound {
+		if widgetBinder, ok := w.(BoundFieldBinderWidget); ok {
+			return widgetBinder.BoundField(ctx, w, f, name, value, errors, bw)
+		}
+	}
+
 	return bw
 }
 

@@ -135,6 +135,12 @@ func (r *defaultRenderer) RenderField(w io.Writer, c context.Context, field Boun
 
 func (r *defaultRenderer) RenderFieldLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) error {
 	var fld = field.Input()
+
+	if r, ok := fld.(FieldLabelRenderer); ok {
+		r.RenderFieldLabel(w, ctx, field, id, name)
+		return nil
+	}
+
 	var labelText = fld.Label(ctx)
 	fmt.Fprintf(w,
 		"<label for=\"%s\">%s</label>",
@@ -145,6 +151,12 @@ func (r *defaultRenderer) RenderFieldLabel(w io.Writer, ctx context.Context, fie
 
 func (r *defaultRenderer) RenderFieldHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) error {
 	var fld = field.Input()
+
+	if r, ok := fld.(FieldHelpTextRenderer); ok {
+		r.RenderFieldHelpText(w, ctx, field, id, name)
+		return nil
+	}
+
 	var helpText = fld.HelpText(ctx)
 	if helpText == "" {
 		return nil

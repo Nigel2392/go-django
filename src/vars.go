@@ -22,6 +22,12 @@ const (
 	// The URL to serve static files from, e.g. "/static/"
 	APPVAR_STATIC_URL = "STATIC_URL" // string
 
+	// The URL to serve media files from, e.g. "/media/"
+	APPVAR_MEDIA_URL = "MEDIA_URL" // string
+
+	// The backend to serve media files from, e.g. "/media/"
+	APPVAR_MEDIA_BACKEND = "MEDIA_BACKEND" // string
+
 	// The port to bind the application's server to for TLS, e.g. "443"
 	APPVAR_TLS_PORT = "TLS_PORT" // string
 

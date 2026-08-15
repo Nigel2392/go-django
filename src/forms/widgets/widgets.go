@@ -1,8 +1,6 @@
 package widgets
 
-import (
-	"github.com/Nigel2392/go-django/internal/forms"
-)
+import "github.com/Nigel2392/go-django/internal/forms"
 
 type (
 	Widget             = forms.Widget
@@ -46,14 +44,12 @@ func (w *WrappedOption) Value() string {
 
 func WrapOptions(options []Option, selectedValues []string) []WrappedOption {
 	var wrappedOptions []WrappedOption
+	var selectedVals = make(map[string]struct{})
+	for _, s := range selectedValues {
+		selectedVals[s] = struct{}{}
+	}
 	for _, option := range options {
-		var selected bool
-		for _, selectedValue := range selectedValues {
-			if selectedValue == option.Value() {
-				selected = true
-				break
-			}
-		}
+		_, selected := selectedVals[option.Value()]
 		wrappedOptions = append(wrappedOptions, WrappedOption{Option: option, Selected: selected})
 	}
 	return wrappedOptions

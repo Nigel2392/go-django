@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -131,9 +132,9 @@ func (lf *ListForm[T]) ForInstance(instance T) forms.Form {
 	return lf.forms[attrs.PrimaryKey(lf.List.request.Context(), instance)]
 }
 
-func (lf *ListForm[T]) IsValid() bool {
+func (lf *ListForm[T]) IsValid(ctx context.Context) bool {
 	for _, form := range lf.Forms() {
-		if !forms.IsValid(form.Context(), form) {
+		if !forms.IsValid(ctx, form) {
 			return false
 		}
 	}

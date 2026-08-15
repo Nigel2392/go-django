@@ -14,8 +14,15 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-signals"
 	"github.com/elliotchance/orderedmap/v2"
 )
+
+type FormSignals struct {
+	OnValid    signals.Signal[Form]
+	OnInvalid  signals.Signal[Form]
+	OnFinalize signals.Signal[Form]
+}
 
 type BaseForm struct {
 	FormPrefix      string
@@ -34,6 +41,7 @@ type BaseForm struct {
 	FormRenderer    FormRenderer
 
 	FormValidators  []func(Form, map[string]interface{}) []error
+	Signals         FormSignals
 	OnValidFuncs    []func(Form)
 	OnInvalidFuncs  []func(Form)
 	OnFinalizeFuncs []func(Form)
@@ -216,16 +224,25 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 	return ret
 }
 
-func (f *BaseForm) OnValid(funcs ...func(Form)) {
-	f.OnValidFuncs = append(f.OnValidFuncs, funcs...)
+func (f *BaseForm) OnValid() signals.Signal[Form] {
+	if f.Signals.OnValid == nil {
+		f.Signals.OnValid = signals.New[Form]("OnValid")
+	}
+	return f.Signals.OnValid
 }
 
-func (f *BaseForm) OnInvalid(funcs ...func(Form)) {
-	f.OnInvalidFuncs = append(f.OnInvalidFuncs, funcs...)
+func (f *BaseForm) OnInvalid() signals.Signal[Form] {
+	if f.Signals.OnInvalid == nil {
+		f.Signals.OnInvalid = signals.New[Form]("OnInvalid")
+	}
+	return f.Signals.OnInvalid
 }
 
-func (f *BaseForm) OnFinalize(funcs ...func(Form)) {
-	f.OnFinalizeFuncs = append(f.OnFinalizeFuncs, funcs...)
+func (f *BaseForm) OnFinalize() signals.Signal[Form] {
+	if f.Signals.OnFinalize == nil {
+		f.Signals.OnFinalize = signals.New[Form]("OnFinalize")
+	}
+	return f.Signals.OnFinalize
 }
 
 func (f *BaseForm) Media() media.Media {

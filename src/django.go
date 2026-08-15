@@ -29,6 +29,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/mhttp"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -158,6 +160,7 @@ var (
 	AppInstalled = Global.AppInstalled
 	Reverse      = Global.Reverse
 	Static       = Global.Static
+	Media        = Global.Media
 	Task         = Global.Task
 )
 
@@ -212,6 +215,7 @@ func App(opts ...Option) *Application {
 		AppInstalled = Global.AppInstalled
 		Reverse = Global.Reverse
 		Static = Global.Static
+		Media = Global.Media
 		Task = Global.Task
 	}
 
@@ -378,7 +382,21 @@ func (a *Application) staticURL() string {
 	return string(staticURL)
 }
 
-func (a *Application) Static(path string) string {
+func (a *Application) mediaURL() string {
+	var mediaURL = []byte(
+		ConfigGet(
+			a.Settings,
+			APPVAR_MEDIA_URL,
+			"/media/",
+		),
+	)
+	if mediaURL[len(mediaURL)-1] != '/' {
+		mediaURL = append(mediaURL, '/')
+	}
+	return string(mediaURL)
+}
+
+func (a *Application) urlFunc(path string, fn func() string) string {
 	var u, err = url.Parse(path)
 	if err != nil {
 		panic(errors.Wrapf(err, "Invalid static URL path '%s'", path))
@@ -392,8 +410,16 @@ func (a *Application) Static(path string) string {
 		return path
 	}
 
-	var staticUrl = a.staticURL()
+	var staticUrl = fn()
 	return fmt.Sprintf("%s%s", staticUrl, path)
+}
+
+func (a *Application) Static(path string) string {
+	return a.urlFunc(path, a.staticURL)
+}
+
+func (a *Application) Media(path string) string {
+	return a.urlFunc(path, a.mediaURL)
 }
 
 func (a *Application) Task(description string, fn func(*Application) error) error {
@@ -594,6 +620,31 @@ func (a *Application) Initialize() error {
 		rt.Preprocess(MarkStaticRouteMiddleware)
 	}
 
+	// add a handler for the staticfiles route
+	var mediaURL = a.mediaURL()
+	if len(mediafiles.MapRegistry()) > 0 && mediaURL != "" {
+		a.Log.Debugf(
+			"Initializing media files at %q",
+			mediaURL,
+		)
+
+		var rt = a.Mux.Handle(
+			mux.GET,
+			fmt.Sprintf("%s*", mediaURL),
+			http.StripPrefix(mediaURL, mhttp.Serve(ConfigGet(
+				a.Settings,
+				APPVAR_MEDIA_BACKEND,
+				"",
+			))),
+		)
+
+		// middleware will run before any other,
+		// this is to allow easily identifying which
+		// route is a static route, and to allow
+		// for possibly disabling / enabling some features.
+		rt.Preprocess(MarkStaticRouteMiddleware)
+	}
+
 	tpl.Processors(func(val any) {
 		var ctx, ok = val.(ctx.Context)
 		if !ok {
@@ -612,6 +663,7 @@ func (a *Application) Initialize() error {
 			return string(b)
 		},
 		"static": a.Static,
+		"media":  a.Media,
 		"repeat": func(str any, cnt any) template.HTML {
 			var s = fmt.Sprintf("%v", str)
 			var count = reflect.ValueOf(cnt).Int()

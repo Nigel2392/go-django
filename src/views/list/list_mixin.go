@@ -10,9 +10,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/Nigel2392/go-django/contrib/messages"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -97,7 +97,7 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 		return w, r, nil
 	}
 
-	var isValid = form.IsValid()
+	var isValid = form.IsValid(r.Context())
 	if !isValid {
 		var errs = form.Errors()
 		if len(errs) > 0 {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"net/http"
 	"net/url"
 	"reflect"
 	"slices"
@@ -111,6 +110,8 @@ var _ listFormObject[BaseFormSetForm] = (ListFormSet[BaseFormSetForm])(nil)
 
 type ListFormSet[T BaseFormSetForm] interface {
 	forms.WithDataDefiner
+	forms.ErrorDefiner
+	forms.FormFieldDefiner
 	Load()
 	WithContext(ctx context.Context)
 	Context() context.Context
@@ -119,44 +120,24 @@ type ListFormSet[T BaseFormSetForm] interface {
 	Media() media.Media
 	Prefix() string
 	SetPrefix(prefix string)
-	PrefixName(fieldName string) string
 	PrefixForm(fld any) string
 	DeletedForms() []T
 	ManagementForm() *ManagementForm
 	Forms() ([]T, error)
 	SetForms(forms []T)
 	SetDeletedForms(forms []T)
-	Field(name string) (fields.Field, bool)
-	Widget(name string) (widgets.Widget, bool)
 	NewForm(ctx context.Context) T
 	Initial(ctx context.Context, totalForms int) (base map[string]interface{}, list []map[string]interface{})
 	Form(index int) (form T, ok bool)
 	InitialData() map[string]interface{} // this should always return nil for formsets
 	CleanedData() map[string]any         // this should always return nil for formsets
 	CleanedDataList() []map[string]any
-	ErrorList() []error
 	ErrorLists() [][]error
-	BoundErrors() *orderedmap.OrderedMap[string, []error]
 	BoundErrorsList() []*orderedmap.OrderedMap[string, []error]
 	Save() ([]any, error)
 }
 
-type BaseFormSetForm interface {
-	forms.ErrorDefiner
-	forms.WithDataDefiner
-	AddFormError(errorList ...error)
-	SetPrefix(prefix string)
-	Prefix() string
-	Field(name string) (fields.Field, bool)
-	Widget(name string) (widgets.Widget, bool)
-	ErrorList() []error
-	BoundErrors() *orderedmap.OrderedMap[string, []error]
-	InitialData() map[string]interface{}
-	WithContext(ctx context.Context)
-	CleanedData() map[string]any
-	PrefixName(fieldName string) string
-	HasChanged() bool
-}
+type BaseFormSetForm = forms.Minimum
 
 type CleanedDataDefiner interface {
 	CleanedData() map[string]interface{}
@@ -209,6 +190,7 @@ type FormsetOptions[FORM BaseFormSetForm] struct {
 }
 
 type BaseFormSet[FORM BaseFormSetForm] struct {
+	forms.FormData
 	opts             FormsetOptions[FORM]
 	FormList         []FORM
 	DeletedFormsList []FORM
@@ -217,9 +199,6 @@ type BaseFormSet[FORM BaseFormSetForm] struct {
 	mgmt             *ManagementForm
 	validators       []func(FORM, map[string]any) []error
 	errors           []error
-	req              *http.Request
-	formData         url.Values
-	formFiles        map[string][]filesystem.FileHeader
 }
 
 func NewBaseFormSet[FORM BaseFormSetForm](ctx context.Context, opts FormsetOptions[FORM]) *BaseFormSet[FORM] {
@@ -389,7 +368,7 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	var totalForms int
 	var managementForm = form.ManagementForm()
 	if managementForm != nil {
-		managementForm.WithData(data, files, fs.req)
+		managementForm.WithData(data, files, fs.FormData.Request)
 		managementForm.WithContext(ctx)
 		if !forms.IsValid(ctx, managementForm) {
 			isValid = false
@@ -452,7 +431,7 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		}
 
 		subForm.WithContext(form.Context())
-		subForm.WithData(data, files, fs.req)
+		subForm.WithData(data, files, fs.FormData.Request)
 
 		if s, ok := any(subForm).(initialSetter); ok {
 			s.SetInitial(init)
@@ -547,18 +526,8 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	return isValid && !forms.HasErrors(form)
 }
 
-func (b *BaseFormSet[FORM]) Data() (url.Values, map[string][]filesystem.FileHeader) {
-	return b.formData, b.formFiles
-}
-
-func (b *BaseFormSet[FORM]) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
-	b.req = r
-	b.formData = data
-	b.formFiles = files
-}
-
 func (b *BaseFormSet[FORM]) Load() {
-	if (b.formData != nil && b.req != nil || b.formFiles != nil && b.req != nil) || forms.HasErrors(b) {
+	if (b.FormData.Values != nil && b.FormData.Request != nil || b.FormData.Files != nil && b.FormData.Request != nil) || forms.HasErrors(b) {
 		logger.Warnf("Formset: already loaded, skipping Load()")
 		return
 	}
@@ -837,7 +806,7 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 		//
 		//	logger.Warnf("Saving, Form[%d](%q) of type %T has changed", idx, form.Prefix(), form)
 
-		var wrapFn = django_reflect.WrapWithContext(b.ctx)
+		var wrapFn = django_reflect.WithContext(b.ctx)
 		var rv = reflect.ValueOf(form)
 		var saveMethod = rv.MethodByName("Save")
 		switch saveMethod.Type().NumOut() {

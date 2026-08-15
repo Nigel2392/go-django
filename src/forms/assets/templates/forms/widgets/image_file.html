@@ -1,5 +1,8 @@
-{{ define "file" }}
+{{ define "image_file" }}
 <div class="file-input">
+    <div class="file-input-preview">
+        <img src="{{ if .Data.file_value }}{{ media .Data.file_value }}{{ end }}" alt="" class="file-input-preview-img">
+    </div>
     <input type="{{ .Get "type" }}" name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ if (.Get "value") }}value="{{ .Get "value" }}"{{ end }}{{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}{{ if .Data.extensionsAttr }} accept="{{ .Data.extensionsAttr }}"{{ end }}/>
 </div>
 {{ if and (not (or (eq .Data.file_value "") (eq .Data.file_value nil))) (not .Data.errors) }}

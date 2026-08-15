@@ -8,27 +8,32 @@ import (
 )
 
 type (
-	FormValuer         = forms.FormValuer
-	FormValueConverter = forms.FormValueConverter
-	FormValueOmitter   = forms.FormValueOmitter
-	FormValueGetter    = forms.FormValueGetter
-	FormRenderer       = forms.FormRenderer
-	Cleaner            = forms.Cleaner
-	Validator          = forms.Validator
-	Option             = forms.Option
-	ErrorAdder         = forms.ErrorAdder
-	FieldError         = forms.FieldError
-	Widget             = forms.Widget
-	Field              = forms.Field
-	Form               = forms.Form
-	BoundForm          = forms.BoundForm
-	BoundField         = forms.BoundField
-	IsValidDefiner     = forms.IsValidDefiner
-	BinderWidget       = forms.BinderWidget
-	FormWrapper[T any] = forms.FormWrapper[T]
-	WithDataDefiner    = forms.WithDataDefiner
-	ErrorDefiner       = forms.ErrorDefiner
-	FormFieldDefiner   = forms.FormFieldDefiner
+	FormValuer             = forms.FormValuer
+	FormValueConverter     = forms.FormValueConverter
+	FormValueOmitter       = forms.FormValueOmitter
+	FormValueGetter        = forms.FormValueGetter
+	FormRenderer           = forms.FormRenderer
+	Cleaner                = forms.Cleaner
+	Validator              = forms.Validator
+	Option                 = forms.Option
+	ErrorAdder             = forms.ErrorAdder
+	FieldError             = forms.FieldError
+	Widget                 = forms.Widget
+	Field                  = forms.Field
+	Form                   = forms.Form
+	Minimum                = forms.Minimum
+	BoundForm              = forms.BoundForm
+	BoundField             = forms.BoundField
+	IsValidDefiner         = forms.IsValidDefiner
+	BinderWidget           = forms.BinderWidget
+	BoundFieldBinderWidget = forms.BoundFieldBinderWidget
+	FormWrapper[T any]     = forms.FormWrapper[T]
+	WithDataDefiner        = forms.WithDataDefiner
+	ErrorDefiner           = forms.ErrorDefiner
+	FormFieldDefiner       = forms.FormFieldDefiner
+	FieldLabelRenderer     = forms.FieldLabelRenderer
+	FieldHelpTextRenderer  = forms.FieldHelpTextRenderer
+	FormData               = forms.FormData
 
 	PrevalidatorMixin = forms.PrevalidatorMixin
 	ValidatorMixin    = forms.ValidatorMixin

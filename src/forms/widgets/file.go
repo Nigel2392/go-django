@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/utils/fileutils"
 )
 
@@ -53,8 +54,10 @@ import (
 
 type FileWidget struct {
 	*BaseWidget
-	Extensions []string
-	Validators []func(filename string, file io.Reader) error
+	IsImageField  bool
+	DisallowClear bool
+	Extensions    []string
+	Validators    []func(filename string, file io.Reader) error
 }
 
 type FileObject struct {
@@ -62,13 +65,33 @@ type FileObject struct {
 	File *bytes.Buffer
 }
 
-func NewFileInput(attrs map[string]string, allowedMimeTypes []string, validators ...func(filename string, file io.Reader) error) Widget {
+func NewFileInput(attrs map[string]string, allowedMimeTypes []string, validators ...func(filename string, file io.Reader) error) *FileWidget {
 	var base = NewBaseWidget("file", "forms/widgets/file.html", attrs)
 	return &FileWidget{
 		BaseWidget: base,
 		Validators: validators,
 		Extensions: allowedMimeTypes,
 	}
+}
+
+func NewImageFileInput(attrs map[string]string, allowedMimeTypes []string, validators ...func(filename string, file io.Reader) error) *FileWidget {
+	var base = NewBaseWidget("file", "forms/widgets/image_file.html", attrs)
+	return &FileWidget{
+		IsImageField: true,
+		BaseWidget:   base,
+		Validators:   validators,
+		Extensions:   allowedMimeTypes,
+	}
+}
+
+func (b *FileWidget) Media() media.Media {
+	var m = media.NewMedia()
+
+	if b.IsImageField {
+		m.AddJS(&media.JSAsset{})
+	}
+
+	return m
 }
 
 func (f *FileWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
@@ -217,6 +240,8 @@ func (f *FileWidget) GetContextData(c context.Context, id, name string, value in
 		}
 	}
 
+	data["isImage"] = f.IsImageField
+	data["disallowClear"] = f.DisallowClear
 	data["extensionsAttr"] = extAttr.String()
 	data["file_value"] = data["value"]
 	data["context"] = c
