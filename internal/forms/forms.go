@@ -10,8 +10,25 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-signals"
 	"github.com/elliotchance/orderedmap/v2"
 )
+
+type FormData struct {
+	Request *http.Request
+	Values  url.Values
+	Files   map[string][]filesystem.FileHeader
+}
+
+func (f *FormData) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
+	f.Request = r
+	f.Values = data
+	f.Files = files
+}
+
+func (f *FormData) Data() (url.Values, map[string][]filesystem.FileHeader) {
+	return f.Values, f.Files
+}
 
 type FormValueConverter interface {
 	// Convert the forms' string value to the appropriate GO type.
@@ -91,6 +108,11 @@ type BinderWidget interface {
 	BoundField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error) BoundField
 }
 
+type BoundFieldBinderWidget interface {
+	Widget
+	BoundField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error, bf BoundField) BoundField
+}
+
 type Field interface {
 	FormValueConverter
 	Attrs() map[string]string
@@ -120,6 +142,21 @@ type Field interface {
 	IsEmpty(value interface{}) bool
 }
 
+type WidgetFormType interface {
+	WithContext(context.Context)
+	SetPrefix(prefix string)
+	WithDataDefiner
+	ErrorDefiner
+}
+
+type WidgetForm interface {
+	WidgetForm(ctx context.Context, parentForm FullCleanMixin) WidgetFormType
+}
+
+type WidgetFormDefiner interface {
+	IsWidgetForm()
+}
+
 type SaveableField interface {
 	Field
 	Save(value interface{}) (interface{}, error)
@@ -134,6 +171,14 @@ type FormFieldDefiner interface {
 	Field(name string) (Field, bool)
 	Widget(name string) (Widget, bool)
 	PrefixName(fieldName string) string
+}
+
+type FieldLabelRenderer interface {
+	RenderFieldLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
+}
+
+type FieldHelpTextRenderer interface {
+	RenderFieldHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
 }
 
 type CleanableForm interface {
@@ -151,18 +196,28 @@ type FormRenderer interface {
 	RenderField(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) error
 }
 
-type Form interface {
-	WithDataDefiner
-	FullCleanMixin
-	ErrorAdder
+type Minimum interface {
 	ErrorDefiner
-
-	Media() media.Media
-	Context() context.Context
-	WithContext(ctx context.Context)
+	WithDataDefiner
+	FormFieldDefiner
 	Prefix() string
 	SetPrefix(prefix string)
+	InitialData() map[string]any
+	CleanedData() map[string]any
+	Context() context.Context
+	WithContext(ctx context.Context)
+	AddFormError(errorList ...error)
+	HasChanged() bool
+}
+
+type Form interface {
+	Minimum
+	FullCleanMixin
+	ErrorAdder
+
+	Media() media.Media
 	SetInitial(initial map[string]interface{})
+	FormValue(name string) interface{}
 	Validators() []func(f Form, cleanedData map[string]interface{}) []error
 	SetValidators(validators ...func(Form, map[string]interface{}) []error)
 	Renderer() FormRenderer
@@ -180,18 +235,12 @@ type Form interface {
 	BoundForm() BoundForm
 	BoundFields() *orderedmap.OrderedMap[string, BoundField]
 
-	InitialData() map[string]interface{}
-	CleanedData() map[string]interface{}
-
-	OnValid(...func(Form))
-	OnInvalid(...func(Form))
-	OnFinalize(...func(Form))
+	OnValid() signals.Signal[Form]
+	OnInvalid() signals.Signal[Form]
+	OnFinalize() signals.Signal[Form]
 
 	WasCleaned() bool
 	HasChanged() bool
-	CallbackOnValid() []func(f Form)
-	CallbackOnInvalid() []func(f Form)
-	CallbackOnFinalize() []func(f Form)
 	CleanedDataUnsafe() map[string]interface{}
 }
 

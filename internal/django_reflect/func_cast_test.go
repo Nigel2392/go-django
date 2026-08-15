@@ -428,9 +428,9 @@ func TestStringToByteReturn(t *testing.T) {
 		return a + b, len(c), nil
 	}
 
-	f, err := django_reflect.CastFunc[func(string, string, int, int, int) ([]byte, int, error)](fn)
+	f, err := django_reflect.CastFunc[func(string, int, int, int) ([]byte, int, error)](fn, django_reflect.WithFuncArgs("hello "))
 	mustNoErr(t, err)
-	s, l, e := f("hello ", "world", 1, 2, 3)
+	s, l, e := f("world", 1, 2, 3)
 	mustNoErr(t, e)
 	if string(s) != "hello world" {
 		t.Fatalf("expected 'hello world', got %q", s)
@@ -465,6 +465,29 @@ func TestCast_DiscardExtraReturns_ToNoReturn(t *testing.T) {
 
 	// Just call it; no return values expected
 	out("hi", 5)
+}
+
+func TestCast_DiscardExtraParams_Wrapped(t *testing.T) {
+	src := func(s string, n int) (string, int, error) {
+		return s + "!", n * 2, nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string, int) (string, int, error)](src, django_reflect.WithFuncArgs("a", "b", float64(100)))
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	a, b, err := out("hi", 5)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if a != "hi!" {
+		t.Fatalf("Unexpected value: %v", a)
+	}
+
+	if b != 10 {
+		t.Fatalf("Unexpected value: %v", a)
+	}
 }
 
 func TestCast_DiscardPartialReturn_ToErrorOnlyFromTwoReturns(t *testing.T) {
@@ -606,7 +629,7 @@ func TestWrapWithContext(t *testing.T) {
 		return a * 2
 	}
 
-	out, err := django_reflect.CastFunc[func(int) int](src, django_reflect.WrapWithContext(context.Background()))
+	out, err := django_reflect.CastFunc[func(int) int](src, django_reflect.WithFuncArgs(context.Background()))
 	mustNoErr(t, err)
 
 	v := out(5)
@@ -623,12 +646,73 @@ func TestWrapWithContextArg(t *testing.T) {
 		return a * 2
 	}
 
-	out, err := django_reflect.CastFunc[func(ctx context.Context, a int) int](src, django_reflect.WrapWithContext(context.Background()))
+	out, err := django_reflect.CastFunc[func(ctx context.Context, a int) int](src, django_reflect.WithFuncArgs(context.Background()))
 	mustNoErr(t, err)
 
 	v := out(nil, 5)
 	if v != 10 {
 		t.Fatalf("expected 10, got %d", v)
+	}
+}
+
+func TestWrapWithContextIntArgs(t *testing.T) {
+	src := func(ctx context.Context, a int, b int) int {
+		if ctx != nil {
+			t.Fatal("expected nil context")
+		}
+		return a * b
+	}
+
+	out, err := django_reflect.CastFunc[func() int](src, django_reflect.WithFuncArgs(5, 10, 50, django_reflect.Arg[context.Context](nil)))
+	mustNoErr(t, err)
+
+	v := out()
+	if v != 50 {
+		t.Fatalf("expected 10, got %d", v)
+	}
+}
+
+func TestWrapWithContextIntArg(t *testing.T) {
+	src := func(ctx context.Context, a int) int {
+		if ctx != nil {
+			t.Fatal("expected nil context")
+		}
+		return a * 2
+	}
+
+	out, err := django_reflect.CastFunc[func() int](src, django_reflect.WithFuncArgs(5), django_reflect.WithContext(nil))
+	mustNoErr(t, err)
+
+	v := out()
+	if v != 10 {
+		t.Fatalf("expected 10, got %d", v)
+	}
+}
+
+func TestWrapWithContextIntArg2(t *testing.T) {
+	src := func(ctx context.Context, a int) int {
+		if ctx != nil {
+			t.Fatal("expected nil context")
+		}
+		return a * 2
+	}
+
+	out, err := django_reflect.CastFunc[func() int](src, django_reflect.WithContext(nil), django_reflect.WithFuncArgs(5))
+	mustNoErr(t, err)
+
+	v := out()
+	if v != 10 {
+		t.Fatalf("expected 10, got %d", v)
+	}
+}
+
+func TestCast_10Args_Wrapper_Context_Execution(t *testing.T) {
+	ctx := context.Background()
+	src := func(ctx context.Context, a, b_, c, d, e, f, g, h, i int64) float32 { return float32(a + i) }
+	out, _ := django_reflect.CastFunc[func(int8, int8, int8, int8, int8, int8) int64](src, django_reflect.WithContext(ctx), django_reflect.WithFuncArgs(1, 2, 3))
+	ret := out(4, 5, 6, 7, 8, 9)
+	if ret != 10 {
+		t.Fatalf("expected 10, got %d", ret)
 	}
 }
 
@@ -640,7 +724,7 @@ func TestWrapWithContextOnly(t *testing.T) {
 		return 42
 	}
 
-	out, err := django_reflect.CastFunc[func() int](src, django_reflect.WrapWithContext(context.Background()))
+	out, err := django_reflect.CastFunc[func() int](src, django_reflect.WithFuncArgs(context.Background()))
 	mustNoErr(t, err)
 
 	v := out()
@@ -666,9 +750,9 @@ func (s *intSaver) Save(ctx context.Context) (int, int, error) {
 
 func TestWrapWithContextMethod(t *testing.T) {
 	var saver IntSaver = &intSaver{value: 21}
-	out, err := django_reflect.Method[func() (int, int, error)](saver, "Save", django_reflect.WrapWithContext(context.Background()))
+	out, err := django_reflect.Method[func() (int, int, error)](saver, "Save", django_reflect.WithFuncArgs(context.Background()))
 	if err != nil {
-		t.Fatal("expected to find method Save")
+		t.Fatalf("expected to find method Save: %v", err)
 	}
 
 	v1, v2, err := out()
@@ -683,6 +767,67 @@ func TestWrapWithContextMethod(t *testing.T) {
 	}
 
 	t.Logf("got %d and %d", v1, v2)
+}
+
+func TestWrapWithContextMethod2(t *testing.T) {
+	var saver IntSaver = &intSaver{value: 21}
+	out, err := django_reflect.Method[func() error](saver, "Save", django_reflect.WithFuncArgs(context.Background()))
+	if err != nil {
+		t.Fatalf("expected to find method Save: %v", err)
+	}
+
+	err = out()
+	mustNoErr(t, err)
+}
+
+func TestWrapWithContextMethod3(t *testing.T) {
+	var saver IntSaver = &intSaver{value: 21}
+	out, err := django_reflect.Method[func() ([]any, error)](saver, "Save", django_reflect.WithFuncArgs(context.Background()))
+	if err != nil {
+		t.Fatalf("expected to find method Save: %v", err)
+	}
+
+	a, err := out()
+	mustNoErr(t, err)
+	if len(a) != 2 {
+		t.Fatalf("Expected 2 return parameters, got %d", len(a))
+	}
+
+	if a[0] != 21 {
+		t.Fatalf("expected 21, got %d", a[0])
+	}
+
+	if a[1] != 42 {
+		t.Fatalf("expected 42, got %d", a[1])
+	}
+
+	t.Logf("got %d and %d", a[0], a[1])
+}
+
+func TestWrapWithContextMethod4(t *testing.T) {
+	var saver IntSaver = &intSaver{value: 21}
+	out, err := django_reflect.Method[func() (any, error)](saver, "Save", django_reflect.WithFuncArgs(context.Background()))
+	if err != nil {
+		t.Fatalf("expected to find method Save: %v", err)
+	}
+
+	ret, err := out()
+	mustNoErr(t, err)
+
+	a := ret.([]any)
+	if len(a) != 2 {
+		t.Fatalf("Expected 2 return parameters, got %d", len(a))
+	}
+
+	if a[0] != 21 {
+		t.Fatalf("expected 21, got %d", a[0])
+	}
+
+	if a[1] != 42 {
+		t.Fatalf("expected 42, got %d", a[1])
+	}
+
+	t.Logf("got %d and %d", a[0], a[1])
 }
 
 func TestCast_InterfaceContravariance(t *testing.T) {
@@ -746,35 +891,74 @@ func TestCast_SaveMethodsVariations(t *testing.T) {
 
 	t.Run("func() error", func(t *testing.T) {
 		m := &Model1{}
-		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithContext(ctx))
 		mustNoErr(t, err)
 		mustNoErr(t, saveFn())
 	})
 
 	t.Run("func(ctx context.Context) error", func(t *testing.T) {
 		m := &Model2{}
-		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithContext(ctx))
 		mustNoErr(t, err)
 		mustNoErr(t, saveFn())
 	})
 
 	t.Run("func(ctx context.Context) (..., error) 1 val", func(t *testing.T) {
 		m := &Model3{}
-		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithContext(ctx))
 		mustNoErr(t, err)
 		mustNoErr(t, saveFn())
 	})
 
 	t.Run("func(ctx context.Context) (..., error) 0 val", func(t *testing.T) {
 		m := &Model3{}
-		saveFn, err := django_reflect.Method[func()](m, "Save", django_reflect.WrapWithContext(ctx))
+		saveFn, err := django_reflect.Method[func()](m, "Save", django_reflect.WithContext(ctx))
 		mustNoErr(t, err)
 		saveFn()
 	})
 
 	t.Run("func(ctx context.Context) (..., error) 2 vals", func(t *testing.T) {
 		m := &Model4{}
-		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithContext(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
+}
+
+func TestCast_SaveMethodsVariationsWrapArgs(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("func() error", func(t *testing.T) {
+		m := &Model1{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithFuncArgs(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
+
+	t.Run("func(ctx context.Context) error", func(t *testing.T) {
+		m := &Model2{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithFuncArgs(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
+
+	t.Run("func(ctx context.Context) (..., error) 1 val", func(t *testing.T) {
+		m := &Model3{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithFuncArgs(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
+
+	t.Run("func(ctx context.Context) (..., error) 0 val", func(t *testing.T) {
+		m := &Model3{}
+		saveFn, err := django_reflect.Method[func()](m, "Save", django_reflect.WithFuncArgs(ctx))
+		mustNoErr(t, err)
+		saveFn()
+	})
+
+	t.Run("func(ctx context.Context) (..., error) 2 vals", func(t *testing.T) {
+		m := &Model4{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WithFuncArgs(ctx))
 		mustNoErr(t, err)
 		mustNoErr(t, saveFn())
 	})

@@ -2,10 +2,12 @@ package forms
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"net/url"
 	"reflect"
 
+	dr "github.com/Nigel2392/go-django/internal/django_reflect"
 	errsPkg "github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -15,7 +17,7 @@ import (
 )
 
 type IsValidDefiner interface {
-	IsValid() bool
+	IsValid(ctx context.Context) bool
 }
 
 type IsValidChecker[T any] interface {
@@ -52,13 +54,8 @@ type pointerContextKey struct {
 	ptr uintptr
 }
 
-type errorDefiner interface {
-	ErrorList() []error
-	BoundErrors() *orderedmap.OrderedMap[string, []error]
-}
-
 type wasCleanedChecker interface {
-	errorDefiner
+	ErrorDefiner
 	WasCleaned() bool
 }
 
@@ -107,7 +104,7 @@ func checkUnwrappedForms[T any](ctx context.Context, formObj FormWrapper[T]) boo
 	}
 
 	if definer, ok := any(formObj).(IsValidDefiner); ok && valid {
-		return definer.IsValid()
+		return definer.IsValid(ctx)
 	}
 
 	return valid
@@ -124,7 +121,7 @@ func IsValid[T any](ctx context.Context, formObj T) bool {
 	if chk, ok := any(formObj).(wasCleanedChecker); ok {
 		valid, ok := checkWasCleaned(chk, func(formObj wasCleanedChecker) (valid, ok bool) {
 			if isValidDef, ok := formObj.(IsValidDefiner); ok {
-				return isValidDef.IsValid(), true
+				return isValidDef.IsValid(ctx), true
 			}
 			return true, true
 		})
@@ -147,19 +144,20 @@ func IsValid[T any](ctx context.Context, formObj T) bool {
 
 	f, ok := any(formObj).(Form)
 	if !ok {
-		if chk, ok := any(formObj).(IsValidChecker[T]); ok {
-			return chk.CheckIsValid(ctx, formObj)
+		fn, err := dr.Method[func(context.Context, any) bool](
+			formObj, "CheckIsValid",
+		)
+		if err != nil {
+			panic(fmt.Errorf("Invalid CheckIsValid function on %T: %w", formObj, err))
 		}
-		if chk, ok := any(formObj).(IsValidChecker[any]); ok {
-			return chk.CheckIsValid(ctx, formObj)
-		}
-		panic("IsValid() only accepts a pointer to a Form, not a " + rv.Type().String())
+
+		return fn(ctx, formObj)
 	}
 
 	var rawData, files = f.Data()
 	assert.False(
 		rawData == nil,
-		"You cannot call IsValid() without setting the data first.",
+		"You cannot call IsValid() without setting the data first on %T.", f,
 	)
 
 	for mixin := range mixins.Mixins[any](f, true) {
@@ -233,19 +231,13 @@ postValidateErrCheck:
 	bndErrs = f.BoundErrors()
 
 	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
-		for _, fn := range f.CallbackOnValid() {
-			fn(f)
-		}
+		f.OnValid().Send(f)
 	} else {
 		f.BindCleanedData(invalid, defaults, nil)
-		for _, fn := range f.CallbackOnInvalid() {
-			fn(f)
-		}
+		f.OnInvalid().Send(f)
 	}
 
-	for _, fn := range f.CallbackOnFinalize() {
-		fn(f)
-	}
+	f.OnFinalize().Send(f)
 
 	if bndErrs != nil && bndErrs.Len() > 0 || len(errs) > 0 {
 		f.BindCleanedData(invalid, defaults, nil)
@@ -255,7 +247,7 @@ postValidateErrCheck:
 	bndErrs = f.BoundErrors()
 	var isValid = (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0
 	if isValidDef, ok := f.(IsValidDefiner); ok {
-		return isValidDef.IsValid() && isValid
+		return isValidDef.IsValid(ctx) && isValid
 	}
 
 	return isValid
@@ -270,6 +262,10 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 	)
 
 	var addError = func(mixin any, depth int, field string, errList ...error) {
+		if len(errList) == 0 {
+			return
+		}
+
 		if depth == 0 {
 			f.AddError(field, errList...)
 		} else {
@@ -290,7 +286,7 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 		fm, ok := mixin.(FullCleanMixin)
 		if !ok {
 			if depth == 0 {
-				panic("Form does not implement FullCleanMixin")
+				panic(fmt.Errorf("Form %T does not implement FullCleanMixin", mixin))
 			}
 			continue
 		}
@@ -343,6 +339,47 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 				v.SetWidget(widget)
 			}
 
+			// todo: write tests
+			wf, ok := widget.(WidgetFormDefiner)
+			if ok {
+				formFn, err := dr.Method[func() WidgetFormType](
+					wf, "WidgetForm",
+					dr.WithContext(ctx),
+					dr.WithFuncArgs(fm),
+				)
+				if err != nil {
+					assert.Fail(
+						"%T does not have the correct WidgetForm function: %v",
+						widget, err,
+					)
+				}
+
+				form := formFn()
+				form.SetPrefix(fm.PrefixName(k))
+				form.WithContext(ctx)
+				form.WithData(rawData, files, nil)
+
+				if !IsValid(ctx, form) {
+					var (
+						_errList = form.ErrorList()
+						_errBnd  = form.BoundErrors()
+						errs     = make([]error, 0, len(_errList)+_errBnd.Len())
+					)
+
+					errs = append(errs, _errList...)
+					for head := _errBnd.Front(); head != nil; head = head.Next() {
+						errs = append(errs, head.Value...)
+					}
+
+					addError(mixin, depth, k, errs...)
+					invalid[k] = form
+					continue
+				}
+
+				data = form
+				goto saveField
+			}
+
 			if !widget.ValueOmittedFromData(ctx, rawData, files, fm.PrefixName(k)) {
 				initial, errors = widget.ValueFromDataDict(ctx, rawData, files, fm.PrefixName(k))
 			}
@@ -385,9 +422,9 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 					CleanField__email(context.Context?, data) (data, error?)
 
 			*/
-			//	cleanField, err := django_reflect.Method[func(data any) (any, error)](
+			//	cleanField, err := dr.Method[func(data any) (any, error)](
 			//		fm, fmt.Sprintf("CleanField__%s", head.Key),
-			//		django_reflect.WrapWithContext(ctx),
+			//		dr.WithContext(ctx),
 			//	)
 			//	if err == nil {
 			//		data, err = cleanField(data)
@@ -415,6 +452,7 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 				continue
 			}
 
+		saveField:
 			// Check if the field is saveable and call Save() on it.
 			// This might be used to save a relation to the database, among other things.
 			// TODO: FIX INTERACTION WITH FileField
@@ -493,4 +531,17 @@ func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, na
 		"field %q in form %T: value is %T, cannot convert to %T",
 		name, form, value, _nT,
 	)}
+}
+
+func SaveForm(ctx context.Context, form any, args ...any) error {
+
+	saveFn, err := dr.Method[func() error](form, "Save",
+		dr.WithContext(ctx),
+		dr.WithFuncArgs(args),
+	)
+	if err != nil {
+		return err
+	}
+
+	return saveFn()
 }

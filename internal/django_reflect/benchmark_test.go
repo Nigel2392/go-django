@@ -136,14 +136,14 @@ func BenchmarkCast_Wrapper_Context_Creation(b *testing.B) {
 	src := func(ctx context.Context, a int) int { return a * 2 }
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = django_reflect.CastFunc[func(int) int](src, django_reflect.WrapWithContext(ctx))
+		_, _ = django_reflect.CastFunc[func(int) int](src, django_reflect.WithContext(ctx))
 	}
 }
 
 func BenchmarkCast_Wrapper_Context_Execution(b *testing.B) {
 	ctx := context.Background()
 	src := func(ctx context.Context, a int) int { return a * 2 }
-	out, _ := django_reflect.CastFunc[func(int) int](src, django_reflect.WrapWithContext(ctx))
+	out, _ := django_reflect.CastFunc[func(int) int](src, django_reflect.WithContext(ctx))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = out(5)
@@ -153,7 +153,7 @@ func BenchmarkCast_Wrapper_Context_Execution(b *testing.B) {
 func BenchmarkCast_Wrapper_Context_NoReturns_Execution(b *testing.B) {
 	ctx := context.Background()
 	src := func(ctx context.Context) {}
-	out, _ := django_reflect.CastFunc[func()](src, django_reflect.WrapWithContext(ctx))
+	out, _ := django_reflect.CastFunc[func()](src, django_reflect.WithContext(ctx))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		out()
@@ -167,7 +167,7 @@ func (m *bModel) Save(ctx context.Context) error { return nil }
 func BenchmarkCast_Wrapper_Method_Execution(b *testing.B) {
 	ctx := context.Background()
 	m := &bModel{}
-	saveFn, _ := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+	saveFn, _ := django_reflect.Method[func() error](m, "Save", django_reflect.WithContext(ctx))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = saveFn()
@@ -179,7 +179,7 @@ func BenchmarkCast_Wrapper_Context_MultiReturn_Execution(b *testing.B) {
 	src := func(ctx context.Context, s string) (string, int, error) { return s, len(s), nil }
 
 	// Cast down to error (dropping the string and int)
-	out, _ := django_reflect.CastFunc[func(string) error](src, django_reflect.WrapWithContext(ctx))
+	out, _ := django_reflect.CastFunc[func(string) error](src, django_reflect.WithContext(ctx))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = out("test")
@@ -189,7 +189,7 @@ func BenchmarkCast_Wrapper_Context_MultiReturn_Execution(b *testing.B) {
 func BenchmarkCast_Wrapper_Context_DestTakesContext1_Execution(b *testing.B) {
 	ctx := context.Background()
 	src := func(ctx context.Context, a int) int { return a * 2 }
-	out, _ := django_reflect.CastFunc[func(context.Context, int) int](src, django_reflect.WrapWithContext(ctx))
+	out, _ := django_reflect.CastFunc[func(context.Context, int) int](src, django_reflect.WithContext(ctx))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = out(context.Background(), 5)
@@ -199,7 +199,7 @@ func BenchmarkCast_Wrapper_Context_DestTakesContext1_Execution(b *testing.B) {
 func BenchmarkCast_Wrapper_Context_DestTakesContext2_Execution(b *testing.B) {
 	ctx := context.Background()
 	src := func(ctx context.Context, s string) (string, error) { return s, nil }
-	out, _ := django_reflect.CastFunc[func(context.Context, any) any](src, django_reflect.WrapWithContext(ctx))
+	out, _ := django_reflect.CastFunc[func(context.Context, any) any](src, django_reflect.WithContext(ctx))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = out(context.Background(), "test")
@@ -242,12 +242,40 @@ func BenchmarkCast_10Args_Variadic_Execution(b *testing.B) {
 	}
 }
 
+func BenchmarkCast_10Args_wrapper_Context_Variadic_Execution(b *testing.B) {
+	src := func(a ...int) int { return a[0] + a[len(a)-1] }
+	out, _ := django_reflect.CastFunc[func(any, any, any, any, any, any, any, any, any, any) float64](src, django_reflect.WithContext(b.Context()))
+	b.ResetTimer()
+	for x := 0; x < b.N; x++ {
+		_ = out(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+	}
+}
+
 func BenchmarkCast_10Args_Wrapper_Context_Execution(b *testing.B) {
 	ctx := context.Background()
 	src := func(ctx context.Context, a, b_, c, d, e, f, g, h, i int64) float32 { return float32(a + i) }
-	out, _ := django_reflect.CastFunc[func(int8, int8, int8, int8, int8, int8, int8, int8, int8) int64](src, django_reflect.WrapWithContext(ctx))
+	out, _ := django_reflect.CastFunc[func(int8, int8, int8, int8, int8, int8, int8, int8, int8) int64](src, django_reflect.WithContext(ctx))
 	b.ResetTimer()
 	for x := 0; x < b.N; x++ {
 		_ = out(1, 2, 3, 4, 5, 6, 7, 8, 9)
+	}
+}
+
+func BenchmarkCast_10Args_Wrapper_Variadic_Execution(b *testing.B) {
+	src := func(a ...int) int { return a[0] + a[len(a)-1] }
+	out, _ := django_reflect.CastFunc[func(any, any, any, any, any, any, any) float64](src, django_reflect.WithFuncArgs(1, 2, 3))
+	b.ResetTimer()
+	for x := 0; x < b.N; x++ {
+		_ = out(4, 5, 6, 7, 8, 9, 10)
+	}
+}
+
+func BenchmarkCast_10Args_Wrapper_Execution(b *testing.B) {
+	ctx := context.Background()
+	src := func(ctx context.Context, a, b_, c, d, e, f, g, h, i int64) float32 { return float32(a + i) }
+	out, _ := django_reflect.CastFunc[func(int8, int8, int8, int8, int8, int8) int64](src, django_reflect.WithContext(ctx), django_reflect.WithFuncArgs(1, 2, 3))
+	b.ResetTimer()
+	for x := 0; x < b.N; x++ {
+		_ = out(4, 5, 6, 7, 8, 9)
 	}
 }
