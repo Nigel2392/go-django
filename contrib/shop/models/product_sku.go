@@ -3,9 +3,12 @@ package models
 import (
 	"context"
 
+	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/shopspring/decimal"
 )
 
@@ -15,10 +18,21 @@ type ProductSku struct {
 	Title   string
 	Price   decimal.Decimal
 	Stock   uint64
+	Images  *blocks.ListBlockValue
 }
 
 func (m *ProductSku) Label(ctx context.Context) string {
 	return trans.T(ctx, "Product SKU")
+}
+
+func (b *ProductSku) GetImagesBlock() *blocks.ListBlock {
+	var block = blocks.NewListBlock(blocks.FormFieldBlock(
+		fields.ImageFileField("", fields.Label(trans.S("Image"))),
+		&mediafiles.SimpleStoredObject{},
+	))
+	block.Min = 0
+	block.Max = 3
+	return block
 }
 
 func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -53,6 +67,13 @@ func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*ProductSku, uint64]{
 				Config: attrs.FieldConfig{
 					MinValue: 0,
+				},
+			}
+		}),
+		fattrs.Field(m, "Images", &m.Images, func() fattrs.PtrFieldConfig[*ProductSku, *blocks.ListBlockValue] {
+			return fattrs.PtrFieldConfig[*ProductSku, *blocks.ListBlockValue]{
+				Default: &blocks.ListBlockValue{
+					V: make([]*blocks.ListBlockData, 0),
 				},
 			}
 		}),

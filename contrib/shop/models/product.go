@@ -62,6 +62,7 @@ func (qs *ProductQuery) SyncProducts(products ...*Product) error {
 	}
 
 	_, res, err := queries.GetQuerySet(&ProductSku{}).
+		Select("ID", "Price", "Product").
 		Filter("Product__in", qs.Select("ID")).
 		OrderBy("Product").
 		IterAll()

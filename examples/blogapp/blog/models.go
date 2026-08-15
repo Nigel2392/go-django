@@ -104,7 +104,7 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 		)),
 		blocks.WithBlockField[*blocks.StructBlock]("Stream", blocks.NewStreamBlock(
 			blocks.WithLabel[*blocks.StreamBlock](trans.S("Stream Content")),
-			blocks.WithMin[*blocks.StreamBlock](1),
+			blocks.WithMin[*blocks.StreamBlock](0),
 			blocks.WithMax[*blocks.StreamBlock](5),
 			blocks.WithBlockField[*blocks.StreamBlock]("paragraph", blocks.TextBlock(
 				blocks.WithLabel[*blocks.FieldBlock](trans.S("Paragraph")),
@@ -144,7 +144,7 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 	)
 
 	var block = blocks.NewListBlock(sb)
-	block.Min = 2
+	block.Min = 1
 	block.Max = 9
 
 	return block
@@ -314,12 +314,22 @@ func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 			Label:    "Slug",
 			HelpText: trans.S("The slug for this blog post."),
 			Blank:    true,
+			//	FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			//		return &fieldform.FormWidget[forms.Form]{
+			//			GetForm: func(ctx context.Context, parentForm forms.FullCleanMixin) forms.Form {
+			//				return forms.NewBaseForm(ctx)
+			//			},
+			//		}
+			//	},
 		}),
 		attrs.NewField(n, "Image", &attrs.FieldConfig{
 			Label:    "Image",
 			HelpText: trans.S("The image for this blog post."),
 			Null:     true,
 			Blank:    true,
+			FormField: func(opts ...func(fields.Field)) fields.Field {
+				return fields.ImageFileField("", opts...)
+			},
 		}),
 		attrs.NewField(n, "Thumbnail", &attrs.FieldConfig{
 			Null:     true,

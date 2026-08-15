@@ -117,6 +117,8 @@ func (f *FieldTest[FORMFIELD]) getFormData(d *djester.Tester, t *testing.T, fld 
 		data = []string{getData}
 	case []string:
 		data = getData
+	case url.Values:
+		urlValues = getData
 	case func(d *djester.Tester, t *testing.T, ft *FieldTest[FORMFIELD], f FORMFIELD) (urlValues []string, files []filesystem.FileHeader):
 		data, files = getData(d, t, f, fld)
 	}
@@ -148,12 +150,14 @@ func (f *FieldTest[FORMFIELD]) renderFormBoundField(t *testing.T, fld forms.Boun
 }
 
 func (f *FieldTest[FORMFIELD]) Test(d *djester.Tester, t *testing.T) {
+	t.Helper()
+
 	if f.FormField == nil {
 		t.Fatal("FormField cannot be nil.")
 	}
 
 	if f.FormData == nil && f.FormWithData != nil {
-		t.Fatal("You must provide both GetFormData and FormWithData when FormWithData is set.")
+		t.Fatal("You must provide both FormData and FormWithData when FormWithData is set.")
 	}
 
 	var (
@@ -177,9 +181,9 @@ func (f *FieldTest[FORMFIELD]) Test(d *djester.Tester, t *testing.T) {
 		isValid := forms.IsValid(t.Context(), form)
 		if isValid != f.ExpectsValid {
 			if f.ExpectsValid {
-				t.Fatal("valid form expected, but form was not valid")
+				t.Error("valid form expected, but form was not valid")
 			} else {
-				t.Fatal("invalid form expected, but form was valid")
+				t.Error("invalid form expected, but form was valid")
 			}
 		}
 
@@ -241,7 +245,7 @@ func (f *FieldTest[FORMFIELD]) Test(d *djester.Tester, t *testing.T) {
 		}
 
 		document := f.renderFormBoundField(t, boundField)
-		asserter := d.Assert(t, true)
+		asserter := d.Assert(t, false)
 		asserter.AssertHTMLDoc(document, assertHtml...)
 	}
 }

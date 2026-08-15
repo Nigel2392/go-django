@@ -797,10 +797,6 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			return err
 		}
 
-		if err := adminForm.SaveForms(); err != nil {
-			return err
-		}
-
 		var addData = map[string]interface{}{
 			"cType": cType.PkgPath(),
 			"label": ref.Title,
@@ -1039,10 +1035,6 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		}
 		if err != nil {
 			return errors.Wrap(err, "failed to update page node")
-		}
-
-		if err := adminForm.SaveForms(); err != nil {
-			return err
 		}
 
 		var logAction string

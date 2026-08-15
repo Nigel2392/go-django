@@ -49,10 +49,13 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 	var initAdminForm = func(updating bool) func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
 		return func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
 			var fileField = &fields.FileStorageField{
+				IsImageField:  true,
+				DisallowClear: true,
 				BaseField: fields.NewField(
 					fields.Label(trans.S("Image File")),
 					fields.HelpText(trans.S("Upload an image file")),
 					fields.Required(false),
+					fields.Default(instance.(*Image).Path),
 				),
 				Extensions: app.Options.AllowedFileExts,
 				UploadTo: func(fileObject *widgets.FileObject) string {
@@ -165,9 +168,9 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 		AddView: admin.FormViewOptions{
 			FormInit: initAdminForm(false),
 			Panels: []admin.Panel{
+				admin.FieldPanel("ImageFile"),
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
-				admin.FieldPanel("ImageFile"),
 				admin.FieldPanel("FileSize"),
 				// admin.FieldPanel("FileHash"),
 			},
@@ -175,10 +178,10 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 		EditView: admin.FormViewOptions{
 			FormInit: initAdminForm(true),
 			Panels: []admin.Panel{
+				admin.FieldPanel("ImageFile"),
 				admin.FieldPanel("ID"),
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
-				admin.FieldPanel("ImageFile"),
 				admin.PanelClass("collapsed", admin.LabeledPanelGroup(
 					trans.S("File Metadata"),
 					trans.S("Metadata about the file"),

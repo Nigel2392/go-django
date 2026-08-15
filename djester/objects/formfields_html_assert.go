@@ -81,20 +81,66 @@ func AssertInputAttributes(fieldName string, checkAttrs ...HTMLAttributeCheck) d
 	}
 }
 
-func AssertInputValueMatches(fieldName string, provided string) djester.HTMLAssertFunc {
+func valueError(value string, provided []string) error {
+	return fmt.Errorf("value %q does not match test value %q", value, provided)
+}
+
+func AssertInputValueMatches(fieldName string, provided ...string) djester.HTMLAssertFunc {
+	var ok bool
+	var provMap = make(map[string]struct{})
+	for _, p := range provided {
+		provMap[p] = struct{}{}
+	}
+
 	return func(doc *goquery.Document) error {
 		sel := doc.Find(fmt.Sprintf("#id_%s", fieldName))
 		if sel.Length() != 1 {
 			return fmt.Errorf("%d selections found, expected 1", sel.Length())
 		}
 
-		value, ok := sel.Attr("value")
-		if !ok {
-			return fmt.Errorf("expected value in selection: %v", sel)
+		var value string
+		switch {
+		case sel.Is("select[multiple]"):
+			var optSel = sel.Find("option")
+			var selectedOpts = optSel.Filter("option[selected]")
+			for _, node := range selectedOpts.EachIter() {
+				value, ok = node.Attr("value")
+				if !ok {
+					h, err := node.Html()
+					if err != nil {
+						return err
+					}
+					return fmt.Errorf("value not found in node %s", h)
+				}
+
+				if _, ok := provMap[value]; !ok {
+					return valueError(value, provided)
+				}
+			}
+
+			return nil
+
+		case sel.Is("select"):
+			var optSel = sel.Find("option")
+			var selectedOpt = optSel.Filter("option[selected]")
+			value, ok = selectedOpt.Attr("value")
+
+		case sel.Is("textarea"):
+			var innerText = sel.Text()
+			value = innerText
+			ok = true
+
+		default:
+			value, ok = sel.Attr("value")
 		}
 
-		if value != provided {
-			return fmt.Errorf("value %q does not match test value %q", value, provided)
+		if !ok && len(provided) > 0 {
+			h, _ := sel.Html()
+			return fmt.Errorf("expected value %v in selection: %v", provided, h)
+		}
+
+		if _, ok := provMap[value]; !ok {
+			return valueError(value, provided)
 		}
 
 		return nil

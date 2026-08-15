@@ -124,7 +124,8 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 
 		pages.Register(&pages.PageDefinition{
 			Prefetch: admin.Prefetch{
-				SelectRelated: []string{"User", "Thumbnail", "Document"},
+				SelectRelated:   []string{"User", "Thumbnail", "Document"},
+				PrefetchRelated: []any{"BlogImageSet"},
 			},
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				GetLabel:       trans.S("Blog Page"),
@@ -162,6 +163,33 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 					),
 					admin.FieldPanel("Editor"),
 					admin.FieldPanel("Content"),
+					&admin.ModelFormPanel[*BlogImage, modelforms.ModelForm[*BlogImage]]{
+						TargetType: &BlogImage{},
+						FieldName:  "BlogImageSet",
+						Classname:  "collapsible",
+						// SubClassname: "collapsed",
+						MinNum: 3,
+						MaxNum: 9,
+						// DisallowAdd: true,
+						// DisallowRemove: true,
+						Panels: []admin.Panel{
+							admin.FieldPanel("Image"),
+							admin.FieldPanel("Content"),
+							//&admin.ModelFormPanel[*BlogPage, modelforms.ModelForm[*BlogPage]]{
+							//	TargetType: &BlogPage{},
+							//	FieldName:  "BlogPage",
+							//	// SubClassname: "collapsed",
+							//	MinNum: 1,
+							//	MaxNum: 1,
+							//	Panels: []admin.Panel{
+							//		admin.FieldPanel("Title"),
+							//		admin.FieldPanel("UrlPath"),
+							//		admin.FieldPanel("Slug"),
+							//		admin.FieldPanel("Thumbnail"),
+							//	},
+							//},
+						},
+					},
 				}
 			},
 			EditPanels: func(r *http.Request, page pages.Page) []admin.Panel {
@@ -194,16 +222,6 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 								Panels: []admin.Panel{
 									admin.FieldPanel("Image"),
 									admin.FieldPanel("Content"),
-									//	&admin.ModelFormPanel[*BlogPage, modelforms.ModelForm[*BlogPage]]{
-									//		TargetType: &BlogPage{},
-									//		FieldName:  "BlogPage",
-									//		// SubClassname: "collapsed",
-									//		MinNum: 1,
-									//		MaxNum: 1,
-									//		//Panels: []admin.Panel{
-									//		//	admin.FieldPanel("Image"),
-									//		//},
-									//	},
 								},
 							},
 						),

@@ -1107,7 +1107,7 @@ func (v *GenericPreviewHandler[T]) TakeControl(w http.ResponseWriter, req *http.
 	//   - func() error
 	//   - func(ctx context.Context) error
 	//   - func(ctx context.Context) (..., error)
-	saveFn, err := django_reflect.Method[func() error](form, "Save", django_reflect.WrapWithContext(
+	saveFn, err := django_reflect.Method[func() error](form, "Save", django_reflect.WithContext(
 		form.Context(),
 	))
 	if err == nil {

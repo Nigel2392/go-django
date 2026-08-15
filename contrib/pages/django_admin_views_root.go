@@ -276,10 +276,6 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			return err
 		}
 
-		if err := adminForm.SaveForms(); err != nil {
-			return err
-		}
-
 		var addData = map[string]interface{}{
 			"cType":  cType.TypeName(),
 			"pageId": ref.PageID,
