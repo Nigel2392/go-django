@@ -40,6 +40,18 @@ func RetrieveBackend(name string) (Backend, bool) {
 	return backends.Backend(name)
 }
 
+func MapRegistry() map[string]Backend {
+	var reg = backends.registry
+	if reg == nil {
+		reg = make(map[string]Backend)
+	}
+	var def = GetDefault()
+	if def != nil {
+		reg["default"] = def
+	}
+	return reg
+}
+
 func GetDefault() Backend {
 	return defaultBackend
 }

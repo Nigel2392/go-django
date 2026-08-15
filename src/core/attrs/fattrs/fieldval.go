@@ -450,9 +450,9 @@ func (r *ptrField[M, V]) SetValue(v interface{}, force bool) error {
 	}
 
 scanNow:
-	wasSet, _ := django_reflect.ScanTo(r.val, v, django_reflect.SF_CONVS)
+	wasSet, err := django_reflect.ScanTo(r.val, v, django_reflect.SF_CONVS)
 	if wasSet {
-		return r.wasSet(nil)
+		return r.wasSet(err)
 	}
 
 	var (

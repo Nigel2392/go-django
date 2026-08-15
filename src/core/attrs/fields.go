@@ -1204,7 +1204,7 @@ func (f *FieldDef) Scan(value any) error {
 				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 				reflect.Float32, reflect.Float64:
 				if rv.String() == "" {
-					return fmt.Errorf("value is empty")
+					return fmt.Errorf("%T.%s: value is empty", f.Instance(), f.Name())
 				}
 				n := reflect.New(f.field_t.Type)
 				if _, err := fmt.Sscan(rv.String(), n.Interface()); err != nil {

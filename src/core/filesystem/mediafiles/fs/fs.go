@@ -21,6 +21,7 @@ var (
 
 func init() {
 	mediafiles.RegisterBackend("filesystem", &Backend{})
+	mediafiles.SetDefault("filesystem")
 }
 
 type Backend struct {
