@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/contrib/admin/compare"
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
@@ -831,7 +832,6 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 		}
 
 		var form modelforms.ModelForm[TARGET]
-
 		if p.Form != nil {
 			form = p.Form()
 		} else {
@@ -890,7 +890,6 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 							Relation: revField.Rel(),
 						},
 					})
-
 				} else {
 					logger.Warnf("ModelFormPanel: source instance has zero primary key; related object may not be saved correctly")
 				}
@@ -901,15 +900,7 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 					field.Name(),
 				)
 			}
-			form = &clusterableForm[TARGET, FORM]{
-				ModelForm:    form,
-				FormOrdering: FORM_ORDERING_POST,
-			}
 		case attrs.RelManyToOne:
-			form = &clusterableForm[TARGET, FORM]{
-				ModelForm:    form,
-				FormOrdering: FORM_ORDERING_PRE,
-			}
 		default:
 			// not implemented
 			assert.Fail(
@@ -930,22 +921,22 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 	return formList
 }
 
-var _ ClusterOrderableForm = (*clusterableForm[attrs.Definer, modelforms.ModelForm[attrs.Definer]])(nil)
+var _ ClusterOrderableForm = (*clusterableForm[attrs.Definer])(nil)
 
-type clusterableForm[T1 attrs.Definer, T2 modelforms.ModelForm[T1]] struct {
-	modelforms.ModelForm[T1]
+type clusterableForm[T1 attrs.Definer] struct {
+	formsets.BaseFormSetForm
 	FormOrdering FORM_ORDERING
 }
 
-func (c *clusterableForm[T1, T2]) FormOrder() FORM_ORDERING {
+func (c *clusterableForm[T1]) FormOrder() FORM_ORDERING {
 	return c.FormOrdering
 }
 
-func (c *clusterableForm[T1, T2]) Unwrap() []any {
-	if unwrapper, ok := c.ModelForm.(forms.FormWrapper[any]); ok {
+func (c *clusterableForm[T1]) Unwrap() []any {
+	if unwrapper, ok := c.BaseFormSetForm.(forms.FormWrapper[any]); ok {
 		return unwrapper.Unwrap()
 	}
-	if unwrapper, ok := c.ModelForm.(forms.FormWrapper[T1]); ok {
+	if unwrapper, ok := c.BaseFormSetForm.(forms.FormWrapper[T1]); ok {
 		var unwrapped = unwrapper.Unwrap()
 		var list = make([]any, len(unwrapped))
 		for i, item := range unwrapped {
@@ -953,24 +944,57 @@ func (c *clusterableForm[T1, T2]) Unwrap() []any {
 		}
 		return list
 	}
-	return []any{c.ModelForm}
+	return []any{c.BaseFormSetForm}
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Context, instance attrs.Definer) (FormSetObject, []formsets.BaseFormSetForm, error) {
-	var f = m.FormSet(r, ctx, instance)
+	var f formsets.BaseFormSetForm = m.FormSet(r, ctx, instance)
+
+	var ordering FORM_ORDERING
+	if django_reflect.IsZero(attrs.PrimaryKey(ctx, instance)) {
+		ordering = FORM_ORDERING_POST
+	} else {
+		ordering = FORM_ORDERING_PRE
+	}
+
+	var field = m.getField(instance)
+	var rel = field.Rel()
+	switch rel.Type() {
+	case attrs.RelManyToOne:
+		f = &clusterableForm[attrs.Definer]{
+			BaseFormSetForm: f,
+			FormOrdering:    ordering,
+		}
+	case attrs.RelOneToMany:
+		f = &clusterableForm[attrs.Definer]{
+			BaseFormSetForm: f,
+			FormOrdering:    FORM_ORDERING_POST,
+		}
+	case attrs.RelManyToMany:
+	case attrs.RelOneToOne:
+	}
+
 	return f, []formsets.BaseFormSetForm{f}, nil
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Context, instance attrs.Definer) formsets.ListFormSet[modelforms.ModelForm[TARGET]] {
-
+	var fld = m.getField(instance)
+	var relFld = fld.Rel().Field()
+	var relFnd bool
 	var targetFields = make([]string, 0, len(m.Panels))
 	for _, panel := range m.Panels {
+		var fields = panel.Fields()
+		if !relFnd && relFld != nil {
+			for _, fld := range fields {
+				if fld == relFld.Name() {
+					relFnd = true
+				}
+			}
+		}
 		targetFields = append(targetFields, panel.Fields()...)
 	}
 
-	var fld = m.getField(instance)
-	var relFld = fld.Rel().Field()
-	if relFld != nil && !attrs.IsZero(attrs.PrimaryKey(ctx, instance)) {
+	if relFld != nil && !relFnd && !attrs.IsZero(attrs.PrimaryKey(ctx, instance)) {
 		targetFields = append(targetFields, relFld.Name())
 	}
 

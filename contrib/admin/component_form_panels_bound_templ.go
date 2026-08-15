@@ -5,9 +5,6 @@ package admin
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
 	"bytes"
 	"context"
@@ -22,8 +19,6 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"github.com/gosimple/slug"
-
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -36,6 +31,9 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/utils/htmlutil"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+	"github.com/gosimple/slug"
 )
 
 func PanelHeading(panelId string, allowPanelLink bool) templ.Component {

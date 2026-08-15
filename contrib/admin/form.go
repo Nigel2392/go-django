@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -19,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/models"
+	"github.com/Nigel2392/go-signals"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -56,13 +58,13 @@ func NewAdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](r *http.Request
 	}
 }
 
-func (a *AdminForm[T1, T2]) Unwrap() []formsets.BaseFormSetForm {
+func (a *AdminForm[T1, T2]) Unwrap() []any {
 	var fs = a.FormSet()
 	if fs == nil {
-		return []formsets.BaseFormSetForm{a}
+		return []any{a}
 	}
 
-	return []formsets.BaseFormSetForm{a, fs}
+	return []any{a, fs}
 }
 
 func (a *AdminForm[T1, T2]) EditContext(key string, context ctx.Context) {
@@ -83,7 +85,9 @@ func (a *AdminForm[T1, T2]) WithContext(ctx context.Context) {
 
 func (a *AdminForm[T1, T2]) Media() media.Media {
 	var m = a.Form.Media()
-	m = m.Merge(a.FormSet().Media())
+	if fs := a.FormSet(); fs != nil {
+		m = m.Merge(fs.Media())
+	}
 	return m
 }
 func (a *AdminForm[T1, T2]) Prefix() string {
@@ -113,6 +117,9 @@ func (a *AdminForm[T1, T2]) Ordering(o []string) {
 }
 func (a *AdminForm[T1, T2]) FieldOrder() []string {
 	return a.Form.FieldOrder()
+}
+func (a *AdminForm[T1, T2]) FormValue(name string) any {
+	return a.Form.FormValue(name)
 }
 func (a *AdminForm[T1, T2]) Field(name string) (fields.Field, bool) {
 	return a.Form.Field(name)
@@ -250,16 +257,16 @@ func (f *AdminForm[T1, T2]) Validators() []func(forms.Form, map[string]interface
 	return f.Form.Validators()
 }
 
-func (f *AdminForm[T1, T2]) CallbackOnValid() []func(forms.Form) {
-	return f.Form.CallbackOnValid()
+func (f *AdminForm[T1, T2]) OnValid() signals.Signal[forms.Form] {
+	return f.Form.OnValid()
 }
 
-func (f *AdminForm[T1, T2]) CallbackOnInvalid() []func(forms.Form) {
-	return f.Form.CallbackOnInvalid()
+func (f *AdminForm[T1, T2]) OnInvalid() signals.Signal[forms.Form] {
+	return f.Form.OnInvalid()
 }
 
-func (f *AdminForm[T1, T2]) CallbackOnFinalize() []func(forms.Form) {
-	return f.Form.CallbackOnFinalize()
+func (f *AdminForm[T1, T2]) OnFinalize() signals.Signal[forms.Form] {
+	return f.Form.OnFinalize()
 }
 
 func (f *AdminForm[T1, T2]) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
@@ -282,26 +289,19 @@ func (a *AdminForm[T1, T2]) AddFormError(errorList ...error) {
 func (a *AdminForm[T1, T2]) AddError(name string, errorList ...error) {
 	a.Form.AddError(name, errorList...)
 }
-func (a *AdminForm[T1, T2]) OnValid(f ...func(forms.Form)) {
-	a.Form.OnValid(f...)
-}
-func (a *AdminForm[T1, T2]) OnInvalid(f ...func(forms.Form)) {
-	a.Form.OnInvalid(f...)
-}
-func (a *AdminForm[T1, T2]) OnFinalize(f ...func(forms.Form)) {
-	a.Form.OnFinalize(f...)
-}
-func (a *AdminForm[T1, T2]) IsValid() bool {
-	if validDef, ok := any(a.Form).(forms.IsValidDefiner); ok && !validDef.IsValid() {
-		return false
+func (a *AdminForm[T1, T2]) IsValid(ctx context.Context) (valid bool) {
+	valid = true
+
+	if validDef, ok := any(a.Form).(forms.IsValidDefiner); ok {
+		valid = validDef.IsValid(ctx)
 	}
+
 	var fs = a.FormSet()
 	if fs != nil {
-		if !forms.IsValid(a.Context(), fs) {
-			return false
-		}
+		valid = valid && forms.IsValid(ctx, fs)
 	}
-	return true
+
+	return valid
 }
 
 func (a *AdminForm[T1, T2]) SetOnLoad(fn func(model T2, initialData map[string]interface{})) {
@@ -417,6 +417,10 @@ func (a *AdminForm[T1, T2]) FormSet() formsets.ListFormSet[formsets.BaseFormSetF
 		return int(FORM_ORDERING_NONE)
 	})
 
+	if len(formsList) == 0 {
+		return nil
+	}
+
 	a.forms = formSets
 	a.formset = formsets.NewBaseFormSet(
 		a.Context(),
@@ -440,13 +444,57 @@ func (a *AdminForm[T1, T2]) FormSet() formsets.ListFormSet[formsets.BaseFormSetF
 	//return formsList //, nil
 }
 
-func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
-	var data, err = a.Form.Save()
+func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]interface{}, error)) (map[string]interface{}, error) {
+	if len(a.forms) == 0 {
+		a.FormSet()
+	}
+
+	if a.formset == nil {
+		return a.Form.Save()
+	}
+
+	var (
+		preSaveForms  = make([]formsets.BaseFormSetForm, 0)
+		postSaveForms = make([]formsets.BaseFormSetForm, 0)
+		fList, err    = a.FormSet().Forms()
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, form := range fList {
+		switch f := form.(type) {
+		case *clusterableForm[attrs.Definer]:
+			if f.FormOrder() == FORM_ORDERING_POST {
+				postSaveForms = append(postSaveForms, f.BaseFormSetForm)
+			} else {
+				preSaveForms = append(preSaveForms, f.BaseFormSetForm)
+			}
+		default:
+			preSaveForms = append(preSaveForms, form)
+		}
+	}
+
+	for _, form := range preSaveForms {
+		a.saveFormSetForm(form, FORM_ORDERING_PRE)
+	}
+
+	data, err := fn(a.Context(), a.Form)
 	if err != nil {
 		return data, err
 	}
 
+	for _, form := range postSaveForms {
+		a.saveFormSetForm(form, FORM_ORDERING_POST)
+	}
+
 	return data, nil
+}
+
+func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
+	return a.SaveFunc(func(ctx context.Context, t T1) (map[string]interface{}, error) {
+		return a.Form.Save()
+	})
 }
 
 func (a *AdminForm[T1, T2]) SaveForms(formList ...forms.Form) (err error) {
@@ -467,82 +515,76 @@ func (a *AdminForm[T1, T2]) SaveForms(formList ...forms.Form) (err error) {
 	}
 
 	for _, form := range flist {
-		var rV = reflect.ValueOf(form)
-		var saveMethod = rV.MethodByName("Save")
-		if !saveMethod.IsValid() {
-			logger.Warnf("could not save form, no Save method found on %T", form)
-			continue
-		}
-
-		if saveMethod.Type().NumIn() != 0 {
-			logger.Warnf("could not save form, Save method on %T has %d inputs, expected 0", form, saveMethod.Type().NumIn())
-			continue
-		}
-
-		var cleaned = form.CleanedData()
-		var deleted, _ = cleaned["__DELETED__"].(string)
-		if deleted == "true" {
-			var instanceMethod = rV.MethodByName("Instance")
-			if !instanceMethod.IsValid() {
-				// ? maybe do something here, not sure..
-				logger.Warnf("could not delete form, no Instance method found on %T", form)
-				continue
-			}
-
-			if instanceMethod.Type().NumIn() != 0 {
-				// ? maybe do something here, not sure..
-				logger.Warnf("could not delete form, Instance method on %T has %d inputs, expected 0", form, instanceMethod.Type().NumIn())
-				continue
-			}
-
-			if instanceMethod.Type().NumOut() < 1 {
-				// ? maybe do something here, not sure..
-				logger.Warnf("could not delete form, Instance method on %T has %d outputs, expected at least 1", form, instanceMethod.Type().NumOut())
-				continue
-			}
-
-			if !instanceMethod.Type().Out(0).ConvertibleTo(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
-				// ? maybe do something here, not sure..
-				logger.Warnf("could not delete form, Instance method on %T does not return an attrs.Definer, got %v", form, instanceMethod.Type().Out(0))
-				continue
-			}
-
-			var vals = instanceMethod.Call([]reflect.Value{})
-			var instanceVal = vals[0].Interface()
-			if instanceVal == nil {
-				// ? maybe do something here, not sure..
-				logger.Warnf("could not delete form, Instance method on %T returned nil", form)
-				continue
-			}
-
-			logger.Debugf("AdminForm: deleting form %T, instance: %v", form, instanceVal)
-			deleted, err := models.DeleteModel(a.Context(), instanceVal.(attrs.Definer))
-			if err != nil {
-				logger.Errorf("could not delete model %T: %v", instanceVal, err)
-				a.Form.AddFormError(err)
-				continue
-			}
-			if !deleted {
-				logger.Warnf("could not delete model %T: unknown error", instanceVal)
-				a.Form.AddFormError(errors.New("could not delete model"))
-			}
-			continue
-		}
-
-		var results = saveMethod.Call([]reflect.Value{})
-		if len(results) > 0 {
-			var last = results[len(results)-1]
-			if !last.Type().Implements(reflect.TypeOf((*error)(nil)).Elem()) || last.IsNil() {
-				continue
-			}
-
-			err = last.Interface().(error)
-		}
-		if err != nil {
-			a.Form.AddFormError(err)
-		}
+		a.saveFormSetForm(form, FORM_ORDERING_NONE)
 	}
+
 	return nil
+}
+
+func (a *AdminForm[T1, T2]) saveFormSetForm(form formsets.BaseFormSetForm, ordering FORM_ORDERING) {
+	var rV = reflect.ValueOf(form)
+	var cleaned = form.CleanedData()
+	var deleted, _ = cleaned["__DELETED__"].(string)
+	if deleted == "true" {
+		var instanceMethod = rV.MethodByName("Instance")
+		if !instanceMethod.IsValid() {
+			// ? maybe do something here, not sure..
+			logger.Warnf("could not delete form, no Instance method found on %T", form)
+			return
+		}
+
+		if instanceMethod.Type().NumIn() != 0 {
+			// ? maybe do something here, not sure..
+			logger.Warnf("could not delete form, Instance method on %T has %d inputs, expected 0", form, instanceMethod.Type().NumIn())
+			return
+		}
+
+		if instanceMethod.Type().NumOut() < 1 {
+			// ? maybe do something here, not sure..
+			logger.Warnf("could not delete form, Instance method on %T has %d outputs, expected at least 1", form, instanceMethod.Type().NumOut())
+			return
+		}
+
+		if !instanceMethod.Type().Out(0).ConvertibleTo(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
+			// ? maybe do something here, not sure..
+			logger.Warnf("could not delete form, Instance method on %T does not return an attrs.Definer, got %v", form, instanceMethod.Type().Out(0))
+			return
+		}
+
+		var vals = instanceMethod.Call([]reflect.Value{})
+		var instanceVal = vals[0].Interface()
+		if instanceVal == nil {
+			// ? maybe do something here, not sure..
+			logger.Warnf("could not delete form, Instance method on %T returned nil", form)
+			return
+		}
+
+		logger.Debugf("AdminForm: deleting form %T, instance: %v", form, instanceVal)
+		deleted, err := models.DeleteModel(a.Context(), instanceVal.(attrs.Definer))
+		if err != nil {
+			logger.Errorf("could not delete model %T: %v", instanceVal, err)
+			a.Form.AddFormError(err)
+			return
+		}
+		if !deleted {
+			logger.Warnf("could not delete model %T: unknown error", instanceVal)
+			a.Form.AddFormError(errors.New("could not delete model"))
+		}
+		return
+	}
+
+	saveFn, err := django_reflect.Method[func() error](form, "Save", django_reflect.WithContext(
+		a.Context(),
+	))
+	if err != nil {
+		logger.Warnf("form %T does not have Save method: %v", form, err)
+		return
+	}
+
+	err = saveFn()
+	if err != nil {
+		a.Form.AddFormError(err)
+	}
 }
 
 func (a *AdminForm[T1, T2]) SetFields(fields ...string) {
@@ -551,7 +593,7 @@ func (a *AdminForm[T1, T2]) SetFields(fields ...string) {
 func (a *AdminForm[T1, T2]) SetExclude(exclude ...string) {
 	a.Form.SetExclude(exclude...)
 }
-func (a *AdminForm[T1, T2]) Instance() attrs.Definer {
+func (a *AdminForm[T1, T2]) Instance() T2 {
 	return a.Form.Instance()
 }
 func (a *AdminForm[T1, T2]) SetInstance(model T2) {
