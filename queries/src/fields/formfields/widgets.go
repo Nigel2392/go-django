@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -68,6 +69,10 @@ func (f *ModelSelect) ValueToGo(value interface{}) (interface{}, error) {
 		return value, nil
 	}
 
+	if value == nil || django_reflect.IsZero(value) {
+		return nil, nil
+	}
+
 	var newObj = attrs.NewObject[attrs.Definer](context.Background(), f.Opts.TargetObject)
 	var defs = attrs.Define(context.Background(), newObj)
 	var prim = defs.Primary()
@@ -114,7 +119,7 @@ func (o *ModelSelect) GetContextData(ctx context.Context, id, name string, value
 		case []string:
 			values = v
 		default:
-			values = []string{fmt.Sprintf("%v", v)}
+			values = []string{fmt.Sprint(attrs.PrimaryKey(ctx, value))}
 		}
 	}
 

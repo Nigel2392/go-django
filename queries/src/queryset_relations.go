@@ -176,6 +176,11 @@ func (t *relatedQuerySet[T, T2]) setup() {
 
 }
 
+func (t *relatedQuerySet[T, T2]) BuildExpression() expr.Expression {
+	t.setup()
+	return t.qs.BuildExpression()
+}
+
 func (t *relatedQuerySet[T, T2]) createTargets(targets []T) ([]T, error) {
 	t.setup()
 	return t.originalQs.Clone().WithContext(t.qs.Context()).BulkCreate(targets)
@@ -314,6 +319,12 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 func (t *relatedQuerySet[T, T2]) WithContext(ctx context.Context) T2 {
 	t.setup()
 	t.qs = t.qs.WithContext(ctx)
+	return t.embedder
+}
+
+func (t *relatedQuerySet[T, T2]) Select(fields ...any) T2 {
+	t.setup()
+	t.qs = t.qs.Select(fields...)
 	return t.embedder
 }
 

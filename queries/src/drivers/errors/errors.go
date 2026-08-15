@@ -21,6 +21,7 @@ for wrapping and unwrapping errors from `github.com/pkg/errors`.
 */
 
 var (
+	Unknown            Error = New(CodeUnknown, "Unknown error")
 	NotImplemented     Error = New(CodeNotImplemented, "Not implemented")
 	NoDatabase         Error = New(CodeNoDatabase, "No database connection")
 	UnknownDriver      Error = New(CodeUnknownDriver, "Unknown driver")
