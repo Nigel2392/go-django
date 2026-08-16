@@ -2,11 +2,13 @@ package forms
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"net/url"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	dr "github.com/Nigel2392/go-django/internal/django_reflect"
 	errsPkg "github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -533,15 +535,26 @@ func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, na
 	)}
 }
 
-func SaveForm(ctx context.Context, form any, args ...any) error {
+func HasErrors(form ErrorDefiner) bool {
+	var errs = form.BoundErrors()
+	return errs != nil && errs.Len() > 0 || len(form.ErrorList()) > 0
+}
 
+func SaveForm(ctx context.Context, form any, args ...any) error {
 	saveFn, err := dr.Method[func() error](form, "Save",
 		dr.WithContext(ctx),
-		dr.WithFuncArgs(args),
+		dr.WithFuncArgs(args...),
 	)
-	if err != nil {
+	if err != nil && !errors.Is(err, django_reflect.ErrMethodNotFound) {
 		return err
 	}
 
-	return saveFn()
+	err = saveFn()
+	if a, ok := form.(ErrorAdder); ok {
+		if err != nil {
+			a.AddFormError(err)
+		}
+	}
+
+	return err
 }

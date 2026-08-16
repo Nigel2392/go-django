@@ -221,7 +221,7 @@ func WithFuncArgs(args ...any) func(*FuncConfig) {
 			rv = a
 			rt = a.Type()
 		case Argument:
-			rv = reflect.ValueOf(a.Arg())
+			rv = ReflectValue(a.Arg())
 			rt = a.Type()
 		default:
 			rv = reflect.ValueOf(arg)
@@ -620,7 +620,7 @@ func compileReturnConverter(srcFnTyp, dstFnTyp reflect.Type) (func([]reflect.Val
 		// keep exact matcher inside closure
 	case numOutDst == 1 && isErrType(outZero) && numOutSrc > 0 && isErrType(srcFnTyp.Out(numOutSrc-1)):
 		// keep exact matcher inside closure
-	case numOutDst == 2 && numOutSrc > 1 && isErrType(dstFnTyp.Out(1)) && isErrType(srcFnTyp.Out(numOutSrc-1)) && (isLiteralAny(outZero) || isAnySlice(outZero)):
+	case numOutDst == 2 && numOutSrc >= 1 && isErrType(dstFnTyp.Out(1)) && isErrType(srcFnTyp.Out(numOutSrc-1)) && (isLiteralAny(outZero) || isAnySlice(outZero)):
 		// keep exact matcher inside closure
 	case numOutDst == 1 && (isLiteralAny(outZero) || isAnySlice(outZero)) && numOutSrc >= 1:
 		// keep exact matcher inside closure
@@ -631,22 +631,43 @@ func compileReturnConverter(srcFnTyp, dstFnTyp reflect.Type) (func([]reflect.Val
 		)
 	}
 
+	argIdx := 0
 	dstTypes := make([]reflect.Type, numOutDst)
 	retConverters := make([]converterFunc, numOutDst)
 	for i := 0; i < numOutDst; i++ {
 		dstTypes[i] = dstFnTyp.Out(i)
 
-		var srcType = srcFnTyp.Out(i)
-		if numOutDst == 1 && isErrType(outZero) && numOutSrc > 0 && isErrType(srcFnTyp.Out(numOutSrc-1)) {
+		var srcType = srcFnTyp.Out(argIdx)
+		switch {
+		case numOutDst == 1 && isErrType(outZero) && numOutSrc > 0 && isErrType(srcFnTyp.Out(numOutSrc-1)):
 			srcType = srcFnTyp.Out(numOutSrc - 1)
-		} else if numOutDst == 2 && numOutSrc > 1 && isErrType(dstFnTyp.Out(1)) && isErrType(srcFnTyp.Out(numOutSrc-1)) && (isLiteralAny(outZero) || isAnySlice(outZero)) {
-			if i == 1 {
-				srcType = srcFnTyp.Out(numOutSrc - 1)
-			} else {
+			argIdx++
+		case numOutDst == 2 && numOutSrc >= 1 && isErrType(dstFnTyp.Out(1)) && isErrType(srcFnTyp.Out(numOutSrc-1)) && (isLiteralAny(outZero) || isAnySlice(outZero)):
+			switch {
+			// handle src func() error -> func() (any | []any, error)
+			case numOutSrc == 1 && i == 0:
 				srcType = _literalAny
+
+			case numOutSrc == 1 && i == 1:
+				srcType = srcFnTyp.Out(numOutSrc - 1)
+
+			default:
+				// handle src func() (..., error) -> func() (any | []any, error)
+				if i == 1 {
+					srcType = srcFnTyp.Out(numOutSrc - 1)
+					argIdx++
+				} else {
+					srcType = _literalAny
+					argIdx++
+				}
 			}
-		} else if numOutDst == 1 && (isLiteralAny(outZero) || isAnySlice(outZero)) && numOutSrc >= 1 {
+
+		case numOutDst == 1 && (isLiteralAny(outZero) || isAnySlice(outZero)) && numOutSrc >= 1:
+			// handle func() (...) -> func() (any | []any)
 			srcType = _literalAny
+			argIdx++
+		default:
+			argIdx++
 		}
 
 		if isAnySlice(dstTypes[i]) {
@@ -669,8 +690,19 @@ func compileReturnConverter(srcFnTyp, dstFnTyp reflect.Type) (func([]reflect.Val
 			// standard processing below
 		case numOutDst == 1 && isErrType(outZero) && numOutSrc > 0 && isErrType(srcFnTyp.Out(numOutSrc-1)):
 			res = res[numOutSrc-1:]
-		case numOutDst == 2 && numOutSrc > 1 && isErrType(dstFnTyp.Out(1)) && isErrType(srcFnTyp.Out(numOutSrc-1)) && (isLiteralAny(outZero) || isAnySlice(outZero)):
-			if len(res) > 2 || isAnySlice(outZero) {
+		case numOutDst == 2 && numOutSrc >= 1 && isErrType(dstFnTyp.Out(1)) && isErrType(srcFnTyp.Out(numOutSrc-1)) && (isLiteralAny(outZero) || isAnySlice(outZero)):
+			switch {
+			// handle src func() error -> func() (any, error)
+			case len(res) == 1 && isLiteralAny(outZero):
+				return []reflect.Value{reflect.ValueOf(new(any)).Elem(), res[len(res)-1]}
+
+			// handle src func() error -> func() (any, error)
+			case len(res) == 1 && isAnySlice(outZero):
+				var slice = reflect.MakeSlice(reflect.SliceOf(_literalAny), 0, 0)
+				return []reflect.Value{slice, res[len(res)-1]}
+
+			// handle src func() (..., error) -> func() (any, error)
+			case len(res) > 2 || isLiteralAny(outZero) || isAnySlice(outZero):
 				var slice = reflect.MakeSlice(reflect.SliceOf(_literalAny), 0, len(res)-1)
 				for i := 0; i < len(res)-1; i++ {
 					slice = reflect.Append(slice, res[i])
@@ -678,6 +710,7 @@ func compileReturnConverter(srcFnTyp, dstFnTyp reflect.Type) (func([]reflect.Val
 				return []reflect.Value{slice, res[len(res)-1]}
 			}
 		case numOutDst == 1 && (isLiteralAny(outZero) || isAnySlice(outZero)) && numOutSrc >= 1:
+			// handle func() (...) -> func() (any | []any)
 			if len(res) > 1 || isAnySlice(outZero) {
 				var slice = reflect.MakeSlice(reflect.SliceOf(_literalAny), 0, len(res))
 				for i := 0; i < len(res); i++ {

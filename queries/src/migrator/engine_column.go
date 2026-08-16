@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	dr "github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -247,6 +248,10 @@ func (c *Column) FieldType() reflect.Type {
 
 func jsonCompare(newDefault, oldDefault interface{}) (bool, error) {
 
+	if dr.Equals(newDefault, oldDefault, dr.EQ_DFLT) {
+		return true, nil
+	}
+
 	var (
 		aBytes, bBytes []byte
 		err            error
@@ -267,9 +272,11 @@ func jsonCompare(newDefault, oldDefault interface{}) (bool, error) {
 	if err = json.Unmarshal(bBytes, bFace); err != nil {
 		return false, err
 	}
-	if reflect.DeepEqual(aFace, bFace) {
+
+	if dr.Equals(*aFace, *bFace, dr.EQ_DFLT) {
 		return true, nil
 	}
+
 	return false, nil
 }
 

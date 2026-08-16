@@ -52,12 +52,11 @@ func ValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, name s
 	return forms.FormValueFromDataDict[T](ctx, form, name, data, files)
 }
 
+func HasErrors(f ErrorDefiner) bool {
+	return forms.HasErrors(f)
+}
+
 type SaveableForm interface {
 	Form
 	Save() (map[string]interface{}, error)
-}
-
-func HasErrors(form ErrorDefiner) bool {
-	var errs = form.BoundErrors()
-	return errs != nil && errs.Len() > 0 || len(form.ErrorList()) > 0
 }

@@ -830,6 +830,49 @@ func TestWrapWithContextMethod4(t *testing.T) {
 	t.Logf("got %d and %d", a[0], a[1])
 }
 
+type intSaver2 struct{}
+
+func (s *intSaver2) Save(ctx context.Context) error {
+	if ctx == nil {
+		panic("expected non-nil context")
+	}
+	return nil
+}
+
+func TestWrapWithContextMethod5(t *testing.T) {
+	var saver = &intSaver2{}
+	out, err := django_reflect.Method[func() ([]any, error)](saver, "Save", django_reflect.WithFuncArgs(context.Background()))
+	if err != nil {
+		t.Fatalf("expected to find method Save: %v", err)
+	}
+
+	a, err := out()
+	mustNoErr(t, err)
+
+	if len(a) != 0 {
+		t.Fatalf("Expected 0 return parameters, got %d", len(a))
+	}
+
+	t.Logf("got %v", a)
+}
+
+func TestWrapWithContextMethod6(t *testing.T) {
+	var saver = &intSaver2{}
+	out, err := django_reflect.Method[func() (any, error)](saver, "Save", django_reflect.WithFuncArgs(context.Background()))
+	if err != nil {
+		t.Fatalf("expected to find method Save: %v", err)
+	}
+
+	a, err := out()
+	mustNoErr(t, err)
+
+	if a != nil {
+		t.Fatalf("Expected 0 return parameters, got %d", a)
+	}
+
+	t.Logf("got %v", a)
+}
+
 func TestCast_InterfaceContravariance(t *testing.T) {
 	src := func(s fmt.Stringer) string {
 		if s == nil {

@@ -91,6 +91,24 @@ func (l *BoundValue[T]) UnmarshalJSON(data []byte) error {
 	return l.loadData()
 }
 
+func (l *BoundValue[T]) Equal(other any) bool {
+	if l == nil && other == nil {
+		return true
+	}
+	if (l == nil) != (other == nil) {
+		return false
+	}
+
+	switch o := other.(type) {
+	case *BoundValue[T]:
+		return django_reflect.Equals(l.V, o.V, django_reflect.EQ_DFLT)
+	case T:
+		return django_reflect.Equals(l.V, o, django_reflect.EQ_DFLT)
+	}
+
+	return false
+}
+
 func (l BoundValue[T]) Value() (driver.Value, error) {
 	jsonData, err := json.Marshal(l.V)
 	return string(jsonData), err
