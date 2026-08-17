@@ -233,7 +233,7 @@ func TestEquals(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := Equals(tt.a, tt.b, tt.flags...)
+			result := Equals(tt.a, tt.b, tt.flags)
 			if result != tt.expected {
 				t.Errorf("%s: Equals(%v, %v, %v) = %v, expected %v", tt.name, tt.a, tt.b, tt.flags, result, tt.expected)
 			}
