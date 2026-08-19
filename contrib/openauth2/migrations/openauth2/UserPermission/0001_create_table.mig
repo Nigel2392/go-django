@@ -7,17 +7,13 @@
         "name": "UserID",
         "column": "user_id",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Uint",
-        "db_type": "UINT",
-        "default": 0
+        "db_type": "UINT"
       },
       {
         "name": "PermissionID",
         "column": "permission_id",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Uint",
-        "db_type": "UINT",
-        "default": 0
+        "db_type": "UINT"
       }
     ],
     "indexes": null,

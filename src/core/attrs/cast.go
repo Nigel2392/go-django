@@ -1,12 +1,14 @@
 package attrs
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"net/mail"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
@@ -64,6 +66,11 @@ func toString(r reflect.Value, v any) string {
 		return v.String()
 	case error:
 		return v.Error()
+	case driver.Valuer:
+		val, err := v.Value()
+		if err == nil {
+			return toString(reflect.ValueOf(val), val)
+		}
 	}
 
 	if r.Kind() == reflect.Ptr {
@@ -84,6 +91,14 @@ func toString(r reflect.Value, v any) string {
 	case reflect.Bool:
 		return strconv.FormatBool(r.Bool())
 	case reflect.Slice, reflect.Array:
+
+		switch r.Type().Elem().Kind() {
+		case reflect.Uint8:
+			return string(r.Bytes())
+		case reflect.Int32:
+			return string(unsafe.Slice((*rune)(r.UnsafePointer()), r.Len()))
+		}
+
 		var b = make([]string, r.Len())
 		for i := 0; i < r.Len(); i++ {
 			b[i] = ToString(r.Index(i).Interface())

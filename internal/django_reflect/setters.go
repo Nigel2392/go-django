@@ -2,9 +2,11 @@ package django_reflect
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"reflect"
 	"strconv"
 	"time"
+	"unsafe"
 
 	"github.com/Nigel2392/go-django/internal/bitch"
 	"golang.org/x/exp/constraints"
@@ -25,15 +27,27 @@ const (
 func setZero(dstPtr reflect.Value) {
 	dstPtr.Elem().Set(reflect.Zero(dstPtr.Elem().Type()))
 }
-
-func genericStrconv[OUT, IN constraints.Integer](in string, fn func(string) (IN, error)) (result OUT, err error) {
-	res, err := fn(in)
+func parseInt[OUT constraints.Integer](in string, bitSize int) (OUT, error) {
+	res, err := strconv.ParseInt(in, 10, bitSize)
 	return OUT(res), err
 }
-
-func parseUint[OUT constraints.Unsigned](in string) (OUT, error) {
-	res, err := strconv.ParseUint(in, 10, 0)
+func parseUint[OUT constraints.Unsigned](in string, size int) (OUT, error) {
+	res, err := strconv.ParseUint(in, 10, size)
 	return OUT(res), err
+}
+func setPtr[OUT any](ptr *OUT, val OUT, err error) (bool, error) {
+	if err != nil {
+		return false, err
+	}
+	*ptr = val
+	return true, nil
+}
+func setUnsafePtr[OUT any](ptr unsafe.Pointer, val OUT, err error) (bool, error) {
+	if err != nil {
+		return false, err
+	}
+	*(*OUT)(ptr) = val
+	return true, nil
 }
 
 func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err error) {
@@ -43,6 +57,13 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 		if scanner, ok := anyDest.(sql.Scanner); ok {
 			err := scanner.Scan(ConvertToUniformType(src))
 			return err == nil, err
+		}
+	}
+
+	if dv, ok := src.(driver.Valuer); ok {
+		src, err = dv.Value()
+		if err != nil {
+			return false, err
 		}
 	}
 
@@ -57,8 +78,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = genericStrconv[int](val, strconv.Atoi)
-				wasSet = true
+				var v int
+				v, err = parseInt[int](val, 0)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -72,8 +94,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = genericStrconv[int8](val, strconv.Atoi)
-				wasSet = true
+				var v int8
+				v, err = parseInt[int8](val, 8)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -87,8 +110,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = genericStrconv[int16](val, strconv.Atoi)
-				wasSet = true
+				var v int16
+				v, err = parseInt[int16](val, 16)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -102,8 +126,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = genericStrconv[int32](val, strconv.Atoi)
-				wasSet = true
+				var v int32
+				v, err = parseInt[int32](val, 32)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -117,8 +142,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = genericStrconv[int64](val, strconv.Atoi)
-				wasSet = true
+				var v int64
+				v, err = parseInt[int64](val, 64)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -132,8 +158,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = parseUint[uint](val)
-				wasSet = true
+				var v uint
+				v, err = parseUint[uint](val, 0)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -147,8 +174,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = parseUint[uint8](val)
-				wasSet = true
+				var v uint8
+				v, err = parseUint[uint8](val, 8)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -162,8 +190,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = parseUint[uint16](val)
-				wasSet = true
+				var v uint16
+				v, err = parseUint[uint16](val, 16)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -177,8 +206,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = parseUint[uint32](val)
-				wasSet = true
+				var v uint32
+				v, err = parseUint[uint32](val, 32)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -192,8 +222,25 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = parseUint[uint64](val)
-				wasSet = true
+				var v uint64
+				v, err = parseUint[uint64](val, 64)
+				wasSet, err = setPtr(this, v, err)
+			}
+		}
+
+	case *uintptr:
+		switch val := ConvertToUniformType(src).(type) {
+		case int64:
+			*this = uintptr(val)
+			wasSet = true
+		case uint64:
+			*this = uintptr(val)
+			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v uintptr
+				v, err = parseUint[uintptr](val, 0)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -203,11 +250,10 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			*this = float32(val)
 			wasSet = true
 		case string:
-			var res float64
-			res, err = strconv.ParseFloat(val, 64)
 			if flags.Is(SF_STRCONV) {
-				*this = float32(res)
-				wasSet = true
+				var v float64
+				v, err = strconv.ParseFloat(val, 32)
+				wasSet, err = setPtr(this, float32(v), err)
 			}
 		}
 
@@ -218,8 +264,9 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			wasSet = true
 		case string:
 			if flags.Is(SF_STRCONV) {
-				*this, err = strconv.ParseFloat(val, 64)
-				wasSet = true
+				var v float64
+				v, err = strconv.ParseFloat(val, 64)
+				wasSet, err = setPtr(this, v, err)
 			}
 		}
 
@@ -231,14 +278,48 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 		case string:
 			*this = []byte(val)
 			wasSet = true
+		case []rune:
+			*this = []byte(string(val))
+			wasSet = true
 		}
-		switch val := ConvertToUniformType(src).(type) {
+		if !wasSet {
+			switch val := ConvertToUniformType(src).(type) {
+			case []byte:
+				*this = val
+				wasSet = true
+			case string:
+				*this = []byte(val)
+				wasSet = true
+			case []rune:
+				*this = []byte(string(val))
+				wasSet = true
+			}
+		}
+
+	case *[]rune:
+		switch val := src.(type) {
 		case []byte:
-			*this = val
+			*this = []rune(string(val))
 			wasSet = true
 		case string:
-			*this = []byte(val)
+			*this = []rune(val)
 			wasSet = true
+		case []rune:
+			*this = val
+			wasSet = true
+		}
+		if !wasSet {
+			switch val := ConvertToUniformType(src).(type) {
+			case []byte:
+				*this = []rune(string(val))
+				wasSet = true
+			case string:
+				*this = []rune(val)
+				wasSet = true
+			case []rune:
+				*this = val
+				wasSet = true
+			}
 		}
 
 	case *string:
@@ -249,14 +330,22 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 		case string:
 			*this = val
 			wasSet = true
-		}
-		switch val := ConvertToUniformType(src).(type) {
-		case []byte:
+		case []rune:
 			*this = string(val)
 			wasSet = true
-		case string:
-			*this = val
-			wasSet = true
+		}
+		if !wasSet {
+			switch val := ConvertToUniformType(src).(type) {
+			case []byte:
+				*this = string(val)
+				wasSet = true
+			case string:
+				*this = val
+				wasSet = true
+			case []rune:
+				*this = string(val)
+				wasSet = true
+			}
 		}
 
 	case *bool:
@@ -277,39 +366,46 @@ func ScanTo[DST any](dstPtr *DST, src any, flags ScanFlag) (wasSet bool, err err
 			}
 		}
 
-		switch val := ConvertToUniformType(src).(type) {
-		case bool:
-			*this = val
-			wasSet = true
-		case int64:
-			*this = val != 0
-			wasSet = true
-		case uint64:
-			*this = val != 0
-			wasSet = true
-		case string:
-			if flags.Is(SF_STRCONV) {
-				*this, err = strconv.ParseBool(val)
+		if !wasSet {
+			switch val := ConvertToUniformType(src).(type) {
+			case bool:
+				*this = val
 				wasSet = true
+			case int64:
+				*this = val != 0
+				wasSet = true
+			case uint64:
+				*this = val != 0
+				wasSet = true
+			case string:
+				if flags.Is(SF_STRCONV) {
+					*this, err = strconv.ParseBool(val)
+					wasSet = true
+				}
 			}
 		}
 
 	case *any:
 		*this = src
+		wasSet = true
 	}
 
 	if wasSet {
 		return wasSet, err
 	}
 
-	return RScanTo(reflect.ValueOf(dstPtr), src, flags), err
+	if err != nil {
+		return false, err
+	}
+
+	return RScanTo(reflect.ValueOf(dstPtr), src, flags)
 }
 
-func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
+func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool, err error) {
 
 	if src == nil {
 		setZero(dstPtr)
-		return true
+		return true, nil
 	}
 
 	var (
@@ -321,12 +417,17 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 
 	if srcTyp == nil || srcV.Kind() == reflect.Invalid {
 		setZero(dstPtr)
-		return true
+		return true, nil
 	}
 
 	if srcTyp == dstElemTyp {
 		dstElemVal.Set(srcV)
-		return true
+		return true, nil
+	}
+
+	if srcTyp.AssignableTo(dstElemTyp) {
+		dstElemVal.Set(srcV)
+		return true, nil
 	}
 
 	// Get the raw memory address of the destination
@@ -341,6 +442,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*int)(ptr) = int(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v int
+				v, err = parseInt[int](val, 0)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 	case reflect.Int8:
 		switch val := ConvertToUniformType(src).(type) {
@@ -350,6 +457,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*int8)(ptr) = int8(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v int8
+				v, err = parseInt[int8](val, 8)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Int16:
@@ -360,6 +473,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*int16)(ptr) = int16(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v int16
+				v, err = parseInt[int16](val, 16)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Int32:
@@ -370,6 +489,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*int32)(ptr) = int32(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v int32
+				v, err = parseInt[int32](val, 32)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Int64:
@@ -380,7 +505,14 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*int64)(ptr) = int64(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v int64
+				v, err = parseInt[int64](val, 64)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
+
 	case reflect.Uint:
 		switch val := ConvertToUniformType(src).(type) {
 		case int64:
@@ -389,7 +521,14 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*uint)(ptr) = uint(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v uint
+				v, err = parseUint[uint](val, 0)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
+
 	case reflect.Uint8:
 		switch val := ConvertToUniformType(src).(type) {
 		case int64:
@@ -398,6 +537,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*uint8)(ptr) = uint8(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v uint8
+				v, err = parseUint[uint8](val, 8)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Uint16:
@@ -408,6 +553,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*uint16)(ptr) = uint16(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v uint16
+				v, err = parseUint[uint16](val, 16)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Uint32:
@@ -418,6 +569,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*uint32)(ptr) = uint32(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v uint32
+				v, err = parseUint[uint32](val, 32)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Uint64:
@@ -428,6 +585,28 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case uint64:
 			*(*uint64)(ptr) = uint64(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v uint64
+				v, err = parseUint[uint64](val, 64)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
+		}
+
+	case reflect.Uintptr:
+		switch val := ConvertToUniformType(src).(type) {
+		case int64:
+			*(*uintptr)(ptr) = uintptr(val)
+			wasSet = true
+		case uint64:
+			*(*uintptr)(ptr) = uintptr(val)
+			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v uintptr
+				v, err = parseUint[uintptr](val, 0)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Float32:
@@ -435,6 +614,12 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case float64:
 			*(*float32)(ptr) = float32(val)
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v float64
+				v, err = strconv.ParseFloat(val, 32)
+				wasSet, err = setUnsafePtr(ptr, float32(v), err)
+			}
 		}
 
 	case reflect.Float64:
@@ -442,40 +627,66 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		case float64:
 			*(*float64)(ptr) = val
 			wasSet = true
+		case string:
+			if flags.Is(SF_STRCONV) {
+				var v float64
+				v, err = strconv.ParseFloat(val, 64)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+			}
 		}
 
 	case reflect.Slice:
 		if dstElemTyp.Elem().Kind() == reflect.Uint8 {
 			switch val := src.(type) {
 			case []byte:
-				// Avoid reflect.MakeSlice and reflect.Copy
-				newBytes := make([]byte, len(val))
-				copy(newBytes, val)
-				*(*[]byte)(ptr) = newBytes
+				*(*[]byte)(ptr) = val
 				wasSet = true
-
+			case []rune:
+				*(*[]byte)(ptr) = []byte(string(val))
+				wasSet = true
 			case string:
-				newBytes := make([]byte, len(val))
-				copy(newBytes, val)
-				*(*[]byte)(ptr) = newBytes
+				*(*[]byte)(ptr) = []byte(val)
 				wasSet = true
 			}
 
 			if !wasSet {
-				switch srcTyp.Kind() {
-				case reflect.Slice:
-					if srcTyp.Elem().Kind() == reflect.Uint8 {
-						srcBytes := srcV.Bytes()
-						newBytes := make([]byte, len(srcBytes))
-						copy(newBytes, srcBytes)
-						*(*[]byte)(ptr) = newBytes
-						wasSet = true
-					}
-				case reflect.String:
-					srcStr := srcV.String()
-					newBytes := make([]byte, len(srcStr))
-					copy(newBytes, srcStr)
-					*(*[]byte)(ptr) = newBytes
+				switch val := ConvertToUniformType(src).(type) {
+				case []byte:
+					*(*[]byte)(ptr) = val
+					wasSet = true
+				case []rune:
+					*(*[]byte)(ptr) = []byte(string(val))
+					wasSet = true
+				case string:
+					*(*[]byte)(ptr) = []byte(val)
+					wasSet = true
+				}
+			}
+		}
+
+		if dstElemTyp.Elem().Kind() == reflect.Int32 {
+			switch val := src.(type) {
+			case []byte:
+				*(*[]rune)(ptr) = []rune(string(val))
+				wasSet = true
+			case []rune:
+				*(*[]rune)(ptr) = val
+				wasSet = true
+			case string:
+				*(*[]rune)(ptr) = []rune(val)
+				wasSet = true
+			}
+
+			if !wasSet {
+				switch val := ConvertToUniformType(src).(type) {
+				case []byte:
+					*(*[]rune)(ptr) = []rune(string(val))
+					wasSet = true
+				case []rune:
+					*(*[]rune)(ptr) = val
+					wasSet = true
+				case string:
+					*(*[]rune)(ptr) = []rune(val)
 					wasSet = true
 				}
 			}
@@ -493,49 +704,69 @@ func RScanTo(dstPtr reflect.Value, src any, flags ScanFlag) (wasSet bool) {
 		}
 
 	case reflect.Bool:
-		switch val := src.(type) {
+		switch val := ConvertToUniformType(src).(type) {
 		case bool:
 			*(*bool)(ptr) = val
 			wasSet = true
+
 		case int64:
 			*(*bool)(ptr) = val != 0
 			wasSet = true
+
 		case uint64:
 			*(*bool)(ptr) = val != 0
 			wasSet = true
-		}
-
-		switch val := ConvertToUniformType(src).(type) {
-		case []byte:
-			*(*string)(ptr) = string(val)
-			wasSet = true
 
 		case string:
-			*(*string)(ptr) = val
-			wasSet = true
+			if flags.Is(SF_STRCONV) {
+				var v bool
+				v, err = strconv.ParseBool(val)
+				wasSet, err = setUnsafePtr(ptr, v, err)
+
+			}
 		}
 	}
 
+	if err != nil {
+		return false, err
+	}
+
 	if wasSet {
-		return true
+		return true, err
 	}
 
 	if srcTyp.AssignableTo(dstElemTyp) {
 		dstElemVal.Set(srcV)
-		return true
+		return true, err
 	}
 
 	if flags.Is(SF_REFLECTCONV) && srcTyp.ConvertibleTo(dstElemTyp) {
 		srcV = srcV.Convert(dstElemTyp)
 		dstElemVal.Set(srcV)
-		return true
+		return true, err
 	}
 
-	return false
+	return false, err
 }
 
+// Tries to convert val to an expected type.
+//
+// For example, all ints will be converted to int64
+// The same logic goes for uint, float and complex respectively.
 func ConvertToUniformType(val any) any {
 	switch v := val.(type) {
+
+	case int64,
+		uint64,
+		float64,
+		complex128,
+		[]byte,
+		[]rune,
+		string,
+		bool,
+		time.Time:
+		return v
+
 	case int:
 		return int64(v)
 	case int8:
@@ -544,9 +775,6 @@ func ConvertToUniformType(val any) any {
 		return int64(v)
 	case int32:
 		return int64(v)
-	case int64:
-		return v
-
 	case uint:
 		return uint64(v)
 	case uint8:
@@ -555,22 +783,12 @@ func ConvertToUniformType(val any) any {
 		return uint64(v)
 	case uint32:
 		return uint64(v)
-	case uint64:
-		return v
-
+	case uintptr:
+		return uint64(v)
 	case float32:
 		return float64(v)
-	case float64:
-		return float64(v)
-
-	case []byte:
-		return []byte(v)
-
-	case string:
-		return string(v)
-
-	case time.Time:
-		return v
+	case complex64:
+		return complex128(v)
 
 	case interface{ Time() time.Time }:
 		// see queries/src/drivers/types.go time types
@@ -578,6 +796,7 @@ func ConvertToUniformType(val any) any {
 	}
 
 	rv := reflect.ValueOf(val)
+	rt := rv.Type()
 	switch rv.Kind() {
 	case reflect.Int,
 		reflect.Int8,
@@ -590,7 +809,8 @@ func ConvertToUniformType(val any) any {
 		reflect.Uint8,
 		reflect.Uint16,
 		reflect.Uint32,
-		reflect.Uint64:
+		reflect.Uint64,
+		reflect.Uintptr:
 		return rv.Uint()
 
 	case reflect.Float32,
@@ -600,11 +820,23 @@ func ConvertToUniformType(val any) any {
 	case reflect.String:
 		return rv.String()
 
+	case reflect.Bool:
+		return rv.Bool()
+
 	case reflect.Slice:
-		if rv.Elem().Kind() == reflect.Uint8 {
+		elem := rt.Elem()
+		if elem.Kind() == reflect.Uint8 {
 			return rv.Bytes()
+		}
+
+		if elem.Kind() == reflect.Int32 {
+			return fastRunes(rv)
 		}
 	}
 
 	return val
+}
+
+func fastRunes(rv reflect.Value) []rune {
+	return unsafe.Slice((*rune)(rv.UnsafePointer()), rv.Len())
 }

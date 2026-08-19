@@ -176,6 +176,10 @@ func NewAppConfig() (django.AppConfig, error) {
 
 		// admin.RegisterSearchHook
 
+		return nil
+	}
+
+	SHOP.Ready = func() error {
 		// always run the sync on startup
 		// /mostly/ handled in DB
 		return models.Products().SyncProducts()

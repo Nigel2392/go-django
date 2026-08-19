@@ -265,9 +265,9 @@ func FastSet(modelInstance reflect.Value, fieldName string, src any) (wasSet, ha
 		return false, true, err
 	}
 
-	wasSet = django_reflect.RScanTo(dstV.Addr(), src, django_reflect.SF_DEFAULT)
+	wasSet, err = django_reflect.RScanTo(dstV.Addr(), src, django_reflect.SF_DEFAULT)
 
-	return wasSet, true, nil
+	return wasSet, true, err
 }
 
 // SetPrimaryKey sets the primary key field of a Definer.

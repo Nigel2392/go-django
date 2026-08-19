@@ -9,9 +9,7 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "int64",
-        "db_type": "INT",
-        "default": 0
+        "db_type": "INT"
       },
       {
         "name": "Name",
@@ -19,9 +17,11 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Email",
@@ -29,36 +29,40 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Age",
         "column": "age",
         "use_in_db": true,
         "max_value": 120,
-        "go_type": "int32",
-        "db_type": "INT",
-        "default": 0
+        "db_type": "INT"
       },
       {
         "name": "FirstName",
         "column": "first_name",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "LastName",
         "column": "last_name",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       }
     ],
     "indexes": null,
@@ -73,7 +77,10 @@
           "column": "first_name",
           "use_in_db": true,
           "nullable": true,
-          "default": ""
+          "default": {
+            "go_type": "string",
+            "value": ""
+          }
         }
       }
     },
@@ -85,7 +92,10 @@
           "column": "last_name",
           "use_in_db": true,
           "nullable": true,
-          "default": ""
+          "default": {
+            "go_type": "string",
+            "value": ""
+          }
         }
       }
     }

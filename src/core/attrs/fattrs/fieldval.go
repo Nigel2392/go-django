@@ -503,7 +503,10 @@ func (r *ptrField[M, V]) Scan(v any) error {
 		}
 	}
 
-	wasSet, _ := django_reflect.ScanTo(r.val, v, django_reflect.SF_CONVS)
+	wasSet, err := django_reflect.ScanTo(r.val, v, django_reflect.SF_CONVS)
+	if err != nil {
+		return err
+	}
 	if wasSet {
 		return r.wasSet(nil)
 	}
@@ -618,7 +621,7 @@ func (r *ptrField[M, V]) get(val *V) V {
 }
 
 func (r *ptrField[M, V]) Value() (driver.Value, error) {
-	return drivers.Value(*r.val)
+	return drivers.GetValue(*r.val)
 }
 
 func (r *ptrField[M, V]) GetValue() interface{} {

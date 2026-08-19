@@ -54,18 +54,23 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 // It checks if the field implements [CanDBType] and calls its [CanDBType.DBType] method.
 // If it does not implement [CanDBType], it will check the [TYPES] registry to find the database type
 // based on the field's reflect.Type.
-func DBType(field attrs.FieldDefinition) (dbType dbtype.Type, ok bool) {
+func DBType(val any) (dbType dbtype.Type, ok bool) {
 
-	if dbTypeDefiner, ok := field.(dbtype.CanDBType); ok {
+	if dbTypeDefiner, ok := val.(dbtype.CanDBType); ok {
 		return dbTypeDefiner.DBType(), true
 	}
 
-	if dbTypeDefiner, ok := field.(dbtype.CanDBTypeString); ok {
+	if dbTypeDefiner, ok := val.(dbtype.CanDBTypeString); ok {
 		var dbTypeStr = dbTypeDefiner.DBType()
 		var dbType, ok = dbtype.NewFromString(dbTypeStr)
 		if ok {
 			return dbType, true
 		}
+	}
+
+	field, ok := val.(attrs.FieldDefinition)
+	if !ok {
+		return dbtype.For(reflect.TypeOf(val))
 	}
 
 	var fieldType = FieldType(field)

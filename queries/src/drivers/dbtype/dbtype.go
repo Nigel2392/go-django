@@ -108,22 +108,20 @@ func NewFromString(s string) (Type, bool) {
 	return Invalid, false
 }
 
-// The TypeRegistry interface defines methods for managing a registry of database types.
+// The GenericTypeRegistry interface defines methods for managing a registry of database types.
 // It is only used for the signal before the type registry is locked.
-type TypeRegistry interface {
-	Add(srcTyp any, dbType Type, forceKind ...bool) bool
-	For(typ reflect.Type) (dbType Type, exists bool)
+type GenericTypeRegistry[T any] interface {
+	Add(srcTyp any, dbType T, forceKind ...bool) bool
+	For(typ reflect.Type) (dbType T, exists bool)
 	IsLocked() bool
 	Lock() (success bool)
-	Types() iter.Seq2[reflect.Type, Type]
+	Types() iter.Seq2[reflect.Type, T]
 	Unlock()
 }
 
-var TYPES = &typeRegistry{
-	byType: make(map[reflect.Type]Type),
-	byKind: make(map[reflect.Kind]Type),
-	Locked: signals.New[TypeRegistry]("dbtype.TYPES.Locked"),
-}
+type TypeRegistry = GenericTypeRegistry[Type]
+
+var TYPES = NewRegistry[Type](DEFAULT)
 
 // Add a type to the registry.
 //
@@ -181,9 +179,10 @@ func IsLocked() bool {
 //
 // The registry provides a unified way to handle database types
 // across different databases and parts of the application.
-type typeRegistry struct {
-	byType map[reflect.Type]Type
-	byKind map[reflect.Kind]Type
+type typeRegistry[T any] struct {
+	byType   map[reflect.Type]T
+	byKind   map[reflect.Kind]T
+	_default T
 
 	// we use TryLock to avoid deadlocks in some cases - this is
 	// so types can still be registered inside of the Locked
@@ -194,37 +193,46 @@ type typeRegistry struct {
 	// because the value is read and written multiple times
 	mu     sync.Mutex
 	locked bool
-	Locked signals.Signal[TypeRegistry]
+	Locked signals.Signal[GenericTypeRegistry[T]]
 }
 
-func (r *typeRegistry) registerType(typ reflect.Type, dbType Type) {
+func NewRegistry[T any](_default T) GenericTypeRegistry[T] {
+	return &typeRegistry[T]{
+		_default: _default,
+		byType:   make(map[reflect.Type]T),
+		byKind:   make(map[reflect.Kind]T),
+		Locked:   signals.New[GenericTypeRegistry[T]]("lock"),
+	}
+}
+
+func (r *typeRegistry[T]) registerType(typ reflect.Type, t T) {
 	if typ == nil {
 		return
 	}
 	if _, exists := r.byType[typ]; exists {
 		logger.Warnf(
 			"Type %s already registered with type %s, overwriting with %d",
-			typ.String(), r.byType[typ], dbType,
+			typ.String(), r.byType[typ], t,
 		)
 	}
 
-	r.byType[typ] = dbType
+	r.byType[typ] = t
 }
 
-func (r *typeRegistry) registerKind(knd reflect.Kind, dbType Type) {
+func (r *typeRegistry[T]) registerKind(knd reflect.Kind, t T) {
 	if knd == reflect.Invalid {
 		return
 	}
 	if _, exists := r.byKind[knd]; exists {
 		logger.Warnf(
 			"Kind %s already registered with type %d, overwriting with %d",
-			knd.String(), r.byKind[knd], dbType,
+			knd.String(), r.byKind[knd], t,
 		)
 	}
-	r.byKind[knd] = dbType
+	r.byKind[knd] = t
 }
 
-func (r *typeRegistry) Add(srcTyp any, dbType Type, forceKind ...bool) bool {
+func (r *typeRegistry[T]) Add(srcTyp any, t T, forceKind ...bool) bool {
 	if r.mu.TryLock() {
 		defer r.mu.Unlock()
 	}
@@ -259,17 +267,17 @@ func (r *typeRegistry) Add(srcTyp any, dbType Type, forceKind ...bool) bool {
 	}
 
 	if typ != nil {
-		r.registerType(typ, dbType)
+		r.registerType(typ, t)
 	}
 
 	if useKind || knd != reflect.Invalid {
-		r.registerKind(knd, dbType)
+		r.registerKind(knd, t)
 	}
 
 	return true
 }
 
-func (r *typeRegistry) For(typ reflect.Type) (dbType Type, exists bool) {
+func (r *typeRegistry[T]) For(typ reflect.Type) (dbType T, exists bool) {
 	if typ == nil {
 		goto retFalse
 	}
@@ -283,11 +291,11 @@ func (r *typeRegistry) For(typ reflect.Type) (dbType Type, exists bool) {
 	}
 
 retFalse:
-	return DEFAULT, false
+	return r._default, false
 }
 
-func (r *typeRegistry) Types() iter.Seq2[reflect.Type, Type] {
-	return func(yield func(reflect.Type, Type) bool) {
+func (r *typeRegistry[T]) Types() iter.Seq2[reflect.Type, T] {
+	return func(yield func(reflect.Type, T) bool) {
 		for typ, dbType := range r.byType {
 			if !yield(typ, dbType) {
 				return
@@ -296,7 +304,7 @@ func (r *typeRegistry) Types() iter.Seq2[reflect.Type, Type] {
 	}
 }
 
-func (r *typeRegistry) Lock() bool {
+func (r *typeRegistry[T]) Lock() bool {
 	if r.mu.TryLock() {
 		defer r.mu.Unlock()
 	}
@@ -310,7 +318,7 @@ func (r *typeRegistry) Lock() bool {
 	return false
 }
 
-func (r *typeRegistry) IsLocked() bool {
+func (r *typeRegistry[T]) IsLocked() bool {
 	if r.mu.TryLock() {
 		defer r.mu.Unlock()
 	}
@@ -320,7 +328,7 @@ func (r *typeRegistry) IsLocked() bool {
 // Unlock releases the lock on the type registry.
 //
 // This is only used in tests, and thus not exported as a global function.
-func (r *typeRegistry) Unlock() {
+func (r *typeRegistry[T]) Unlock() {
 	if r.mu.TryLock() {
 		defer r.mu.Unlock()
 	}

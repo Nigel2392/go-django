@@ -220,8 +220,8 @@ func EQ_ISZEROER(state *EqStepState) (eq bool, ok bool) {
 		return false, false
 	}
 
-	if a, ok := state.A.(isZeroer); ok {
-		if b, ok := state.B.(isZeroer); ok {
+	if a, ok := state.A.(IsZeroer); ok {
+		if b, ok := state.B.(IsZeroer); ok {
 			return (a == nil || a.IsZero()) == (b == nil || b.IsZero()), true
 		}
 	}
@@ -275,8 +275,8 @@ func EQ_BYTES_RUNES(state *EqStepState) (eq bool, ok bool) {
 
 	// Womp womp.
 	switch {
-	case (v1TE.Kind() == re.Uint8 || v1TE.Kind() == re.Uint32) &&
-		(v2TE.Kind() == re.Uint8 || v2TE.Kind() == re.Uint32) &&
+	case (v1TE.Kind() == re.Uint8 || v1TE.Kind() == re.Int32) &&
+		(v2TE.Kind() == re.Uint8 || v2TE.Kind() == re.Int32) &&
 		(state.V1.IsNil() || state.V2.IsNil()):
 
 		// EQ_ZEROS will not matter for byte or rune slices.
@@ -286,17 +286,17 @@ func EQ_BYTES_RUNES(state *EqStepState) (eq bool, ok bool) {
 		// []byte == []byte
 		return bytes.Equal(state.V1.Bytes(), state.V2.Bytes()), true
 
-	case v1TE.Kind() == re.Uint32 && v2TE.Kind() == re.Uint32:
+	case v1TE.Kind() == re.Int32 && v2TE.Kind() == re.Int32:
 		// []rune == []rune
-		return string(*(*[]rune)(state.V1.UnsafePointer())) == string(*(*[]rune)(state.V2.UnsafePointer())), true
+		return string(fastRunes(state.V1)) == string(fastRunes(state.V2)), true
 
-	case v1TE.Kind() == re.Uint8 && v2TE.Kind() == re.Uint32:
+	case v1TE.Kind() == re.Uint8 && v2TE.Kind() == re.Int32:
 		// []byte == []rune
-		return string(state.V1.Bytes()) == string(*(*[]rune)(state.V2.UnsafePointer())), true
+		return string(state.V1.Bytes()) == string(fastRunes(state.V2)), true
 
-	case v2TE.Kind() == re.Uint8 && v1TE.Kind() == re.Uint32:
+	case v2TE.Kind() == re.Uint8 && v1TE.Kind() == re.Int32:
 		// []rune == []byte
-		return string(*(*[]rune)(state.V1.UnsafePointer())) == string(state.V1.Bytes()), true
+		return string(fastRunes(state.V1)) == string(state.V1.Bytes()), true
 	}
 
 	return false, false

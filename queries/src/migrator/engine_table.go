@@ -1,7 +1,6 @@
 package migrator
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,8 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
@@ -44,8 +41,8 @@ type IndexDefiner interface {
 
 type Index struct {
 	table      *ModelTable `json:"-"`
-	Identifier string      `json:"name"`
-	Type       string      `json:"type"`
+	Identifier string      `json:"name,omitempty"`
+	Type       string      `json:"type,omitempty"`
 	Fields     []string    `json:"columns"`
 	Unique     bool        `json:"unique,omitempty"`
 	Comment    string      `json:"comment,omitempty"`
@@ -189,9 +186,7 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 
 type serializableTableColumn struct {
 	Column
-	GOType  string          `json:"go_type"`
-	DBType  string          `json:"db_type"`
-	Default json.RawMessage `json:"default"`
+	DBType string `json:"db_type"`
 }
 
 type serializableModelTable struct {
@@ -212,17 +207,9 @@ func (t *ModelTable) MarshalJSON() ([]byte, error) {
 	}
 
 	for head := t.Fields.Front(); head != nil; head = head.Next() {
-
-		var bytes, err = json.Marshal(head.Value.Default)
-		if err != nil {
-			return nil, fmt.Errorf("could not marshal default value for column %q: %w", head.Value.Name, err)
-		}
-
 		s.Fields = append(s.Fields, serializableTableColumn{
-			Column:  head.Value,
-			DBType:  head.Value.DBType().String(),
-			GOType:  drivers.StringForType(head.Value.FieldType()),
-			Default: bytes,
+			Column: head.Value,
+			DBType: head.Value.DBType().String(),
 		})
 	}
 
@@ -255,38 +242,9 @@ func (t *ModelTable) UnmarshalJSON(data []byte) error {
 			col.Field = f
 		}
 
-		var isNullLiteral = bytes.Equal(col.Default, nullLiteral)
-		if !isNullLiteral { // || (isNullLiteral && !col.Nullable && !col.Auto && !col.Primary) {
-			// It is fine to unmarshal it into an incompatible type here,
-			// i.e. drivers.DateTime into time.Time.
-			// This is only used to properly restore migration defaults in SQL.
-
-			var goType, ok = drivers.TypeFromString(col.GOType)
-			if !ok {
-				var dbType, ok = dbtype.NewFromString(col.DBType)
-				if !ok {
-					return fmt.Errorf("unknown db type %q for column %q", col.DBType, col.Name)
-				}
-
-				goType = drivers.DBToDefaultGoType(dbType)
-			}
-
-			var isPtr = goType.Kind() == reflect.Pointer
-			if isPtr {
-				goType = goType.Elem()
-			}
-
-			var jsonData = col.Default
-			var scanToVal = reflect.New(goType)
-			var scanTo = scanToVal.Interface()
-			if err := json.Unmarshal(jsonData, scanTo); err != nil {
-				return fmt.Errorf("could not unmarshal default value for column %T %q: %w (%s)", scanTo, col.Name, err, string(jsonData))
-			}
-
-			if isPtr {
-				col.Column.Default = scanToVal.Interface()
-			} else {
-				col.Column.Default = scanToVal.Elem().Interface()
+		if col.Column.Default.V != nil {
+			if err := attrs.BindValueToModel(t.Object, col.Field, col.Column.Default.V); err != nil {
+				return err
 			}
 		}
 

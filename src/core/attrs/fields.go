@@ -1001,7 +1001,11 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		return assert.Fail("field %q is not editable", f.field_t.Name)
 	}
 
-	wasSet := django_reflect.RScanTo(f.field_v.Addr(), v, django_reflect.SF_CONVS)
+	wasSet, err := django_reflect.RScanTo(f.field_v.Addr(), v, django_reflect.SF_CONVS)
+	if err != nil {
+		return err
+	}
+
 	if wasSet {
 		if err := f.Validate(); err != nil {
 			return err
@@ -1124,7 +1128,11 @@ func (f *FieldDef) Scan(value any) error {
 		return scanner.Scan(value)
 	}
 
-	wasSet := django_reflect.RScanTo(f.field_v.Addr(), value, django_reflect.SF_CONVS)
+	wasSet, err := django_reflect.RScanTo(f.field_v.Addr(), value, django_reflect.SF_CONVS)
+	if err != nil {
+		return err
+	}
+
 	if wasSet {
 		return nil
 	}

@@ -11,9 +11,7 @@
         "column": "id",
         "use_in_db": true,
         "primary": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.UUID",
-        "db_type": "UUID",
-        "default": null
+        "db_type": "UUID"
       },
       {
         "name": "Type",
@@ -21,25 +19,23 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.String",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Level",
         "column": "level",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/src/core/logger.LogLevel",
-        "db_type": "INT",
-        "default": null
+        "db_type": "INT"
       },
       {
         "name": "Timestamp",
         "column": "timestamp",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Timestamp",
-        "db_type": "TIMESTAMP",
-        "default": null
+        "db_type": "TIMESTAMP"
       },
       {
         "name": "User",
@@ -53,45 +49,35 @@
             "lazy_model_key": "users.User"
           }
         },
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       },
       {
         "name": "Object",
         "column": "object",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "",
-        "db_type": "JSON",
-        "default": null
+        "db_type": "JSON"
       },
       {
         "name": "ObjectID",
         "column": "object_id",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.JSON[interface {}]",
-        "db_type": "JSON",
-        "default": null
+        "db_type": "JSON"
       },
       {
         "name": "ContentType",
         "column": "content_type",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "*github.com/Nigel2392/go-django/src/core/contenttypes.BaseContentType[interface {}]",
-        "db_type": "TEXT",
-        "default": null
+        "db_type": "TEXT"
       },
       {
         "name": "Data",
         "column": "data",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.JSON[map[string]interface {}]",
-        "db_type": "JSON",
-        "default": null
+        "db_type": "JSON"
       }
     ],
     "indexes": null,

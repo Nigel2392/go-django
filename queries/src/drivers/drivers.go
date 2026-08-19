@@ -5,7 +5,9 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"time"
+	"unsafe"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 
@@ -167,7 +169,7 @@ func databaseError(d *Driver, err error) error {
 
 // driverValue prepares the value for the driver to be used in a query.
 // it makes sure that the value adheres to the [driver.Value] interface.
-func Value(arg any) (driver.Value, error) {
+func GetValue(arg any) (driver.Value, error) {
 	switch v := arg.(type) {
 	case driver.Valuer:
 		var err error
@@ -179,7 +181,7 @@ func Value(arg any) (driver.Value, error) {
 		}
 
 	case attrs.Definer:
-		return Value(attrs.PrimaryKey(context.Background(), v))
+		return GetValue(attrs.PrimaryKey(context.Background(), v))
 
 	case nil, time.Time, string, []byte, int64, uint64, float64, bool:
 		// these types are already compatible with driver.Value
@@ -203,13 +205,16 @@ func Value(arg any) (driver.Value, error) {
 	case reflect.Bool:
 		arg = rVal.Bool()
 	case reflect.Slice, reflect.Array:
-		if rVal.Type().Elem().Kind() == reflect.Uint8 {
-			//  byte slice, e.g. for binary data
+		var typElem = rVal.Type().Elem()
+		switch typElem.Kind() {
+		case reflect.Uint8:
 			arg = rVal.Bytes()
-		} else {
+		case reflect.Int32:
+			arg = unsafe.Slice((*rune)(rVal.UnsafePointer()), rVal.Len())
+		default:
 			return nil, errors.TypeMismatch.WithCause(fmt.Errorf(
 				"unsupported slice type for driver.Value: %s (%T)",
-				rVal.Type().Elem().Kind(), arg,
+				typElem.Kind(), arg,
 			))
 		}
 	default:
@@ -220,4 +225,20 @@ func Value(arg any) (driver.Value, error) {
 	}
 
 	return arg, nil
+}
+
+type ScanFlag = django_reflect.ScanFlag
+
+const (
+	SF_NONE        = django_reflect.SF_NONE
+	SF_SQL_SCANNER = django_reflect.SF_SQL_SCANNER
+	SF_STRCONV     = django_reflect.SF_STRCONV
+	SF_REFLECTCONV = django_reflect.SF_REFLECTCONV
+	SF_CONVS       = django_reflect.SF_CONVS
+	SF_DEFAULT     = django_reflect.SF_DEFAULT
+)
+
+// ScanTo scans value src into dst, doing so without reflect where it deems possible.
+func ScanTo[T any](dst *T, src any, opts ScanFlag) (wasSet bool, err error) {
+	return django_reflect.ScanTo(dst, src, opts)
 }

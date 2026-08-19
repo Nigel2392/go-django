@@ -9,53 +9,53 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "uint32",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       },
       {
         "name": "Title",
         "column": "title",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Path",
         "column": "path",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "CreatedAt",
         "column": "created_at",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "time.Time",
-        "db_type": "DATETIME",
-        "default": null
+        "db_type": "DATETIME"
       },
       {
         "name": "FileSize",
         "column": "file_size",
         "use_in_db": true,
-        "go_type": "database/sql.NullInt32",
-        "db_type": "INT",
-        "default": null
+        "db_type": "INT"
       },
       {
         "name": "FileHash",
         "column": "file_hash",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       }
     ],
     "indexes": null,

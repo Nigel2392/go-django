@@ -517,22 +517,23 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 
 	if col.HasDefault() {
 
-		if valuer, ok := col.Default.(driver.Valuer); ok {
+		defaultVal := col.Default.V
+		if valuer, ok := defaultVal.(driver.Valuer); ok {
 			// If the default value is a driver.Valuer, we need to call it to get the actual value.
 			val, err := valuer.Value()
 			if err != nil {
 				panic(fmt.Errorf("failed to get value from driver.Valuer: %w", err))
 			}
-			col.Default = val
+			defaultVal = val
 		}
 
-		if col.Default == nil && !col.Nullable {
+		if defaultVal == nil && !col.Nullable {
 			goto checkRels
 		}
 
 		w.WriteString(" DEFAULT ")
 
-		switch v := col.Default.(type) {
+		switch v := defaultVal.(type) {
 		case string:
 			w.WriteString("'")
 			w.WriteString(v)
@@ -559,7 +560,7 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 		case nil:
 			w.WriteString("NULL")
 		default:
-			logger.Errorf("Unknown default type for column %q: %T", col.Name, col.Default)
+			logger.Errorf("Unknown default type for column %q: %T: %v", col.Name, col.Default.V, col.Default.V)
 		}
 	}
 

@@ -48,7 +48,8 @@ func (e *EditorJSBlockData) DBType() dbtype.Type {
 }
 
 func (e *EditorJSBlockData) Value() (driver.Value, error) {
-	return JSONMarshalEditorData(e)
+	s, err := JSONMarshalEditorData(e)
+	return string(s), err
 }
 
 func (e *EditorJSBlockData) MarshalJSON() ([]byte, error) {

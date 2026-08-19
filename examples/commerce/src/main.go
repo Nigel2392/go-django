@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/mail"
 	"os"
 
@@ -25,8 +26,22 @@ import (
 
 func main() {
 	os.MkdirAll("./.private/commerce", 0755)
+	os.Remove("./.private/commerce/db.sqlite3")
+	dst, err := os.Create("./.private/commerce/db.sqlite3")
+	if err != nil {
+		panic(err)
+	}
 
-	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/commerce/db.sqlite3")
+	src, err := os.Open("./.private/commerce/db.sqlite3")
+	if err != nil {
+		panic(err)
+	}
+
+	io.Copy(dst, src)
+	dst.Close()
+	src.Close()
+
+	db, err := drivers.Open(context.Background(), "sqlite3", "./.private/commerce/db.sqlite3")
 	if err != nil {
 		panic(err)
 	}

@@ -9,9 +9,7 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": 0
+        "db_type": "UINT"
       },
       {
         "name": "Name",
@@ -19,9 +17,11 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Description",
@@ -29,9 +29,21 @@
         "use_in_db": true,
         "max_length": 1024,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
+      },
+      {
+        "name": "GroupPermissions",
+        "column": "id",
+        "db_type": "UINT"
+      },
+      {
+        "name": "UserPermissions",
+        "column": "id",
+        "db_type": "UINT"
       }
     ],
     "indexes": null,

@@ -66,6 +66,10 @@ func RegisterGoType(typ any, typObj ...any) {
 	}
 
 	registeredTypeConversions[tNm] = rT
+
+	if rT.Kind() == reflect.Pointer {
+		RegisterGoType(rT.Elem())
+	}
 }
 
 func StringForType(i any) string {
@@ -191,6 +195,8 @@ func registerTypeConversions() {
 		if !dbtype.IsLocked() {
 			panic("dbtype registry is not locked, call dbtype.Lock() before registering all db type conversions")
 		}
+
+		registeredTypeConversions["nil"] = reflect.TypeOf((*any)(nil)).Elem()
 
 		for rTyp, _ := range dbtype.Types() {
 			registeredTypeConversions[StringForType(rTyp)] = rTyp

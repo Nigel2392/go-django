@@ -50,7 +50,9 @@ func TestStringForType(t *testing.T) {
 }
 
 func TestTypeFromString(t *testing.T) {
-	dbtype.Lock() // required by internal guard
+	if !dbtype.IsLocked() {
+		dbtype.Lock() // required by internal guard
+	}
 	typ := reflect.TypeOf(decimal.Decimal{})
 	drivers.RegisterGoType(typ)
 

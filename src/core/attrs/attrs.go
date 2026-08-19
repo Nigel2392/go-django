@@ -71,6 +71,28 @@ func init() {
 			return formfield, true
 		},
 	)
+
+	django_reflect.RegisterCompareStep(75, func(ess *django_reflect.EqStepState) (eq bool, ok bool) {
+		a, ok := ess.A.(Definer)
+		if !ok {
+			return false, false
+		}
+
+		b, ok := ess.B.(Definer)
+		if !ok {
+			return false, false
+		}
+
+		if reflect.TypeOf(a) != reflect.TypeOf(b) {
+			return false, false
+		}
+
+		backCtx := context.Background()
+		return ess.Equals(
+			PrimaryKey(backCtx, a),
+			PrimaryKey(backCtx, b),
+		), true
+	})
 }
 
 // IsZero checks if a value is set to its zero value.

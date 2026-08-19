@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
-	"reflect"
 	"slices"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -213,7 +212,9 @@ marshalObject:
 			return nil, err
 		}
 
-		objMap[name] = value
+		objMap[name] = drivers.Value[any]{
+			V: value,
+		}
 	}
 
 	return objMap, nil
@@ -295,20 +296,7 @@ func UnmarshalRevisionData(obj attrs.Definer, data []byte, opts ...MarshallerOpt
 			continue
 		}
 
-		dbTyp, ok := drivers.DBType(def)
-		if !ok {
-			return errors.TypeMismatch.Wrapf(
-				"cannot determine database type for field %q", name,
-			)
-		}
-
-		var fT = drivers.DBToDefaultGoType(dbTyp)
-		if fT.Kind() == reflect.Ptr {
-			fT = fT.Elem()
-		}
-
-		var rValuePtr = reflect.New(fT)
-		var valuePtr = rValuePtr.Interface()
+		valuePtr := &drivers.Value[any]{}
 		err = json.Unmarshal(value, valuePtr)
 		if err != nil {
 			return errors.Wrapf(
@@ -316,9 +304,9 @@ func UnmarshalRevisionData(obj attrs.Definer, data []byte, opts ...MarshallerOpt
 			)
 		}
 
-		if err = def.Scan(rValuePtr.Elem().Interface()); err != nil {
+		if err = def.Scan(valuePtr.V); err != nil {
 			return errors.Wrapf(
-				err, "scanning field %q for %T", name, rValuePtr.Elem().Interface(),
+				err, "scanning field %q for %T", name, valuePtr.V,
 			)
 		}
 	}

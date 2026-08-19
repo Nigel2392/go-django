@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -410,7 +411,7 @@ func TestModelForceSetReadOnly(t *testing.T) {
 }
 
 type TestModelReadonlyStructTag struct {
-	ID   int
+	ID   int    `attrs:"primary"`
 	Name string `attrs:"readonly"`
 }
 
@@ -458,6 +459,44 @@ func TestModelForceSetReadOnlyStructTag(t *testing.T) {
 	if m.Name != "new name" {
 		t.Errorf("expected %q, got %q", "new name", m.Name)
 	}
+}
+
+func TestDjangoReflectEquals(t *testing.T) {
+	var a = &TestModelReadonlyStructTag{
+		ID:   1,
+		Name: "name",
+	}
+	var b = &TestModelReadonlyStructTag{
+		ID: 1,
+	}
+	var c = &TestModelReadonlyStructTag{
+		ID:   1,
+		Name: "differentName",
+	}
+	var d = &TestModelReadonlyStructTag{
+		ID: 2,
+	}
+
+	t.Run("EQ", func(t *testing.T) {
+		t.Log(a, b)
+		if !django_reflect.Equals(a, b) {
+			t.Fatalf("Expected a == b")
+		}
+	})
+
+	t.Run("EQ", func(t *testing.T) {
+		t.Log(a, c)
+		if !django_reflect.Equals(a, c) {
+			t.Fatalf("Expected a == c")
+		}
+	})
+
+	t.Run("NEQ", func(t *testing.T) {
+		t.Log(a, d)
+		if django_reflect.Equals(a, d) {
+			t.Fatalf("Expected a != d")
+		}
+	})
 }
 
 func BenchmarkUnpackFieldsFromArgs(b *testing.B) {

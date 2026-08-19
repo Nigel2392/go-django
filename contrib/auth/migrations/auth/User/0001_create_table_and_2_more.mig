@@ -13,9 +13,7 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       },
       {
         "name": "Email",
@@ -23,9 +21,7 @@
         "use_in_db": true,
         "min_length": 3,
         "max_length": 255,
-        "go_type": "*github.com/Nigel2392/go-django/queries/src/drivers.Email",
-        "db_type": "STRING",
-        "default": null
+        "db_type": "STRING"
       },
       {
         "name": "Username",
@@ -34,9 +30,11 @@
         "min_length": 3,
         "max_length": 16,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "FirstName",
@@ -44,9 +42,11 @@
         "use_in_db": true,
         "max_length": 75,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "LastName",
@@ -54,59 +54,49 @@
         "use_in_db": true,
         "max_length": 75,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Password",
         "column": "password",
         "use_in_db": true,
         "max_length": 255,
-        "go_type": "*github.com/Nigel2392/go-django/contrib/auth.Password",
-        "db_type": "STRING",
-        "default": null
+        "db_type": "STRING"
       },
       {
         "name": "CreatedAt",
         "column": "created_at",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
-        "db_type": "DATETIME",
-        "default": null
+        "db_type": "DATETIME"
       },
       {
         "name": "UpdatedAt",
         "column": "updated_at",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
-        "db_type": "DATETIME",
-        "default": null
+        "db_type": "DATETIME"
       },
       {
         "name": "IsAdministrator",
         "column": "is_administrator",
         "use_in_db": true,
-        "go_type": "bool",
-        "db_type": "BOOL",
-        "default": null
+        "db_type": "BOOL"
       },
       {
         "name": "IsActive",
         "column": "is_active",
         "use_in_db": true,
-        "go_type": "bool",
-        "db_type": "BOOL",
-        "default": null
+        "db_type": "BOOL"
       },
       {
         "name": "LastLogin",
         "column": "last_login",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "time.Time",
-        "db_type": "DATETIME",
-        "default": null
+        "db_type": "DATETIME"
       },
       {
         "name": "Groups",
@@ -127,9 +117,7 @@
             "target_field": "GroupID"
           }
         },
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       },
       {
         "name": "Permissions",
@@ -150,9 +138,7 @@
             "target_field": "PermissionID"
           }
         },
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       }
     ],
     "indexes": [

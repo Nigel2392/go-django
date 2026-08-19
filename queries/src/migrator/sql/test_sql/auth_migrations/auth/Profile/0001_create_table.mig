@@ -12,9 +12,7 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "int64",
-        "db_type": "INT",
-        "default": 0
+        "db_type": "INT"
       },
       {
         "name": "User",
@@ -27,9 +25,7 @@
             "lazy_model_key": "users.User"
           }
         },
-        "go_type": "int64",
-        "db_type": "INT",
-        "default": null
+        "db_type": "INT"
       }
     ],
     "indexes": null,

@@ -12,36 +12,40 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "int64",
-        "db_type": "INT",
-        "default": null
+        "db_type": "INT"
       },
       {
         "name": "ObjectID",
         "column": "object_id",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "ContentType",
         "column": "content_type",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Data",
         "column": "data",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "User",
@@ -55,17 +59,13 @@
             "lazy_model_key": "users.User"
           }
         },
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       },
       {
         "name": "CreatedAt",
         "column": "created_at",
         "use_in_db": true,
-        "go_type": "time.Time",
-        "db_type": "DATETIME",
-        "default": null
+        "db_type": "DATETIME"
       }
     ],
     "indexes": null,

@@ -12,9 +12,7 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "int64",
-        "db_type": "INT",
-        "default": null
+        "db_type": "INT"
       },
       {
         "name": "Name",
@@ -23,9 +21,11 @@
         "min_length": 2,
         "max_length": 64,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Domain",
@@ -34,9 +34,11 @@
         "min_length": 2,
         "max_length": 256,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Port",
@@ -44,17 +46,21 @@
         "use_in_db": true,
         "min_value": 1,
         "max_value": 65535,
-        "go_type": "int",
-        "db_type": "INT",
-        "default": 80
+        "default": {
+          "go_type": "int",
+          "value": 80
+        },
+        "db_type": "INT"
       },
       {
         "name": "Default",
         "column": "is_default_site",
         "use_in_db": true,
-        "go_type": "bool",
-        "db_type": "BOOL",
-        "default": false
+        "default": {
+          "go_type": "bool",
+          "value": false
+        },
+        "db_type": "BOOL"
       },
       {
         "name": "Root",
@@ -69,9 +75,7 @@
           },
           "field": "PK"
         },
-        "go_type": "int64",
-        "db_type": "INT",
-        "default": null
+        "db_type": "INT"
       }
     ],
     "indexes": [

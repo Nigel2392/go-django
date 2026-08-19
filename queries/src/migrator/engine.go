@@ -56,6 +56,8 @@ func (d *Dependency) UnmarshalJSON(data []byte) error {
 }
 
 type MigrationFile struct {
+	Prev *MigrationFile `json:"-"`
+
 	fileName string `json:"-"` // migration's file name
 
 	// The name of the application for this migration.
@@ -337,25 +339,33 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 			switch action.ActionType {
 			case ActionCreateTable:
 				err = m.SchemaEditor.CreateTable(ctx, n.mig.Table, false)
+
 			case ActionDropTable:
 				err = m.SchemaEditor.DropTable(ctx, action.Table.Old, false)
+
 			case ActionRenameTable:
 				err = m.SchemaEditor.RenameTable(ctx, action.Table.Old, action.Table.New.TableName())
+
 			case ActionAddField:
 				if !action.Field.New.UseInDB {
 					continue
 				}
+
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
 				err = m.SchemaEditor.AddField(ctx, n.mig.Table, *action.Field.New)
+
 			case ActionAlterField:
 				if !(action.Field.New.UseInDB && action.Field.Old.UseInDB) {
 					continue
 				}
-				action.Field.Old.Table = n.mig.Table
+
+				action.Field.Old.Table = n.mig.Prev.Table
 				action.Field.Old.Field, _ = defs.Field(action.Field.Old.Name)
+
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
+
 				err = m.SchemaEditor.AlterField(ctx, n.mig.Table, *action.Field.Old, *action.Field.New)
 			case ActionRemoveField:
 				if !action.Field.Old.UseInDB {
@@ -1133,6 +1143,7 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 	var (
 		migrations   = make([]*MigrationFile, 0)
 		lastTableMap = make(map[reflect.Type]*ModelTable)
+		lastMigMap   = make(map[reflect.Type]*MigrationFile)
 	)
 	for _, appName := range apps {
 		app, ok := e.apps.Get(appName)
@@ -1170,7 +1181,8 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 			migrationFiles, err := e.readMigrationDirFS(
 				fSys, modelMigrationPath,
 				appName, cType.Model(),
-				reflect.TypeOf(model), lastTableMap,
+				reflect.TypeOf(model),
+				lastMigMap, lastTableMap,
 			)
 			if err != nil {
 				return nil, errors.Wrapf(
@@ -1250,7 +1262,8 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 			migrationFiles, err := e.readMigrationDirFS(
 				mfs, filesDir,
 				appMigrationDir.Name(), modelMigrationDir.Name(),
-				reflect.TypeOf(model), lastTableMap,
+				reflect.TypeOf(model),
+				lastMigMap, lastTableMap,
 			)
 			if err != nil {
 				return nil, errors.Wrapf(
@@ -1276,7 +1289,7 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 	return migrations, nil
 }
 
-func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelName string, typ reflect.Type, lastTableMap map[reflect.Type]*ModelTable) ([]*MigrationFile, error) {
+func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelName string, typ reflect.Type, lastMigMap map[reflect.Type]*MigrationFile, lastTableMap map[reflect.Type]*ModelTable) ([]*MigrationFile, error) {
 	dirPath = filepath.FromSlash(dirPath)
 	dirPath = filepath.ToSlash(dirPath)
 
@@ -1306,20 +1319,7 @@ func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelN
 			continue
 		}
 
-		var migrationFileBytes, err = fs.ReadFile(dir, filePath)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "failed to read migration file %q", filePath,
-			)
-		}
-
 		var migrationFile = new(MigrationFile)
-		if err := json.Unmarshal(migrationFileBytes, &migrationFile); err != nil {
-			return nil, errors.Wrapf(
-				err, "failed to unmarshal migration file %q", filePath,
-			)
-		}
-
 		orderNum, name, err := parseMigrationFileName(file.Name())
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -1332,6 +1332,23 @@ func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelN
 		migrationFile.AppName = appName
 		migrationFile.ModelName = modelName
 		migrationFile.Order = orderNum
+
+		if last, ok := lastMigMap[typ]; ok {
+			migrationFile.Prev = last
+		}
+
+		migrationFileBytes, err := fs.ReadFile(dir, filePath)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "failed to read migration file %q", filePath,
+			)
+		}
+
+		if err := json.Unmarshal(migrationFileBytes, &migrationFile); err != nil {
+			return nil, errors.Wrapf(
+				err, "failed to unmarshal migration file %q", filePath,
+			)
+		}
 
 		switch {
 		case migrationFile.Table == nil:
@@ -1348,6 +1365,7 @@ func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelN
 			migrationFile.Table.Object,
 		)
 
+		lastMigMap[typ] = migrationFile
 		migrations = append(migrations, migrationFile)
 	}
 

@@ -31,7 +31,7 @@ type Column struct {
 	Nullable     bool               `json:"nullable,omitempty"`
 	Primary      bool               `json:"primary,omitempty"`
 	Auto         bool               `json:"auto,omitempty"`
-	Default      interface{}        `json:"default"`
+	Default      drivers.Value[any] `json:"default,omitzero"`
 	ReverseAlias string             `json:"reverse_alias,omitempty"`
 	Rel          *MigrationRelation `json:"relation,omitempty"`
 }
@@ -39,16 +39,16 @@ type Column struct {
 func (c *Column) String() string {
 	var sb strings.Builder
 	sb.WriteString("Column{")
-	sb.WriteString(fmt.Sprintf("Name: %s, ", c.Name))
-	sb.WriteString(fmt.Sprintf("Column: %s, ", c.Column))
-	sb.WriteString(fmt.Sprintf("UseInDB: %t, ", c.UseInDB))
-	sb.WriteString(fmt.Sprintf("MinLength: %d, ", c.MinLength))
-	sb.WriteString(fmt.Sprintf("MaxLength: %d, ", c.MaxLength))
-	sb.WriteString(fmt.Sprintf("MinValue: %f, ", c.MinValue))
-	sb.WriteString(fmt.Sprintf("MaxValue: %f, ", c.MaxValue))
-	sb.WriteString(fmt.Sprintf("Unique: %t, ", c.Unique))
-	sb.WriteString(fmt.Sprintf("Nullable: %t, ", c.Nullable))
-	sb.WriteString(fmt.Sprintf("Primary: %t", c.Primary))
+	fmt.Fprintf(&sb, "Name: %s, ", c.Name)
+	fmt.Fprintf(&sb, "Column: %s, ", c.Column)
+	fmt.Fprintf(&sb, "UseInDB: %t, ", c.UseInDB)
+	fmt.Fprintf(&sb, "MinLength: %d, ", c.MinLength)
+	fmt.Fprintf(&sb, "MaxLength: %d, ", c.MaxLength)
+	fmt.Fprintf(&sb, "MinValue: %f, ", c.MinValue)
+	fmt.Fprintf(&sb, "MaxValue: %f, ", c.MaxValue)
+	fmt.Fprintf(&sb, "Unique: %t, ", c.Unique)
+	fmt.Fprintf(&sb, "Nullable: %t, ", c.Nullable)
+	fmt.Fprintf(&sb, "Primary: %t", c.Primary)
 	sb.WriteString("}")
 	return sb.String()
 }
@@ -185,22 +185,24 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	}
 
 	var col = Column{
-		Table:        table,
-		Field:        field,
-		Name:         field.Name(),
-		Column:       field.ColumnName(),
-		UseInDB:      attrUseInDB,
-		MinLength:    attrMinLength,
-		MaxLength:    attrMaxLength,
-		MinValue:     attrMinValue,
-		MaxValue:     attrMaxValue,
-		Unique:       attrUnique,
-		Precision:    attrPrecision,
-		Scale:        attrScale,
-		Auto:         attrAutoIncrement || CanAutoIncrement(field),
-		Primary:      field.IsPrimary(),
-		Nullable:     nullable,
-		Default:      dflt,
+		Table:     table,
+		Field:     field,
+		Name:      field.Name(),
+		Column:    field.ColumnName(),
+		UseInDB:   attrUseInDB,
+		MinLength: attrMinLength,
+		MaxLength: attrMaxLength,
+		MinValue:  attrMinValue,
+		MaxValue:  attrMaxValue,
+		Unique:    attrUnique,
+		Precision: attrPrecision,
+		Scale:     attrScale,
+		Auto:      attrAutoIncrement || CanAutoIncrement(field),
+		Primary:   field.IsPrimary(),
+		Nullable:  nullable,
+		Default: drivers.Value[any]{
+			V: dflt,
+		},
 		ReverseAlias: attrReverseAlias,
 		Rel:          rel,
 	}
@@ -285,11 +287,11 @@ func (c *Column) HasDefault() bool {
 	if c == nil {
 		return false
 	}
-	if c.Default == nil {
+	if c.Default.V == nil {
 		return false
 	}
 
-	var rv = reflect.ValueOf(c.Default)
+	var rv = reflect.ValueOf(c.Default.V)
 	if rv.Type().Kind() == reflect.Interface && rv.IsNil() {
 		return false
 	}
@@ -298,7 +300,7 @@ func (c *Column) HasDefault() bool {
 		return false
 	}
 
-	if isZero, ok := c.Default.(interface{ IsZero() bool }); ok {
+	if isZero, ok := c.Default.V.(interface{ IsZero() bool }); ok {
 		return !isZero.IsZero()
 	}
 
@@ -318,8 +320,8 @@ func (c *Column) HasDefault() bool {
 		return !c.Primary && c.Rel == nil || rv.Uint() != 0
 	case reflect.Float32, reflect.Float64:
 		return !c.Primary && c.Rel == nil || rv.Float() != 0.0
-	case reflect.Array, reflect.Slice, reflect.Map:
-		return rv.Len() > 0
+	case reflect.Slice, reflect.Map:
+		return !rv.IsNil()
 	case reflect.Invalid:
 		return false
 	}
@@ -375,7 +377,7 @@ func (c *Column) ChangeList(other *Column) []string {
 		goto checkRevAlias
 	}
 
-	if c.Default == nil {
+	if c.Default.V == nil {
 		goto checkRevAlias
 	}
 

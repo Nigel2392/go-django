@@ -155,11 +155,11 @@ func RSet(src, dst *re.Value, convert bool) bool {
 	return false
 }
 
-type isZeroer interface {
+type IsZeroer interface {
 	IsZero() bool
 }
 
-var _isZeroerType = re.TypeOf((*isZeroer)(nil)).Elem()
+var _isZeroerType = re.TypeOf((*IsZeroer)(nil)).Elem()
 
 func ReflectValue(value interface{}) re.Value {
 	var rv re.Value
@@ -178,6 +178,14 @@ func ReflectValue(value interface{}) re.Value {
 }
 
 func IsZero(value interface{}) bool {
+	if value == nil {
+		return true
+	}
+
+	if zeroer, ok := value.(IsZeroer); ok {
+		return zeroer.IsZero()
+	}
+
 	var rv = ReflectValue(value)
 	if !rv.IsValid() {
 		return true
@@ -193,9 +201,9 @@ func IsZero(value interface{}) bool {
 
 	// check if either the pointer to the value or the value itself implements isZeroer
 	if rv.Type().Implements(_isZeroerType) {
-		return rv.Interface().(isZeroer).IsZero()
+		return rv.Interface().(IsZeroer).IsZero()
 	} else if rv.Kind() == re.Ptr && !rv.IsNil() && rv.Elem().Type().Implements(_isZeroerType) {
-		return rv.Elem().Interface().(isZeroer).IsZero()
+		return rv.Elem().Interface().(IsZeroer).IsZero()
 	}
 
 	switch rv.Kind() {

@@ -79,7 +79,10 @@ func (l *BoundValue[T]) DBType() dbtype.Type {
 	return dbtype.JSON
 }
 
-func (l *BoundValue[T]) MarshalJSON() ([]byte, error) {
+func (l BoundValue[T]) MarshalJSON() ([]byte, error) {
+	if l.BlockObject == nil && l._rawData != nil {
+		return l._rawData, nil
+	}
 	return json.Marshal(l.V)
 }
 
@@ -101,16 +104,48 @@ func (l *BoundValue[T]) Equal(other any) bool {
 
 	switch o := other.(type) {
 	case *BoundValue[T]:
-		return django_reflect.Equals(l.V, o.V, django_reflect.EQ_DFLT)
+
+		switch {
+		case l.BlockObject == nil && o.BlockObject == nil:
+			if len(l._rawData) > 0 && len(o._rawData) > 0 {
+				return django_reflect.Equals(l._rawData, o._rawData, django_reflect.EQ_BYTES_RUNES)
+			}
+
+			return django_reflect.Equals(l.V, o.V, django_reflect.EQ_DFLT)
+
+		case l.BlockObject == nil:
+			l.BlockObject = o.BlockObject
+			l.loadData()
+
+		case o.BlockObject == nil:
+			o.BlockObject = l.BlockObject
+			o.loadData()
+		}
+
+		if l.BlockObject == nil {
+			// other is automatically also nil
+			return django_reflect.Equals(l.V, o.V, django_reflect.EQ_DFLT)
+		}
+
+		return !l.BlockObject.HasChanged(l, o)
+
 	case T:
-		return django_reflect.Equals(l.V, o, django_reflect.EQ_DFLT)
+
+		if l.BlockObject == nil {
+			return django_reflect.Equals(l.V, o, django_reflect.EQ_DFLT)
+		}
+
+		return !l.BlockObject.HasChanged(l.V, &BoundValue[T]{
+			BlockObject: l.BlockObject,
+			V:           o,
+		})
 	}
 
 	return false
 }
 
 func (l BoundValue[T]) Value() (driver.Value, error) {
-	jsonData, err := json.Marshal(l.V)
+	jsonData, err := json.Marshal(l)
 	return string(jsonData), err
 }
 

@@ -284,23 +284,22 @@ func WriteColumn(w *strings.Builder, col migrator.Column) {
 	}
 
 	if col.HasDefault() {
-
-		if valuer, ok := col.Default.(driver.Valuer); ok {
+		if valuer, ok := col.Default.V.(driver.Valuer); ok {
 			// If the default value is a driver.Valuer, we need to call it to get the actual value.
 			val, err := valuer.Value()
 			if err != nil {
 				panic(fmt.Errorf("failed to get value from driver.Valuer: %w", err))
 			}
-			col.Default = val
+			col.Default.V = val
 		}
 
-		if col.Default == nil && !col.Nullable {
+		if col.Default.V == nil && !col.Nullable {
 			goto checkRels
 		}
 
 		w.WriteString(" DEFAULT ")
 
-		switch v := col.Default.(type) {
+		switch v := col.Default.V.(type) {
 		case string:
 			w.WriteString("'")
 			w.WriteString(v)

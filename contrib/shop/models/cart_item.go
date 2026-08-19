@@ -13,7 +13,7 @@ var _ queries.ActsBeforeCreate = (*CartItem)(nil)
 
 type CartItem struct {
 	ID      drivers.ULID
-	Cart    *Cart
+	Cart    *Cart `json:"-"`
 	Product *ProductSku
 	Amount  uint64
 }

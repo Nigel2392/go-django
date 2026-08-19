@@ -2,6 +2,7 @@ package fattrs_test
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -238,8 +239,8 @@ func TestPtrModelFieldsScannable(t *testing.T) {
 		t.Errorf("expected %d, got %d", 4, m.ID)
 	}
 
-	if err = defID.Scan("not a number"); err != nil {
-		t.Errorf("expected %v, got %v", nil, err)
+	if err = defID.Scan("not a number"); err == nil {
+		t.Errorf("expected %v, got %v", strconv.ErrSyntax, err)
 	}
 
 	if m.Name != "new name" {

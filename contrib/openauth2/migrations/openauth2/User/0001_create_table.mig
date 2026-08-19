@@ -13,9 +13,7 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": 0
+        "db_type": "UINT"
       },
       {
         "name": "UniqueIdentifier",
@@ -23,9 +21,11 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "ProviderName",
@@ -33,35 +33,39 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Data",
         "column": "data",
         "use_in_db": true,
-        "go_type": "encoding/json.RawMessage",
-        "db_type": "JSON",
-        "default": null
+        "db_type": "JSON"
       },
       {
         "name": "AccessToken",
         "column": "access_token",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Text",
-        "db_type": "TEXT",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "TEXT"
       },
       {
         "name": "RefreshToken",
         "column": "refresh_token",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Text",
-        "db_type": "TEXT",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "TEXT"
       },
       {
         "name": "TokenType",
@@ -69,59 +73,49 @@
         "use_in_db": true,
         "max_length": 50,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "ExpiresAt",
         "column": "expires_at",
         "use_in_db": true,
         "max_length": 6,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Timestamp",
-        "db_type": "TIMESTAMP",
-        "default": "0001-01-01T00:00:00Z"
+        "db_type": "TIMESTAMP"
       },
       {
         "name": "CreatedAt",
         "column": "created_at",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
-        "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "db_type": "DATETIME"
       },
       {
         "name": "UpdatedAt",
         "column": "updated_at",
         "use_in_db": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
-        "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "db_type": "DATETIME"
       },
       {
         "name": "IsAdministrator",
         "column": "is_administrator",
         "use_in_db": true,
-        "go_type": "bool",
-        "db_type": "BOOL",
-        "default": false
+        "db_type": "BOOL"
       },
       {
         "name": "IsActive",
         "column": "is_active",
         "use_in_db": true,
-        "go_type": "bool",
-        "db_type": "BOOL",
-        "default": false
+        "db_type": "BOOL"
       },
       {
         "name": "LastLogin",
         "column": "last_login",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "time.Time",
-        "db_type": "DATETIME",
-        "default": "0001-01-01T00:00:00Z"
+        "db_type": "DATETIME"
       },
       {
         "name": "Groups",
@@ -142,9 +136,7 @@
             "target_field": "GroupID"
           }
         },
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       },
       {
         "name": "Permissions",
@@ -165,9 +157,7 @@
             "target_field": "PermissionID"
           }
         },
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       }
     ],
     "indexes": null,

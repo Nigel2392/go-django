@@ -231,7 +231,7 @@ func (c BaseContentType[T]) Value() (driver.Value, error) {
 // MarshalJSON implements the json.Marshaler interface.
 // It marshals the type name of the BaseContentType.
 func (c BaseContentType[T]) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%s"`, c.TypeName())), nil
+	return fmt.Appendf([]byte{}, `"%s"`, c.TypeName()), nil
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.

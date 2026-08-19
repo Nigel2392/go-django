@@ -13,12 +13,12 @@ import (
 )
 
 type ProductSku struct {
-	ID      uint64
-	Product *Product
-	Title   string
-	Price   decimal.Decimal
-	Stock   uint64
-	Images  *blocks.ListBlockValue
+	ID      uint64                 `json:"id"`
+	Product *Product               `json:"product"`
+	Title   string                 `json:"title"`
+	Price   decimal.Decimal        `json:"price"`
+	Stock   uint64                 `json:"stock"`
+	Images  *blocks.ListBlockValue `json:"images"`
 }
 
 func (m *ProductSku) Label(ctx context.Context) string {

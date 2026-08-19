@@ -477,8 +477,8 @@ func TestMigratorBroad(t *testing.T) {
 		for _, col := range table.Columns() {
 			var m = m[col.Name]
 
-			if !reflect.DeepEqual(col.Default, m) {
-				t.Errorf("expected column %s default value to be \"%v\" (%T), got \"%v\" (%T)", col.Name, m, m, col.Default, col.Default)
+			if !reflect.DeepEqual(col.Default.V, m) {
+				t.Errorf("expected column %s default value to be \"%v\" (%T), got \"%v\" (%T)", col.Name, m, m, col.Default.V, col.Default.V)
 			}
 		}
 	})

@@ -12,9 +12,7 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
       },
       {
         "name": "Name",
@@ -22,9 +20,11 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Description",
@@ -32,9 +32,11 @@
         "use_in_db": true,
         "max_length": 1024,
         "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
       },
       {
         "name": "Permissions",
@@ -55,9 +57,12 @@
             "target_field": "PermissionID"
           }
         },
-        "go_type": "uint64",
-        "db_type": "UINT",
-        "default": null
+        "db_type": "UINT"
+      },
+      {
+        "name": "UserGroups",
+        "column": "id",
+        "db_type": "UINT"
       }
     ],
     "indexes": null,
