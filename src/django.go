@@ -803,7 +803,7 @@ func (a *Application) Initialize() error {
 	// before they can be used.
 	dbtype.Lock()
 
-	if err := core.BeforeModelsReady.Send(a); err != nil {
+	if err := core.BeforeModelsReady.Send(c, a); err != nil {
 		return errors.Wrap(err, "Error sending BeforeModelsReady signal")
 	}
 
@@ -832,7 +832,7 @@ func (a *Application) Initialize() error {
 		attrs.RegisterModel(model)
 	}
 
-	if err := core.OnModelsReady.Send(a); err != nil {
+	if err := core.OnModelsReady.Send(c, a); err != nil {
 		return errors.Wrap(err, "Error sending OnModelsReady signal")
 	}
 
@@ -840,7 +840,7 @@ func (a *Application) Initialize() error {
 	// This is to ensure that all static definitions are reset
 	// and all (reverse) fields are included the next time the static definitions
 	// are set up for the model.
-	if err := attrs.ResetDefinitions.Send(nil); err != nil {
+	if err := attrs.ResetDefinitions.Send(c, nil); err != nil {
 		return errors.Wrap(err, "Error sending ResetDefinitions signal")
 	}
 
@@ -982,7 +982,7 @@ func (a *Application) Initialize() error {
 
 	a.initialized.Store(true)
 
-	if err := core.OnDjangoReady.Send(a); err != nil {
+	if err := core.OnDjangoReady.Send(c, a); err != nil {
 		return errors.Wrap(err, "Error sending OnDjangoReady signal")
 	}
 

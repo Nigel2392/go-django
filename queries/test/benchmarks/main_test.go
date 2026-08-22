@@ -1,6 +1,7 @@
 package benchmarks_test
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -35,7 +36,8 @@ var (
 type fatalLogger struct {
 }
 
-func (l *fatalLogger) Helper() {}
+func (l *fatalLogger) Helper()                  {}
+func (l *fatalLogger) Context() context.Context { return context.Background() }
 
 func (l *fatalLogger) Fatal(args ...any) {
 	log.Fatal(args...)
@@ -104,7 +106,7 @@ func TestMain(m *testing.M) {
 	attrs.RegisterModel(&FastAttrsInlineBenchmarkM2MSource{})
 	attrs.RegisterModel(&FastAttrsInlineBenchmarkM2MTarget{})
 
-	attrs.ResetDefinitions.Send(nil)
+	attrs.ResetDefinitions.Send(context.Background(), nil)
 
 	tables.Create()
 	defer tables.Drop()

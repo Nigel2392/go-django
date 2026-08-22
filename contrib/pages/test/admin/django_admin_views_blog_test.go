@@ -251,7 +251,7 @@ func TestMain(m *testing.M) {
 	logger.Setup(log)
 
 	// bandaid because i am lazy and do not want to fix my tests to not violate the constraint for the content type field.
-	queries.SignalPreModelCreate.Listen(func(s signals.Signal[queries.ModelSignal], ms queries.ModelSignal) error {
+	queries.SignalPreModelCreate.Listen(context.Background(), func(ctx context.Context, s signals.Signal[queries.ModelSignal], ms queries.ModelSignal) error {
 		p, ok := ms.Instance.(*pages.PageNode)
 		if !ok {
 			return nil

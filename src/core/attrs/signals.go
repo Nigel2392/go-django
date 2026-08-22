@@ -76,9 +76,9 @@ var (
 	//
 	// This is so reverse fields are visible in the static definitions - these
 	// can only be built after all models have been registered.
-	_, _ = ResetDefinitions.Listen(func(s signals.Signal[any], a any) error {
+	_, _ = ResetDefinitions.Listen(context.Background(), func(ctx context.Context, s signals.Signal[any], a any) error {
 
-		if err := PreResetDefinitions.Send(a); err != nil {
+		if err := PreResetDefinitions.Send(ctx, a); err != nil {
 			panic(errors.Wrap(
 				err, "PreResetDefinitions",
 			))
@@ -131,7 +131,7 @@ var (
 			)
 		}
 
-		if err := PostResetDefinitions.Send(a); err != nil {
+		if err := PostResetDefinitions.Send(ctx, a); err != nil {
 			return errors.Wrap(
 				err, "PostResetDefinitions",
 			)

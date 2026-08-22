@@ -199,7 +199,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			return err
 		}
 
-		return shop.SIGNALS.Products.Created.Send(&signals.ProductSignalData{
+		return shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
 			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
 			Product:    p,
 			Skus:       skus,
@@ -339,7 +339,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			return err
 		}
 
-		return shop.SIGNALS.Products.Updated.Send(&signals.ProductSignalData{
+		return shop.SIGNALS.Products.Updated.Send(r.Context(), &signals.ProductSignalData{
 			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
 			Product:    p,
 			Skus:       skus,

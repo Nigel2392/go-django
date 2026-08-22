@@ -17,8 +17,8 @@ const _PROXY_FIELDS_KEY = "models.embed.proxy.fields"
 //
 // This will create a tree structure that contains all the proxy fields
 // and their respective sub-proxy fields.
-var _, _ = attrs.OnModelRegister.Listen(func(s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
-	var regCtx = attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true)
+var _, _ = attrs.OnModelRegister.Listen(context.Background(), func(ctx context.Context, s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
+	var regCtx = attrs.ContextWithFlags(ctx, attrs.CtxFlagRegistering, true)
 	var newDefiner = attrs.NewObject[attrs.Definer](regCtx, meta.Definer)
 	var proxyFields = buildProxyFieldMap(regCtx, newDefiner)
 	attrs.StoreOnMeta(

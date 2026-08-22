@@ -1,6 +1,7 @@
 package dbtype
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"iter"
@@ -310,7 +311,7 @@ func (r *typeRegistry[T]) Lock() bool {
 	}
 
 	if !r.locked {
-		assert.Err(r.Locked.Send(r))
+		assert.Err(r.Locked.Send(context.Background(), r))
 		r.locked = true
 		return true
 	}

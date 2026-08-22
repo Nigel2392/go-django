@@ -1,6 +1,7 @@
 package forms
 
 import (
+	"context"
 	"maps"
 	"mime/multipart"
 	"net/http"
@@ -98,7 +99,7 @@ func WithInitial(initial map[string]interface{}) func(Form) {
 
 func OnValid(funcs ...func(Form)) func(Form) {
 	return func(f Form) {
-		f.OnValid().Listen(func(s signals.Signal[Form], f Form) error {
+		f.OnValid().Listen(f.Context(), func(ctx context.Context, s signals.Signal[Form], f Form) error {
 			for _, fn := range funcs {
 				fn(f)
 			}
@@ -109,7 +110,7 @@ func OnValid(funcs ...func(Form)) func(Form) {
 
 func OnInvalid(funcs ...func(Form)) func(Form) {
 	return func(f Form) {
-		f.OnInvalid().Listen(func(s signals.Signal[Form], f Form) error {
+		f.OnInvalid().Listen(f.Context(), func(ctx context.Context, s signals.Signal[Form], f Form) error {
 			for _, fn := range funcs {
 				fn(f)
 			}
@@ -120,7 +121,7 @@ func OnInvalid(funcs ...func(Form)) func(Form) {
 
 func OnFinalize(funcs ...func(Form)) func(Form) {
 	return func(f Form) {
-		f.OnFinalize().Listen(func(s signals.Signal[Form], f Form) error {
+		f.OnFinalize().Listen(f.Context(), func(ctx context.Context, s signals.Signal[Form], f Form) error {
 			for _, fn := range funcs {
 				fn(f)
 			}

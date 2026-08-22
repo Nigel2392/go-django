@@ -124,7 +124,7 @@ func TestSpecificQuerySet(t *testing.T) {
 		&CommentWithAuthor{},
 	)
 
-	attrs.ResetDefinitions.Send(nil)
+	attrs.ResetDefinitions.Send(t.Context(), nil)
 	tables.Create()
 	t.Cleanup(func() {
 		tables.Drop()

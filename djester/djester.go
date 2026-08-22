@@ -314,7 +314,7 @@ func (d *Tester) loginHandler(w http.ResponseWriter, r *http.Request) {
 		authentication.User
 		attrs.Definer
 	}); ok {
-		core.SIGNAL_USER_LOGGED_IN.Send(core.UserWithRequest{
+		core.SIGNAL_USER_LOGGED_IN.Send(r.Context(), core.UserWithRequest{
 			User: definer,
 			Req:  r,
 		})
@@ -344,7 +344,7 @@ func (d *Tester) logoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := core.SIGNAL_USER_LOGGED_OUT.Send(core.UserWithRequest{
+	err := core.SIGNAL_USER_LOGGED_OUT.Send(r.Context(), core.UserWithRequest{
 		User: nil,
 		Req:  r,
 	})

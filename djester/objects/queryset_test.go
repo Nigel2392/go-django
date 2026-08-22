@@ -67,7 +67,7 @@ func TestQuerySetTests(t *testing.T) {
 
 	// Reset the definitions to ensure all models are registered
 	// before reverse fields are fully setup.
-	attrs.ResetDefinitions.Send(nil)
+	attrs.ResetDefinitions.Send(t.Context(), nil)
 
 	tables.Create()
 

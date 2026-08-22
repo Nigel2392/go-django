@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 	tables.Create()
 	defer tables.Drop()
 
-	attrs.ResetDefinitions.Send(nil)
+	attrs.ResetDefinitions.Send(context.Background(), nil)
 
 	exitCode := m.Run()
 	if exitCode != 0 {

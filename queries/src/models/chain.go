@@ -19,7 +19,7 @@ var (
 	//	_BINDER_VALUE   = reflect.ValueOf((*attrs.Binder)(nil)).Elem()
 )
 
-var _, _ = attrs.OnBeforeModelRegister.Listen(func(s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
+var _, _ = attrs.OnBeforeModelRegister.Listen(context.Background(), func(ctx context.Context, s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
 	var (
 		rTyp       = reflect.TypeOf(meta.Definer)
 		modelChain = buildModelChain(rTyp)

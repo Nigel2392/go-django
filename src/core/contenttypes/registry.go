@@ -131,7 +131,7 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 		}
 	}
 
-	p.onRegister.Send(definition)
+	p.onRegister.Send(context.Background(), definition)
 }
 
 // EditDefinition edits the definition for the given model.
@@ -350,7 +350,7 @@ func GetInstancesByIDs(ctx context.Context, typeName string, ids []interface{}) 
 
 // OnRegister allows a function to be called when a new content type is registered.
 func OnRegister(fn func(def *ContentTypeDefinition)) (signals.Receiver[*ContentTypeDefinition], error) {
-	return contentTypeRegistryObject.onRegister.Listen(func(s signals.Signal[*ContentTypeDefinition], ctd *ContentTypeDefinition) error {
+	return contentTypeRegistryObject.onRegister.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*ContentTypeDefinition], ctd *ContentTypeDefinition) error {
 		fn(ctd)
 		return nil
 	})

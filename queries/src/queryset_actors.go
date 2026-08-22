@@ -155,7 +155,7 @@ func Actor(obj attrs.Definer) *ObjectActor {
 }
 
 func (s *ObjectActor) sendSig(sig signals.Signal[ModelSignal], ctx context.Context) (err error) {
-	err = sig.Send(ModelSignal{
+	err = sig.Send(ctx, ModelSignal{
 		Context:  ctx,
 		Instance: s.obj,
 	})

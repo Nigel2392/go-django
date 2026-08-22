@@ -3,12 +3,13 @@ module github.com/Nigel2392/go-django/queries
 go 1.27.0
 
 require (
-	github.com/Nigel2392/errors v1.0.0
-	github.com/Nigel2392/go-signals v1.1.1
+	github.com/Nigel2392/errors v1.0.1
+	github.com/Nigel2392/go-signals v1.1.2
 	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/Nigel2392/mux v1.6.1
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.9.3
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.32

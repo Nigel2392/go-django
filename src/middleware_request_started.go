@@ -27,7 +27,7 @@ func RequestSignalMiddleware(next mux.Handler) mux.Handler {
 	return mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
 		var signal = &core.HttpSignal{W: w, R: r, H: next}
 
-		if err := core.SIGNAL_BEFORE_REQUEST.Send(signal); err != nil {
+		if err := core.SIGNAL_BEFORE_REQUEST.Send(r.Context(), signal); err != nil {
 			if errors.Is(err, ErrServeCanceled) {
 				return
 			}
@@ -35,6 +35,6 @@ func RequestSignalMiddleware(next mux.Handler) mux.Handler {
 
 		signal.H.ServeHTTP(signal.W, signal.R)
 
-		core.SIGNAL_AFTER_REQUEST.Send(signal)
+		core.SIGNAL_AFTER_REQUEST.Send(r.Context(), signal)
 	})
 }

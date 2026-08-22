@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"net/mail"
 
@@ -70,8 +71,8 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 		),
 	}
 
-	f.OnInvalid().Listen(func(s signals.Signal[forms.Form], f forms.Form) error {
-		return core.SIGNAL_LOGIN_FAILED.Send(r)
+	f.OnInvalid().Listen(r.Context(), func(ctx context.Context, s signals.Signal[forms.Form], f forms.Form) error {
+		return core.SIGNAL_LOGIN_FAILED.Send(r.Context(), r)
 	})
 
 	if Auth.LoginWithEmail {
@@ -239,7 +240,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 			Config:      registerConfig,
 		}
 
-		if err := SignalPreValidateLogonField.Send(&fsig); err != nil {
+		if err := SignalPreValidateLogonField.Send(r.Context(), &fsig); err != nil {
 			return []error{err}
 		}
 
@@ -289,7 +290,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 			}
 		}
 
-		if err := SignalPostValidateLogonField.Send(&fsig); err != nil {
+		if err := SignalPostValidateLogonField.Send(r.Context(), &fsig); err != nil {
 			return []error{err}
 		}
 

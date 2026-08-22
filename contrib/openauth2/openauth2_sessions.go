@@ -23,7 +23,7 @@ func Login(r *http.Request, u *User) (*User, error) {
 
 	session.Set(USER_ID_SESSION_KEY, u.ID)
 
-	core.SIGNAL_USER_LOGGED_IN.Send(core.UserWithRequest{
+	core.SIGNAL_USER_LOGGED_IN.Send(r.Context(), core.UserWithRequest{
 		User: u,
 		Req:  r,
 	})
@@ -49,7 +49,7 @@ func Logout(r *http.Request) error {
 		return err
 	}
 
-	return core.SIGNAL_USER_LOGGED_OUT.Send(core.UserWithRequest{
+	return core.SIGNAL_USER_LOGGED_OUT.Send(r.Context(), core.UserWithRequest{
 		User: nil,
 		Req:  r,
 	})

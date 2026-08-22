@@ -51,7 +51,7 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	}
 
 	if definition.OnReferenceUpdate != nil {
-		SignalNodeUpdated.Listen(func(s signals.Signal[*PageNodeSignal], ps *PageNodeSignal) error {
+		SignalNodeUpdated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*PageNodeSignal], ps *PageNodeSignal) error {
 			if ps.Node.ContentType == typeName {
 				return definition.OnReferenceUpdate(ps.Ctx, ps.Node, ps.PageID)
 			}
@@ -60,7 +60,7 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	}
 
 	if definition.OnReferenceBeforeDelete != nil {
-		SignalNodeBeforeDelete.Listen(func(s signals.Signal[*PageNodeSignal], ps *PageNodeSignal) error {
+		SignalNodeBeforeDelete.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*PageNodeSignal], ps *PageNodeSignal) error {
 			if ps.Node.ContentType == typeName {
 				return definition.OnReferenceBeforeDelete(ps.Ctx, ps.Node, ps.PageID)
 			}

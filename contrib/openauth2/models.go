@@ -156,27 +156,27 @@ func (o *User) BeforeCreate(ctx context.Context) error {
 		o.CreatedAt = drivers.CurrentDateTime()
 	}
 
-	return core.SIGNAL_BEFORE_USER_CREATE.Send(o)
+	return core.SIGNAL_BEFORE_USER_CREATE.Send(ctx, o)
 }
 
 func (o *User) AfterCreate(ctx context.Context) error {
-	return core.SIGNAL_AFTER_USER_CREATE.Send(o)
+	return core.SIGNAL_AFTER_USER_CREATE.Send(ctx, o)
 }
 
 func (o *User) BeforeUpdate(ctx context.Context) error {
-	return core.SIGNAL_BEFORE_USER_UPDATE.Send(o)
+	return core.SIGNAL_BEFORE_USER_UPDATE.Send(ctx, o)
 }
 
 func (o *User) AfterUpdate(ctx context.Context) error {
-	return core.SIGNAL_AFTER_USER_UPDATE.Send(o)
+	return core.SIGNAL_AFTER_USER_UPDATE.Send(ctx, o)
 }
 
 func (o *User) BeforeDelete(ctx context.Context) error {
-	return core.SIGNAL_BEFORE_USER_DELETE.Send(o.ID)
+	return core.SIGNAL_BEFORE_USER_DELETE.Send(ctx, o.ID)
 }
 
 func (o *User) AfterDelete(ctx context.Context) error {
-	return core.SIGNAL_AFTER_USER_DELETE.Send(o.ID)
+	return core.SIGNAL_AFTER_USER_DELETE.Send(ctx, o.ID)
 }
 
 func (o *User) BeforeSave(ctx context.Context) error {

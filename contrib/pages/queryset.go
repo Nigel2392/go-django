@@ -401,7 +401,7 @@ func (qs *PageQuerySet) AddRoots(nodes ...*PageNode) error {
 		return errors.Wrap(err, "failed to commit transaction")
 	}
 
-	return SignalRootCreated.Send(&PageNodeSignal{
+	return SignalRootCreated.Send(qs.Context(), &PageNodeSignal{
 		BaseSignal: BaseSignal{
 			Ctx: qs.Context(),
 		},
@@ -510,7 +510,7 @@ func (qs *PageQuerySet) AddChildren(parent *PageNode, children ...*PageNode) err
 		return err
 	}
 
-	return SignalChildCreated.Send(&PageNodeSignal{
+	return SignalChildCreated.Send(qs.Context(), &PageNodeSignal{
 		BaseSignal: BaseSignal{
 			Ctx: qs.Context(),
 		},
@@ -586,7 +586,7 @@ func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
 		return errors.Wrap(err, "failed to commit transaction")
 	}
 
-	return SignalNodeUpdated.Send(&PageNodeSignal{
+	return SignalNodeUpdated.Send(qs.Context(), &PageNodeSignal{
 		BaseSignal: BaseSignal{
 			Ctx: qs.Context(),
 		},
@@ -702,7 +702,7 @@ func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
 			cTypes.Set(row.Object.ContentType, idList)
 		}
 
-		var err = SignalNodeBeforeDelete.Send(&PageNodeSignal{
+		var err = SignalNodeBeforeDelete.Send(qs.Context(), &PageNodeSignal{
 			BaseSignal: BaseSignal{
 				Ctx: qs.Context(),
 			},
@@ -950,7 +950,7 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 		return errors.Wrap(err, "failed to commit transaction")
 	}
 
-	return SignalNodeMoved.Send(&PageMovedSignal{
+	return SignalNodeMoved.Send(qs.Context(), &PageMovedSignal{
 		BaseSignal: BaseSignal{
 			Ctx: qs.Context(),
 		},

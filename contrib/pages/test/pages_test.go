@@ -315,22 +315,22 @@ func TestPageNode(t *testing.T) {
 		nodeDeleteCounter  = 0
 	)
 
-	pages.SignalNodeUpdated.Listen(func(s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
+	pages.SignalNodeUpdated.Listen(t.Context(), func(ctx context.Context, s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
 		nodeUpdateCounter++
 		return nil
 	})
 
-	pages.SignalNodeBeforeDelete.Listen(func(s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
+	pages.SignalNodeBeforeDelete.Listen(t.Context(), func(ctx context.Context, s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
 		nodeDeleteCounter++
 		return nil
 	})
 
-	pages.SignalRootCreated.Listen(func(s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
+	pages.SignalRootCreated.Listen(t.Context(), func(ctx context.Context, s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
 		rootCreateCounter++
 		return nil
 	})
 
-	pages.SignalChildCreated.Listen(func(s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
+	pages.SignalChildCreated.Listen(t.Context(), func(ctx context.Context, s signals.Signal[*pages.PageNodeSignal], ps *pages.PageNodeSignal) error {
 		childCreateCounter++
 		return nil
 	})

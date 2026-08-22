@@ -186,7 +186,7 @@ func NewAppConfig() django.AppConfig {
 		}))
 	}
 
-	core.SIGNAL_LOGIN_FAILED.Listen(func(s signals.Signal[*http.Request], r *http.Request) error {
+	core.SIGNAL_LOGIN_FAILED.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*http.Request], r *http.Request) error {
 		var logData = make(map[string]interface{})
 		var newData = make(url.Values, len(r.Form))
 		for k, v := range r.Form {

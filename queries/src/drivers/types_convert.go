@@ -165,7 +165,7 @@ func DBToDefaultGoType(dbType dbtype.Type) reflect.Type {
 	return reflect.TypeOf(scanTo).Elem()
 }
 
-var _, _ = attrs.PostResetDefinitions.Listen(func(s signals.Signal[any], a any) error {
+var _, _ = attrs.PostResetDefinitions.Listen(context.Background(), func(ctx context.Context, s signals.Signal[any], a any) error {
 	definitions, err := attrs.IterModelMeta()
 	if err != nil {
 		return errors.Wrap(err, "drivers.PostResetDefinitions.Listen: failed to iterate ModelMeta")

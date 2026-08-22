@@ -137,7 +137,7 @@ func (m *Model) setupInitialState() {
 // onChange is a callback that is called when the model changes.
 // It is used to handle changes in the model's fields to update the model's state
 // when the signal is emitted.
-func (m *Model) onChange(s signals.Signal[ModelChangeSignal], ms ModelChangeSignal) error {
+func (m *Model) onChange(ctx context.Context, s signals.Signal[ModelChangeSignal], ms ModelChangeSignal) error {
 	m.checkValid()
 
 	if ms.Model != m {
@@ -220,7 +220,7 @@ func (m *Model) SignalChange(fa attrs.Field, value interface{}) {
 	//		return
 	//	}
 
-	m.changed.Send(ModelChangeSignal{
+	m.changed.Send(m.Defs().Context(), ModelChangeSignal{
 		Model:  m,
 		Field:  fa,
 		Flags:  FlagFieldChanged,
@@ -236,7 +236,7 @@ func (m *Model) SignalReset(fa attrs.Field) {
 		return
 	}
 
-	m.changed.Send(ModelChangeSignal{
+	m.changed.Send(m.Defs().Context(), ModelChangeSignal{
 		Model:  m,
 		Field:  fa,
 		Flags:  FlagFieldReset,
@@ -403,7 +403,7 @@ func (m *Model) Setup(ctx context.Context, def attrs.Definer) (err error) {
 
 	if m.changed == nil {
 		m.changed = signals.New[ModelChangeSignal]("model.changed")
-		m.changed.Listen(m.onChange)
+		m.changed.Listen(ctx, m.onChange)
 	}
 
 	// if the model is not setup, we need to initialize it
@@ -417,7 +417,7 @@ func (m *Model) Setup(ctx context.Context, def attrs.Definer) (err error) {
 
 	// send the model setup signal
 	if !sig.SignalInfo.Flags.True(ModelSignalFlagNone) {
-		if err := SIGNAL_MODEL_SETUP.Send(sig); err != nil {
+		if err := SIGNAL_MODEL_SETUP.Send(ctx, sig); err != nil {
 			return fmt.Errorf(
 				"failed to emit model setup signal for %T: %w",
 				def, err,
@@ -518,8 +518,8 @@ func (m *Model) setupProxy(ctx context.Context, base *BaseModelInfo, parent refl
 				)
 			}
 
-			currentProxy.object.changed.Listen(func(s signals.Signal[ModelChangeSignal], ms ModelChangeSignal) error {
-				m.changed.Send(ModelChangeSignal{
+			currentProxy.object.changed.Listen(ctx, func(ctx context.Context, s signals.Signal[ModelChangeSignal], ms ModelChangeSignal) error {
+				m.changed.Send(ctx, ModelChangeSignal{
 					Flags:       FlagProxyChanged,
 					StructField: proxy.rootField,
 					Next:        &ms,

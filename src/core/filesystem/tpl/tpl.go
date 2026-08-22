@@ -1,6 +1,7 @@
 package tpl
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"io"
@@ -298,7 +299,7 @@ func (r *TemplateRenderer) Render(buffer io.Writer, context any, baseKey string,
 }
 
 func (r *TemplateRenderer) onFirstRender() {
-	r.firstRenderSignal.Send(r)
+	r.firstRenderSignal.Send(context.Background(), r)
 }
 
 func (r *TemplateRenderer) getTemplateConfig(baseKey string, path []string) (*templates, error) {

@@ -175,7 +175,7 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 			return err
 		}
 
-		return shop.SIGNALS.Orders.Updated.Send(&signals.OrderSignalData{
+		return shop.SIGNALS.Orders.Updated.Send(r.Context(), &signals.OrderSignalData{
 			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
 			Current:    p,
 			OrderItems: skus,

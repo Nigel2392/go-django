@@ -62,7 +62,7 @@ const (
 )
 
 func init() {
-	tpl.FirstRender().Listen(func(s signals.Signal[*tpl.TemplateRenderer], tr *tpl.TemplateRenderer) error {
+	tpl.FirstRender().Listen(context.Background(), func(ctx context.Context, s signals.Signal[*tpl.TemplateRenderer], tr *tpl.TemplateRenderer) error {
 		initTemplateLibrary()
 		return nil
 	})

@@ -19,6 +19,7 @@ import (
 type TB interface {
 	Helper()
 	Fatal(...any)
+	Context() context.Context
 	Logf(string, ...any)
 	Fatalf(string, ...any)
 }
@@ -70,7 +71,14 @@ func Table[T TB](t T, model ...attrs.Definer) *DBTables[T] {
 		attrs.RegisterModel(m)
 	}
 
-	if err := attrs.ResetDefinitions.Send(nil); err != nil {
+	var ctx context.Context
+	if any(t) == any(*new(T)) {
+		ctx = context.Background()
+	} else {
+		ctx = t.Context()
+	}
+
+	if err := attrs.ResetDefinitions.Send(ctx, nil); err != nil {
 		t.Fatalf("Error during ResetDefinitions signal: %v", err)
 		return nil
 	}

@@ -188,7 +188,7 @@ func NewAppConfig() (django.AppConfig, error) {
 	auditlogs.RegisterDefinition("shop:product:add", logging.NewShopLogDefinition())
 	auditlogs.RegisterDefinition("shop:product:edit", logging.NewShopLogDefinition())
 
-	SHOP.SIGNALS.Products.Created.Listen(func(s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
+	SHOP.SIGNALS.Products.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
 		_, err := auditlogs.Log(psd.Context, "shop:product:add", logger.INF, psd.Product, map[string]any{
 			"title":    psd.Product.Title,
 			"skuCount": len(psd.Skus),
@@ -196,7 +196,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		return err
 	})
 
-	SHOP.SIGNALS.Products.Updated.Listen(func(s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
+	SHOP.SIGNALS.Products.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
 		_, err := auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product, map[string]any{
 			"title":    psd.Product.Title,
 			"skuCount": len(psd.Skus),

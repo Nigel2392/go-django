@@ -1,6 +1,7 @@
 package preload_test
 
 import (
+	"context"
 	"flag"
 	"os"
 	"testing"
@@ -85,7 +86,7 @@ func TestMain(m *testing.M) {
 		&PreloadAuthorProfile{},
 	)
 
-	attrs.ResetDefinitions.Send(nil)
+	attrs.ResetDefinitions.Send(context.Background(), nil)
 
 	tables.Create()
 	defer tables.Drop()

@@ -287,7 +287,7 @@ func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) 
 	// Send signal that the model is being registered
 	var staticDefs = wrapDefinitions(meta.model, defs)
 	if sendSignals {
-		OnBeforeModelRegister.Send(SignalModelMeta{
+		OnBeforeModelRegister.Send(registerContext, SignalModelMeta{
 			Definer:     meta.model,
 			Definitions: staticDefs,
 			Meta:        meta,
@@ -376,7 +376,7 @@ func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) 
 
 			if sendSignals {
 				// Send signal that the through model is being registered
-				OnThroughModelRegister.Send(SignalThroughModelMeta{
+				OnThroughModelRegister.Send(registerContext, SignalThroughModelMeta{
 					Source:      meta.model,
 					Target:      rel.Model(),
 					ThroughInfo: through,
@@ -413,7 +413,7 @@ func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) 
 
 	if sendSignals {
 		// Send signal that the model has been registered
-		OnModelRegister.Send(SignalModelMeta{
+		OnModelRegister.Send(registerContext, SignalModelMeta{
 			Definer:     meta.model,
 			Definitions: staticDefs,
 			Meta:        meta,

@@ -1,6 +1,7 @@
 package chooser
 
 import (
+	"context"
 	"embed"
 	"net/http"
 	"reflect"
@@ -23,7 +24,7 @@ import (
 //go:embed assets/**
 var choosersFS embed.FS
 
-var _, _ = core.OnDjangoReady.Listen(func(s signals.Signal[any], a any) error {
+var _, _ = core.OnDjangoReady.Listen(context.Background(), func(ctx context.Context, s signals.Signal[any], a any) error {
 	for head := choosers.Front(); head != nil; head = head.Next() {
 		for valHead := head.Value.Front(); valHead != nil; valHead = valHead.Next() {
 			if err := valHead.Value.Setup(valHead.Key); err != nil {
@@ -34,7 +35,7 @@ var _, _ = core.OnDjangoReady.Listen(func(s signals.Signal[any], a any) error {
 	return nil
 })
 
-var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
+var _, _ = core.OnModelsReady.Listen(context.Background(), func(ctx context.Context, s signals.Signal[any], a any) error {
 	if !django.AppInstalled("admin") {
 		logger.Error("Admin app is not installed, but chooser forms are being used.")
 		return nil

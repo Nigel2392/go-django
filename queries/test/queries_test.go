@@ -544,7 +544,7 @@ func init() {
 
 	// Reset the definitions to ensure all models are registered
 	// before reverse fields are fully setup.
-	attrs.ResetDefinitions.Send(nil)
+	attrs.ResetDefinitions.Send(context.Background(), nil)
 
 	tables.Create()
 }

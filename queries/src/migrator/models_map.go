@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"reflect"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -32,7 +33,7 @@ func getModelByApp(appName, modelName string) (attrs.Definer, bool) {
 	return model, ok
 }
 
-var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
+var _, _ = core.OnModelsReady.Listen(context.Background(), func(ctx context.Context, s signals.Signal[any], a any) error {
 	var app = a.(*django.Application)
 	var apps = app.Apps
 	for head := apps.Front(); head != nil; head = head.Next() {

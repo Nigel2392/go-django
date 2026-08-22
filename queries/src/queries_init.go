@@ -76,7 +76,7 @@ func init() {
 	}))
 }
 
-var _, _ = attrs.OnBeforeModelRegister.Listen(func(s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
+var _, _ = attrs.OnBeforeModelRegister.Listen(context.Background(), func(ctx context.Context, s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
 
 	var (
 		def           = contenttypes.DefinitionForObject(meta.Definer)
@@ -163,7 +163,7 @@ func getMetaUniqueFields(modelMeta attrs.ModelMeta) [][]string {
 // in the queryset, for example when updating or deleting objects.
 //
 // See [GenerateObjectsWhereClause] for the implementation details when a primary key is defined.
-var _, _ = attrs.OnModelRegister.Listen(func(s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
+var _, _ = attrs.OnModelRegister.Listen(context.Background(), func(ctx context.Context, s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
 	var (
 		modelDefs = meta.Meta.Definitions()
 		primary   = modelDefs.Primary()
@@ -277,7 +277,7 @@ var _, _ = attrs.OnModelRegister.Listen(func(s signals.Signal[attrs.SignalModelM
 //
 // It generates a where clause for a list of through model objects
 // that match the source and target fields of the through model meta.
-var _, _ = attrs.OnThroughModelRegister.Listen(func(s signals.Signal[attrs.SignalThroughModelMeta], d attrs.SignalThroughModelMeta) error {
+var _, _ = attrs.OnThroughModelRegister.Listen(context.Background(), func(ctx context.Context, s signals.Signal[attrs.SignalThroughModelMeta], d attrs.SignalThroughModelMeta) error {
 
 	var (
 		throughModel   = d.ThroughInfo.Model()

@@ -326,7 +326,7 @@ func TestAdmin(t *testing.T) {
 	tables.Create()
 	defer tables.Drop()
 
-	attrs.ResetDefinitions.Send(nil)
+	attrs.ResetDefinitions.Send(t.Context(), nil)
 
 	// insert a test model
 	var testModel = &TestModel{Name: "Test 1"}

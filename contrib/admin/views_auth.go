@@ -57,7 +57,7 @@ var LoginHandler = &views.FormView[LoginForm]{
 		return loginForm
 	},
 	InvalidFn: func(req *http.Request, form LoginForm) error {
-		core.SIGNAL_LOGIN_FAILED.Send(req)
+		core.SIGNAL_LOGIN_FAILED.Send(req.Context(), req)
 		return nil
 	},
 	ValidFn: func(req *http.Request, form LoginForm) error {
