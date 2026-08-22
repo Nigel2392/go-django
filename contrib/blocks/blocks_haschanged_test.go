@@ -3,8 +3,9 @@ package blocks_test
 import (
 	"testing"
 
-	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/google/uuid"
+
+	"github.com/Nigel2392/go-django/contrib/blocks"
 )
 
 func TestListBlock_HasChanged(t *testing.T) {

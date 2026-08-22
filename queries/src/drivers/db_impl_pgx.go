@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/google/uuid"
+
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"

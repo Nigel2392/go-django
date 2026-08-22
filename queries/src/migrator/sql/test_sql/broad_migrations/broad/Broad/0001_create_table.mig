@@ -702,7 +702,7 @@
         "column": "field__null_uuid",
         "use_in_db": true,
         "default": {
-          "go_type": "database/sql.Null[github.com/google/uuid.UUID]",
+          "go_type": "database/sql.Null[uuid.UUID]",
           "value": "550e8400-e29b-41d4-a716-446655440000"
         },
         "db_type": "UUID"

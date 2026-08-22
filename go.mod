@@ -1,6 +1,6 @@
 module github.com/Nigel2392/go-django
 
-go 1.26.3
+go 1.27.0
 
 require (
 	github.com/Nigel2392/mux v1.6.1
@@ -28,7 +28,6 @@ require (
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/go-cmp v0.7.0
-	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.15.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
@@ -47,6 +46,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect

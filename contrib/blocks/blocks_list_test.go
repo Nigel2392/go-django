@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/uuid"
 )
 
 var __BLOCK = reflect.TypeOf((*blocks.Block)(nil)).Elem()

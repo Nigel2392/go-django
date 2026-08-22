@@ -8,6 +8,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
+
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/djester/testdb"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -18,7 +20,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/google/uuid"
 )
 
 var entries []*auditlogs.Entry

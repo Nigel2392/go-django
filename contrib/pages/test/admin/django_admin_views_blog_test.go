@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/auth"
 	"github.com/Nigel2392/go-django/contrib/auth/users"
@@ -32,7 +34,6 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux/middleware/authentication"
-	"github.com/google/uuid"
 )
 
 var (

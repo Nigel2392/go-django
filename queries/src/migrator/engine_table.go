@@ -216,8 +216,6 @@ func (t *ModelTable) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s)
 }
 
-var nullLiteral = []byte("null")
-
 func (t *ModelTable) UnmarshalJSON(data []byte) error {
 	var s serializableModelTable
 	if err := json.Unmarshal(data, &s); err != nil {

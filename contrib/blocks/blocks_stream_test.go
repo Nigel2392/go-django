@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/google/uuid"
+
+	"github.com/Nigel2392/go-django/contrib/blocks"
 )
 
 func jraw(t *testing.T, v any) json.RawMessage {

@@ -1,4 +1,4 @@
-go 1.26.3
+go 1.27.0
 
 use (
 	.
@@ -18,4 +18,4 @@ use (
 	./queries
 )
 
-replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
+// replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f

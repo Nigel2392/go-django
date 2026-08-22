@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -19,7 +21,6 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/elliotchance/orderedmap/v2"
-	"github.com/google/uuid"
 )
 
 var (
