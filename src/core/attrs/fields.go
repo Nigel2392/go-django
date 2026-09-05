@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/checks"
@@ -23,6 +22,8 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/versatile"
+	"github.com/Nigel2392/versatile/scan"
 	"github.com/shopspring/decimal"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -981,7 +982,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		var setterName = nameSetValue(f.field_t)
 		var method, ok = attrutils.GetStructMethod(f.instance_v_ptr.Type(), setterName)
 		if ok {
-			var arg, ok = django_reflect.RConvert(&rv, method.Type.In(1))
+			var arg, ok = versatile.RConvert(&rv, method.Type.In(1))
 			assert.True(ok,
 				"value %q not convertible to %q for field %q",
 				rv.Type(), method.Type.In(1), f.field_t.Name,
@@ -1001,7 +1002,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		return assert.Fail("field %q is not editable", f.field_t.Name)
 	}
 
-	wasSet, err := django_reflect.RScanTo(f.field_v.Addr(), v, django_reflect.SF_CONVS)
+	wasSet, err := scan.RScan(f.field_v.Addr(), v, scan.SF_CONVS)
 	if err != nil {
 		return err
 	}
@@ -1013,7 +1014,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		return nil
 	}
 
-	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
+	rvPtr, ok := versatile.RConvert(&rv, f.field_t.Type)
 	if !ok {
 		if sqlScanner, ok := f.field_v.Addr().Interface().(sql.Scanner); ok {
 			return assert.Err(sqlScanner.Scan(
@@ -1081,7 +1082,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	}
 
 	old := f.field_v
-	django_reflect.RSet(rvPtr, &f.field_v, false)
+	versatile.RSet(rvPtr, &f.field_v, false)
 
 	if err := f.Validate(); err != nil {
 		f.field_v.Set(old)
@@ -1128,7 +1129,7 @@ func (f *FieldDef) Scan(value any) error {
 		return scanner.Scan(value)
 	}
 
-	wasSet, err := django_reflect.RScanTo(f.field_v.Addr(), value, django_reflect.SF_CONVS)
+	wasSet, err := scan.RScan(f.field_v.Addr(), value, scan.SF_CONVS)
 	if err != nil {
 		return err
 	}
@@ -1166,7 +1167,7 @@ func (f *FieldDef) Scan(value any) error {
 		return Define(f.defs.Context(), definer).Primary().Scan(value)
 	}
 
-	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
+	rvPtr, ok := versatile.RConvert(&rv, f.field_t.Type)
 	if !ok {
 		typ := f.field_t.Type
 		if typ.Kind() == reflect.Ptr {
@@ -1233,7 +1234,7 @@ func (f *FieldDef) Scan(value any) error {
 	}
 
 	old := f.field_v
-	django_reflect.RSet(rvPtr, &f.field_v, false)
+	versatile.RSet(rvPtr, &f.field_v, false)
 
 	if err := f.Validate(); err != nil {
 		f.field_v.Set(old)

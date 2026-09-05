@@ -24,14 +24,17 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	djmodels "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/shopspring/decimal"
 )
 
@@ -156,6 +159,12 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			skuFormSet productSkuFormset
 		)
 
+		for i, form := range flist {
+			if c, ok := form.(admin.ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
+				flist[i] = c.Form()
+			}
+		}
+
 		for _, form := range flist {
 			switch f := form.(type) {
 			case productSkuFormset:
@@ -163,7 +172,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			default:
 				except.Fail(
 					http.StatusInternalServerError,
-					"unhandled form type",
+					"unhandled form type: %T", f,
 				)
 			}
 		}
@@ -174,11 +183,11 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 		}
 
 		var priceMax decimal.Decimal
-		var skus = make([]*models.ProductSku, 0, len(skuForms))
-		for _, form := range skuForms {
+		var skuCache = p.Skus.Cache()
+		for idx, form := range skuForms {
 
 			sku := form.Instance()
-			skus = append(skus, sku)
+			skuCache.Set(idx, sku)
 
 			if sku.Price.GreaterThan(priceMax) {
 				priceMax = sku.Price
@@ -187,7 +196,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			form.CleanedData()["Product"] = p
 		}
 
-		p.SkuCount = len(skus)
+		p.SkuCount = skuCache.Len()
 		p.PriceMax = priceMax
 
 		saved, err := djmodels.SaveModel(ctx, p)
@@ -195,38 +204,27 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			err = fmt.Errorf("model %T not saved", p)
 		}
 
-		if _, err := form.FormSet().Save(); err != nil {
-			return err
-		}
-
-		return shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
-			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
-			Product:    p,
-			Skus:       skus,
-		})
+		return nil
 	}
 
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: "shop",
-			TemplateName:    "shop/products/admin/add.tmpl",
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = admin.NewContext(req, admin.AdminSite, nil)
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: "shop",
+		TemplateName:    "shop/products/admin/add.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+			var backURL string
+			if q := req.URL.Query().Get("next"); q != "" {
+				backURL = q
+			}
 
-				var backURL string
-				if q := req.URL.Query().Get("next"); q != "" {
-					backURL = q
-				}
+			context.Set("BackURL", backURL)
+			context.Set("PostURL", django.Reverse("admin:shop:products:add"))
+			context.SetPage(admin.PageOptions{
+				TitleFn: trans.S("Add new product"),
+			})
 
-				context.Set("BackURL", backURL)
-				context.Set("PostURL", django.Reverse("admin:shop:products:add"))
-				context.SetPage(admin.PageOptions{
-					TitleFn: trans.S("Add new product"),
-				})
-
-				return context, nil
-			},
+			return context, nil
 		},
 		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product] {
 			return form
@@ -246,9 +244,20 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 				"instance is nil after form submission",
 			)
 
+			shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
+				BaseSignal: signals.NewBaseSignal(req.Context(), r, nil, nil),
+				Product: signals.Changed[*models.Product]{
+					New: instance,
+				},
+				Skus: signals.Changed[[]*models.ProductSku]{
+					New: instance.Skus.AsList(),
+				},
+			})
+
 			messages.Success(r, "Product added")
 
 			http.Redirect(w, r, django.Reverse("admin:shop:products"), http.StatusSeeOther)
+
 		},
 	}
 
@@ -282,6 +291,11 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		)
 	}
 
+	originalProduct, err := attrs.Clone(r.Context(), productRow.Object)
+	if err != nil {
+		logger.Fatal(http.StatusInternalServerError, err)
+	}
+
 	var form = forms.NewAdminForm(r, productRow.Object, func(p *models.Product) []admin.Panel {
 		return p.EditPanels(r.Context())
 	})
@@ -299,12 +313,21 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			skuFormSet productSkuFormset
 		)
 
+		for i, form := range flist {
+			if c, ok := form.(admin.ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
+				flist[i] = c.Form()
+			}
+		}
+
 		for _, form := range flist {
 			switch f := form.(type) {
 			case productSkuFormset:
 				skuFormSet = f
 			default:
-				panic("unhandled form type")
+				except.Fail(
+					http.StatusInternalServerError,
+					"unhandled form type: %T", f,
+				)
 			}
 		}
 
@@ -314,11 +337,12 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		}
 
 		var priceMax decimal.Decimal
-		var skus = make([]*models.ProductSku, 0, len(skuForms))
-		for _, form := range skuForms {
+		var skuCache = p.Skus.Cache()
+		*skuCache = *orderedmap.NewOrderedMap[any, *models.ProductSku]()
+		for idx, form := range skuForms {
 
 			sku := form.Instance()
-			skus = append(skus, sku)
+			skuCache.Set(idx, sku)
 
 			if sku.Price.GreaterThan(priceMax) {
 				priceMax = sku.Price
@@ -327,7 +351,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			form.CleanedData()["Product"] = p
 		}
 
-		p.SkuCount = len(skus)
+		p.SkuCount = skuCache.Len()
 		p.PriceMax = priceMax
 
 		saved, err := djmodels.SaveModel(ctx, p)
@@ -335,39 +359,28 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			err = fmt.Errorf("model %T not saved", p)
 		}
 
-		if _, err := form.FormSet().Save(); err != nil {
-			return err
-		}
-
-		return shop.SIGNALS.Products.Updated.Send(r.Context(), &signals.ProductSignalData{
-			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
-			Product:    p,
-			Skus:       skus,
-		})
-
+		return nil
 	}
 
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: "shop",
-			TemplateName:    "shop/products/admin/edit.tmpl",
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = admin.NewContext(req, admin.AdminSite, nil)
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: "shop",
+		TemplateName:    "shop/products/admin/edit.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
 
-				var backURL string
-				if q := req.URL.Query().Get("next"); q != "" {
-					backURL = q
-				}
+			var backURL string
+			if q := req.URL.Query().Get("next"); q != "" {
+				backURL = q
+			}
 
-				context.Set("BackURL", backURL)
-				context.Set("PostURL", django.Reverse("admin:shop:products:edit", productRow.Object.ID))
-				context.SetPage(admin.PageOptions{
-					TitleFn: trans.S("Change product"),
-				})
+			context.Set("BackURL", backURL)
+			context.Set("PostURL", django.Reverse("admin:shop:products:edit", productRow.Object.ID))
+			context.SetPage(admin.PageOptions{
+				TitleFn: trans.S("Change product"),
+			})
 
-				return context, nil
-			},
+			return context, nil
 		},
 		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product] {
 			return form
@@ -386,6 +399,18 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				http.StatusInternalServerError,
 				"instance is nil after form submission",
 			)
+
+			shop.SIGNALS.Products.Updated.Send(r.Context(), &signals.ProductSignalData{
+				BaseSignal: signals.NewBaseSignal(r.Context(), r, nil, nil),
+				Product: signals.Changed[*models.Product]{
+					Old: originalProduct,
+					New: instance,
+				},
+				Skus: signals.Changed[[]*models.ProductSku]{
+					Old: originalProduct.Skus.AsList(),
+					New: instance.Skus.AsList(),
+				},
+			})
 
 			messages.Success(r, "Product changed")
 

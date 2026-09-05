@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
@@ -245,13 +245,13 @@ var (
 )
 
 type checkRegistry struct {
-	checks   map[Tag][]*django_reflect.Func
+	checks   map[Tag][]*versatile.Func
 	silenced map[string]func(m Message) bool
 }
 
 func NewCheckRegistry() *checkRegistry {
 	return &checkRegistry{
-		checks:   make(map[Tag][]*django_reflect.Func),
+		checks:   make(map[Tag][]*versatile.Func),
 		silenced: make(map[string]func(m Message) bool),
 	}
 }
@@ -293,10 +293,10 @@ func (r *checkRegistry) Register(tag Tag, check any) USELESS {
 
 	var checks, ok = r.checks[tag]
 	if !ok {
-		checks = make([]*django_reflect.Func, 0, 1)
+		checks = make([]*versatile.Func, 0, 1)
 	}
 
-	var fn = django_reflect.NewFunc(check, reflect.TypeOf([]Message{}))
+	var fn = versatile.NewFunc(check, reflect.TypeOf([]Message{}))
 	fn.BeforeExec = func(in []reflect.Value) error {
 		if len(in) == 0 {
 			return errors.New("check function must accept at least one argument (context.Context)")

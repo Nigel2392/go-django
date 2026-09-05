@@ -1262,44 +1262,6 @@ func (g *postgresQueryBuilder) SupportsUnionOrderByTableAlias() bool {
 	return false
 }
 
-// getPostgresType returns the Postgres type for a given Go type and field.
-func getPostgresType(rTyp reflect.Type, field attrs.FieldDefinition) string {
-	switch rTyp.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return "BIGINT"
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return "BIGINT"
-	case reflect.Float32, reflect.Float64:
-		return "DOUBLE PRECISION"
-	case reflect.String, reflect.Slice, reflect.Array:
-		return "TEXT"
-	case reflect.Bool:
-		return "BOOLEAN"
-	}
-
-	if rTyp.Implements(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
-		var newObj = attrs.GetModelMeta(rTyp)
-		var defs = newObj.Definitions()
-		var primary = defs.Primary()
-		if primary == nil {
-			panic(fmt.Errorf(
-				"cannot use object without primary key field in update: %T", newObj,
-			))
-		}
-		return getPostgresType(primary.Type(), primary)
-	}
-
-	if field == nil {
-		panic(fmt.Errorf(
-			"cannot determine Postgres type for field type: %s (%s)",
-			rTyp.Name(), rTyp.Kind(),
-		))
-	}
-
-	var fieldType = field.Type()
-	return getPostgresType(fieldType, nil)
-}
-
 // Postgres requires a special update statement
 // to handle the case where multiple rows are updated at once.
 func (g *postgresQueryBuilder) BuildUpdateQuery(

@@ -2378,7 +2378,7 @@ type comparingField struct {
 // Union is used to combine the results of two queries.
 //
 // It takes another QuerySet as an argument and returns a new QuerySet with the combined results.
-func (qs *QuerySet[T]) Union(other *QuerySet[attrs.Definer]) *QuerySet[T] {
+func (qs *QuerySet[T]) Union[T2 attrs.Definer](other *QuerySet[T2]) *QuerySet[T] {
 	var fieldsListThis = make([]comparingField, 0, len(qs.internals.Fields))
 	for _, info := range qs.internals.Fields {
 		for _, field := range info.Fields {
@@ -2448,7 +2448,10 @@ func (qs *QuerySet[T]) Union(other *QuerySet[attrs.Definer]) *QuerySet[T] {
 	other.internals.OrderBy = nil // no order by for unions
 	other.internals.Limit = 0     // no limit for unions
 	other.internals.Offset = 0    // no offset for unions
-	nqs.internals.Unions = append(nqs.internals.Unions, other)
+	nqs.internals.Unions = append(
+		nqs.internals.Unions,
+		ChangeObjectsType[T2, attrs.Definer](other),
+	)
 	return nqs
 }
 

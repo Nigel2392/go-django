@@ -61,10 +61,10 @@ func New[THIS forms.Minimum, FORM Clusterable, K comparable](form THIS, opts ...
 		c.order = s.SaveOrder()
 	}
 
-	//	fn, err := django_reflect.Method[func() []FORM](c._THIS, "Forms", django_reflect.WithFuncArgs(
-	//		c.Context(), django_reflect.Arg[ClusterForm[FORM]](c),
+	//	fn, err := versatile.Method[func() []FORM](c._THIS, "Forms", versatile.WithFuncArgs(
+	//		c.Context(), versatile.Arg[ClusterForm[FORM]](c),
 	//	))
-	//	if err != nil && !errors.Is(err, django_reflect.ErrMethodNotFound) {
+	//	if err != nil && !errors.Is(err, versatile.ErrMethodNotFound) {
 	//		panic(err)
 	//	}
 	//

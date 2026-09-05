@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -83,6 +84,10 @@ func TestDeferredRelation(t *testing.T) {
 	if err := app.Initialize(); err != nil {
 		t.Fatalf("Failed to initialize app: %s", err)
 	}
+
+	t.Cleanup(func() {
+		dbtype.TYPES.Unlock()
+	})
 
 	var test = &LazyRelationTest{}
 	var defs = define(test)

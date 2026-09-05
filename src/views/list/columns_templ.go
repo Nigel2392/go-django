@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 )
 
 func input(typ string, name string, value any, atts map[string]any) templ.Component {
@@ -1494,7 +1494,7 @@ func (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, ro
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if !django_reflect.IsZero(c.fieldColumn.data(r, defs, row)) {
+		if !versatile.IsZero(c.fieldColumn.data(r, defs, row)) {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, " checked")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

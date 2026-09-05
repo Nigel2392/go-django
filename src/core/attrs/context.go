@@ -6,10 +6,10 @@ import (
 	"maps"
 	"unsafe"
 
-	"github.com/Nigel2392/go-django/internal/bitch"
+	"github.com/Nigel2392/versatile/bitcheck"
 )
 
-type ContextFlag bitch.Flag
+type ContextFlag bitcheck.Flag
 
 const (
 	CtxFlagNone        ContextFlag = 0
@@ -29,7 +29,7 @@ const (
 	CtxFlagDeferValidation
 )
 
-type ContextSignalFlag bitch.Flag
+type ContextSignalFlag bitcheck.Flag
 
 const (
 	SigFlagNone    ContextSignalFlag = 0
@@ -119,7 +119,7 @@ func (c *Context) Send(sig ContextSignalFlag) error {
 
 func (c *Context) Listen(sig ContextFlag, fn func() error) {
 	for src := range signalMapping {
-		if bitch.Isnt(src, sig) {
+		if bitcheck.Isnt(src, sig) {
 			continue
 		}
 
@@ -169,14 +169,14 @@ func ContextWithFlags(ctx context.Context, flag ContextFlag, set bool) context.C
 	case ContextFlag:
 		return context.WithValue(
 			ctx, attrsContextKey{},
-			bitch.Set(v, flag, set),
+			bitcheck.Set(v, flag, set),
 		)
 	case *Context:
 		// clone the context to preserve whatever
 		// flags are already set / not set.
 		// signals will not be cloned, their reference remains.
 		newCtx := v.Clone()
-		newCtx.Flags = bitch.Set(newCtx.Flags, flag, set)
+		newCtx.Flags = bitcheck.Set(newCtx.Flags, flag, set)
 		return context.WithValue(ctx, attrsContextKey{}, newCtx)
 	}
 
@@ -191,9 +191,9 @@ func ContextHasFlag(ctx context.Context, flag ContextFlag) bool {
 
 	switch v := val.(type) {
 	case ContextFlag:
-		return bitch.Is(v, flag)
+		return bitcheck.Is(v, flag)
 	case *Context:
-		return bitch.Is(v.Flags, flag)
+		return bitcheck.Is(v.Flags, flag)
 	}
 
 	panic(fmt.Sprintf("this shouldn't happen: unknown context type used: %T", val))

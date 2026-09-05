@@ -2,6 +2,7 @@ package queries
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -81,13 +82,35 @@ func (rl *RelFK[T]) GetValue() attrs.Definer {
 }
 
 type RelRevFK[ModelType attrs.Definer] struct {
-	Parent          *ParentInfo                            // The parent model instance
-	relations       *orderedmap.OrderedMap[any, ModelType] // The related objects
-	relatedQuerySet *RelOneToManyQuerySet[ModelType]       // The query set for this relation
+	Parent          *ParentInfo                            `json:"-"` // The parent model instance
+	relations       *orderedmap.OrderedMap[any, ModelType] `json:"-"` // The related objects
+	relatedQuerySet *RelOneToManyQuerySet[ModelType]       `json:"-"` // The query set for this relation
+}
+
+func (rl *RelRevFK[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(rl.AsList())
 }
 
 func (rl *RelRevFK[T]) ParentInfo() *ParentInfo {
 	return rl.Parent
+}
+
+func (rl *RelRevFK[T]) AttrsClone(ctx context.Context, obj attrs.Definer, fld attrs.Field) (ret *RelRevFK[T], err error) {
+	var relations = rl.relations.Copy()
+	for head := relations.Front(); head != nil; head = head.Next() {
+		head.Value, err = attrs.Clone(ctx, head.Value)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &RelRevFK[T]{
+		Parent: &ParentInfo{
+			Object: obj,
+			Field:  fld,
+		},
+		relations: relations,
+	}, nil
 }
 
 func (rl *RelRevFK[T]) BindToModel(parent attrs.Definer, parentField attrs.Field) error {
@@ -181,6 +204,31 @@ type RelO2O[ModelType, ThroughModelType attrs.Definer] struct {
 	relatedQuerySet *RelOneToOneQuerySet[ModelType]
 }
 
+func (rl *RelO2O[T1, T2]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(rl.Object)
+}
+
+func (rl *RelO2O[T1, T2]) AttrsClone(ctx context.Context, obj attrs.Definer, fld attrs.Field) (*RelO2O[T1, T2], error) {
+	clonedObject, err := attrs.Clone(ctx, rl.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	clonedThroughObject, err := attrs.Clone(ctx, rl.ThroughObject)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RelO2O[T1, T2]{
+		Parent: &ParentInfo{
+			Object: obj,
+			Field:  fld,
+		},
+		Object:        clonedObject,
+		ThroughObject: clonedThroughObject,
+	}, nil
+}
+
 func (rl *RelO2O[T1, T2]) ParentInfo() *ParentInfo {
 	return rl.Parent
 }
@@ -241,6 +289,30 @@ type RelM2M[ModelType, ThroughModelType attrs.Definer] struct {
 	relatedQuerySet *RelManyToManyQuerySet[ModelType]                                // The query set for this relation
 
 	// relations []RelO2O[T1, T2] // can be changed to OrderedMap if needed
+}
+
+func (rl *RelM2M[T1, T2]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(rl.AsList())
+}
+
+func (rl *RelM2M[T1, T2]) AttrsClone(ctx context.Context, obj attrs.Definer, fld attrs.Field) (*RelM2M[T1, T2], error) {
+	var relations = rl.relations.Copy()
+	for head := relations.Front(); head != nil; head = head.Next() {
+		hv, err := head.Value.AttrsClone(ctx, obj, fld)
+		if err != nil {
+			return nil, err
+		}
+
+		head.Value = *hv
+	}
+
+	return &RelM2M[T1, T2]{
+		Parent: &ParentInfo{
+			Object: obj,
+			Field:  fld,
+		},
+		relations: relations,
+	}, nil
 }
 
 func (rl *RelM2M[T1, T2]) ParentInfo() *ParentInfo {

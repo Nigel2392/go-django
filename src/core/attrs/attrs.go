@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/versatile"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/shopspring/decimal"
 
@@ -72,7 +72,7 @@ func init() {
 		},
 	)
 
-	django_reflect.RegisterCompareStep(75, func(ess *django_reflect.EqStepState) (eq bool, ok bool) {
+	versatile.RegisterCompareStep(75, func(ess *versatile.EqStepState) (eq bool, ok bool) {
 		a, ok := ess.A.(Definer)
 		if !ok {
 			return false, false
@@ -103,8 +103,8 @@ func init() {
 //   - For pointers it checks if the pointer is nil
 //     or if the value it points to is a zero value.
 func IsZero(value interface{}) bool {
-	var rv = django_reflect.ReflectValue(value)
-	return django_reflect.IsZero(value) && rv.Kind() != reflect.Bool && rv.Kind() != reflect.String
+	var rv = versatile.ReflectValue(value)
+	return versatile.IsZero(value) && rv.Kind() != reflect.Bool && rv.Kind() != reflect.String
 }
 
 // CanCreateObject is an interface for models that can create new objects of the same type.
@@ -202,7 +202,7 @@ var labelMap = make(map[string]string)
 
 // ColumnName returns a column name for the given field name.
 // To get an actual column name for a field, you should use the
-// `ColumnName` method on the `attrs.FieldDefinition`.
+// `ColumnName` method on the `FieldDefinition`.
 func ColumnName(str string) string {
 	if col, ok := nameMap[str]; ok {
 		return col
@@ -233,6 +233,72 @@ func NiceName(str string) string {
 	label := strings.Join(split, " ")
 	labelMap[str] = label
 	return label
+}
+
+// A base interface for relation values.
+//
+// This interfaces is mostly used in the (queries)[github.com/Nigel2392/go-django/queries] package.
+//
+// This interface should only be used for OneToOne relations with a through table,
+// or for ManyToMany relations with a through table.
+//
+// It should contain the actual instances of the models involved in the relation,
+// and the through model if applicable.
+type ValueRelation interface {
+	// The target model of the relation.
+	Model() Definer
+
+	// The through model of the relation.
+	Through() Definer
+}
+
+// A model field's value can adhere to this interface to indicate that the
+// field's relation value can be set or retrieved.
+//
+// This interfaces is mostly used in the (queries)[github.com/Nigel2392/go-django/queries] package.
+type RelationValue interface {
+	GetValue() (obj Definer)
+	SetValue(instance Definer)
+}
+
+// A model field's value can adhere to this interface to indicate that the
+// field's relation values can be set or retrieved.
+//
+// This interfaces is mostly used in the (queries)[github.com/Nigel2392/go-django/queries] package.
+//
+// This is used for OneToMany relations without a through table,
+// if a through table is specified, the field's value should be of type [MultiThroughRelationValue]
+type MultiRelationValue interface {
+	GetValues() []Definer
+	SetValues(instances []Definer)
+}
+
+// A model field's value can adhere to this interface to indicate that the
+// field's relation value can be set or retrieved.
+//
+// This is used for OneToOne relations with a through table,
+// if no through table is specified, the field's value should be of type [Definer]
+//
+// This interfaces is mostly used in the (queries)[github.com/Nigel2392/go-django/queries] package.
+//
+// A default implementation is provided with the [queries.RelO2O] type.
+type ThroughRelationValue interface {
+	GetValue() (obj Definer, through Definer)
+	SetValue(instance Definer, through Definer)
+}
+
+// A model field's value can adhere to this interface to indicate that the
+// field's relation values can be set or retrieved.
+//
+// This is used for ManyToMany relations with a through table,
+// a through table is required for ManyToMany relations.
+//
+// This interfaces is mostly used in the (queries)[github.com/Nigel2392/go-django/queries] package.
+//
+// A default implementation is provided with the [queries.RelM2M] type.
+type MultiThroughRelationValue interface {
+	SetValues(instances []ValueRelation)
+	GetValues() []ValueRelation
 }
 
 // A binder is a value which can be bound to a model.
@@ -398,7 +464,7 @@ type ModelMeta interface {
 	// This is used to store values that are not part of the model itself,
 	// but are needed for the model or possible third party libraries to function.
 	//
-	// Values can be stored on the model meta using the `attrs.StoreOnMeta` helper function.
+	// Values can be stored on the model meta using the `StoreOnMeta` helper function.
 	//
 	// A model can also implement the `CanModelInfo` interface to store values on the model meta.
 	Storage(key string) (any, bool)

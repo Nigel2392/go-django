@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -806,12 +806,12 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 		//
 		//	logger.Warnf("Saving, Form[%d](%q) of type %T has changed", idx, form.Prefix(), form)
 
-		var wrapFn = django_reflect.WithContext(b.ctx)
+		var wrapFn = versatile.WithContext(b.ctx)
 		var rv = reflect.ValueOf(form)
 		var saveMethod = rv.MethodByName("Save")
 		switch saveMethod.Type().NumOut() {
 		case 1:
-			var saveMethod, err = django_reflect.Method[func() error](form, "Save", wrapFn)
+			var saveMethod, err = versatile.Method[func() error](form, "Save", wrapFn)
 			if err != nil {
 				return nil, errors.Wrapf(err, "form %T does not have a Save method", form)
 			}
@@ -822,7 +822,7 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 				continue
 			}
 		case 2:
-			var saveMethod, err = django_reflect.Method[func() (any, error)](form, "Save", wrapFn)
+			var saveMethod, err = versatile.Method[func() (any, error)](form, "Save", wrapFn)
 			if err != nil {
 				return nil, errors.Wrapf(err, "form %T does not have a Save method", form)
 			}

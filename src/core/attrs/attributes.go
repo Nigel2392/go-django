@@ -7,9 +7,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/versatile"
+	"github.com/Nigel2392/versatile/scan"
 )
 
 func fieldNames(d any, exclude []string) []string {
@@ -139,6 +140,10 @@ func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, 
 	t := modelInstance.Type()
 	modelInstance = modelInstance.Elem() // models should ALWAYS be pointers.
 
+	if modelInstance.Kind() == reflect.Invalid {
+		return val, nil, true, errInitialised
+	}
+
 	if modelInstance.Kind() != reflect.Struct {
 		panic(fmt.Sprintf("expected struct type for *modelMeta.FastGet, got %s", modelInstance.Kind()))
 	}
@@ -265,7 +270,7 @@ func FastSet(modelInstance reflect.Value, fieldName string, src any) (wasSet, ha
 		return false, true, err
 	}
 
-	wasSet, err = django_reflect.RScanTo(dstV.Addr(), src, django_reflect.SF_DEFAULT)
+	wasSet, err = scan.RScan(dstV.Addr(), src, scan.SF_DEFAULT)
 
 	return wasSet, true, err
 }
@@ -332,6 +337,10 @@ func PrimaryKey(ctx context.Context, obj any) interface{} {
 		rT  reflect.Type
 		rV  reflect.Value
 	)
+
+	if obj == nil {
+		return nil
+	}
 
 typeSwitch:
 	switch v := obj.(type) {
@@ -613,7 +622,7 @@ type Function interface{}
 //
 // The generic type parameter must be the type of the method.
 func Method[T Function](obj interface{}, name string) (n T, ok bool) {
-	var m, err = django_reflect.Method[T](obj, name)
+	var m, err = versatile.Method[T](obj, name)
 	return m, err == nil
 }
 

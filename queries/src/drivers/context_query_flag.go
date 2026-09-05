@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/go-django/internal/bitch"
+	"github.com/Nigel2392/versatile/bitcheck"
 )
 
-type QueryFlag bitch.Flag
+type QueryFlag bitcheck.Flag
 
 func (f QueryFlag) String() string {
 	var n, ok = flagNames[f]

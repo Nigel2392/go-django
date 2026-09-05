@@ -7,9 +7,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/versatile/scan"
 
 	"reflect"
 )
@@ -227,18 +227,18 @@ func GetValue(arg any) (driver.Value, error) {
 	return arg, nil
 }
 
-type ScanFlag = django_reflect.ScanFlag
+type ScanFlag = scan.ScanFlag
 
 const (
-	SF_NONE        = django_reflect.SF_NONE
-	SF_SQL_SCANNER = django_reflect.SF_SQL_SCANNER
-	SF_STRCONV     = django_reflect.SF_STRCONV
-	SF_REFLECTCONV = django_reflect.SF_REFLECTCONV
-	SF_CONVS       = django_reflect.SF_CONVS
-	SF_DEFAULT     = django_reflect.SF_DEFAULT
+	SF_NONE        = scan.SF_NONE
+	SF_SQL_SCANNER = scan.SF_SQL_SCANNER
+	SF_STRCONV     = scan.SF_STRCONV
+	SF_REFLECTCONV = scan.SF_REFLECTCONV
+	SF_CONVS       = scan.SF_CONVS
+	SF_DEFAULT     = scan.SF_DEFAULT
 )
 
 // ScanTo scans value src into dst, doing so without reflect where it deems possible.
 func ScanTo[T any](dst *T, src any, opts ScanFlag) (wasSet bool, err error) {
-	return django_reflect.ScanTo(dst, src, opts)
+	return scan.Scan(dst, src, opts)
 }

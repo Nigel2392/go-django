@@ -6,7 +6,7 @@ import (
 	"iter"
 	"strings"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -63,11 +63,9 @@ type orderedSet[V any] struct {
 
 func newOrderedSet[V any](cap int) *orderedSet[V] {
 	return &orderedSet[V]{
-		orderedMap: orderedMap[V]{
-			overwrite: false,
-			entries:   make([]V, 0, cap),
-			index:     make(map[any]int, cap),
-		},
+		overwrite: false,
+		entries:   make([]V, 0, cap),
+		index:     make(map[any]int, cap),
 	}
 }
 
@@ -352,7 +350,7 @@ chainLoop:
 		// ManyToOne and OneToOne relations are special cases where the primary key can be zero.
 		//
 		// This also means that any deeper relations cannot be traversed, I.E. we break the loop.
-		if django_reflect.IsZero(part.uniqueValue) && !(part.relTyp == attrs.RelManyToOne || part.relTyp == attrs.RelOneToOne) {
+		if versatile.IsZero(part.uniqueValue) && !(part.relTyp == attrs.RelManyToOne || part.relTyp == attrs.RelOneToOne) {
 			break chainLoop
 		}
 
@@ -534,7 +532,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 					}
 
 					var val = attrs.PrimaryKey(ctx, field)
-					if django_reflect.IsZero(val) {
+					if versatile.IsZero(val) {
 						zeroCount++
 						continue
 					}
@@ -862,7 +860,7 @@ func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableFie
 			primaryVal = pk
 		)
 
-		if primaryVal == nil || django_reflect.IsZero(primaryVal) {
+		if primaryVal == nil || versatile.IsZero(primaryVal) {
 			var err error
 			pk, err = GetUniqueKey(ctx, defs)
 			if err != nil && !errors.Is(err, errors.NoUniqueKey) {
@@ -875,7 +873,7 @@ func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableFie
 		}
 
 		// var preload *Preload
-		if (cur.relType == attrs.RelManyToMany || cur.relType == attrs.RelOneToMany) && django_reflect.IsZero(pk) {
+		if (cur.relType == attrs.RelManyToMany || cur.relType == attrs.RelOneToMany) && versatile.IsZero(pk) {
 
 			/*
 				the commented out code might be useful in the future

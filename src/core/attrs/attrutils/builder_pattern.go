@@ -3,7 +3,7 @@ package attrutils
 import (
 	"reflect"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
@@ -39,7 +39,7 @@ func builderMethod[BUILDER any](bld BUILDER, methodName string, args ...any) (BU
 		if i == numIn-1 && method.Type().IsVariadic() {
 			var remainingArgs = args[i:]
 			for _, a := range remainingArgs {
-				var converted, err = django_reflect.ConvertToType(reflect.ValueOf(a), paramType.Elem())
+				var converted, err = versatile.ConvertToType(reflect.ValueOf(a), paramType.Elem())
 				if err != nil {
 					return bld, nil, errors.Wrapf(err, "argument %d to method %s on %T", i, methodName, bld)
 				}
@@ -49,7 +49,7 @@ func builderMethod[BUILDER any](bld BUILDER, methodName string, args ...any) (BU
 			break
 		}
 
-		var converted, err = django_reflect.ConvertToType(argVal, paramType)
+		var converted, err = versatile.ConvertToType(argVal, paramType)
 		if err != nil {
 			return bld, nil, errors.Wrapf(err, "argument %d to method %s on %T", i, methodName, bld)
 		}
@@ -69,7 +69,7 @@ func builderMethod[BUILDER any](bld BUILDER, methodName string, args ...any) (BU
 		convertedQS BUILDER
 	)
 
-	converted, err := django_reflect.ConvertToType(retVal, rVal.Type())
+	converted, err := versatile.ConvertToType(retVal, rVal.Type())
 	switch {
 	case err == nil:
 		convertedQS = converted.Interface().(BUILDER)

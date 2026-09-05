@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -220,7 +220,7 @@ func (b *BaseBlock) SetDefault(def interface{}) {
 	var rv = reflect.ValueOf(def)
 	if rv.Kind() == reflect.Func {
 		var err error
-		b.Default, err = django_reflect.CastFunc[func() interface{}](rv)
+		b.Default, err = versatile.CastFunc[func() interface{}](rv)
 		if err != nil {
 			panic(err)
 		}

@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/internal/bitch"
-	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/versatile/bitcheck"
+	"github.com/Nigel2392/versatile/scan"
 )
 
-type fieldFlag bitch.Flag
+type fieldFlag bitcheck.Flag
 
 const (
 	flagNone    fieldFlag = iota
@@ -27,6 +27,9 @@ const (
 	flagIsBinder
 	flagIsPtrBinder
 	flagSetupNilVal
+
+	// value types, anything that can be initialised with `var myVar [TYPE]`
+	flagIsBasic
 	flagHasColumn
 	flagHasColumnName
 
@@ -77,6 +80,12 @@ func ptrConf_Default_Zero[MODEL attrs.Definer, VALUE any](obj MODEL) (v VALUE) {
 	return v
 }
 
+// only to be used on value types that can be initialized by just
+// referencing the type in a var statement: `var myVar [TYPE]`
+func ptrConf_newZeroVal[TYPE any]() (v TYPE) {
+	return v
+}
+
 func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL, VALUE], conf PtrFieldConfig[MODEL, VALUE]) *ptrFieldOpts[MODEL, VALUE] {
 	var opts = &ptrFieldOpts[MODEL, VALUE]{
 		typ:           reflect.TypeFor[VALUE](),
@@ -91,22 +100,22 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 	)
 
 	if rTPtr.Implements(_SCANNER) {
-		opts.flags = bitch.Set(opts.flags, flagIsPtrScanner, true)
+		opts.flags = bitcheck.Set(opts.flags, flagIsPtrScanner, true)
 	}
 	if rT.Implements(_SCANNER) {
-		opts.flags = bitch.Set(opts.flags, flagIsScanner, true)
+		opts.flags = bitcheck.Set(opts.flags, flagIsScanner, true)
 	}
 	if rTPtr.Implements(_BINDER) {
-		opts.flags = bitch.Set(opts.flags, flagIsPtrBinder, true)
+		opts.flags = bitcheck.Set(opts.flags, flagIsPtrBinder, true)
 	}
 	if rT.Implements(_BINDER) {
-		opts.flags = bitch.Set(opts.flags, flagIsBinder, true)
+		opts.flags = bitcheck.Set(opts.flags, flagIsBinder, true)
 	}
 	if rT.Implements(_VALUER) {
-		opts.flags = bitch.Set(opts.flags, flagIsValuer, true)
+		opts.flags = bitcheck.Set(opts.flags, flagIsValuer, true)
 	}
 	if rT == _DEFINER || rT.Implements(_DEFINER) {
-		opts.flags = bitch.Set(opts.flags, flagIsModel, true)
+		opts.flags = bitcheck.Set(opts.flags, flagIsModel, true)
 	}
 
 	/*
@@ -120,36 +129,36 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 	case conf.Config.RelForeignKey != nil:
 		//	attrs.RelManyToOne
 		rel = conf.Config.RelForeignKey
-		opts.flags = bitch.Set(opts.flags, flagHasColumn, true)
+		opts.flags = bitcheck.Set(opts.flags, flagHasColumn, true)
 
 	case conf.Config.RelManyToMany != nil:
 		//	attrs.RelManyToMany
 		rel = conf.Config.RelManyToMany
-		opts.flags = bitch.Set(opts.flags, flagHasColumn, false)
+		opts.flags = bitcheck.Set(opts.flags, flagHasColumn, false)
 
 	case conf.Config.RelOneToOne != nil:
 		//	attrs.RelOneToOne
 		rel = conf.Config.RelOneToOne
-		opts.flags = bitch.Set(opts.flags, flagHasColumn, rel.Through() == nil)
+		opts.flags = bitcheck.Set(opts.flags, flagHasColumn, rel.Through() == nil)
 
 	case conf.Config.RelForeignKeyReverse != nil:
 		//	attrs.RelOneToMany
 		rel = conf.Config.RelForeignKeyReverse
-		opts.flags = bitch.Set(opts.flags, flagHasColumn, false)
-		opts.flags = bitch.Set(opts.flags, F_IS_REVERSE_FLD, true)
+		opts.flags = bitcheck.Set(opts.flags, flagHasColumn, false)
+		opts.flags = bitcheck.Set(opts.flags, F_IS_REVERSE_FLD, true)
 
 	default:
-		opts.flags = bitch.Set(opts.flags, flagHasColumn, true)
+		opts.flags = bitcheck.Set(opts.flags, flagHasColumn, true)
 	}
 
 	if conf.Config.Column != "" {
-		opts.flags = bitch.Set(opts.flags, flagHasColumnName, true)
+		opts.flags = bitcheck.Set(opts.flags, flagHasColumnName, true)
 	}
 
 	if rel != nil {
 		var relThrough = rel.Through()
 		if relThrough != nil {
-			opts.flags = bitch.Set(opts.flags, flagHasColumn, false)
+			opts.flags = bitcheck.Set(opts.flags, flagHasColumn, false)
 		}
 	} else {
 		var rel, fwd, ok = attrs.GetRelationMeta(*new(MODEL), fld.fieldName)
@@ -165,12 +174,12 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 				conf.Config.RelOneToOne = rel
 			}
 
-			opts.flags = bitch.Set(opts.flags, F_IS_REVERSE_FLD, true)
+			opts.flags = bitcheck.Set(opts.flags, F_IS_REVERSE_FLD, true)
 		}
 	}
 
-	if bitch.Is(opts.flags, flagIsBinder) || bitch.Is(opts.flags, flagIsPtrBinder) {
-		opts.flags = bitch.Set(opts.flags, flagSetupNilVal, true)
+	if bitcheck.Is(opts.flags, flagIsBinder) || bitcheck.Is(opts.flags, flagIsPtrBinder) {
+		opts.flags = bitcheck.Set(opts.flags, flagSetupNilVal, true)
 	}
 
 	switch _default := conf.Default.(type) {
@@ -226,13 +235,46 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 		reflect.Slice,
 		reflect.Chan,
 		reflect.Func:
+
+		// set nil check
 		opts.isNil = ptrConf_Value_CheckNil
+
+		if opts.newValue == nil {
+			switch rT.Kind() {
+			case reflect.Pointer:
+				opts.newValue = func() (v VALUE) {
+					return reflect.New(rT.Elem()).Interface().(VALUE)
+				}
+			case reflect.Map:
+				opts.newValue = func() VALUE {
+					return reflect.MakeMap(rT).Interface().(VALUE)
+				}
+			case reflect.Slice:
+				opts.newValue = func() VALUE {
+					return reflect.MakeSlice(rT, 0, 0).Interface().(VALUE)
+				}
+			case reflect.Interface, reflect.Chan, reflect.Func:
+				opts.newValue = ptrConf_newZeroVal[VALUE] // typed nil by default
+			}
+		}
+
 	default:
+		// can never be nil
 		opts.isNil = ptrConf_Value_NeverNil
+
+		opts.flags = bitcheck.Set(opts.flags, flagIsBasic, true)
+
+		if opts.newValue == nil {
+			opts.newValue = ptrConf_newZeroVal[VALUE]
+		}
 	}
 
 	if opts.validateValue == nil {
 		opts.validateValue = ptrConf_Validate_Nop
+	}
+
+	if opts.newValue == nil {
+		panic(fmt.Sprintf("opts.newValue should not be nil for %q", fld.fieldName))
 	}
 
 	opts.FieldDefinition = attrs.NewField(
@@ -314,26 +356,26 @@ func (r *ptrField[M, V]) Embedded() bool {
 }
 
 func (r *ptrField[M, V]) ForSelectAll() bool {
-	if bitch.Is(r.opts.flags, F_IS_REVERSE_FLD) {
+	if bitcheck.Is(r.opts.flags, F_IS_REVERSE_FLD) {
 		return false
 	}
-	return bitch.Is(r.opts.flags, flagHasColumn)
+	return bitcheck.Is(r.opts.flags, flagHasColumn)
 }
 
 func (r *ptrField[M, V]) CanMigrate() bool {
-	return bitch.Is(r.opts.flags, flagHasColumn)
+	return bitcheck.Is(r.opts.flags, flagHasColumn)
 }
 
 func (r *ptrField[M, V]) AllowDBEdit() bool {
-	return bitch.Is(r.opts.flags, flagHasColumn) && !bitch.Is(r.opts.flags, F_IS_REVERSE_FLD)
+	return bitcheck.Is(r.opts.flags, flagHasColumn) && !bitcheck.Is(r.opts.flags, F_IS_REVERSE_FLD)
 }
 
 func (r *ptrField[M, V]) IsReverse() bool {
-	return bitch.Is(r.opts.flags, F_IS_REVERSE_FLD)
+	return bitcheck.Is(r.opts.flags, F_IS_REVERSE_FLD)
 }
 
 //	func (r *ptrField[M, V]) AllowReverseRelation() bool {
-//		return bitch.Is(r.opts.flags, flagHasColumn)
+//		return bitcheck.Is(r.opts.flags, flagHasColumn)
 //	}
 
 func (r *ptrField[M, V]) StructField() *reflect.StructField {
@@ -388,7 +430,7 @@ func (r *ptrField[M, V]) Rel() attrs.Relation {
 
 func (r *ptrField[M, V]) ColumnName() string {
 
-	if bitch.Is(r.useOpts().flags, flagHasColumnName) {
+	if bitcheck.Is(r.useOpts().flags, flagHasColumnName) {
 		return r.opts.ColumnName()
 	}
 
@@ -420,7 +462,7 @@ func (r *ptrField[M, V]) FormField() fields.Field { return r.useOpts().FormField
 func (r *ptrField[M, V]) ToString() string        { return attrs.ToString(r.GetValue()) }
 
 func (r *ptrField[M, V]) SetValue(v interface{}, force bool) error {
-	if bitch.Is(r.useOpts().flags, flagIsModel) {
+	if bitcheck.Is(r.useOpts().flags, flagIsModel) {
 		var rt reflect.Type
 		d, ok := v.(attrs.Definer)
 		if !ok {
@@ -450,7 +492,7 @@ func (r *ptrField[M, V]) SetValue(v interface{}, force bool) error {
 	}
 
 scanNow:
-	wasSet, err := django_reflect.ScanTo(r.val, v, django_reflect.SF_CONVS)
+	wasSet, err := scan.Scan(r.val, v, scan.SF_DEFAULT)
 	if wasSet {
 		return r.wasSet(err)
 	}
@@ -476,7 +518,7 @@ scanNow:
 	// if is model we can create new value of type V
 	// and set the scanned v as it's primary key.
 	// this wont work if the field type itself is an interface.
-	if bitch.Is(r.opts.flags, flagIsModel) && r.opts.typ != _DEFINER {
+	if bitcheck.Is(r.opts.flags, flagIsModel) && r.opts.typ != _DEFINER {
 		var newModel = reflect.New(r.opts.typ.Elem())
 		var newModelV = newModel.Interface().(attrs.Definer)
 		if err := attrs.SetPrimaryKey(r.defs.Context(), newModelV, v); err != nil {
@@ -492,18 +534,19 @@ scanNow:
 }
 
 func (r *ptrField[M, V]) Scan(v any) error {
-	if bitch.Is(r.useOpts().flags, flagIsPtrScanner) {
+	if bitcheck.Is(r.useOpts().flags, flagIsPtrScanner) {
 		this := r.val
 		return r.wasSet(any(this).(sql.Scanner).Scan(v))
 	}
 
-	if bitch.Is(r.opts.flags, flagIsScanner) {
-		if !r.opts.isNil(r.val) {
-			return r.wasSet(any(*r.val).(sql.Scanner).Scan(v))
+	if bitcheck.Is(r.opts.flags, flagIsScanner) {
+		if r.opts.isNil(r.val) {
+			*r.val = r.newValue()
 		}
+		return r.wasSet(any(*r.val).(sql.Scanner).Scan(v))
 	}
 
-	wasSet, err := django_reflect.ScanTo(r.val, v, django_reflect.SF_CONVS)
+	wasSet, err := scan.Scan(r.val, v, scan.SF_DEFAULT)
 	if err != nil {
 		return err
 	}
@@ -523,21 +566,10 @@ func (r *ptrField[M, V]) Scan(v any) error {
 	// if is model we can create new value of type V
 	// and set the scanned v as it's primary key.
 	// this wont work if the field type itself is an interface.
-	if bitch.Is(r.opts.flags, flagIsModel) && r.opts.typ != _DEFINER {
+	if bitcheck.Is(r.opts.flags, flagIsModel) && r.opts.typ != _DEFINER {
 
-		var (
-			newModel  reflect.Value
-			newModelV any
-		)
-
-		if r.opts.newValue != nil {
-			newModelV = r.opts.newValue()
-			newModel = reflect.ValueOf(newModelV)
-		} else {
-			newModel = reflect.New(r.opts.typ.Elem())
-			newModelV = newModel.Interface().(V)
-		}
-
+		var newModelV any = r.opts.newValue()
+		var newModel = reflect.ValueOf(newModelV)
 		if err := attrs.SetPrimaryKey(r.defs.Context(), newModelV.(attrs.Definer), v); err != nil {
 			return err
 		}
@@ -562,21 +594,30 @@ func (r *ptrField[M, V]) Scan(v any) error {
 
 // no op for now
 func (r *ptrField[M, V]) wasSet(err error) error {
-	if err != nil || (!bitch.Is(r.opts.flags, flagIsBinder) && !bitch.Is(r.opts.flags, flagIsPtrBinder)) {
+	if err != nil || (!bitcheck.Is(r.opts.flags, flagIsBinder) && !bitcheck.Is(r.opts.flags, flagIsPtrBinder)) {
 		return err
 	}
 
-	if bitch.Is(r.opts.flags, flagIsPtrBinder) {
+	if bitcheck.Is(r.opts.flags, flagIsPtrBinder) {
 		binder := any(r.val).(attrs.Binder)
 		return binder.BindToModel(r.obj, r)
 	}
 
-	if bitch.Is(r.opts.flags, flagIsBinder) && !r.opts.isNil(r.val) {
+	if bitcheck.Is(r.opts.flags, flagIsBinder) && !r.opts.isNil(r.val) {
 		binder := any(*r.val).(attrs.Binder)
 		return binder.BindToModel(r.obj, r)
 	}
 
 	return nil
+}
+
+func (r *ptrField[K, V]) newValue() (v V) {
+	if r.opts.newValue != nil {
+		return r.opts.newValue()
+	}
+
+	// panic(fmt.Sprintf("should not be reachable: %s", r.opts.typ.Kind()))
+	return v
 }
 
 func (r *ptrField[M, V]) set(rv reflect.Value) error {
@@ -586,18 +627,13 @@ func (r *ptrField[M, V]) set(rv reflect.Value) error {
 
 func (r *ptrField[M, V]) get(val *V) V {
 
-	if !bitch.Is(r.useOpts().flags, flagIsBinder) && !bitch.Is(r.opts.flags, flagIsPtrBinder) {
+	if !bitcheck.Is(r.useOpts().flags, flagIsBinder) && !bitcheck.Is(r.opts.flags, flagIsPtrBinder) {
 		return *val
 	}
 
 	isNil := r.opts.isNil(val)
-	if isNil && bitch.Is(r.opts.flags, flagSetupNilVal) {
-		if r.opts.newValue != nil {
-			*r.val = r.opts.newValue()
-		} else {
-			var newV = reflect.New(r.opts.typ.Elem())
-			*r.val = newV.Interface().(V)
-		}
+	if isNil && bitcheck.Is(r.opts.flags, flagSetupNilVal) {
+		*r.val = r.newValue()
 		isNil = false
 	}
 
@@ -605,13 +641,13 @@ func (r *ptrField[M, V]) get(val *V) V {
 		return *val
 	}
 
-	if bitch.Is(r.opts.flags, flagIsPtrBinder) {
+	if bitcheck.Is(r.opts.flags, flagIsPtrBinder) {
 		if err := any(val).(attrs.Binder).BindToModel(r.obj, r); err != nil {
 			r.opts.bindError(err)
 		}
 	}
 
-	if bitch.Is(r.opts.flags, flagIsBinder) && !r.opts.isNil(r.val) {
+	if bitcheck.Is(r.opts.flags, flagIsBinder) && !r.opts.isNil(r.val) {
 		if err := any(*val).(attrs.Binder).BindToModel(r.obj, r); err != nil {
 			r.opts.bindError(err)
 		}
@@ -635,16 +671,11 @@ func (r *ptrField[M, V]) GetDefault() interface{} {
 		return nil
 	}
 
-	if r.opts.isNil(def) && (bitch.Is(r.useOpts().flags, flagIsBinder) || bitch.Is(r.opts.flags, flagIsPtrBinder)) {
-		if r.opts.newValue != nil {
-			d := r.opts.newValue()
-			def = &d
-		} else {
-			var newV = reflect.New(r.opts.typ.Elem())
-			d := newV.Interface().(V)
-			def = &d
-		}
+	if r.opts.isNil(def) && (bitcheck.Is(r.useOpts().flags, flagIsBinder) || bitcheck.Is(r.opts.flags, flagIsPtrBinder)) {
+		d := r.opts.newValue()
+		def = &d
 	}
+
 	return r.get(def)
 }
 

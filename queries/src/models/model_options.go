@@ -3,14 +3,14 @@ package models
 import (
 	"reflect"
 
-	"github.com/Nigel2392/go-django/internal/bitch"
 	"github.com/Nigel2392/go-django/queries/src/models/state"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/versatile/bitcheck"
 )
 
 const (
-	flagNone   bitch.Flag = 0
-	flagFromDB bitch.Flag = 1 << (iota - 1)
+	flagNone   bitcheck.Flag = 0
+	flagFromDB bitcheck.Flag = 1 << (iota - 1)
 	flagStateDisabled
 )
 
@@ -20,7 +20,7 @@ type ModelOptions struct {
 	ReflectValue *reflect.Value
 	Defs         *attrs.ObjectDefinitions
 	State        *state.ModelState
-	Flags        bitch.Flag
+	Flags        bitcheck.Flag
 }
 
 func OptionsFromModel(modelObject any) (options *ModelOptions, err error) {

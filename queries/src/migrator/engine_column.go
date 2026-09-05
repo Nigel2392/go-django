@@ -8,11 +8,11 @@ import (
 	"slices"
 	"strings"
 
-	dr "github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	dr "github.com/Nigel2392/versatile"
 )
 
 type Column struct {

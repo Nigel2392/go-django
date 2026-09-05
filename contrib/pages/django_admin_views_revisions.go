@@ -15,7 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/revisions"
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
@@ -714,7 +714,7 @@ type GenericBoundPreview[T attrs.Definer] struct {
 func (v *GenericBoundPreview[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
 
 func (v *GenericBoundPreview[T]) GetObject(r *http.Request) (attrs.Definer, error) {
-	if !django_reflect.IsZero(v.Object) {
+	if !versatile.IsZero(v.Object) {
 		return v.Object, nil
 	}
 
@@ -1107,7 +1107,7 @@ func (v *GenericPreviewHandler[T]) TakeControl(w http.ResponseWriter, req *http.
 	//   - func() error
 	//   - func(ctx context.Context) error
 	//   - func(ctx context.Context) (..., error)
-	saveFn, err := django_reflect.Method[func() error](form, "Save", django_reflect.WithContext(
+	saveFn, err := versatile.Method[func() error](form, "Save", versatile.WithContext(
 		form.Context(),
 	))
 	if err == nil {

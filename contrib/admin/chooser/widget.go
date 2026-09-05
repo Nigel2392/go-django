@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
@@ -126,7 +126,7 @@ func (w *ChooserWidget) Validate(ctx context.Context, value interface{}) []error
 		return errs
 	}
 
-	if !django_reflect.IsZero(value) {
+	if !versatile.IsZero(value) {
 		var meta = attrs.GetModelMeta(w.Model)
 		var defs = meta.Definitions()
 		var primDef = defs.Primary()
@@ -169,7 +169,7 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 	ctx.Set("urls", urlMap)
 	ctx.Set("title", b.Definition.GetTitle(c))
 
-	if django_reflect.IsZero(value) {
+	if versatile.IsZero(value) {
 		ctx.Set("value", nil)
 		ctx.Set("preview", nil)
 	} else {

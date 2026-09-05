@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -479,21 +479,21 @@ func TestDjangoReflectEquals(t *testing.T) {
 
 	t.Run("EQ", func(t *testing.T) {
 		t.Log(a, b)
-		if !django_reflect.Equals(a, b) {
+		if !versatile.Equals(a, b) {
 			t.Fatalf("Expected a == b")
 		}
 	})
 
 	t.Run("EQ", func(t *testing.T) {
 		t.Log(a, c)
-		if !django_reflect.Equals(a, c) {
+		if !versatile.Equals(a, c) {
 			t.Fatalf("Expected a == c")
 		}
 	})
 
 	t.Run("NEQ", func(t *testing.T) {
 		t.Log(a, d)
-		if django_reflect.Equals(a, d) {
+		if versatile.Equals(a, d) {
 			t.Fatalf("Expected a != d")
 		}
 	})

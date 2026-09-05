@@ -15,7 +15,7 @@ var (
 	// _ queries.QuerySetCanBeforeExec = (*PageQuerySet)(nil)
 	// _ queries.QuerySetCanAfterExec                                              = (*SpecificPageQuerySet)(nil)
 	_ queries.QuerySetCanClone[*PageNode, *SpecificPageQuerySet, *PageQuerySet] = (*SpecificPageQuerySet)(nil)
-	// _ queries.NullQuerySet[Page, *SpecificPageQuerySet]                         = (*SpecificPageQuerySet)(nil)
+	// _ queries.AbstractQuerySet[Page, *SpecificPageQuerySet]                         = (*SpecificPageQuerySet)(nil)
 )
 
 type specificPage struct {
@@ -51,55 +51,55 @@ func (qs *SpecificPageQuerySet) CloneQuerySet(wrapped *queries.WrappedQuerySet[*
 
 func (qs *SpecificPageQuerySet) StatusFlags(statusFlags StatusFlag) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().StatusFlags(statusFlags)
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().StatusFlags(statusFlags)
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) Published() *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().Published()
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().Published()
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) Unpublished() *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().Unpublished()
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().Unpublished()
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) Types(types ...any) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().Types(types...)
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().Types(types...)
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) AncestorOf(node *PageNode, inclusive ...bool) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().AncestorOf(node, inclusive...)
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().AncestorOf(node, inclusive...)
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) DescendantOf(node *PageNode, inclusive ...bool) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().DescendantOf(node, inclusive...)
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().DescendantOf(node, inclusive...)
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) ChildrenOf(node *PageNode) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().ChildrenOf(node)
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().ChildrenOf(node)
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) SiblingsOf(node *PageNode, inclusive ...bool) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().SiblingsOf(node, inclusive...)
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().SiblingsOf(node, inclusive...)
 	return qs
 }
 
 func (qs *SpecificPageQuerySet) Search(query string) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.NullQuerySet = qs.WrappedQuerySet.Base().Search(query)
+	qs.WrappedQuerySet.AbstractQuerySet = qs.WrappedQuerySet.Base().Search(query)
 	return qs
 }
 

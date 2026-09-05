@@ -20,7 +20,7 @@ var (
 	_ queries.BaseWriteQuerySet[attrs.Definer, *SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]]]                                  = (*SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
 )
 
-type BaseSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[QS]] interface {
+type BaseSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]] interface {
 	queries.BaseReadQuerySet[Specific[ORIGINAL, SPECIFIC], *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]]
 	queries.BaseWriteQuerySet[ORIGINAL, *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]]
 }
@@ -41,12 +41,12 @@ type SpecificQuerySetOptions[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer] str
 	GetSpecificTargetID    func(target SPECIFIC) (id any, ok bool)
 }
 
-type SpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[QS]] struct {
+type SpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]] struct {
 	*queries.WrappedQuerySet[ORIGINAL, *SpecificQuerySet[ORIGINAL, SPECIFIC, QS], QS]
 	opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]
 }
 
-func GetSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[QS]](qs QS, opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
+func GetSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]](qs QS, opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
 	assert.False(
 		opts.GetSpecificPreloadData == nil,
 		"GetSpecificQuerySet: opts.GetSpecificPreloadData must be provided",

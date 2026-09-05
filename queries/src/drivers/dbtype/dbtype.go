@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"iter"
 	"reflect"
-	"sync"
+	"sync/atomic"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -192,8 +192,7 @@ type typeRegistry[T any] struct {
 	// we use a mutex to ensure that the locked state is consistent
 	// during function calls, using an atomic.Bool would not be enough
 	// because the value is read and written multiple times
-	mu     sync.Mutex
-	locked bool
+	locked atomic.Bool
 	Locked signals.Signal[GenericTypeRegistry[T]]
 }
 
@@ -234,11 +233,7 @@ func (r *typeRegistry[T]) registerKind(knd reflect.Kind, t T) {
 }
 
 func (r *typeRegistry[T]) Add(srcTyp any, t T, forceKind ...bool) bool {
-	if r.mu.TryLock() {
-		defer r.mu.Unlock()
-	}
-
-	if r.locked {
+	if r.locked.Load() {
 		logger.Warn("Type registry is locked, cannot add new types")
 		return false
 	}
@@ -306,13 +301,9 @@ func (r *typeRegistry[T]) Types() iter.Seq2[reflect.Type, T] {
 }
 
 func (r *typeRegistry[T]) Lock() bool {
-	if r.mu.TryLock() {
-		defer r.mu.Unlock()
-	}
-
-	if !r.locked {
+	if !r.locked.Load() {
 		assert.Err(r.Locked.Send(context.Background(), r))
-		r.locked = true
+		r.locked.Store(true)
 		return true
 	}
 
@@ -320,22 +311,15 @@ func (r *typeRegistry[T]) Lock() bool {
 }
 
 func (r *typeRegistry[T]) IsLocked() bool {
-	if r.mu.TryLock() {
-		defer r.mu.Unlock()
-	}
-	return r.locked
+	return r.locked.Load()
 }
 
 // Unlock releases the lock on the type registry.
 //
 // This is only used in tests, and thus not exported as a global function.
 func (r *typeRegistry[T]) Unlock() {
-	if r.mu.TryLock() {
-		defer r.mu.Unlock()
-	}
-
-	if r.locked {
-		r.locked = false
+	if r.locked.Load() {
+		r.locked.Store(false)
 		return
 	}
 

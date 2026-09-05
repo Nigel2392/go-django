@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/contrib/admin/compare"
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
@@ -805,7 +805,7 @@ func (p *ModelFormPanel[TARGET, FORM]) formPrefix(index any) string {
 	return fmt.Sprintf("%s-%v", p.FieldName, index)
 }
 
-func (f *ModelFormPanel[TARGET, FORM]) getField(source attrs.Definer) attrs.FieldDefinition {
+func (f *ModelFormPanel[TARGET, FORM]) getField(source attrs.Definer) (attrs.FieldDefinition, attrs.FieldDefinition) {
 	var meta = attrs.GetModelMeta(source)
 	var defs = meta.Definitions()
 	var field, ok = defs.Field(f.FieldName)
@@ -814,12 +814,12 @@ func (f *ModelFormPanel[TARGET, FORM]) getField(source attrs.Definer) attrs.Fiel
 		"ModelFormPanel: field %q not found in model %T",
 		f.FieldName, source,
 	)
-	return field
+	return defs.Primary(), field
 }
 
 func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Request, source attrs.Definer, minNumForms int, targetFields []string, targetList []TARGET) []modelforms.ModelForm[TARGET] {
 	var formList = make([]modelforms.ModelForm[TARGET], 0, minNumForms)
-	var field = p.getField(source)
+	var _, field = p.getField(source)
 	var rel = field.Rel()
 	var revField = rel.Field()
 	for i := 0; i < max(minNumForms, len(targetList)); i++ {
@@ -866,33 +866,27 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 			if revField != nil {
 				var fieldName = revField.Name()
 				var pk = attrs.PrimaryKey(ctx, source)
-				if !fields.IsZero(pk) {
-					initialData[fieldName] = pk
+				initialData[fieldName] = pk
 
-					form.AddField(fieldName, &formfields.ForeignKeyFormField{
-						BaseRelationField: formfields.BaseRelationField{
-							BaseField: fields.NewField(
-								fields.Widget(formfields.ModelSelectWidget(
-									false, "", chooser.BaseChooserOptions{
-										TargetObject: source,
-										GetPrimaryKey: func(ctx context.Context, i interface{}) interface{} {
-											return attrs.PrimaryKey(ctx, i.(attrs.Definer))
-										},
-										Queryset: func(ctx context.Context) ([]interface{}, error) {
-											return []interface{}{source}, nil
-										},
-									},
-									nil,
-								)),
-								fields.Hide(true),
-							),
-							Field:    revField,
-							Relation: revField.Rel(),
-						},
-					})
-				} else {
-					logger.Warnf("ModelFormPanel: source instance has zero primary key; related object may not be saved correctly")
-				}
+				form.AddField(fieldName, &formfields.ForeignKeyFormField{
+					BaseField: fields.NewField(
+						fields.Widget(formfields.ModelSelectWidget(
+							false, "", chooser.BaseChooserOptions{
+								TargetObject: source,
+								GetPrimaryKey: func(ctx context.Context, i interface{}) interface{} {
+									return attrs.PrimaryKey(ctx, i.(attrs.Definer))
+								},
+								Queryset: func(ctx context.Context) ([]interface{}, error) {
+									return []interface{}{source}, nil
+								},
+							},
+							nil,
+						)),
+						fields.Hide(true),
+					),
+					Field:    revField,
+					Relation: revField.Rel(),
+				})
 
 			} else {
 				assert.Fail(
@@ -921,18 +915,32 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 	return formList
 }
 
-var _ ClusterOrderableForm = (*clusterableForm[attrs.Definer])(nil)
+var _ ClusterOrderableForm = (*adminClusterForm[formsets.BaseFormSetForm, attrs.Definer])(nil)
 
-type clusterableForm[T1 attrs.Definer] struct {
+type adminClusterForm[FORM formsets.BaseFormSetForm, T1 attrs.Definer] struct {
 	formsets.BaseFormSetForm
-	FormOrdering FORM_ORDERING
+	FieldFromParent string
+	FieldForChild   string
+	FormOrdering    FORM_ORDERING
 }
 
-func (c *clusterableForm[T1]) FormOrder() FORM_ORDERING {
+func (c *adminClusterForm[F, T1]) FormOrder() FORM_ORDERING {
 	return c.FormOrdering
 }
 
-func (c *clusterableForm[T1]) Unwrap() []any {
+func (c *adminClusterForm[F, T1]) FormField() string {
+	return c.FieldForChild
+}
+
+func (c *adminClusterForm[F, T1]) ParentField() string {
+	return c.FieldFromParent
+}
+
+func (c *adminClusterForm[F, T1]) Form() F {
+	return c.BaseFormSetForm.(F)
+}
+
+func (c *adminClusterForm[F, T1]) Unwrap() []any {
 	if unwrapper, ok := c.BaseFormSetForm.(forms.FormWrapper[any]); ok {
 		return unwrapper.Unwrap()
 	}
@@ -951,23 +959,25 @@ func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Contex
 	var f formsets.BaseFormSetForm = m.FormSet(r, ctx, instance)
 
 	var ordering FORM_ORDERING
-	if django_reflect.IsZero(attrs.PrimaryKey(ctx, instance)) {
+	if versatile.IsZero(attrs.PrimaryKey(ctx, instance)) {
 		ordering = FORM_ORDERING_POST
 	} else {
 		ordering = FORM_ORDERING_PRE
 	}
 
-	var field = m.getField(instance)
+	var prim, field = m.getField(instance)
 	var rel = field.Rel()
 	switch rel.Type() {
 	case attrs.RelManyToOne:
-		f = &clusterableForm[attrs.Definer]{
+		f = &adminClusterForm[formsets.BaseFormSetForm, attrs.Definer]{
 			BaseFormSetForm: f,
 			FormOrdering:    ordering,
 		}
 	case attrs.RelOneToMany:
-		f = &clusterableForm[attrs.Definer]{
+		f = &adminClusterForm[formsets.BaseFormSetForm, attrs.Definer]{
 			BaseFormSetForm: f,
+			FieldFromParent: prim.Name(),
+			FieldForChild:   rel.Field().Name(),
 			FormOrdering:    FORM_ORDERING_POST,
 		}
 	case attrs.RelManyToMany:
@@ -978,7 +988,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Contex
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Context, instance attrs.Definer) formsets.ListFormSet[modelforms.ModelForm[TARGET]] {
-	var fld = m.getField(instance)
+	var _, fld = m.getField(instance)
 	var relFld = fld.Rel().Field()
 	var relFnd bool
 	var targetFields = make([]string, 0, len(m.Panels))
@@ -994,7 +1004,7 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 		targetFields = append(targetFields, panel.Fields()...)
 	}
 
-	if relFld != nil && !relFnd && !attrs.IsZero(attrs.PrimaryKey(ctx, instance)) {
+	if relFld != nil && !relFnd {
 		targetFields = append(targetFields, relFld.Name())
 	}
 
@@ -1194,7 +1204,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		panels = append(panels, panel)
 	}
 
-	var fld = m.getField(instance)
+	var _, fld = m.getField(instance)
 	var relFld = fld.Rel().Field()
 	if relFld != nil && !attrs.IsZero(attrs.PrimaryKey(ctx, instance)) {
 		if _, ok := seen[relFld.Name()]; !ok {

@@ -24,31 +24,29 @@ type LoginForm interface {
 }
 
 var LoginHandler = &views.FormView[LoginForm]{
-	BaseView: views.BaseView{
-		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-		BaseTemplateKey: "admin",
-		TemplateName:    "admin/views/auth/login.tmpl",
-		GetContextFn: func(req *http.Request) (ctx.Context, error) {
-			var context = ctx.RequestContext(req)
-			// context.Set("next", req.URL.Query().Get("next"))
-			var loginURL = django.Reverse("admin:login")
-			var nextURL = req.URL.Query().Get("next")
-			if nextURL != "" {
-				var u, err = url.Parse(loginURL)
-				if err != nil {
-					goto returnContext
-				}
-
-				q := u.Query()
-				q.Set("next", nextURL)
-				u.RawQuery = q.Encode()
-				loginURL = u.String()
+	AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+	BaseTemplateKey: "admin",
+	TemplateName:    "admin/views/auth/login.tmpl",
+	GetContextFn: func(req *http.Request) (ctx.Context, error) {
+		var context = ctx.RequestContext(req)
+		// context.Set("next", req.URL.Query().Get("next"))
+		var loginURL = django.Reverse("admin:login")
+		var nextURL = req.URL.Query().Get("next")
+		if nextURL != "" {
+			var u, err = url.Parse(loginURL)
+			if err != nil {
+				goto returnContext
 			}
 
-		returnContext:
-			context.Set("LoginURL", loginURL)
-			return context, nil
-		},
+			q := u.Query()
+			q.Set("next", nextURL)
+			u.RawQuery = q.Encode()
+			loginURL = u.String()
+		}
+
+	returnContext:
+		context.Set("LoginURL", loginURL)
+		return context, nil
 	},
 	GetFormFn: func(req *http.Request) LoginForm {
 		var loginForm = AdminSite.AuthLoginForm(

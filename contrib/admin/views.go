@@ -627,18 +627,16 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 	}
 
 	var deleteView = &AdminDeleteView{
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: BASE_KEY,
-			TemplateName:    "admin/views/models/delete.tmpl",
-		},
-		Permissions: []string{"admin:delete"},
-		Writer:      w,
-		Request:     r,
-		AdminSite:   adminSite,
-		App:         app,
-		Model:       model,
-		Instances:   []attrs.Definer{instance},
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: BASE_KEY,
+		TemplateName:    "admin/views/models/delete.tmpl",
+		Permissions:     []string{"admin:delete"},
+		Writer:          w,
+		Request:         r,
+		AdminSite:       adminSite,
+		App:             app,
+		Model:           model,
+		Instances:       []attrs.Definer{instance},
 	}
 
 	var err = views.Invoke(deleteView, w, r)
@@ -684,18 +682,16 @@ var ModelBulkDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminS
 	}
 
 	var deleteView = &AdminDeleteView{
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: BASE_KEY,
-			TemplateName:    "admin/views/models/delete.tmpl",
-		},
-		Permissions: []string{"admin:delete"},
-		Writer:      w,
-		Request:     r,
-		AdminSite:   adminSite,
-		App:         app,
-		Model:       model,
-		Instances:   instances,
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: BASE_KEY,
+		TemplateName:    "admin/views/models/delete.tmpl",
+		Permissions:     []string{"admin:delete"},
+		Writer:          w,
+		Request:         r,
+		AdminSite:       adminSite,
+		App:             app,
+		Model:           model,
+		Instances:       instances,
 	}
 
 	err = views.Invoke(deleteView, w, r)
@@ -763,28 +759,26 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 	var primary = definer.Primary()
 
 	return &views.FormView[*AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]{
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: BASE_KEY,
-			TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = NewContext(req, AdminSite, nil)
-				context.Set("app", app)
-				context.Set("model", model)
-				context.Set("instance", instance)
-				context.Set("primaryField", primary)
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: BASE_KEY,
+		TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = NewContext(req, AdminSite, nil)
+			context.Set("app", app)
+			context.Set("model", model)
+			context.Set("instance", instance)
+			context.Set("primaryField", primary)
 
-				if page != nil {
-					context.SetPage(*page)
-				}
+			if page != nil {
+				context.SetPage(*page)
+			}
 
-				var next = r.URL.Query().Get("next")
-				if next != "" {
-					context.Set("BackURL", next)
-				}
+			var next = r.URL.Query().Get("next")
+			if next != "" {
+				context.Set("BackURL", next)
+			}
 
-				return context, nil
-			},
+			return context, nil
 		},
 		GetFormFn: func(req *http.Request) *AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer] {
 			var form modelforms.ModelForm[attrs.Definer]

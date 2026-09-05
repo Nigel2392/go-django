@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -117,18 +117,18 @@ func (f *ForeignKeyFormField) HasChanged(initial, data interface{}) bool {
 		b, ok2 = data.(attrs.Definer)
 	)
 
-	if ok1 && ok2 && (!django_reflect.IsZero(a) && !django_reflect.IsZero(b)) {
+	if ok1 && ok2 && (!versatile.IsZero(a) && !versatile.IsZero(b)) {
 		var pkA = attrs.PrimaryKey(context.Background(), a)
 		var pkB = attrs.PrimaryKey(context.Background(), b)
 		return f.BaseField.HasChanged(pkA, pkB)
 	}
 
-	if ok1 && !ok2 && !django_reflect.IsZero(a) {
+	if ok1 && !ok2 && !versatile.IsZero(a) {
 		var pkA = attrs.PrimaryKey(context.Background(), a)
 		return f.BaseField.HasChanged(pkA, data)
 	}
 
-	if !ok1 && ok2 && !django_reflect.IsZero(b) {
+	if !ok1 && ok2 && !versatile.IsZero(b) {
 		var pkB = attrs.PrimaryKey(context.Background(), b)
 		return f.BaseField.HasChanged(initial, pkB)
 	}

@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 )
 
-type ComponentFunc = django_reflect.Function
+type ComponentFunc = versatile.Function
 
 type Registry interface {
 	Register(name string, componentFn ComponentFunc)
@@ -31,19 +31,19 @@ type AttributeSetter interface {
 }
 
 type ComponentRegistry struct {
-	ns_components map[string]map[string]*django_reflect.Func
-	components    map[string]*django_reflect.Func
+	ns_components map[string]map[string]*versatile.Func
+	components    map[string]*versatile.Func
 }
 
 func NewComponentRegistry() *ComponentRegistry {
 	return &ComponentRegistry{
-		ns_components: make(map[string]map[string]*django_reflect.Func),
-		components:    make(map[string]*django_reflect.Func),
+		ns_components: make(map[string]map[string]*versatile.Func),
+		components:    make(map[string]*versatile.Func),
 	}
 }
 
-func (r *ComponentRegistry) newComponent(fn ComponentFunc) *django_reflect.Func {
-	return django_reflect.NewFunc(fn, reflect.TypeOf((*Component)(nil)).Elem())
+func (r *ComponentRegistry) newComponent(fn ComponentFunc) *versatile.Func {
+	return versatile.NewFunc(fn, reflect.TypeOf((*Component)(nil)).Elem())
 }
 
 func (r *ComponentRegistry) Namespace(name string) Registry {

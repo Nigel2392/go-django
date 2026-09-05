@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -43,7 +43,7 @@ type Value[T any] struct {
 
 func (s *Value[T]) IsZero() bool {
 	av := any(s.V)
-	if isZeroer, ok := av.(django_reflect.IsZeroer); ok {
+	if isZeroer, ok := av.(versatile.IsZeroer); ok {
 		return isZeroer.IsZero()
 	}
 

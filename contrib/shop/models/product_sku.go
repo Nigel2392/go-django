@@ -14,7 +14,7 @@ import (
 
 type ProductSku struct {
 	ID      uint64                 `json:"id"`
-	Product *Product               `json:"product"`
+	Product *Product               `json:"-"`
 	Title   string                 `json:"title"`
 	Price   decimal.Decimal        `json:"price"`
 	Stock   uint64                 `json:"stock"`

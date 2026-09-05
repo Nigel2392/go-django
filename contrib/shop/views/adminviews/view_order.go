@@ -24,6 +24,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	djmodels "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
@@ -135,6 +136,12 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 			skuFormSet orderItemFormset
 		)
 
+		for i, form := range flist {
+			if c, ok := form.(admin.ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
+				flist[i] = c.Form()
+			}
+		}
+
 		for _, form := range flist {
 			switch f := form.(type) {
 			case orderItemFormset:
@@ -185,26 +192,24 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 	}
 
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order]]{
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: "shop",
-			TemplateName:    "shop/orders/admin/edit.tmpl",
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = admin.NewContext(req, admin.AdminSite, nil)
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: "shop",
+		TemplateName:    "shop/orders/admin/edit.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
 
-				var backURL string
-				if q := req.URL.Query().Get("next"); q != "" {
-					backURL = q
-				}
+			var backURL string
+			if q := req.URL.Query().Get("next"); q != "" {
+				backURL = q
+			}
 
-				context.Set("BackURL", backURL)
-				context.Set("PostURL", django.Reverse("admin:shop:orders:edit", orderRow.Object.ID))
-				context.SetPage(admin.PageOptions{
-					TitleFn: trans.S("Change order"),
-				})
+			context.Set("BackURL", backURL)
+			context.Set("PostURL", django.Reverse("admin:shop:orders:edit", orderRow.Object.ID))
+			context.SetPage(admin.PageOptions{
+				TitleFn: trans.S("Change order"),
+			})
 
-				return context, nil
-			},
+			return context, nil
 		},
 		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order] {
 			return form

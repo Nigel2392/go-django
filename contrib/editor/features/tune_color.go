@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/go-django/contrib/editor"
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 )
 
 func init() {
@@ -62,7 +62,7 @@ func colorTune(cssAttr string) func(fb editor.FeatureBlock, data interface{}) ed
 			return fb
 		}
 
-		if a, ok = d["color"]; !ok || django_reflect.IsZero(a) {
+		if a, ok = d["color"]; !ok || versatile.IsZero(a) {
 			return fb
 		}
 

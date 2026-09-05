@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -21,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-signals"
+	"github.com/Nigel2392/versatile"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -39,6 +39,16 @@ const (
 
 type ClusterOrderableForm interface {
 	FormOrder() FORM_ORDERING
+}
+
+type postSaveForm interface {
+	FormField() string
+	ParentField() string
+}
+
+type ClusterOrderableFormT[FORMTYPE forms.Minimum] interface {
+	Form() FORMTYPE
+	ClusterOrderableForm
 }
 
 type AdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
@@ -455,7 +465,7 @@ func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]in
 
 	var (
 		preSaveForms  = make([]formsets.BaseFormSetForm, 0)
-		postSaveForms = make([]formsets.BaseFormSetForm, 0)
+		postSaveForms = make([]ClusterOrderableFormT[formsets.BaseFormSetForm], 0)
 		fList, err    = a.FormSet().Forms()
 	)
 	if err != nil {
@@ -464,11 +474,11 @@ func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]in
 
 	for _, form := range fList {
 		switch f := form.(type) {
-		case *clusterableForm[attrs.Definer]:
+		case ClusterOrderableFormT[formsets.BaseFormSetForm]:
 			if f.FormOrder() == FORM_ORDERING_POST {
-				postSaveForms = append(postSaveForms, f.BaseFormSetForm)
+				postSaveForms = append(postSaveForms, f)
 			} else {
-				preSaveForms = append(preSaveForms, f.BaseFormSetForm)
+				preSaveForms = append(preSaveForms, f.Form())
 			}
 		default:
 			preSaveForms = append(preSaveForms, form)
@@ -476,7 +486,7 @@ func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]in
 	}
 
 	for _, form := range preSaveForms {
-		a.saveFormSetForm(form, FORM_ORDERING_PRE)
+		a.saveFormSetForm(form)
 	}
 
 	data, err := fn(a.Context(), a.Form)
@@ -484,12 +494,56 @@ func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]in
 		return data, err
 	}
 
-	for _, form := range postSaveForms {
-		a.saveFormSetForm(form, FORM_ORDERING_POST)
+outer:
+	for _, clusterable := range postSaveForms {
+		form := clusterable.Form()
+
+		if p, ok := clusterable.(postSaveForm); ok && p.ParentField() != "" && p.FormField() != "" {
+			v, ok := data[p.ParentField()]
+			if !ok {
+				// parent field not found in cleaned data
+				// try save and continue
+				a.saveFormSetForm(form)
+				continue outer
+			}
+
+			method, err := versatile.Method[func() ([]forms.Minimum, error)](form, "Forms",
+				versatile.WithContext(a.Context()),
+			)
+			if err != nil && !errors.Is(err, versatile.ErrMethodNotFound) {
+				return data, err
+			}
+
+			// set directly, is not formset
+			// save and continue
+			if method == nil {
+				form.CleanedData()[p.FormField()] = v
+				a.saveFormSetForm(form)
+				continue outer
+			}
+
+			forms, err := method()
+			if err != nil {
+				return data, err
+			}
+
+		inner:
+			for _, f := range forms {
+				f.CleanedData()[p.FormField()] = v
+				a.saveFormSetForm(f)
+				continue inner
+			}
+
+			continue outer
+		}
+
+		a.saveFormSetForm(form)
 	}
 
 	return data, nil
 }
+
+// Forms() ([]formsets.BaseFormSetForm, error)
 
 func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
 	return a.SaveFunc(func(ctx context.Context, t T1) (map[string]interface{}, error) {
@@ -515,13 +569,13 @@ func (a *AdminForm[T1, T2]) SaveForms(formList ...forms.Form) (err error) {
 	}
 
 	for _, form := range flist {
-		a.saveFormSetForm(form, FORM_ORDERING_NONE)
+		a.saveFormSetForm(form)
 	}
 
 	return nil
 }
 
-func (a *AdminForm[T1, T2]) saveFormSetForm(form formsets.BaseFormSetForm, ordering FORM_ORDERING) {
+func (a *AdminForm[T1, T2]) saveFormSetForm(form formsets.BaseFormSetForm) {
 	var rV = reflect.ValueOf(form)
 	var cleaned = form.CleanedData()
 	var deleted, _ = cleaned["__DELETED__"].(string)
@@ -573,7 +627,7 @@ func (a *AdminForm[T1, T2]) saveFormSetForm(form formsets.BaseFormSetForm, order
 		return
 	}
 
-	saveFn, err := django_reflect.Method[func() error](form, "Save", django_reflect.WithContext(
+	saveFn, err := versatile.Method[func() error](form, "Save", versatile.WithContext(
 		a.Context(),
 	))
 	if err != nil {

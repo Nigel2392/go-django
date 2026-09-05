@@ -8,13 +8,13 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
-	dr "github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	errsPkg "github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/utils/mixins"
+	dr "github.com/Nigel2392/versatile"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -545,7 +545,7 @@ func SaveForm(ctx context.Context, form any, args ...any) error {
 		dr.WithContext(ctx),
 		dr.WithFuncArgs(args...),
 	)
-	if err != nil && !errors.Is(err, django_reflect.ErrMethodNotFound) {
+	if err != nil && !errors.Is(err, versatile.ErrMethodNotFound) {
 		return err
 	}
 

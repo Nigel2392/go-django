@@ -1,6 +1,6 @@
 package components
 
-import "github.com/Nigel2392/go-django/internal/django_reflect"
+import "github.com/Nigel2392/versatile"
 
 type namespace struct {
 	name string
@@ -9,8 +9,8 @@ type namespace struct {
 
 func (n *namespace) Render(name string, args ...interface{}) Component {
 	var (
-		cmpFn *django_reflect.Func
-		cmap  map[string]*django_reflect.Func
+		cmpFn *versatile.Func
+		cmap  map[string]*versatile.Func
 		ok    bool
 	)
 	if cmap, ok = n.ns_components[n.name]; !ok {
@@ -25,7 +25,7 @@ func (n *namespace) Render(name string, args ...interface{}) Component {
 
 func (n *namespace) Register(name string, componentFn ComponentFunc) {
 	if _, ok := n.ns_components[n.name]; !ok {
-		n.ns_components[n.name] = make(map[string]*django_reflect.Func)
+		n.ns_components[n.name] = make(map[string]*versatile.Func)
 	}
 
 	n.ns_components[n.name][name] = n.newComponent(componentFn)

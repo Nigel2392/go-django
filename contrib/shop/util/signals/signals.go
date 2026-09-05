@@ -23,11 +23,11 @@ var (
 )
 
 type BaseSignal struct {
-	Context   context.Context
-	Timestamp time.Time
-	User      users.User
-	IPAddr    net.IP
-	Meta      map[string]any
+	Context   context.Context `json:"-"`
+	Timestamp time.Time       `json:"timestamp"`
+	User      users.User      `json:"user"`
+	IPAddr    net.IP          `json:"ipaddr"`
+	Meta      map[string]any  `json:"meta"`
 }
 
 type Signal[T any] = signals.Signal[T]
@@ -72,11 +72,15 @@ type PaymentSignalData struct {
 	RawBytes []byte
 }
 
+type Changed[TYP any] struct {
+	Old TYP
+	New TYP
+}
+
 type ProductSignalData struct {
 	BaseSignal
-	Last    *models.Product
-	Product *models.Product
-	Skus    []*models.ProductSku
+	Product Changed[*models.Product]
+	Skus    Changed[[]*models.ProductSku]
 }
 
 type OrderSignalData struct {

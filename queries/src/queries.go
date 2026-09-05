@@ -270,14 +270,7 @@ func ForSelectAllFields[T any](fields any) []T {
 //
 // It should contain the actual instances of the models involved in the relation,
 // and the through model if applicable.
-type Relation interface {
-
-	// The target model of the relation.
-	Model() attrs.Definer
-
-	// The through model of the relation.
-	Through() attrs.Definer
-}
+type Relation = attrs.ValueRelation
 
 // ParentInfo holds information about a relation's parent model instance
 // and the field on the parent model that holds the relation.
@@ -301,9 +294,8 @@ type canUniqueKey interface {
 // A default implementation is provided with the [RelO2O] type.
 type RelationValue interface {
 	attrs.Binder
+	attrs.RelationValue
 	ParentInfo() *ParentInfo
-	GetValue() (obj attrs.Definer)
-	SetValue(instance attrs.Definer)
 }
 
 // A model field's value can adhere to this interface to indicate that the
@@ -313,9 +305,8 @@ type RelationValue interface {
 // if a through table is specified, the field's value should be of type [MultiThroughRelationValue]
 type MultiRelationValue interface {
 	attrs.Binder
+	attrs.MultiRelationValue
 	ParentInfo() *ParentInfo
-	GetValues() []attrs.Definer
-	SetValues(instances []attrs.Definer)
 }
 
 // A model field's value can adhere to this interface to indicate that the
@@ -327,9 +318,8 @@ type MultiRelationValue interface {
 // A default implementation is provided with the [RelO2O] type.
 type ThroughRelationValue interface {
 	attrs.Binder
+	attrs.ThroughRelationValue
 	ParentInfo() *ParentInfo
-	GetValue() (obj attrs.Definer, through attrs.Definer)
-	SetValue(instance attrs.Definer, through attrs.Definer)
 }
 
 // A model field's value can adhere to this interface to indicate that the
@@ -341,9 +331,8 @@ type ThroughRelationValue interface {
 // A default implementation is provided with the [RelM2M] type.
 type MultiThroughRelationValue interface {
 	attrs.Binder
+	attrs.MultiThroughRelationValue
 	ParentInfo() *ParentInfo
-	SetValues(instances []Relation)
-	GetValues() []Relation
 }
 
 // Annotations from the database are stored in the `Row` struct, and if the
@@ -736,7 +725,7 @@ type RebindCompiler interface {
 	Rebind(ctx context.Context, s string) string
 }
 
-type NullQuerySet[QS any] interface {
+type AbstractQuerySet[MODEL any, QS AbstractQuerySet[MODEL, QS]] interface {
 	expr.ExpressionBuilder
 	expr.FieldResolver
 	Peek() expr.QueryInformation
@@ -769,8 +758,6 @@ type NullQuerySet[QS any] interface {
 	LatestQuery() QueryInfo
 	WithContext(ctx context.Context) QS
 
-	// Lazy query methods
-
 	// Lazy methods for retrieving queries
 	QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}]
 	QueryAggregate() CompiledRowsQuery[[][]interface{}]
@@ -778,8 +765,8 @@ type NullQuerySet[QS any] interface {
 }
 
 // BaseReadQuerySet is a base interface for read-only querysets.
-type BaseReadQuerySet[T any, QS any] interface {
-	NullQuerySet[QS]
+type BaseReadQuerySet[T any, QS AbstractQuerySet[T, QS]] interface {
+	AbstractQuerySet[T, QS]
 
 	// Read operations
 	All() (Rows[T], error)
@@ -789,23 +776,37 @@ type BaseReadQuerySet[T any, QS any] interface {
 	First() (*Row[T], error)
 	Last() (*Row[T], error)
 	Get() (*Row[T], error)
+}
+
+type BaseValuesQuerySet[T any, QS AbstractQuerySet[T, QS]] interface {
+	AbstractQuerySet[T, QS]
+
 	Values(fields ...any) ([]map[string]any, error)
 	ValuesList(fields ...any) ([][]interface{}, error)
 	Aggregate(annotations map[string]expr.Expression) (map[string]any, error)
 }
 
-type BaseWriteQuerySet[T any, QS any] interface {
-	NullQuerySet[QS]
+type BaseBulkQuerySet[T any, QS AbstractQuerySet[T, QS]] interface {
+	AbstractQuerySet[T, QS]
+
+	BulkCreate(objects []T) ([]T, error)
+	BatchCreate(objects []T) ([]T, error)
+	BulkUpdate(params ...any) (int64, error)
+	BatchUpdate(params ...any) (int64, error)
+}
+
+type BaseWriteQuerySet[T any, QS AbstractQuerySet[T, QS]] interface {
+	AbstractQuerySet[T, QS]
 
 	// Write, update, and delete operations
 	Create(value T) (T, error)
 	Update(value T, expressions ...any) (int64, error)
 	GetOrCreate(value T) (T, bool, error)
-	BulkCreate(objects []T) ([]T, error)
-	BatchCreate(objects []T) ([]T, error)
-	BulkUpdate(params ...any) (int64, error)
-	BatchUpdate(params ...any) (int64, error)
 	Delete(objects ...T) (int64, error)
+}
+
+type BaseRawQuerySet[T any, QS AbstractQuerySet[T, QS]] interface {
+	AbstractQuerySet[T, QS]
 
 	// Raw SQL operations
 	Row(sqlStr string, args ...interface{}) drivers.SQLRow
@@ -817,8 +818,11 @@ type BaseWriteQuerySet[T any, QS any] interface {
 //
 // It is used to retrieve, create, update, and delete objects from the database.
 // It is also used to filter, order, and annotate the objects in the database.
-type BaseQuerySet[T any, QS any] interface {
+type BaseQuerySet[T any, QS AbstractQuerySet[T, QS]] interface {
 	BaseReadQuerySet[T, QS]
+	BaseValuesQuerySet[T, QS]
+	BaseRawQuerySet[T, QS]
+	BaseBulkQuerySet[T, QS]
 	BaseWriteQuerySet[T, QS]
 }
 

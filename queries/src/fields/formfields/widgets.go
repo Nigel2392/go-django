@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -69,7 +69,7 @@ func (f *ModelSelect) ValueToGo(value interface{}) (interface{}, error) {
 		return value, nil
 	}
 
-	if value == nil || django_reflect.IsZero(value) {
+	if value == nil || versatile.IsZero(value) {
 		return nil, nil
 	}
 

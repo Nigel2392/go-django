@@ -4,9 +4,9 @@ go 1.27.0
 
 require (
 	github.com/Nigel2392/cache v1.0.4
-	github.com/Nigel2392/go-signals v1.1.2
+	github.com/Nigel2392/go-signals v1.1.4
 	github.com/Nigel2392/go-telepath v1.4.3
-	github.com/Nigel2392/goldcrest v1.0.4
+	github.com/Nigel2392/goldcrest v1.0.6
 	github.com/Nigel2392/mux v1.6.1
 	github.com/Nigel2392/tags v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.3
@@ -27,7 +27,7 @@ require (
 	github.com/shopspring/decimal v1.4.0
 	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/crypto v0.53.0
-	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
+	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa
 	golang.org/x/net v0.56.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/term v0.44.0
@@ -38,6 +38,7 @@ require (
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/Nigel2392/errors v1.0.1 // indirect
+	github.com/Nigel2392/versatile v1.0.3 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

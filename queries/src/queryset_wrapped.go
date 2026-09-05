@@ -15,19 +15,19 @@ var (
 	_ BaseQuerySet[attrs.Definer, *QuerySet[attrs.Definer]]     = (*WrappedQuerySet[attrs.Definer, *GenericQuerySet, *QuerySet[attrs.Definer]])(nil)
 )
 
-type WrappedQuerySet[T any, CONV any, ORIG NullQuerySet[ORIG]] struct {
-	NullQuerySet[ORIG]
+type WrappedQuerySet[T any, CONV AbstractQuerySet[T, CONV], ORIG AbstractQuerySet[T, ORIG]] struct {
+	AbstractQuerySet[T, ORIG]
 	embedder CONV
 }
 
-func WrapQuerySet[T any, CONV any, ORIG NullQuerySet[ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
+func WrapQuerySet[T any, CONV AbstractQuerySet[T, CONV], ORIG AbstractQuerySet[T, ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
 	if _, ok := any(embedder).(QuerySetCanClone[T, CONV, ORIG]); !ok {
 		panic("embedder must implement QuerySetCanClone[T, CONV, ORIG]")
 	}
 
 	return &WrappedQuerySet[T, CONV, ORIG]{
-		NullQuerySet: qs,
-		embedder:     embedder,
+		AbstractQuerySet: qs,
+		embedder:         embedder,
 	}
 }
 
@@ -41,7 +41,7 @@ type (
 	QuerySetCanAfterExec interface {
 		AfterExec(res any) error
 	}
-	QuerySetCanClone[T any, CONV any, ORIG NullQuerySet[ORIG]] interface {
+	QuerySetCanClone[T any, CONV AbstractQuerySet[T, CONV], ORIG AbstractQuerySet[T, ORIG]] interface {
 		/*
 			Your custom queryset must implement the following method to preserve immutability across the queryset.
 			this is **REQUIRED**.
@@ -58,7 +58,7 @@ type (
 )
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Base() ORIG {
-	return w.NullQuerySet.Clone()
+	return w.AbstractQuerySet.Clone()
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) setup() {
@@ -83,18 +83,18 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) afterReadExec(res any) error {
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) WithContext(ctx context.Context) CONV {
 	w = w.clone()
-	w.NullQuerySet = w.NullQuerySet.WithContext(ctx)
+	w.AbstractQuerySet = w.AbstractQuerySet.WithContext(ctx)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) BuildExpression() expr.Expression {
 	w.setup()
-	return w.NullQuerySet.BuildExpression()
+	return w.AbstractQuerySet.BuildExpression()
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) clone() *WrappedQuerySet[T, CONV, ORIG] {
 	var wrapped = &WrappedQuerySet[T, CONV, ORIG]{
-		NullQuerySet: w.NullQuerySet.Clone(),
+		AbstractQuerySet: w.AbstractQuerySet.Clone(),
 	}
 	var cloner = any(w.embedder).(QuerySetCanClone[T, CONV, ORIG])
 	wrapped.embedder = cloner.CloneQuerySet(wrapped)
@@ -108,47 +108,47 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Clone() CONV {
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Distinct() CONV {
 	w = w.clone()
-	w.NullQuerySet = w.NullQuerySet.Distinct()
+	w.AbstractQuerySet = w.AbstractQuerySet.Distinct()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Select(fields ...any) CONV {
 	w = w.clone()
 	w.setup()
-	w.NullQuerySet = w.NullQuerySet.Select(fields...)
+	w.AbstractQuerySet = w.AbstractQuerySet.Select(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Preload(fields ...any) CONV {
 	w = w.clone()
 	w.setup()
-	w.NullQuerySet = w.NullQuerySet.Preload(fields...)
+	w.AbstractQuerySet = w.AbstractQuerySet.Preload(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Filter(key interface{}, vals ...interface{}) CONV {
 	w = w.clone()
 	w.setup()
-	w.NullQuerySet = w.NullQuerySet.Filter(key, vals...)
+	w.AbstractQuerySet = w.AbstractQuerySet.Filter(key, vals...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) GroupBy(fields ...any) CONV {
 	w = w.clone()
 	w.setup()
-	w.NullQuerySet = w.NullQuerySet.GroupBy(fields...)
+	w.AbstractQuerySet = w.AbstractQuerySet.GroupBy(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Limit(n int) CONV {
 	w = w.clone()
-	w.NullQuerySet = w.NullQuerySet.Limit(n)
+	w.AbstractQuerySet = w.AbstractQuerySet.Limit(n)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Offset(n int) CONV {
 	w = w.clone()
-	w.NullQuerySet = w.NullQuerySet.Offset(n)
+	w.AbstractQuerySet = w.AbstractQuerySet.Offset(n)
 	return w.embedder
 }
 
@@ -156,46 +156,46 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) OrderBy(fields ...string) CONV {
 	w = w.clone()
 	w.setup()
 	// w.BaseQuerySet = w.BaseQuerySet.OrderBy(fields...)
-	w.NullQuerySet = w.NullQuerySet.OrderBy(fields...)
+	w.AbstractQuerySet = w.AbstractQuerySet.OrderBy(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Reverse() CONV {
 	w = w.clone()
-	w.NullQuerySet = w.NullQuerySet.Reverse()
+	w.AbstractQuerySet = w.AbstractQuerySet.Reverse()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) ExplicitSave() CONV {
 	w = w.clone()
-	w.NullQuerySet = w.NullQuerySet.ExplicitSave()
+	w.AbstractQuerySet = w.AbstractQuerySet.ExplicitSave()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Annotate(aliasOrAliasMap interface{}, exprs ...expr.Expression) CONV {
 	w = w.clone()
 	w.setup()
-	w.NullQuerySet = w.NullQuerySet.Annotate(aliasOrAliasMap, exprs...)
+	w.AbstractQuerySet = w.AbstractQuerySet.Annotate(aliasOrAliasMap, exprs...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) ForUpdate() CONV {
 	w = w.clone()
-	w.NullQuerySet = w.NullQuerySet.ForUpdate()
+	w.AbstractQuerySet = w.AbstractQuerySet.ForUpdate()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Prefix(prefix string) CONV {
 	w = w.clone()
 	w.setup()
-	w.NullQuerySet = w.NullQuerySet.Prefix(prefix)
+	w.AbstractQuerySet = w.AbstractQuerySet.Prefix(prefix)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Having(key interface{}, vals ...interface{}) CONV {
 	w = w.clone()
 	w.setup()
-	w.NullQuerySet = w.NullQuerySet.Having(key, vals...)
+	w.AbstractQuerySet = w.AbstractQuerySet.Having(key, vals...)
 	return w.embedder
 }
 
@@ -210,7 +210,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) All() (Rows[T], error) {
 		All() (Rows[T], error)
 	}
 
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		res, err := readQs.All()
 		if err != nil {
 			return nil, err
@@ -226,7 +226,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) IterAll() (int, iter.Seq2[*Row[T], erro
 	type readQs interface {
 		IterAll() (int, iter.Seq2[*Row[T], error], error)
 	}
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		return readQs.IterAll()
 	}
 	panic("IterAll method not implemented on underlying queryset")
@@ -242,7 +242,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Exists() (bool, error) {
 		Exists() (bool, error)
 	}
 
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		exists, err := readQs.Exists()
 		if err != nil {
 			return false, err
@@ -262,7 +262,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Count() (int64, error) {
 	type readQs interface {
 		Count() (int64, error)
 	}
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		count, err := readQs.Count()
 		if err != nil {
 			return 0, err
@@ -283,7 +283,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) First() (*Row[T], error) {
 		First() (*Row[T], error)
 	}
 
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		res, err := readQs.First()
 		if err != nil {
 			return nil, err
@@ -304,7 +304,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Last() (*Row[T], error) {
 		Last() (*Row[T], error)
 	}
 
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		res, err := readQs.Last()
 		if err != nil {
 			return nil, err
@@ -326,7 +326,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Get() (*Row[T], error) {
 		Get() (*Row[T], error)
 	}
 
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		res, err := readQs.Get()
 		if err != nil {
 			return nil, err
@@ -346,7 +346,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Values(fields ...any) ([]map[string]any
 	type readQs interface {
 		Values(fields ...any) ([]map[string]any, error)
 	}
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		res, err := readQs.Values(fields...)
 		if err != nil {
 			return nil, err
@@ -365,7 +365,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) ValuesList(fields ...any) ([][]interfac
 	type readQs interface {
 		ValuesList(fields ...any) ([][]interface{}, error)
 	}
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		res, err := readQs.ValuesList(fields...)
 		if err != nil {
 			return nil, err
@@ -386,7 +386,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Aggregate(annotations map[string]expr.E
 		Aggregate(annotations map[string]expr.Expression) (map[string]any, error)
 	}
 
-	if readQs, ok := w.NullQuerySet.(readQs); ok {
+	if readQs, ok := w.AbstractQuerySet.(readQs); ok {
 		res, err := readQs.Aggregate(annotations)
 		if err != nil {
 			return nil, err
@@ -399,7 +399,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Aggregate(annotations map[string]expr.E
 
 // this method is pretty much only used in subquery expressions.
 func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}] {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}]
 	}); ok {
 		return q.QueryAll(fields...)
@@ -409,7 +409,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAll(fields ...any) CompiledRowsQue
 
 // this method is pretty much only used in subquery expressions.
 func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAggregate() CompiledRowsQuery[[][]interface{}] {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		QueryAggregate() CompiledRowsQuery[[][]interface{}]
 	}); ok {
 		return q.QueryAggregate()
@@ -419,7 +419,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAggregate() CompiledRowsQuery[[][]
 
 // this method is pretty much only used in subquery expressions.
 func (w *WrappedQuerySet[T, CONV, ORIG]) QueryCount() CompiledRowQuery[int64] {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		QueryCount() CompiledRowQuery[int64]
 	}); ok {
 		return q.QueryCount()
@@ -428,7 +428,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) QueryCount() CompiledRowQuery[int64] {
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Create(value T) (T, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		Create(value T) (T, error)
 	}); ok {
 		return q.Create(value)
@@ -436,7 +436,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Create(value T) (T, error) {
 	panic("Create method not implemented on underlying queryset")
 }
 func (w *WrappedQuerySet[T, CONV, ORIG]) Update(value T, expressions ...any) (int64, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		Update(value T, expressions ...any) (int64, error)
 	}); ok {
 		return q.Update(value, expressions...)
@@ -444,7 +444,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Update(value T, expressions ...any) (in
 	panic("Update method not implemented on underlying queryset")
 }
 func (w *WrappedQuerySet[T, CONV, ORIG]) GetOrCreate(value T) (T, bool, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		GetOrCreate(value T) (T, bool, error)
 	}); ok {
 		return q.GetOrCreate(value)
@@ -452,7 +452,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) GetOrCreate(value T) (T, bool, error) {
 	panic("GetOrCreate method not implemented on underlying queryset")
 }
 func (w *WrappedQuerySet[T, CONV, ORIG]) BulkCreate(objects []T) ([]T, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		BulkCreate(objects []T) ([]T, error)
 	}); ok {
 		return q.BulkCreate(objects)
@@ -460,7 +460,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) BulkCreate(objects []T) ([]T, error) {
 	panic("BulkCreate method not implemented on underlying queryset")
 }
 func (w *WrappedQuerySet[T, CONV, ORIG]) BatchCreate(objects []T) ([]T, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		BatchCreate(objects []T) ([]T, error)
 	}); ok {
 		return q.BatchCreate(objects)
@@ -468,7 +468,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) BatchCreate(objects []T) ([]T, error) {
 	panic("BatchCreate method not implemented on underlying queryset")
 }
 func (w *WrappedQuerySet[T, CONV, ORIG]) BulkUpdate(params ...any) (int64, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		BulkUpdate(params ...any) (int64, error)
 	}); ok {
 		return q.BulkUpdate(params...)
@@ -476,7 +476,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) BulkUpdate(params ...any) (int64, error
 	panic("BulkUpdate method not implemented on underlying queryset")
 }
 func (w *WrappedQuerySet[T, CONV, ORIG]) BatchUpdate(params ...any) (int64, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		BatchUpdate(params ...any) (int64, error)
 	}); ok {
 		return q.BatchUpdate(params...)
@@ -484,7 +484,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) BatchUpdate(params ...any) (int64, erro
 	panic("BatchUpdate method not implemented on underlying queryset")
 }
 func (w *WrappedQuerySet[T, CONV, ORIG]) Delete(objects ...T) (int64, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		Delete(objects ...T) (int64, error)
 	}); ok {
 		return q.Delete(objects...)
@@ -493,7 +493,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Delete(objects ...T) (int64, error) {
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Row(sqlStr string, args ...interface{}) drivers.SQLRow {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		Row(sqlStr string, args ...interface{}) drivers.SQLRow
 	}); ok {
 		return q.Row(sqlStr, args...)
@@ -502,7 +502,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Row(sqlStr string, args ...interface{})
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Rows(sqlStr string, args ...interface{}) (drivers.SQLRows, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		Rows(sqlStr string, args ...interface{}) (drivers.SQLRows, error)
 	}); ok {
 		return q.Rows(sqlStr, args...)
@@ -511,7 +511,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Rows(sqlStr string, args ...interface{}
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Exec(sqlStr string, args ...interface{}) (sql.Result, error) {
-	if q, ok := w.NullQuerySet.(interface {
+	if q, ok := w.AbstractQuerySet.(interface {
 		Exec(sqlStr string, args ...interface{}) (sql.Result, error)
 	}); ok {
 		return q.Exec(sqlStr, args...)

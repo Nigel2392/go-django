@@ -2,6 +2,7 @@ package messages
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -137,4 +138,56 @@ func Warning(r *http.Request, message string, extraTags ...MessageTag) error {
 
 func Error(r *http.Request, message string, extraTags ...MessageTag) error {
 	return AddMessage(r, ERROR, message, extraTags...)
+}
+
+func tagsFromArgs(args []any) ([]any, []MessageTag) {
+	var (
+		t       = make([]MessageTag, 0)
+		lastIdx int
+	)
+
+loop:
+	for i, arg := range args {
+		switch a := arg.(type) {
+		case MessageTag:
+			t = append(t, a)
+		case []MessageTag:
+			t = append(t, a...)
+		default:
+			lastIdx = i
+			break loop
+		}
+	}
+
+	return args[lastIdx:], t
+}
+
+func Debugf(r *http.Request, message string, argsAndTags ...any) error {
+	args, tags := tagsFromArgs(argsAndTags)
+	message = fmt.Sprintf(message, args...)
+	return AddMessage(r, DEBUG, message, tags...)
+}
+
+func Infof(r *http.Request, message string, argsAndTags ...any) error {
+	args, tags := tagsFromArgs(argsAndTags)
+	message = fmt.Sprintf(message, args...)
+	return AddMessage(r, INFO, message, tags...)
+}
+
+func Successf(r *http.Request, message string, argsAndTags ...any) error {
+	args, tags := tagsFromArgs(argsAndTags)
+	message = fmt.Sprintf(message, args...)
+	return AddMessage(r, SUCCESS, message, tags...)
+}
+
+func Warningf(r *http.Request, message string, argsAndTags ...any) error {
+	args, tags := tagsFromArgs(argsAndTags)
+	message = fmt.Sprintf(message, args...)
+	return AddMessage(r, WARNING, message, tags...)
+}
+
+func Errorf(r *http.Request, message string, argsAndTags ...any) error {
+	args, tags := tagsFromArgs(argsAndTags)
+	message = fmt.Sprintf(message, args...)
+	return AddMessage(r, ERROR, message, tags...)
 }

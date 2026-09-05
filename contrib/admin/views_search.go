@@ -8,15 +8,12 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/Nigel2392/go-django/src/views"
 )
 
 var SearchView = &searches.SearchView{
-	BaseView: views.BaseView{
-		AllowedMethods:  []string{http.MethodGet},
-		BaseTemplateKey: BASE_KEY,
-		TemplateName:    "admin/views/search.tmpl",
-	},
+	AllowedMethods:  []string{http.MethodGet},
+	BaseTemplateKey: BASE_KEY,
+	TemplateName:    "admin/views/search.tmpl",
 	FailURL: func(r *http.Request) string {
 		return django.Reverse("admin:home")
 	},

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -108,10 +108,10 @@ func (l *BoundValue[T]) Equal(other any) bool {
 		switch {
 		case l.BlockObject == nil && o.BlockObject == nil:
 			if len(l._rawData) > 0 && len(o._rawData) > 0 {
-				return django_reflect.Equals(l._rawData, o._rawData, django_reflect.EQ_BYTES_RUNES)
+				return versatile.Equals(l._rawData, o._rawData, versatile.EQ_BYTES_RUNES)
 			}
 
-			return django_reflect.Equals(l.V, o.V, django_reflect.EQ_DFLT)
+			return versatile.Equals(l.V, o.V, versatile.EQ_DFLT)
 
 		case l.BlockObject == nil:
 			l.BlockObject = o.BlockObject
@@ -124,7 +124,7 @@ func (l *BoundValue[T]) Equal(other any) bool {
 
 		if l.BlockObject == nil {
 			// other is automatically also nil
-			return django_reflect.Equals(l.V, o.V, django_reflect.EQ_DFLT)
+			return versatile.Equals(l.V, o.V, versatile.EQ_DFLT)
 		}
 
 		return !l.BlockObject.HasChanged(l, o)
@@ -132,7 +132,7 @@ func (l *BoundValue[T]) Equal(other any) bool {
 	case T:
 
 		if l.BlockObject == nil {
-			return django_reflect.Equals(l.V, o, django_reflect.EQ_DFLT)
+			return versatile.Equals(l.V, o, versatile.EQ_DFLT)
 		}
 
 		return !l.BlockObject.HasChanged(l.V, &BoundValue[T]{
@@ -186,7 +186,7 @@ func (l *BoundValue[T]) LoadData(raw json.RawMessage) error {
 }
 
 func (l *BoundValue[T]) Render(c context.Context, w io.Writer, ctxt ctx.Context) error {
-	if l == nil || django_reflect.IsZero(l.V) {
+	if l == nil || versatile.IsZero(l.V) {
 		return nil
 	}
 	return l.BlockObject.Render(c, w, l, ctxt)

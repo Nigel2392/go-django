@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/djester"
-	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/PuerkitoBio/goquery"
@@ -74,7 +74,7 @@ func (f *FieldTest[FORMFIELD]) getFormField(d *djester.Tester, t *testing.T) (fo
 		t.Fatal("Formfield is not of type FORMFIELD or func(d *djester.Tester, t *testing.T, ft *FieldTest[FORMFIELD]) FORMFIELD")
 	}
 
-	if django_reflect.IsZero(formField) {
+	if versatile.IsZero(formField) {
 		t.Fatal("FormField is nil")
 	}
 
