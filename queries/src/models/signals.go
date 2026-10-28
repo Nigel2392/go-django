@@ -1,8 +1,10 @@
 package models
 
 import (
+	"context"
 	"reflect"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-signals"
 )
@@ -51,4 +53,10 @@ var (
 	model_signal_pool = signals.NewPool[ModelSignal]()
 
 	SIGNAL_MODEL_SETUP = model_signal_pool.Get("models.Model.setup")
+	_, _               = SIGNAL_MODEL_SETUP.Listen(context.Background(), func(ctx context.Context, s signals.Signal[ModelSignal], ms ModelSignal) error {
+		return queries.SignalModelInit.Send(ctx, queries.ModelSignal{
+			Context:  ctx,
+			Instance: ms.Object,
+		})
+	})
 )

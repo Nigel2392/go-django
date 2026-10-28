@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/versatile/clone"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -95,22 +97,33 @@ func (rl *RelRevFK[T]) ParentInfo() *ParentInfo {
 	return rl.Parent
 }
 
-func (rl *RelRevFK[T]) AttrsClone(ctx context.Context, obj attrs.Definer, fld attrs.Field) (ret *RelRevFK[T], err error) {
-	var relations = rl.relations.Copy()
-	for head := relations.Front(); head != nil; head = head.Next() {
-		head.Value, err = attrs.Clone(ctx, head.Value)
-		if err != nil {
-			return nil, err
+func (rl *RelRevFK[T]) CCopy(ctx context.Context, state *clone.State, dst *RelRevFK[T], caller clone.StructCaller) error {
+	if rl == nil {
+		return nil
+	}
+
+	if rl.Parent != nil {
+		model := caller.Val.Addr().Interface().(attrs.Definer)
+		defs := attrs.Define(ctx, model)
+		field, ok := defs.Field(rl.Parent.Field.Name())
+		if !ok {
+			return errors.FieldNotFound
+		}
+
+		dst.Parent = &ParentInfo{
+			Object: model,
+			Field:  field,
 		}
 	}
 
-	return &RelRevFK[T]{
-		Parent: &ParentInfo{
-			Object: obj,
-			Field:  fld,
+	return state.Copy(
+		ctx, &dst.relations, rl.relations,
+		clone.StateCopyCaller[**orderedmap.OrderedMap[any, T], *orderedmap.OrderedMap[any, T], *RelRevFK[T]]{
+			Dst:  &dst.relations,
+			Src:  rl.relations,
+			From: rl,
 		},
-		relations: relations,
-	}, nil
+	)
 }
 
 func (rl *RelRevFK[T]) BindToModel(parent attrs.Definer, parentField attrs.Field) error {
@@ -208,25 +221,39 @@ func (rl *RelO2O[T1, T2]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rl.Object)
 }
 
-func (rl *RelO2O[T1, T2]) AttrsClone(ctx context.Context, obj attrs.Definer, fld attrs.Field) (*RelO2O[T1, T2], error) {
-	clonedObject, err := attrs.Clone(ctx, rl.Object)
-	if err != nil {
-		return nil, err
+func (rl *RelO2O[T1, T2]) CCopy(ctx context.Context, state *clone.State, dst *RelO2O[T1, T2], caller clone.StructCaller) error {
+	if rl == nil {
+		return nil
 	}
 
-	clonedThroughObject, err := attrs.Clone(ctx, rl.ThroughObject)
-	if err != nil {
-		return nil, err
+	if rl.Parent != nil {
+		model := caller.Val.Addr().Interface().(attrs.Definer)
+		defs := attrs.Define(ctx, model)
+		field, ok := defs.Field(rl.Parent.Field.Name())
+		if !ok {
+			return errors.FieldNotFound
+		}
+
+		dst.Parent = &ParentInfo{
+			Object: model,
+			Field:  field,
+		}
 	}
 
-	return &RelO2O[T1, T2]{
-		Parent: &ParentInfo{
-			Object: obj,
-			Field:  fld,
-		},
-		Object:        clonedObject,
-		ThroughObject: clonedThroughObject,
-	}, nil
+	err := state.Copy(ctx, &dst.Object, rl.Object, clone.StateCopyCaller[*T1, T1, *RelO2O[T1, T2]]{
+		Dst:  &dst.Object,
+		Src:  rl.Object,
+		From: rl,
+	})
+	if err != nil {
+		return err
+	}
+
+	return state.Copy(ctx, &dst.ThroughObject, rl.ThroughObject, clone.StateCopyCaller[*T2, T2, *RelO2O[T1, T2]]{
+		Dst:  &dst.ThroughObject,
+		Src:  rl.ThroughObject,
+		From: rl,
+	})
 }
 
 func (rl *RelO2O[T1, T2]) ParentInfo() *ParentInfo {
@@ -295,24 +322,33 @@ func (rl *RelM2M[T1, T2]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rl.AsList())
 }
 
-func (rl *RelM2M[T1, T2]) AttrsClone(ctx context.Context, obj attrs.Definer, fld attrs.Field) (*RelM2M[T1, T2], error) {
-	var relations = rl.relations.Copy()
-	for head := relations.Front(); head != nil; head = head.Next() {
-		hv, err := head.Value.AttrsClone(ctx, obj, fld)
-		if err != nil {
-			return nil, err
-		}
-
-		head.Value = *hv
+func (rl *RelM2M[T1, T2]) CCopy(ctx context.Context, state *clone.State, dst *RelM2M[T1, T2], caller clone.StructCaller) error {
+	if rl == nil {
+		return nil
 	}
 
-	return &RelM2M[T1, T2]{
-		Parent: &ParentInfo{
-			Object: obj,
-			Field:  fld,
+	if rl.Parent != nil {
+		model := caller.Val.Addr().Interface().(attrs.Definer)
+		defs := attrs.Define(ctx, model)
+		field, ok := defs.Field(rl.Parent.Field.Name())
+		if !ok {
+			return errors.FieldNotFound
+		}
+
+		dst.Parent = &ParentInfo{
+			Object: model,
+			Field:  field,
+		}
+	}
+
+	return state.Copy(
+		ctx, &dst.relations, rl.relations,
+		clone.StateCopyCaller[**orderedmap.OrderedMap[any, RelO2O[T1, T2]], *orderedmap.OrderedMap[any, RelO2O[T1, T2]], *RelM2M[T1, T2]]{
+			Dst:  &dst.relations,
+			Src:  rl.relations,
+			From: rl,
 		},
-		relations: relations,
-	}, nil
+	)
 }
 
 func (rl *RelM2M[T1, T2]) ParentInfo() *ParentInfo {

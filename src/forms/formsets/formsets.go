@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -19,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/utils/mixins"
+	"github.com/Nigel2392/versatile"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -350,7 +350,7 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 
 	isValid = true
 	var data, files = form.Data()
-	for mixin := range mixins.Mixins[any](form, true) {
+	for mixin := range mixins.Mixins[any, any](form, true) {
 		if prevalidator, ok := mixin.(forms.PrevalidatorMixin); ok {
 			var errors = prevalidator.Prevalidate(ctx, formObj, data, files)
 			if len(errors) > 0 {

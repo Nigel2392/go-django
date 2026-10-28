@@ -11,9 +11,9 @@ type Definer[T any] interface {
 
 func NillSeq[K any](yield func(K) bool) {}
 
-func defaultMixinsFn[T any](obj T, depth int) iter.Seq[T] {
-	if mixin, ok := any(obj).(Definer[T]); ok {
-		return func(yield func(T) bool) {
+func defaultMixinsFn[IN, OUT any](obj IN, depth int) iter.Seq[OUT] {
+	if mixin, ok := any(obj).(Definer[OUT]); ok {
+		return func(yield func(OUT) bool) {
 			for _, m := range mixin.Mixins() {
 				if !yield(m) {
 					return
@@ -24,31 +24,39 @@ func defaultMixinsFn[T any](obj T, depth int) iter.Seq[T] {
 	return NillSeq
 }
 
-func Mixins[T any](obj T, topDown bool) iter.Seq2[T, int] {
-	return func(yield func(T, int) bool) {
+func Mixins[IN, OUT any](obj IN, topDown bool) iter.Seq2[OUT, int] {
+	return func(yield func(OUT, int) bool) {
 		iterMixins(yield, obj, topDown, 0, defaultMixinsFn)
 	}
 }
 
-func MixinsFunc[T any](obj T, topDown bool, fn func(obj T, depth int) iter.Seq[T]) iter.Seq2[T, int] {
-	return func(yield func(T, int) bool) {
+func MixinsFunc[IN, OUT any](obj IN, topDown bool, fn func(obj IN, depth int) iter.Seq[OUT]) iter.Seq2[OUT, int] {
+	return func(yield func(OUT, int) bool) {
 		iterMixins(yield, obj, topDown, 0, fn)
 	}
 }
 
-func iterMixins[T any](yield func(T, int) bool, obj T, topDown bool, depth int, fn func(obj T, depth int) iter.Seq[T]) bool {
-	if topDown && !yield(obj, depth) {
+func iterMixins[IN, OUT any](yield func(OUT, int) bool, obj IN, topDown bool, depth int, fn func(obj IN, depth int) iter.Seq[OUT]) bool {
+	_out, ok := any(obj).(OUT)
+	if ok && topDown && !yield(_out, depth) {
 		return false
 	}
 	if fn == nil {
 		panic("cannot get mixins, provided function is nil")
 	}
 	for m := range fn(obj, depth) {
-		if !iterMixins(yield, m, topDown, depth+1, fn) {
-			return false
+		_m, _ok := any(m).(IN)
+		if _ok {
+			if !iterMixins(yield, _m, topDown, depth+1, fn) {
+				return false
+			}
+		} else {
+			if !yield(m, depth+1) {
+				return false
+			}
 		}
 	}
-	if !topDown && !yield(obj, depth) {
+	if ok && !topDown && !yield(_out, depth) {
 		return false
 	}
 	return true

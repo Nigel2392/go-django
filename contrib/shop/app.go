@@ -41,13 +41,12 @@ var SHOP = &ShopAppConfig{
 	SIGNALS: signals.NewManager(),
 }
 
-var NewHandler = app.ShopToHttpHandlerBuilder(SHOP)
-
 func NewAppConfig() (django.AppConfig, error) {
 	if SHOP == nil || SHOP.IsReady() {
 		return SHOP, nil
 	}
 
+	var NewHandler = app.ShopToHttpHandlerBuilder(SHOP)
 	tplFS, err := fs.Sub(assetFilesystem, "assets/templates")
 	if err != nil {
 		return SHOP, err

@@ -397,7 +397,7 @@ func TestMixinTree(t *testing.T) {
 	for i, test := range mixinTests {
 		t.Run(fmt.Sprintf("BuildTree-%d", i), func(t *testing.T) {
 			var got []int
-			for mixin, depth := range mixins.Mixins(test.tree, test.topDown) {
+			for mixin, depth := range mixins.Mixins[DepthObj, DepthObj](test.tree, test.topDown) {
 				_ = mixin
 				if test.useTreeDepth {
 					depth = mixin.GetDepth()

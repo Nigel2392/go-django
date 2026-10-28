@@ -2,11 +2,16 @@ package attrutils
 
 import (
 	"reflect"
+	"sync"
 
 	_ "unsafe"
 )
 
-var cachedStructs = make(reflectStructFieldMap) // Cache for struct fields and methods
+var (
+	cachedStructs = reflectStructFields{
+		m: make(map[reflect.Type]*structType), // Cache for struct fields and methods
+	}
+)
 
 func GetStructField(typIndirected reflect.Type, name string) (*reflect.StructField, bool) {
 	var f, ok, _ = cachedStructs.getField(typIndirected, name)
@@ -18,33 +23,11 @@ func GetStructMethod(typIndirected reflect.Type, name string) (reflect.Method, b
 }
 
 func AddStructField(typIndirected reflect.Type, name string, field *reflect.StructField) {
-	var (
-		structTyp, ok = cachedStructs[typIndirected]
-	)
-	if !ok {
-		structTyp = &structType{
-			methods: make(map[string]reflect.Method),
-			fields:  make(map[string]*reflect.StructField),
-		}
-		cachedStructs[typIndirected] = structTyp
-	}
-
-	structTyp.fields[name] = field
+	cachedStructs.addStructField(typIndirected, name, field)
 }
 
 func AddStructMethod(typIndirected reflect.Type, name string, method reflect.Method) {
-	var (
-		structTyp, ok = cachedStructs[typIndirected]
-	)
-	if !ok {
-		structTyp = &structType{
-			methods: make(map[string]reflect.Method),
-			fields:  make(map[string]*reflect.StructField),
-		}
-		cachedStructs[typIndirected] = structTyp
-	}
-
-	structTyp.methods[name] = method
+	cachedStructs.addStructMethod(typIndirected, name, method)
 }
 
 type structType struct {
@@ -52,12 +35,47 @@ type structType struct {
 	fields  map[string]*reflect.StructField
 }
 
-type reflectStructFieldMap map[reflect.Type]*structType
+type reflectStructFields struct {
+	mu sync.Mutex
+	m  map[reflect.Type]*structType
+}
 
-func (m reflectStructFieldMap) getField(typIndirected reflect.Type, name string) (fld *reflect.StructField, found bool, cached bool) {
+func (m *reflectStructFields) addStructField(typIndirected reflect.Type, name string, field *reflect.StructField) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var structTyp, ok = m.m[typIndirected]
+	if !ok {
+		structTyp = &structType{
+			methods: make(map[string]reflect.Method),
+			fields:  make(map[string]*reflect.StructField),
+		}
+		m.m[typIndirected] = structTyp
+	}
+
+	structTyp.fields[name] = field
+}
+
+func (m *reflectStructFields) addStructMethod(typIndirected reflect.Type, name string, method reflect.Method) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var structTyp, ok = m.m[typIndirected]
+	if !ok {
+		structTyp = &structType{
+			methods: make(map[string]reflect.Method),
+			fields:  make(map[string]*reflect.StructField),
+		}
+		m.m[typIndirected] = structTyp
+	}
+
+	structTyp.methods[name] = method
+}
+
+func (m *reflectStructFields) getField(typIndirected reflect.Type, name string) (fld *reflect.StructField, found bool, cached bool) {
 	cached = true
 	var (
-		structTyp, ok = m[typIndirected]
+		structTyp, ok = m.m[typIndirected]
 		field         *reflect.StructField
 	)
 	if !ok {
@@ -65,7 +83,7 @@ func (m reflectStructFieldMap) getField(typIndirected reflect.Type, name string)
 			methods: make(map[string]reflect.Method),
 			fields:  make(map[string]*reflect.StructField),
 		}
-		m[typIndirected] = structTyp
+		m.m[typIndirected] = structTyp
 		cached = false
 	}
 
@@ -83,9 +101,9 @@ func (m reflectStructFieldMap) getField(typIndirected reflect.Type, name string)
 	return field, ok, cached
 }
 
-func (m reflectStructFieldMap) getMethod(typIndirected reflect.Type, name string) (reflect.Method, bool) {
+func (m *reflectStructFields) getMethod(typIndirected reflect.Type, name string) (reflect.Method, bool) {
 	var (
-		structTyp, ok = m[typIndirected]
+		structTyp, ok = m.m[typIndirected]
 		method        reflect.Method
 	)
 

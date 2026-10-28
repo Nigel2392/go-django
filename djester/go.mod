@@ -4,12 +4,15 @@ go 1.27.0
 
 require (
 	github.com/Nigel2392/mux v1.6.1
+	github.com/Nigel2392/versatile v1.0.4
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/dolthub/go-mysql-server v0.20.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
+	github.com/Nigel2392/errors v1.0.3 // indirect
+	github.com/Nigel2392/goldcrest v1.0.7 // indirect
 	github.com/alexedwards/scs/v2 v2.9.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -30,13 +33,15 @@ require (
 	github.com/tetratelabs/wazero v1.9.0 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
-	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260508192327-42602be52be6 // indirect
-	golang.org/x/text v0.38.0 // indirect
-	golang.org/x/tools v0.45.0 // indirect
+	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa // indirect
+	golang.org/x/mod v0.39.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
+	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/src-d/go-errors.v1 v1.0.0 // indirect

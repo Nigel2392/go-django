@@ -28,7 +28,7 @@ func NewContentTypeRegistry() *ContentTypeRegistry {
 		registry:   make(map[string]*ContentTypeDefinition),
 		aliases:    make(map[string][]string),
 		aliasesRev: make(map[string]string),
-		onRegister: signals.New[*ContentTypeDefinition]("contenttypes.OnRegister"),
+		onRegister: signals.Get[*ContentTypeDefinition]("contenttypes.OnRegister"),
 	}
 }
 

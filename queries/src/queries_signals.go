@@ -21,23 +21,24 @@ type ModelSignal struct {
 type SignalSave = ModelSignal
 
 var (
-	signals_model = signals.NewPool[ModelSignal]()
+	// Signal to be executed when a model is setup.
+	SignalModelInit = signals.Get[ModelSignal]("queries.model.init")
 
 	// Signal to be executed before inserting / updating a model instance.
-	SignalPreModelSave = signals_model.Get("queries.model.pre_save")
+	SignalPreModelSave = signals.Get[ModelSignal]("queries.model.pre_save")
 
 	// Signal to be executed after inserting / updating a model instance.
-	SignalPostModelSave = signals_model.Get("queries.model.post_save")
+	SignalPostModelSave = signals.Get[ModelSignal]("queries.model.post_save")
 
 	// Signal to be executed before inserting model instance.
-	SignalPreModelCreate = signals_model.Get("queries.model.pre_create")
+	SignalPreModelCreate = signals.Get[ModelSignal]("queries.model.pre_create")
 
 	// Signal to be executed after inserting a model instance.
-	SignalPostModelCreate = signals_model.Get("queries.model.post_create")
+	SignalPostModelCreate = signals.Get[ModelSignal]("queries.model.post_create")
 
 	// Signal to be executed before deleting a model instance.
-	SignalPreModelDelete = signals_model.Get("queries.model.pre_delete")
+	SignalPreModelDelete = signals.Get[ModelSignal]("queries.model.pre_delete")
 
 	// Signal to be executed after deleting a model instance.
-	SignalPostModelDelete = signals_model.Get("queries.model.post_delete")
+	SignalPostModelDelete = signals.Get[ModelSignal]("queries.model.post_delete")
 )

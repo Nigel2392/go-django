@@ -34,6 +34,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/versatile/clone"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/shopspring/decimal"
 )
@@ -291,9 +292,31 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		)
 	}
 
-	originalProduct, err := attrs.Clone(r.Context(), productRow.Object)
-	if err != nil {
-		logger.Fatal(http.StatusInternalServerError, err)
+	var originalProduct *models.Product
+	// if r.Method == http.MethodPost {
+	// originalProduct, err = clone.Clone[*models.Product](
+	// r.Context(),
+	// productRow.Object,
+	// clone.Flag(clone.CF_NOVALIDATE),
+	// )
+	// if err != nil {
+	// logger.Fatal(http.StatusInternalServerError, err)
+	// }
+	// }
+	//
+	if r.Method == http.MethodPost {
+		err = clone.Copy(
+			r.Context(),
+			&originalProduct,
+			productRow.Object,
+			clone.Flag(clone.CF_NOVALIDATE),
+		)
+		if err != nil {
+			logger.Fatal(http.StatusInternalServerError, err)
+		}
+
+		logger.Warnf("%+v", originalProduct)
+		logger.Warnf("%+v", productRow.Object)
 	}
 
 	var form = forms.NewAdminForm(r, productRow.Object, func(p *models.Product) []admin.Panel {

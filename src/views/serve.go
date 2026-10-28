@@ -402,7 +402,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 	// these methods will still be checked for bound views
 	// this is because we only break the forloop if the [BindableView] check fails.
 	for {
-		for mixin := range mixins.Mixins(view, false) {
+		for mixin := range mixins.Mixins[View, View](view, false) {
 			if checker, ok := mixin.(Checker); ok {
 				if err = checker.Check(w, req); err != nil {
 					django.App().Log.Error(err)

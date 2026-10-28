@@ -8,12 +8,12 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/Nigel2392/versatile"
 	errsPkg "github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/utils/mixins"
+	"github.com/Nigel2392/versatile"
 	dr "github.com/Nigel2392/versatile"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -162,7 +162,7 @@ func IsValid[T any](ctx context.Context, formObj T) bool {
 		"You cannot call IsValid() without setting the data first on %T.", f,
 	)
 
-	for mixin := range mixins.Mixins[any](f, true) {
+	for mixin := range mixins.Mixins[any, any](f, true) {
 		if prevalidator, ok := mixin.(PrevalidatorMixin); ok {
 			var errors = prevalidator.Prevalidate(ctx, formObj, rawData, files)
 			if len(errors) > 0 {
@@ -208,7 +208,7 @@ func IsValid[T any](ctx context.Context, formObj T) bool {
 		}
 
 	loopMixins:
-		for mixin := range mixins.Mixins[any](f, true) {
+		for mixin := range mixins.Mixins[any, any](f, true) {
 			cleaner, ok := mixin.(ValidatorMixin)
 			if !ok {
 				continue
@@ -284,7 +284,7 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 		}
 	}
 
-	for mixin, depth := range mixins.Mixins[any](f, false) {
+	for mixin, depth := range mixins.Mixins[any, any](f, false) {
 		fm, ok := mixin.(FullCleanMixin)
 		if !ok {
 			if depth == 0 {

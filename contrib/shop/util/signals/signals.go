@@ -15,12 +15,12 @@ import (
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
-var (
-	productPool = signals.NewPool[*ProductSignalData]()
-	cartPool    = signals.NewPool[*CartSignalData]()
-	orderPool   = signals.NewPool[*OrderSignalData]()
-	paymentPool = signals.NewPool[*PaymentSignalData]()
-)
+// var (
+// productPool = signals.NewPool[]()
+// cartPool    = signals.NewPool[*CartSignalData]()
+// orderPool   = signals.NewPool[*OrderSignalData]()
+// paymentPool = signals.NewPool[*PaymentSignalData]()
+// )
 
 type BaseSignal struct {
 	Context   context.Context `json:"-"`
@@ -118,24 +118,24 @@ type Manager struct {
 func NewManager() Manager {
 	return Manager{
 		Products: ModelManager[*ProductSignalData]{
-			Created: productPool.Get("products:created"),
-			Updated: productPool.Get("products:updated"),
-			Deleted: productPool.Get("products:deleted"),
+			Created: signals.Get[*ProductSignalData]("products:created"),
+			Updated: signals.Get[*ProductSignalData]("products:updated"),
+			Deleted: signals.Get[*ProductSignalData]("products:deleted"),
 		},
 		Cart: ModelManager[*CartSignalData]{
-			Created: cartPool.Get("cart:created"),
-			Updated: cartPool.Get("cart:updated"),
-			Deleted: cartPool.Get("cart:deleted"),
+			Created: signals.Get[*CartSignalData]("cart:created"),
+			Updated: signals.Get[*CartSignalData]("cart:updated"),
+			Deleted: signals.Get[*CartSignalData]("cart:deleted"),
 		},
 		Orders: ModelManager[*OrderSignalData]{
-			Created: orderPool.Get("orders:created"),
-			Updated: orderPool.Get("orders:updated"),
-			Deleted: orderPool.Get("orders:deleted"),
+			Created: signals.Get[*OrderSignalData]("orders:created"),
+			Updated: signals.Get[*OrderSignalData]("orders:updated"),
+			Deleted: signals.Get[*OrderSignalData]("orders:deleted"),
 		},
 		Payment: PaymentManager{
-			Started:   paymentPool.Get("payments:started"),
-			Cancelled: paymentPool.Get("payments:cancelled"),
-			Refunded:  paymentPool.Get("payments:refunded"),
+			Started:   signals.Get[*PaymentSignalData]("payments:started"),
+			Cancelled: signals.Get[*PaymentSignalData]("payments:cancelled"),
+			Refunded:  signals.Get[*PaymentSignalData]("payments:refunded"),
 		},
 	}
 }

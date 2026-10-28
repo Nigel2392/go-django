@@ -29,10 +29,8 @@ type FormSignal struct {
 }
 
 var (
-	_formSignalPool = signals.NewPool[*FormSignal]()
-
-	SignalPreValidateLogonField  = _formSignalPool.Get("auth.form.prevalidate")
-	SignalPostValidateLogonField = _formSignalPool.Get("auth.form.postvalidate")
+	SignalPreValidateLogonField  = signals.Get[*FormSignal]("auth.form.prevalidate")
+	SignalPostValidateLogonField = signals.Get[*FormSignal]("auth.form.postvalidate")
 
 	_ forms.Form = (*BaseUserForm)(nil)
 )

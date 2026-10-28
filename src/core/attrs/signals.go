@@ -38,33 +38,29 @@ type SignalThroughModelMeta struct {
 //		})
 //	}
 var (
-	modelSignalPool = signals.NewPool[SignalModelMeta]()
-
-	throughSignalPool = signals.NewPool[SignalThroughModelMeta]()
-
 	// A signal that is called before a model is registered.
 	//
 	// This can be used to add custom logic before a model is registered.
-	OnBeforeModelRegister = modelSignalPool.Get("attrs.OnBeforeModelRegister")
+	OnBeforeModelRegister = signals.Get[SignalModelMeta]("attrs.OnBeforeModelRegister")
 
 	// A signal that is called after a model is registered.
 	//
 	// This can be used to add custom logic after a model is registered.
-	OnModelRegister = modelSignalPool.Get("attrs.OnModelRegister")
+	OnModelRegister = signals.Get[SignalModelMeta]("attrs.OnModelRegister")
 
 	// A signal that is called when a through model is registered.
 	//
 	// This is only sent from the forward relation side,
 	// not when the through model is actually registered.
-	OnThroughModelRegister = throughSignalPool.Get("attrs.OnThroughModelRegister")
+	OnThroughModelRegister = signals.Get[SignalThroughModelMeta]("attrs.OnThroughModelRegister")
 
 	// ResetDefinitions is a signal that can be sent to reset the static definitions of all models.
 	//
 	// This should be done after all models have been registered, so that the static definitions have enough information to be built correctly.
-	ResetDefinitions = signals.New[any]("attrs.ResetDefinitions")
+	ResetDefinitions = signals.Get[any]("attrs.ResetDefinitions")
 
-	PreResetDefinitions  = signals.New[any]("attrs.pre.ResetDefinitions")
-	PostResetDefinitions = signals.New[any]("attrs.post.ResetDefinitions")
+	PreResetDefinitions  = signals.Get[any]("attrs.pre.ResetDefinitions")
+	PostResetDefinitions = signals.Get[any]("attrs.post.ResetDefinitions")
 
 	//_, _ = OnModelRegister.Listen(func(s signals.Signal[SignalModelMeta], smm SignalModelMeta) error {
 	//	return ResetDefinitions.Send(nil)

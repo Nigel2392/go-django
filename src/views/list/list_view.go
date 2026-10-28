@@ -73,7 +73,7 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 		}
 	}
 
-	for mixin, depth := range mixins.Mixins(view, false) {
+	for mixin, depth := range mixins.Mixins[views.View, views.View](view, false) {
 		if depth == 0 {
 			continue
 		}
@@ -143,7 +143,7 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 	viewCtx.Set("view_amount_param", v.AmountParam)
 	viewCtx.Set("view_page_param", v.PageParam)
 
-	for mixin, depth := range mixins.Mixins(view, false) {
+	for mixin, depth := range mixins.Mixins[views.View, views.View](view, false) {
 		// only call the GetContext method for mixins.
 		// do not include the view itself, the GetContext method
 		// of the view will be called later.
@@ -176,7 +176,7 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 		}
 	}
 
-	for mixin, depth := range mixins.Mixins(view, false) {
+	for mixin, depth := range mixins.Mixins[views.View, views.View](view, false) {
 		// The view itself cannot hijack like this.
 		// The view has to override the Render method.
 		if depth == 0 {

@@ -9,7 +9,7 @@ import (
 	_ "unsafe"
 )
 
-type Error = errors.Error
+type Error = errors.AbstractError[errors.Error]
 
 func New(code GoCode, message string, related ...error) Error {
 	return errors.New(code, message, related...)
@@ -17,7 +17,7 @@ func New(code GoCode, message string, related ...error) Error {
 
 // Errorf formats according to a format specifier and returns the string
 // as a value that satisfies error.
-func Errorf(code GoCode, format string, args ...interface{}) error {
+func Errorf(code GoCode, format string, args ...interface{}) Error {
 	return errors.Errorf(code, format, args...)
 }
 
