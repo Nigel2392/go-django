@@ -34,7 +34,7 @@ func GetSearchBackend(name string) (SearchBackend, bool) {
 	return backend, ok
 }
 
-func GetSearchBackendForModel[T SearchableModel](model T) (SearchBackend, error) {
+func GetSearchBackendForModel[T any](model T) (SearchBackend, error) {
 	var backend SearchBackend
 	if bd, ok := any(model).(BackendDefiner); ok {
 		backend = bd.SearchBackend()

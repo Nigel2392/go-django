@@ -1,8 +1,8 @@
 filippo.io/edwards25519 v1.1.1 h1:YpjwWWlNmGIDyXOn8zLzqiD+9TyIlPhGFG96P39uBpw=
-github.com/Nigel2392/errors v1.0.3 h1:optlxnOFsrGXIiGnC+LDXDz+clFr/WaN3kuuj8gdSKk=
+github.com/Nigel2392/errors v1.0.4 h1:t9JA1HJbmUKsOxba2e2c53zvFr3YwT1Ro08jkqhayyw=
 github.com/Nigel2392/goldcrest v1.0.7 h1:cQV71lWodn9MUAME0VVhA/E65TGwPikdm/nv5vaaLBY=
 github.com/Nigel2392/mux v1.6.1 h1:gnoN5DnCWrRFJwDA9WQMW9RkYktU+3p6+qzyD3uqWp4=
-github.com/Nigel2392/versatile v1.0.4 h1:rmFHKup/gkF/uk3RBa8wi3m12Rkt4CYj6stx3BqRhi4=
+github.com/Nigel2392/versatile v1.0.7-0.20261028221037-2bc06ecbdba4 h1:vg5oPAMyNno9lpcZpueAxGnjfb2zzE108m8WslizQ+Y=
 github.com/PuerkitoBio/goquery v1.10.3 h1:pFYcNSqHxBD06Fpj/KsbStFRsgRATgnf3LeXiUkhzPo=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/alexedwards/scs/v2 v2.9.0 h1:xa05mVpwTBm1iLeTMNFfAWpKUm4fXAW7CeAViqBVS90=

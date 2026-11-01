@@ -1,4 +1,4 @@
-go 1.27.1
+go 1.27.3
 
 use (
 	.
@@ -14,6 +14,7 @@ use (
 	./examples/server_errors
 	./examples/todoapp
 	./examples/views
+	./nyi
 	./pkg/yml
 	./queries
 )

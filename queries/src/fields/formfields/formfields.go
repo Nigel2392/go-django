@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"reflect"
 
-	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -19,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/versatile"
 )
 
 type BaseRelationField struct {
@@ -70,29 +70,21 @@ func init() {
 			switch relType {
 			case attrs.RelManyToOne:
 				return &ForeignKeyFormField{
-					BaseRelationField: BaseRelationField{
-						BaseField: django_formfields.NewField(opts...),
-						Field:     f,
-						Relation:  rel,
-					},
+					BaseField: django_formfields.NewField(opts...),
+					Field:     f,
+					Relation:  rel,
 				}, true
 			case attrs.RelManyToMany:
 				return &ManyToManyFormField{
-					BaseRelationField: BaseRelationField{
-						BaseField: django_formfields.NewField(opts...),
-						Field:     f,
-						Relation:  rel,
-					},
+					BaseField: django_formfields.NewField(opts...),
+					Field:     f,
+					Relation:  rel,
 				}, true
 			case attrs.RelOneToOne:
 				return &OneToOneFormField{
-					ForeignKeyFormField: ForeignKeyFormField{
-						BaseRelationField: BaseRelationField{
-							BaseField: django_formfields.NewField(opts...),
-							Field:     f,
-							Relation:  rel,
-						},
-					},
+					BaseField: django_formfields.NewField(opts...),
+					Field:     f,
+					Relation:  rel,
 				}, true
 			case attrs.RelOneToMany:
 			default:

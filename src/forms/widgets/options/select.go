@@ -59,7 +59,7 @@ func (o *OptionsWidget) GetContextData(ctx context.Context, id, name string, val
 
 	base_context.Set(
 		"choices",
-		widgets.WrapOptions(choices, values),
+		widgets.WrapOptions(ctx, choices, values),
 	)
 
 	base_context.Set("include_blank", o.IncludeBlank)

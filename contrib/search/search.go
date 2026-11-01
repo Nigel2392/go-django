@@ -33,15 +33,19 @@ type BackendDefiner interface {
 	SearchBackend() SearchBackend
 }
 
-func Search[MODEL SearchableModel, SEARCHABLE any](model MODEL, query string, searchable SEARCHABLE) (SEARCHABLE, error) {
+func Search[MODEL attrs.Definer, SEARCHABLE any](model MODEL, query string, searchable SEARCHABLE, search ...SearchField) (SEARCHABLE, error) {
 	var backend, err = GetSearchBackendForModel(model)
 	if err != nil {
-		return *new(SEARCHABLE), err
+		return searchable, err
 	}
 
-	fields, err := BuildSearchFields(model)
+	fields, err := BuildSearchFields(model, search)
 	if err != nil {
-		return *new(SEARCHABLE), err
+		return searchable, err
+	}
+
+	if len(fields) == 0 {
+		return searchable, nil
 	}
 
 	slices.SortStableFunc(fields, func(a, b BuiltSearchField) int {

@@ -95,6 +95,129 @@ type orderItemFormset interface {
 	Forms() ([]modelforms.ModelForm[*models.OrderItem], error)
 }
 
+func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+	if !permissions.HasObjectPermission(r, &models.Order{}, "orders:add") {
+		admin.ReLogin(w, r, r.URL.Path)
+		return
+	}
+
+	var form = forms.NewAdminForm(r, &models.Order{}, func(p *models.Order) []admin.Panel {
+		return p.AddPanels(r.Context())
+	})
+
+	form.Load()
+
+	form.Form.SaveInstance = func(ctx context.Context, p *models.Order) error {
+
+		flist, err := form.FormSet().Forms()
+		if err != nil {
+			return err
+		}
+
+		var (
+			skuFormSet orderItemFormset
+		)
+
+		for i, form := range flist {
+			if c, ok := form.(admin.ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
+				flist[i] = c.Form()
+			}
+		}
+
+		for _, form := range flist {
+			switch f := form.(type) {
+			case orderItemFormset:
+				skuFormSet = f
+			default:
+				panic("unhandled form type")
+			}
+		}
+
+		skuForms, err := skuFormSet.Forms()
+		if err != nil {
+			return err
+		}
+
+		// var priceMax decimal.Decimal
+		var skus = make([]*models.OrderItem, 0, len(skuForms))
+		for _, form := range skuForms {
+
+			sku := form.Instance()
+			skus = append(skus, sku)
+
+			//	if sku.Price.GreaterThan(priceMax) {
+			//		priceMax = sku.Price
+			//	}
+
+			form.CleanedData()["Order"] = p
+		}
+
+		//	p.SkuCount = len(skus)
+		//	p.PriceMax = priceMax
+
+		saved, err := djmodels.SaveModel(ctx, p)
+		if err == nil && !saved {
+			err = fmt.Errorf("model %T not saved", p)
+		}
+
+		return shop.SIGNALS.Orders.Created.Send(r.Context(), &signals.OrderSignalData{
+			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
+			Current:    p,
+			OrderItems: skus,
+			Reason:     "admin_add",
+		})
+	}
+
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order]]{
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: "shop",
+		TemplateName:    "shop/orders/admin/add.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+
+			var backURL string
+			if q := req.URL.Query().Get("next"); q != "" {
+				backURL = q
+			}
+
+			context.Set("BackURL", backURL)
+			context.Set("PostURL", django.Reverse("admin:shop:orders:add"))
+			context.SetPage(admin.PageOptions{
+				TitleFn: trans.S("Change order"),
+			})
+
+			return context, nil
+		},
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order] {
+			return form
+		},
+		GetInitialFn: func(req *http.Request) map[string]interface{} {
+			var initial = make(map[string]interface{})
+			for _, field := range attrs.Define(r.Context(), &models.Order{}).Fields() {
+				initial[field.Name()] = field.GetValue()
+			}
+			return initial
+		},
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order]) {
+			var instance = form.Instance()
+			except.Assert(
+				instance != nil,
+				http.StatusInternalServerError,
+				"instance is nil after form submission",
+			)
+
+			messages.Success(r, "Order changed")
+
+			http.Redirect(w, r, django.Reverse("admin:shop:orders"), http.StatusSeeOther)
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		except.Fail(500, err)
+		return
+	}
+}
+
 func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
 	if !permissions.HasObjectPermission(r, &models.Order{}, "orders:edit") {
 		admin.ReLogin(w, r, r.URL.Path)
@@ -176,10 +299,6 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 		saved, err := djmodels.SaveModel(ctx, p)
 		if err == nil && !saved {
 			err = fmt.Errorf("model %T not saved", p)
-		}
-
-		if _, err := form.FormSet().Save(); err != nil {
-			return err
 		}
 
 		return shop.SIGNALS.Orders.Updated.Send(r.Context(), &signals.OrderSignalData{

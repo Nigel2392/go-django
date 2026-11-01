@@ -7,13 +7,17 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/shopspring/decimal"
 )
 
 var _ queries.ActsBeforeCreate = (*OrderItem)(nil)
 
 type OrderItem struct {
-	ID    drivers.ULID
-	Order *Order
+	ID        drivers.ULID
+	Order     *Order
+	Product   *ProductSku
+	ItemPrice decimal.Decimal
+	Amount    int
 }
 
 func (m *OrderItem) BeforeCreate(ctx context.Context) error {
@@ -27,6 +31,35 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*OrderItem, drivers.ULID]{
 				Config: attrs.FieldConfig{
 					Primary: true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*OrderItem, *ProductSku] {
+			return fattrs.PtrFieldConfig[*OrderItem, *ProductSku]{
+				Config: attrs.FieldConfig{
+					Null:  false,
+					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "ItemPrice", &m.ItemPrice, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 13,
+						attrs.AttrScaleKey:     4,
+					},
+					Null:  false,
+					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "Amount", &m.Amount, func() fattrs.PtrFieldConfig[*OrderItem, int] {
+			return fattrs.PtrFieldConfig[*OrderItem, int]{
+				Config: attrs.FieldConfig{
+					Primary: true,
+					Null:    false,
+					Blank:   false,
 				},
 			}
 		}),

@@ -2,6 +2,7 @@ package strich
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -15,6 +16,7 @@ type Check[CHECK ~string] interface {
 
 type CheckerDisplay[CHECK ~string] struct {
 	Delimiter     string
+	StringOfCount bool
 	NotFoundLabel func(context.Context, CHECK) string
 	Labels        map[CHECK]func(context.Context) string
 }
@@ -28,6 +30,11 @@ type Checker[CHECK ~string] struct {
 
 func notFoundLabel[CHECK ~string](ctx context.Context, _ CHECK) string {
 	return trans.T(ctx, "Unknown")
+}
+
+type chkStringSection struct {
+	cnt int
+	val string
 }
 
 func (s Checker[CHECK]) StringOf(ctx context.Context, haystack CHECK) string {
@@ -53,9 +60,11 @@ func (s Checker[CHECK]) StringOf(ctx context.Context, haystack CHECK) string {
 	}
 
 	var (
-		secStart int
-		delims   int
-		sb       strings.Builder
+		secStart   int
+		delims     int
+		sb         strings.Builder
+		sections   []chkStringSection
+		secIndexes = make(map[string]int)
 	)
 	for idx, char := range haystack {
 		if char == s.Delimiter && secStart < len(haystack) {
@@ -70,11 +79,16 @@ func (s Checker[CHECK]) StringOf(ctx context.Context, haystack CHECK) string {
 				text = match(ctx)
 			}
 
-			if secStart > 0 {
-				sb.WriteString(s.Display.Delimiter)
+			if secIdx, ok := secIndexes[text]; ok {
+				sections[secIdx].cnt++
+				continue
 			}
 
-			sb.WriteString(text)
+			secIndexes[text] = delims - 1
+			sections = append(sections, chkStringSection{
+				cnt: 1,
+				val: text,
+			})
 
 			secStart = idx + 1
 		}
@@ -90,8 +104,31 @@ func (s Checker[CHECK]) StringOf(ctx context.Context, haystack CHECK) string {
 			text = match(ctx)
 		}
 
-		sb.WriteString(s.Display.Delimiter)
-		sb.WriteString(text)
+		if idx, ok := secIndexes[text]; ok {
+			sections[idx].cnt++
+			goto buildString
+		}
+
+		sections = append(sections, chkStringSection{
+			cnt: 1,
+			val: text,
+		})
+	}
+
+buildString:
+	for idx, sec := range sections {
+
+		if idx > 0 {
+			sb.WriteString(s.Display.Delimiter)
+		}
+
+		sb.WriteString(sec.val)
+
+		if s.Display.StringOfCount && sec.cnt > 1 {
+			sb.WriteRune('[')
+			sb.WriteString(strconv.Itoa(sec.cnt))
+			sb.WriteRune(']')
+		}
 	}
 
 	if secStart == 0 {

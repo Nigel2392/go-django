@@ -15,6 +15,7 @@ var _ queries.ActsBeforeCreate = (*Order)(nil)
 
 type Order struct {
 	ID         drivers.ULID
+	State      *OrderState
 	Payment    *Payment
 	OrderItems *queries.RelRevFK[*OrderItem]
 }
@@ -24,9 +25,48 @@ func (m *Order) BeforeCreate(ctx context.Context) error {
 	return nil
 }
 
+func (m *Order) AddPanels(ctx context.Context) []admin.Panel {
+	return []admin.Panel{
+		admin.FieldPanel("State"),
+		&admin.ModelFormPanel[*Payment, modelforms.ModelForm[*Payment]]{
+			TargetType:     &Payment{},
+			FieldName:      "Payment",
+			Classname:      "collapsible",
+			MinNum:         1,
+			DisallowAdd:    true,
+			DisallowRemove: true,
+			Panels: []admin.Panel{
+				admin.FieldPanel("Amount"),
+				// admin.FieldPanel("Provider"),
+				admin.FieldPanel("State"),
+				admin.FieldPanel("CreatedAt"),
+				admin.FieldPanel("UpdatedAt"),
+				//	Amount
+				//	Provider
+				//	State
+				//	CreatedAt
+				//	UpdatedAt
+			},
+		},
+		&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
+			TargetType: &OrderItem{},
+			FieldName:  "OrderItems",
+			Classname:  "collapsible",
+			// SubClassname: "collapsed",
+			MinNum:         0,
+			DisallowAdd:    true,
+			DisallowRemove: true,
+			Panels: []admin.Panel{
+				admin.FieldPanel("ID"),
+			},
+		},
+	}
+}
+
 func (m *Order) EditPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
 		admin.FieldPanel("ID"),
+		admin.FieldPanel("State"),
 		&admin.ModelFormPanel[*Payment, modelforms.ModelForm[*Payment]]{
 			TargetType:     &Payment{},
 			FieldName:      "Payment",
@@ -69,6 +109,14 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					Primary:  true,
 					ReadOnly: true,
+				},
+			}
+		}),
+		fattrs.Field(m, "State", &m.State, func() fattrs.PtrFieldConfig[*Order, *OrderState] {
+			return fattrs.PtrFieldConfig[*Order, *OrderState]{
+				Config: attrs.FieldConfig{
+					Column:        "state_id",
+					RelForeignKey: attrs.Relate(&OrderState{}, "", nil),
 				},
 			}
 		}),

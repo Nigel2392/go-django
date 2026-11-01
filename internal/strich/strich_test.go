@@ -125,6 +125,32 @@ var strichTests = []strichTest{
 	{
 		Delim:          ':',
 		Haystack:       "SUCCESS:A:B:C",
+		Needle:         []string{"B", "A", "SUCCESS", "C", "FAIL1", "FAIL2", "FAIL3"},
+		ExpectedFound:  4,
+		ExpectedDelims: 3,
+		Check:          IS,
+		ExpectedFunc:   false,
+		Display:        checkerDisplay,
+		ExpectedLabel:  "label_B / label_A / label_SUCCESS / label_C / UNKNOWN",
+	},
+	{
+		Delim:          ':',
+		Haystack:       "SUCCESS:A:B:C",
+		Needle:         []string{"B", "A", "SUCCESS", "C", "FAIL1", "FAIL2", "FAIL3"},
+		ExpectedFound:  4,
+		ExpectedDelims: 3,
+		Check:          IS,
+		ExpectedFunc:   false,
+		Display: func() CheckerDisplay[string] {
+			d := checkerDisplay
+			d.StringOfCount = true
+			return d
+		}(),
+		ExpectedLabel: "label_B / label_A / label_SUCCESS / label_C / UNKNOWN[3]",
+	},
+	{
+		Delim:          ':',
+		Haystack:       "SUCCESS:A:B:C",
 		Needle:         []string{"B", "FAIL"},
 		ExpectedFound:  1,
 		ExpectedDelims: 3,

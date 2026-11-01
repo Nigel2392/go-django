@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -22,6 +21,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
+	"github.com/Nigel2392/versatile"
 )
 
 var _ widgets.Widget = &ModelSelect{}
@@ -125,7 +125,7 @@ func (o *ModelSelect) GetContextData(ctx context.Context, id, name string, value
 
 	base_context.Set(
 		"choices",
-		widgets.WrapOptions(choices, values),
+		widgets.WrapOptions(ctx, choices, values),
 	)
 
 	base_context.Set("include_blank", !o.ExcludeBlank)

@@ -12,9 +12,20 @@ type BuiltSearchField struct {
 	SearchField SearchField
 }
 
-func BuildSearchFields[T SearchableModel](model T) ([]BuiltSearchField, error) {
+func BuildSearchFields[T attrs.Definer](model T, fields []SearchField) ([]BuiltSearchField, error) {
+	if len(fields) > 0 {
+		return buildSearchFields(model, fields)
+	}
+
+	if s, ok := any(model).(SearchableModel); ok {
+		return buildSearchFields(s, s.SearchableFields())
+	}
+
+	return nil, nil
+}
+
+func buildSearchFields[T attrs.Definer](model T, fields []SearchField) ([]BuiltSearchField, error) {
 	var meta = attrs.GetModelMeta(model)
-	var fields = model.SearchableFields()
 	var built = make([]BuiltSearchField, 0, len(fields))
 	for _, field := range fields {
 		var fieldPath = strings.Split(field.Field(), ".")

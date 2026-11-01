@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/versatile"
 )
 
 var (
@@ -102,32 +102,35 @@ func isNil(rv reflect.Value) bool {
 		return true
 	case reflect.Chan,
 		reflect.Func,
-		reflect.Interface,
 		reflect.Map,
 		reflect.Pointer,
+		reflect.UnsafePointer,
+		reflect.Interface,
 		reflect.Slice:
 		return rv.IsNil()
 	}
 	return false
 }
 
-func (s Value[T]) MarshalJSON() (bytes []byte, err error) {
+func (s Value[T]) MarshalJSON() (_ []byte, err error) {
 	rv := reflect.ValueOf(s.V)
 	if isNil(rv) {
 		return _json_nullLiteral, nil
 	}
 
 	var v any = s.V
-	if val, ok := v.(driver.Valuer); ok {
+	switch val := v.(type) {
+	case json.Marshaler:
+	case driver.Valuer:
 		v, err = val.Value()
-	}
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve driver value: %w", err)
+		if err != nil {
+			return nil, fmt.Errorf("drivers.Value: could not retrieve driver value: %w", err)
+		}
 	}
 
-	bytes, err = json.Marshal(v)
+	bytes, err := json.Marshal(v)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal value: %w", err)
+		return nil, fmt.Errorf("drivers.Value: error during marshalling: %w", err)
 	}
 
 	return json.Marshal(&valueJSON{

@@ -85,6 +85,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		&models.Cart{},
 
 		// Orders
+		&models.OrderState{},
 		&models.OrderItem{},
 		&models.Order{},
 
@@ -158,6 +159,8 @@ func NewAppConfig() (django.AppConfig, error) {
 		products.Post("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct))
 
 		orders := m.Get("orders/", NewHandler(adminviews.ViewOrderList.ServeHTTP), "orders")
+		orders.Get("add/", NewHandler(adminviews.ViewAddOrder), "add")
+		orders.Post("add/", NewHandler(adminviews.ViewAddOrder))
 		orders.Get("edit/<<order_id>>/", NewHandler(adminviews.ViewEditOrder), "edit")
 		orders.Post("edit/<<order_id>>/", NewHandler(adminviews.ViewEditOrder))
 	}

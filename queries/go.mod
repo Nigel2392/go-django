@@ -1,13 +1,13 @@
 module github.com/Nigel2392/go-django/queries
 
-go 1.27.0
+go 1.27.1
 
 require (
-	github.com/Nigel2392/errors v1.0.3
+	github.com/Nigel2392/errors v1.0.4
 	github.com/Nigel2392/go-signals v1.1.9
 	github.com/Nigel2392/goldcrest v1.0.7
 	github.com/Nigel2392/mux v1.6.1
-	github.com/Nigel2392/versatile v1.0.4
+	github.com/Nigel2392/versatile v1.0.7-0.20261028221037-2bc06ecbdba4
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/uuid v1.6.0
@@ -23,6 +23,7 @@ require (
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/Nigel2392/tags v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/go4org/hashtriemap v0.0.0-20260925222741-44e5305f85d9 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect

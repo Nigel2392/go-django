@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Nigel2392/go-django/contrib/blocks"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -13,7 +14,7 @@ import (
 )
 
 type ProductSku struct {
-	ID      uint64                 `json:"id"`
+	ID      drivers.ULID           `json:"id"`
 	Product *Product               `json:"-"`
 	Title   string                 `json:"title"`
 	Price   decimal.Decimal        `json:"price"`
@@ -23,6 +24,11 @@ type ProductSku struct {
 
 func (m *ProductSku) Label(ctx context.Context) string {
 	return trans.T(ctx, "Product SKU")
+}
+
+func (m *ProductSku) BeforeCreate(ctx context.Context) error {
+	m.ID = drivers.NewULID()
+	return nil
 }
 
 func (b *ProductSku) GetImagesBlock() *blocks.ListBlock {
@@ -37,8 +43,8 @@ func (b *ProductSku) GetImagesBlock() *blocks.ListBlock {
 
 func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
-		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*ProductSku, uint64] {
-			return fattrs.PtrFieldConfig[*ProductSku, uint64]{
+		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*ProductSku, drivers.ULID] {
+			return fattrs.PtrFieldConfig[*ProductSku, drivers.ULID]{
 				Config: attrs.FieldConfig{
 					Primary:  true,
 					ReadOnly: true,

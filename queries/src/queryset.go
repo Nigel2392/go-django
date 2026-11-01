@@ -3968,13 +3968,11 @@ func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
 
 		var defs, fields = qs.updateFields(obj)
 		var info = UpdateInfo{
-			FieldInfo: FieldInfo[attrs.Field]{
-				Model: obj,
-				Table: Table{
-					Name: defs.TableName(),
-				},
-				Fields: make([]attrs.Field, 0, len(fields)),
+			Model: obj,
+			Table: Table{
+				Name: defs.TableName(),
 			},
+			Fields: make([]attrs.Field, 0, len(fields)),
 			Values: make([]any, 0, len(fields)),
 		}
 
@@ -4050,15 +4048,13 @@ func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
 
 	if len(usedExprs) != len(exprMap) && len(exprMap) > 0 && isCommitContext {
 		var wholeScopeInfo = UpdateInfo{
-			FieldInfo: FieldInfo[attrs.Field]{
-				Model: qs.internals.Model.Object,
-				Table: Table{
-					Name: qs.internals.Model.Table,
-				},
-				Fields: make([]attrs.Field, 0, len(usedExprs)),
+			Model: qs.internals.Model.Object,
+			Table: Table{
+				Name: qs.internals.Model.Table,
 			},
-			Where: where,
-			Joins: joins,
+			Fields: make([]attrs.Field, 0, len(usedExprs)),
+			Where:  where,
+			Joins:  joins,
 		}
 
 		var defs = attrs.Define(qs.Context(), qs.internals.Model.Object)

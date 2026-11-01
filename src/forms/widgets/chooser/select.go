@@ -77,7 +77,7 @@ func (o *Select) GetContextData(ctx context.Context, id, name string, value inte
 
 	base_context.Set(
 		"choices",
-		widgets.WrapOptions(choices, values),
+		widgets.WrapOptions(ctx, choices, values),
 	)
 
 	base_context.Set("include_blank", !o.ExcludeBlank)

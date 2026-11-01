@@ -1,6 +1,12 @@
 package widgets
 
-import "github.com/Nigel2392/go-django/internal/forms"
+import (
+	"context"
+	"fmt"
+
+	"github.com/Nigel2392/go-django/internal/forms"
+	"github.com/Nigel2392/go-django/src/core/trans"
+)
 
 type (
 	Widget             = forms.Widget
@@ -13,12 +19,16 @@ type (
 )
 
 type FormOption struct {
-	OptLabel string
+	OptLabel any
 	OptValue string
 }
 
 func (o *FormOption) Label() string {
-	return o.OptLabel
+	label, ok := trans.GetText(context.Background(), o.OptLabel)
+	if ok {
+		return label
+	}
+	return fmt.Sprint(o.OptLabel)
 }
 
 func (o *FormOption) Value() string {
@@ -42,7 +52,7 @@ func (w *WrappedOption) Value() string {
 	return w.Option.Value()
 }
 
-func WrapOptions(options []Option, selectedValues []string) []WrappedOption {
+func WrapOptions(ctx context.Context, options []Option, selectedValues []string) []WrappedOption {
 	var wrappedOptions []WrappedOption
 	var selectedVals = make(map[string]struct{})
 	for _, s := range selectedValues {

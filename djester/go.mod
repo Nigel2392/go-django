@@ -1,17 +1,17 @@
 module github.com/Nigel2392/go-django/djester
 
-go 1.27.0
+go 1.27.1
 
 require (
 	github.com/Nigel2392/mux v1.6.1
-	github.com/Nigel2392/versatile v1.0.4
+	github.com/Nigel2392/versatile v1.0.7-0.20261028221037-2bc06ecbdba4
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/dolthub/go-mysql-server v0.20.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
-	github.com/Nigel2392/errors v1.0.3 // indirect
+	github.com/Nigel2392/errors v1.0.4 // indirect
 	github.com/Nigel2392/goldcrest v1.0.7 // indirect
 	github.com/alexedwards/scs/v2 v2.9.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
