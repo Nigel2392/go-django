@@ -7,7 +7,7 @@ require (
 	github.com/Nigel2392/go-signals v1.1.9
 	github.com/Nigel2392/goldcrest v1.0.7
 	github.com/Nigel2392/mux v1.6.1
-	github.com/Nigel2392/versatile v1.0.7-0.20261028221037-2bc06ecbdba4
+	github.com/Nigel2392/versatile v1.0.7
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/uuid v1.6.0

@@ -1,7 +1,28 @@
-.file-clear .file-clear-checkbox:checked + .file-clear-label {
+.file-clear-wrapper .file-clear-checkbox:checked + .file-clear-label {
     color: hsl( 0 100% 50% );
     text-decoration: line-through;
 }
 .file-input-preview {
     max-height: 200px;
+}
+.file-input--image .file-input-preview img {
+    max-height: 200px;
+    max-width: 200px;
+}
+.file-input--image {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+}
+.file-input--controls {
+    display: flex;
+    flex-direction: column;
+    align-self: flex-end;
+    padding-top: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+.file-input--controls > div {
+    margin-bottom: 0.5rem;
 }

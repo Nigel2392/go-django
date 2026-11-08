@@ -4,22 +4,22 @@ import (
 	"context"
 
 	"github.com/Nigel2392/go-django/contrib/blocks"
+	"github.com/Nigel2392/go-django/contrib/shop/supplier"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
-	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/shopspring/decimal"
 )
 
 type ProductSku struct {
-	ID      drivers.ULID           `json:"id"`
-	Product *Product               `json:"-"`
-	Title   string                 `json:"title"`
-	Price   decimal.Decimal        `json:"price"`
-	Stock   uint64                 `json:"stock"`
-	Images  *blocks.ListBlockValue `json:"images"`
+	ID           drivers.ULID             `json:"id"`
+	Product      *Product                 `json:"-"`
+	Title        string                   `json:"title"`
+	Price        decimal.Decimal          `json:"price"`
+	Stock        uint64                   `json:"stock"`
+	Images       *blocks.ListBlockValue   `json:"images"`
+	SupplierData *blocks.StreamBlockValue `json:"supplierData"`
 }
 
 func (m *ProductSku) Label(ctx context.Context) string {
@@ -32,13 +32,27 @@ func (m *ProductSku) BeforeCreate(ctx context.Context) error {
 }
 
 func (b *ProductSku) GetImagesBlock() *blocks.ListBlock {
-	var block = blocks.NewListBlock(blocks.FormFieldBlock(
-		fields.ImageFileField("", fields.Label(trans.S("Image"))),
-		&mediafiles.SimpleStoredObject{},
-	))
+	var block = blocks.NewListBlock(blocks.ImageBlock(""))
 	block.Min = 0
 	block.Max = 3
 	return block
+}
+
+func (b *ProductSku) GetSupplierDataBlock() *supplier.SupplierBlock {
+	var streamBlock = blocks.NewStreamBlock()
+	streamBlock.Min = 1
+	streamBlock.Max = 1
+	for _, backend := range supplier.IterBackends(true) {
+		widget := backend.ProductWidget()
+		if widget == nil {
+			widget = blocks.NewStructBlock()
+			widget.AddField("enabled", blocks.BooleanBlock())
+		}
+		widget.SetLabel(backend.Label)
+
+		streamBlock.AddField(backend.InternalName(), widget)
+	}
+	return &supplier.SupplierBlock{StreamBlock: streamBlock}
 }
 
 func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -80,6 +94,13 @@ func (m *ProductSku) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*ProductSku, *blocks.ListBlockValue]{
 				Default: &blocks.ListBlockValue{
 					V: make([]*blocks.ListBlockData, 0),
+				},
+			}
+		}),
+		fattrs.Field(m, "SupplierData", &m.SupplierData, func() fattrs.PtrFieldConfig[*ProductSku, *blocks.StreamBlockValue] {
+			return fattrs.PtrFieldConfig[*ProductSku, *blocks.StreamBlockValue]{
+				Default: &blocks.StreamBlockValue{
+					V: make([]*blocks.StreamBlockData, 0),
 				},
 			}
 		}),

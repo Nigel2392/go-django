@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/Nigel2392/mux v1.6.1
-	github.com/Nigel2392/versatile v1.0.7-0.20261028221037-2bc06ecbdba4
+	github.com/Nigel2392/versatile v1.0.7
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/dolthub/go-mysql-server v0.20.0
 )

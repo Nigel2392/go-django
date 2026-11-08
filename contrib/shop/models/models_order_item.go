@@ -57,9 +57,8 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Amount", &m.Amount, func() fattrs.PtrFieldConfig[*OrderItem, int] {
 			return fattrs.PtrFieldConfig[*OrderItem, int]{
 				Config: attrs.FieldConfig{
-					Primary: true,
-					Null:    false,
-					Blank:   false,
+					Null:  false,
+					Blank: false,
 				},
 			}
 		}),

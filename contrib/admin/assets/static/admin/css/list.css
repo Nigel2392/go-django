@@ -93,3 +93,49 @@ table.list {
 .sortable-column-header {
 
 }
+
+/* 
+    Admin list
+*/
+.admin-list-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0.325em 1em;
+    border-bottom: 1px dotted var(--secondary-bg-color);
+}
+.admin-list-item:hover {
+    text-decoration: none;
+}
+.admin-list-item .header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 0.475em;
+}
+.admin-list-item p {
+    margin: 0;
+}
+.admin-list-item .header > .icon {
+    width: 2.5em;
+    height: 2.5em;
+}
+.admin-list-item .header > .icon svg {
+    width: 2em;
+    height: 2em;
+    margin-right: 0.5em;
+    vertical-align: middle;
+    transition: all 0.2s;
+}
+.admin-list-item:hover .header > .icon svg {
+    fill: var(--secondary-bg-color);
+    transform: scale(0.95);
+}
+.admin-list-item .header > .text {
+    font-size: 1.25em;
+    font-weight: 600;
+}
+.admin-list-item .description {
+
+}

@@ -40,10 +40,11 @@ class InputNotFoundError extends Error {
 
 class BoundWidget<T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement = HTMLInputElement> {
     input: T | null;
+    widget: Widget;
     idForLabel: string | null = null;
 
-    
-    constructor(element: HTMLElement | (HTMLElement | ChildNode)[], name: string) {
+    constructor(widget: Widget, element: HTMLElement | (HTMLElement | ChildNode)[], name: string) {
+        this.widget = widget;
         const selector = `:is(input,select,textarea,button)[name="${name}"]`;
         this.input = querySelectorIncludingSelf(element, selector) as T | null;
         if (!this.input) {
@@ -137,6 +138,7 @@ class Widget {
         }
 
         const boundWidget = new this.boundWidgetClass(
+            this,
             childElements.length === 1 ? childElements[0] as HTMLElement : children,
             name,
         );
@@ -165,7 +167,7 @@ class BoundCheckboxInput extends BoundWidget {
 }
 
 class CheckboxInput extends Widget {
-    boundWidgetClass = BoundCheckboxInput as BoundWidgetType;
+    boundWidgetClass = BoundCheckboxInput;
 }
 
 class BoundRadioSelect {
@@ -281,6 +283,69 @@ class Select extends Widget {
     boundWidgetClass = BoundSelect as unknown as BoundWidgetType;
 }
 
+
+class BoundFileWidget extends BoundWidget<HTMLInputElement> {
+    widget: FileWidget;
+    previewImage: HTMLImageElement | null;
+    pathInput: HTMLInputElement;
+    pathLabel: HTMLSpanElement;
+    clearInput: HTMLInputElement;
+    pathInputWrapper: HTMLElement | null;
+    clearInputWrapper: HTMLElement | null;
+
+    constructor(widget: FileWidget, element: HTMLElement | (HTMLElement | ChildNode)[], name: string) {
+        super(widget, element, name);
+
+        var el: HTMLElement;
+        if (Array.isArray(element)) {
+            el = element[0] as HTMLElement;
+        } else {
+            el = element;
+        }
+
+        this.previewImage = el.
+            querySelector(`#${name}__preview_img`)
+        this.pathInputWrapper = el.
+            querySelector(`#${name}__path_wrapper`)
+        this.pathLabel = this.pathInputWrapper.
+            querySelector(`#${name}__path_label`)
+        this.pathInput = this.pathInputWrapper.
+            querySelector(`:is(input,select,textarea,button)[name="${name}__path"]`)
+        this.clearInputWrapper = el.
+            querySelector(`#${name}__clear_wrapper`)
+
+        if (this.clearInputWrapper) {
+            this.clearInput = this.clearInputWrapper.querySelector(`:is(input,select,textarea,button)[name="${name}__clear"]`)
+        }
+    }
+
+    getValue() {
+        return this.pathInput.value
+    }
+
+    getState() {
+        return this.pathInput.value
+    }
+
+    setState(state: any) {
+        this.pathInput!.value = state;
+        this.pathLabel!.textContent = window.i18n.gettext("Path: %s", state);
+        if (this.previewImage) {
+            this.previewImage!.src = this.widget.mediaPath.replace("__MEDIA_PATH__", this.getState());
+        }
+    }
+}
+
+class FileWidget extends Widget {
+    boundWidgetClass = BoundFileWidget as unknown as BoundWidgetType;
+    mediaPath: string;
+
+    constructor(html: string, mediaPath: string) {
+        super(html);
+        this.mediaPath = mediaPath;
+    }
+}
+
 (function(window: any) {
     window.Widget = Widget;
     window.BoundWidget = BoundWidget;
@@ -291,6 +356,8 @@ class Select extends Widget {
     window.BoundCheckboxInput = BoundCheckboxInput;
     window.BoundRadioSelect = BoundRadioSelect;
     window.BoundSelect = BoundSelect;
+    window.BoundFileWidget = BoundFileWidget;
+    window.FileWidget = FileWidget;
 })(window);
 
 export {
@@ -299,6 +366,8 @@ export {
     InputNotFoundError,
     CheckboxInput,
     RadioSelect,
+    FileWidget,
+    BoundFileWidget,
     Select,
     BoundCheckboxInput,
     BoundRadioSelect,

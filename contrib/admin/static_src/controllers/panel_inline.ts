@@ -212,6 +212,16 @@ class InlinePanelController extends Controller<PanelElement> {
             return;
         }
 
+        console.log(targetedElement)
+        targetedElement.querySelectorAll('input, textarea, select, fieldset').forEach((el: HTMLElement) => {
+            const input = el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+            input.disabled = true;
+            input.setAttribute('disabled', '');
+        });
+
+        deletedInput.disabled = false;
+        deletedInput.removeAttribute('disabled');
+
         this.flash(this.formsTarget, {
             color: 'orange',
             duration: 300,

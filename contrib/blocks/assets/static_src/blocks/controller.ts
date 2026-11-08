@@ -57,7 +57,8 @@ class BlockController extends ClassCallController<BlockElement, BoundBlock> {
 
         this.element.classList.add('block-initiated')
 
-        const definition: Block = window.telepath.unpack(this.classArgs)
+        const definition: Block = window.telepath.unpack(this.classArgs);
+        (this.element.dataset as any).isRootBlock = true;
         const bound = definition.render(
             this.element, this.idValue, ...this.argumentsValue,
         )

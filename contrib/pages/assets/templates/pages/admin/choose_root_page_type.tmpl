@@ -3,10 +3,10 @@
 {{ define "title" }}{{ T "List" }}{{ end }}
 
 {{ define "content" }}
-    <div class="pages-type-list">
+    <div class="admin-list">
         {{ $request := .Request }} 
         {{ range $index, $page := (.Get "definitions") }}
-            <a href="{{ url "admin:pages:root_add" $page.AppLabel $page.Model }}" class="pages-type-list-item">
+            <a href="{{ url "admin:pages:root_add" $page.AppLabel $page.Model }}" class="admin-list-item">
                 <div class="header">
                     <div class="icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="icon-plus-circle" viewBox="0 0 16 16">

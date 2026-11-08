@@ -139,13 +139,7 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 		)
 
 		switch {
-		case isProxyField(field):
-			assert.False(
-				base == nil,
-				"definer %s must embed a model before any proxy fields (%s)",
-				rTyp.Name(), field.Name,
-			)
-
+		case isProxyField(field) && base != nil:
 			var (
 				ctypeFieldName  = field.Tag.Get("ctype")
 				targetFieldName = field.Tag.Get("target")
@@ -191,8 +185,13 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 				base: field,
 			}
 
-		case field.Type.Kind() == reflect.Struct && reflect.PointerTo(field.Type).Implements(_MODEL_IFACE) && base == nil:
+		case field.Type.Kind() == reflect.Struct && reflect.PointerTo(field.Type).Implements(_MODEL_IFACE) && base == nil,
+			field.Type.Kind() == reflect.Pointer && field.Type.Implements(_MODEL_IFACE) && base == nil:
 			var current = field.Type
+			for current.Kind() == reflect.Pointer {
+				current = current.Elem()
+			}
+
 		structLoop:
 			for current.Kind() == reflect.Struct {
 			fieldsLoop:
@@ -234,7 +233,7 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 							targetFieldName = newTargetDefiner.TargetPrimaryField().Name()
 						}
 
-						if field.Type.Implements(reflect.TypeOf((*CanControlSaving)(nil)).Elem()) {
+						if current.Implements(reflect.TypeOf((*CanControlSaving)(nil)).Elem()) {
 							var newControlSaver = reflect.New(subField.Type.Elem()).Interface().(CanControlSaving)
 							controlsSave = newControlSaver.ControlsEmbedderSaving()
 						}

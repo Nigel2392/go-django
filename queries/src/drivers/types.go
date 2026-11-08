@@ -168,6 +168,10 @@ func init() {
 	attrs.RegisterFormFieldType(JSON[any]{}, func(opts ...func(formfields.Field)) formfields.Field {
 		return formfields.JSONField[any](opts...)
 	})
+	attrs.RegisterFormFieldType(JSON[map[string]any]{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.JSONField[map[string]any](opts...)
+	})
+
 }
 
 type (
@@ -414,7 +418,13 @@ func (id ULID) Time() uint64                       { return (ulid.ULID)(id).Time
 func (id ULID) Timestamp() time.Time               { return (ulid.ULID)(id).Timestamp() }
 func (id *ULID) UnmarshalBinary(data []byte) error { return (*ulid.ULID)(id).UnmarshalBinary(data) }
 func (id *ULID) UnmarshalText(v []byte) error      { return (*ulid.ULID)(id).UnmarshalText(v) }
-func (id ULID) Value() (driver.Value, error)       { return (ulid.ULID)(id).Value() }
+func (id ULID) Value() (driver.Value, error) {
+	if id.IsZero() {
+		return "", nil
+	}
+	v, err := (ulid.ULID)(id).MarshalText()
+	return string(v), err
+}
 
 func NewUUID() UUID {
 	return (UUID)(uuid.New())

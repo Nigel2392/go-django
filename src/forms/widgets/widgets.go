@@ -1,7 +1,9 @@
 package widgets
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/internal/forms"
@@ -17,6 +19,15 @@ type (
 	FormValueOmitter   = forms.FormValueOmitter
 	FormValueGetter    = forms.FormValueGetter
 )
+
+type FileObject struct {
+	Name string
+	File *bytes.Buffer
+}
+
+func (f FileObject) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.Name)
+}
 
 type FormOption struct {
 	OptLabel any

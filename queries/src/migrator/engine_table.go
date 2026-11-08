@@ -126,7 +126,7 @@ func (t *ModelTable) String() string {
 func NewModelTable(obj attrs.Definer) *ModelTable {
 
 	var (
-		newObjV = reflect.New(reflect.TypeOf(obj).Elem())
+		newObjV = reflect.ValueOf(attrs.NewObject[attrs.Definer](context.Background(), obj))
 		object  = newObjV.Interface().(attrs.Definer)
 		defs    = attrs.Define(context.Background(), object)
 		fields  = defs.Fields()

@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/versatile"
 )
 
 var _ BoundBlockValue = (*BoundValue[interface{}])(nil)
@@ -62,6 +62,11 @@ func (l *BoundValue[T]) BindToModel(model attrs.Definer, field attrs.Field) erro
 	if err != nil {
 		panic(fmt.Sprintf("blocks: failed to get block for field %s on %T: %v", field.Name(), model, err))
 	}
+
+	if b == nil {
+		return nil
+	}
+
 	l.BlockObject = b
 	return l.loadData()
 }

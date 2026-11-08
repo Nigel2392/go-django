@@ -12,10 +12,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type SignalInitMeta struct {
+	Definer Definer
+	Meta    ModelMeta
+}
+
 type SignalModelMeta struct {
-	Definer     Definer
+	SignalInitMeta
 	Definitions StaticDefinitions
-	Meta        ModelMeta
 }
 
 type SignalThroughModelMeta struct {
@@ -38,6 +42,16 @@ type SignalThroughModelMeta struct {
 //		})
 //	}
 var (
+	// A signal that is called before a model is registered.
+	//
+	// This can be used to add custom logic before a model is registered.
+	//
+	// It is called before [FieldDefs] is called on the model
+	// for the first time by the [registerModel] function.
+	//
+	// This can be used to add custom registry logic, as can be seen in the [setup] subpackage.
+	InitModelRegister = signals.Get[SignalInitMeta]("attrs.InitModelRegister")
+
 	// A signal that is called before a model is registered.
 	//
 	// This can be used to add custom logic before a model is registered.

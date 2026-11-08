@@ -224,13 +224,16 @@ func AttributeContext(ctx context.Context) (_ context.Context, c *Context) {
 }
 
 type eface struct {
-	typ  unsafe.Pointer
+	typ  uintptr
 	data unsafe.Pointer
 }
 
 func Define(ctx context.Context, model Definer) Definitions {
 
-	var val = ctx.Value(attrsContextKey{})
+	var (
+		face = (*eface)(unsafe.Pointer(&model))
+		val  = ctx.Value(attrsContextKey{})
+	)
 	if val == nil {
 		// this prevents panics.
 		// the only right way to call FieldDefs() on a model is though [Definition].
@@ -250,11 +253,10 @@ func Define(ctx context.Context, model Definer) Definitions {
 		clear(c.fieldsMap)
 	}
 
-	ptr := (*eface)(unsafe.Pointer(&model)).data
-	defs, ok := c.fieldsMap[ptr]
+	defs, ok := c.fieldsMap[face.data]
 	if !ok {
 		defs = model.FieldDefs(ctx)
-		c.fieldsMap[ptr] = defs
+		c.fieldsMap[face.data] = defs
 	}
 
 	return defs

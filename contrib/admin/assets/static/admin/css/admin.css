@@ -751,14 +751,14 @@ flex-direction is set to row above 70em.
     color: var(--text-color);
     cursor: not-allowed
 }
-.panel .file-clear .file-clear-label,
-.form-field .file-clear .file-clear-label {
+.panel .file-clear-wrapper .file-clear-label,
+.form-field .file-clear-wrapper .file-clear-label {
      -webkit-user-select: none; /* Safari */
      -ms-user-select: none; /* IE 10 and IE 11 */
      user-select: none; /* Standard syntax */
 }
-.panel .file-clear .file-clear-checkbox:checked + .file-clear-label,
-.form-field .file-clear .file-clear-checkbox:checked + .file-clear-label {
+.panel .file-clear-wrapper .file-clear-checkbox:checked + .file-clear-label,
+.form-field .file-clear-wrapper .file-clear-checkbox:checked + .file-clear-label {
     color: hsl( 0 100% 50% );
     text-decoration: line-through;
 }

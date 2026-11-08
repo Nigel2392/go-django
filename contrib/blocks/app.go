@@ -67,6 +67,7 @@ func init() {
 
 	attrs.RegisterFormFieldGetter(&StreamBlockValue{}, getter)
 	attrs.RegisterFormFieldGetter(&ListBlockValue{}, getter)
+	attrs.RegisterFormFieldGetter(&StructBlockValue{}, getter)
 }
 
 //go:embed assets/static/**
@@ -182,7 +183,7 @@ func NewAppConfig() *apps.AppConfig {
 
 	tpl.Funcs(template.FuncMap{
 		"render_block": func(rc ctx.Context, value RenderableValue) (template.HTML, error) {
-			rctx, ok := rc.(*ctx.HTTPRequestContext)
+			rctx, ok := rc.(ctx.ContextWithRequest)
 			var c context.Context
 			if ok {
 				c = rctx.Request().Context()

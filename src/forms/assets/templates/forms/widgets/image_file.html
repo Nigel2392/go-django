@@ -1,20 +1,28 @@
 {{ define "image_file" }}
-<div class="file-input">
+<div class="file-input--wrapper file-input--image">
+    {{ $zeroValue := (or (eq .Data.file_value "") (eq .Data.file_value nil)) }}
     <div class="file-input-preview">
-        <img src="{{ if .Data.file_value }}{{ media .Data.file_value }}{{ end }}" alt="" class="file-input-preview-img">
+        <img src="{{ if .Data.file_value }}{{ media .Data.file_value }}{{ end }}" alt="" id="{{ .Data.name }}__preview_img" class="file-input-preview-img">
     </div>
-    <input type="{{ .Get "type" }}" name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ if (.Get "value") }}value="{{ .Get "value" }}"{{ end }}{{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}{{ if .Data.extensionsAttr }} accept="{{ .Data.extensionsAttr }}"{{ end }}/>
-</div>
-{{ if and (not (or (eq .Data.file_value "") (eq .Data.file_value nil))) (not .Data.errors) }}
-<div class="file-path">
-    <span class="file-path">{{ Translate .Data.context "Path: %s" .Data.file_value }}</span>
-    <input type="hidden" name="{{ .Data.name }}_path" value="{{ .Data.file_value }}" />
-</div>
-{{ if (and (not .Data.required ) (not .Data.disallowClear) (not .Data.errors)) }}
-    <div class="file-clear">
-        <input type="checkbox" name="{{ .Data.name }}_clear" id="{{ .Data.id }}_clear" value="1" class="file-clear-checkbox">
-        <label for="{{ .Data.id }}_clear" class="file-clear-label default-label">{{ Translate .Data.context "Clear file" }}</label>
+
+    <div class="file-input--controls">
+        <div class="file-input">
+            <input type="{{ .Get "type" }}" name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ if (.Get "value") }}value="{{ .Get "value" }}"{{ end }}{{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}{{ if .Data.extensionsAttr }} accept="{{ .Data.extensionsAttr }}"{{ end }}/>
+        </div>
+        
+        {{ if or (and (not $zeroValue) (not .Data.errors)) .Data.showPath }}
+        <div id="{{ .Data.name }}__path_wrapper" class="file-path-wrapper">
+            <span id="{{ .Data.name }}__path_label" class="file-path">{{ Translate .Data.context "Path: %s" .Data.file_value }}</span>
+            <input type="hidden" id="{{ .Data.name }}__path" name="{{ .Data.name }}__path" value="{{ .Data.file_value }}" />
+        </div>
+        
+        {{ if or (and (not $zeroValue) (not .Data.required ) (not .Data.disallowClear) (not .Data.errors)) .Data.showClear }}
+            <div id="{{ .Data.name }}__clear_wrapper" class="file-clear-wrapper">
+                <input type="checkbox" name="{{ .Data.name }}__clear" id="{{ .Data.id }}__clear" value="1" class="file-clear-checkbox">
+                <label for="{{ .Data.id }}__clear" id="{{ .Data.name }}__clear_label" class="file-clear-label default-label">{{ Translate .Data.context "Clear file" }}</label>
+            </div>
+        {{ end }}
+        {{ end }}
     </div>
-{{ end }}
-{{ end }}
+</div>
 {{ end }}

@@ -20,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/fields/filefield"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
@@ -46,7 +47,7 @@ var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
 func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 	var initAdminForm = func(updating bool) func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
 		return func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
-			var fileField = &fields.FileStorageField{
+			var fileField = &filefield.FileStorageField{
 				BaseField: fields.NewField(
 					fields.Label(trans.S("Document File")),
 					fields.HelpText(trans.S("Upload an document file")),

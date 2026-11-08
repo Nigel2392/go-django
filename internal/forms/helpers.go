@@ -323,11 +323,11 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 
 		for head := fm.FieldMap().Front(); head != nil; head = head.Next() {
 			var (
-				k       = head.Key
-				v       = head.Value
-				errors  []error
-				initial interface{}
-				data    interface{}
+				k        = head.Key
+				v        = head.Value
+				errsList []error
+				initial  interface{}
+				data     interface{}
 			)
 
 			if v.ReadOnly() {
@@ -383,11 +383,11 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 			}
 
 			if !widget.ValueOmittedFromData(ctx, rawData, files, fm.PrefixName(k)) {
-				initial, errors = widget.ValueFromDataDict(ctx, rawData, files, fm.PrefixName(k))
+				initial, errsList = widget.ValueFromDataDict(ctx, rawData, files, fm.PrefixName(k))
 			}
 
-			if len(errors) > 0 {
-				addError(mixin, depth, k, errors...)
+			if len(errsList) > 0 {
+				addError(mixin, depth, k, errsList...)
 				invalid[k] = initial
 				continue
 			}
@@ -437,10 +437,10 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 			//		}
 			//	}
 
-			errors = v.Validate(ctx, data)
-			if len(errors) > 0 {
-				var errList = make([]error, 0, len(errors))
-				for _, err := range errors {
+			errsList = v.Validate(ctx, data)
+			if len(errsList) > 0 {
+				var errList = make([]error, 0, len(errsList))
+				for _, err := range errsList {
 					switch e := err.(type) {
 					case interface{ Unwrap() []error }:
 						errList = append(errList, e.Unwrap()...)
@@ -455,11 +455,13 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 			}
 
 		saveField:
-			// Check if the field is saveable and call Save() on it.
-			// This might be used to save a relation to the database, among other things.
-			// TODO: FIX INTERACTION WITH FileField
-			if field, saveable := v.(SaveableField); saveable {
-				data, err = field.Save(data)
+			saveFunc, err := versatile.Method[func(interface{}) (interface{}, error)](v, "Save", versatile.WithContext(ctx))
+			if err != nil && !errors.Is(err, versatile.ErrMethodNotFound) {
+				assert.Fail("error retrieving method: %v", err)
+			}
+
+			if err == nil {
+				data, err = saveFunc(data)
 				if err != nil {
 					addError(mixin, depth, k, err)
 					invalid[k] = data

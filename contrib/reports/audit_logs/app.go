@@ -274,7 +274,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName: "type",
 		FormField: fields.CharField(fields.Widget(
-			options.NewSelectInput(nil, func() []widgets.Option {
+			options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
 				var vals, err = queries.
 					GetQuerySet(&Entry{}).
 					Filter("Type__isnull", false).
@@ -335,7 +335,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName: "content_type",
 		FormField: fields.CharField(fields.Widget(
-			options.NewSelectInput(nil, func() []widgets.Option {
+			options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
 				var vals, err = queries.
 					GetQuerySet(&Entry{}).
 					Distinct().
@@ -374,7 +374,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName: "user",
 		FormField: fields.CharField(fields.Widget(
-			options.NewSelectInput(nil, func() []widgets.Option {
+			options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
 				var userModelDef = users.GetUserModel()
 				var userModel = userModelDef.
 					ContentType().
@@ -438,7 +438,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName: "level",
 		FormField: fields.CharField(fields.Widget(
-			options.NewSelectInput(nil, func() []widgets.Option {
+			options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
 				return []widgets.Option{
 					&widgets.FormOption{OptValue: logger.DBG.String(), OptLabel: trans.T(r.Context(), "Debug")},
 					&widgets.FormOption{OptValue: logger.INF.String(), OptLabel: trans.T(r.Context(), "Info")},

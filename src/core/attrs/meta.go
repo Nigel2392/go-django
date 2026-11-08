@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
+	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -267,6 +268,10 @@ func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) 
 	//	}
 	//	modelReg[t] = meta
 
+	// register and set up embedded types
+	embedder.Register(model)
+	embedder.Bind(registerContext, model)
+
 	var meta, ok = modelReg[t]
 	if !ok {
 		meta = &modelMeta{
@@ -277,6 +282,14 @@ func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) 
 			fieldsMap: make(map[string]*reflect.StructField),
 		}
 		modelReg[t] = meta
+	}
+
+	err := InitModelRegister.Send(registerContext, SignalInitMeta{
+		Definer: meta.model,
+		Meta:    meta,
+	})
+	if err != nil {
+		panic(fmt.Errorf("error during registry initialisation: %w", err))
 	}
 
 	var defs = meta.model.FieldDefs(registerContext)

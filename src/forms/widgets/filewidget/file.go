@@ -1,4 +1,4 @@
-package widgets
+package filewidget
 
 import (
 	"bytes"
@@ -9,10 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/utils/fileutils"
 )
 
@@ -53,20 +55,18 @@ import (
 //}
 
 type FileWidget struct {
-	*BaseWidget
-	IsImageField  bool
-	DisallowClear bool
-	Extensions    []string
-	Validators    []func(filename string, file io.Reader) error
-}
-
-type FileObject struct {
-	Name string
-	File *bytes.Buffer
+	*widgets.BaseWidget
+	IsImageField    bool
+	DisallowClear   bool
+	ForceShowPath   bool
+	ForceShowClear  bool
+	PathPlaceholder string
+	Extensions      []string
+	Validators      []func(filename string, file io.Reader) error
 }
 
 func NewFileInput(attrs map[string]string, allowedMimeTypes []string, validators ...func(filename string, file io.Reader) error) *FileWidget {
-	var base = NewBaseWidget("file", "forms/widgets/file.html", attrs)
+	var base = widgets.NewBaseWidget("file", "forms/widgets/file.html", attrs)
 	return &FileWidget{
 		BaseWidget: base,
 		Validators: validators,
@@ -75,7 +75,7 @@ func NewFileInput(attrs map[string]string, allowedMimeTypes []string, validators
 }
 
 func NewImageFileInput(attrs map[string]string, allowedMimeTypes []string, validators ...func(filename string, file io.Reader) error) *FileWidget {
-	var base = NewBaseWidget("file", "forms/widgets/image_file.html", attrs)
+	var base = widgets.NewBaseWidget("file", "forms/widgets/image_file.html", attrs)
 	return &FileWidget{
 		IsImageField: true,
 		BaseWidget:   base,
@@ -84,35 +84,31 @@ func NewImageFileInput(attrs map[string]string, allowedMimeTypes []string, valid
 	}
 }
 
-func (b *FileWidget) Media() media.Media {
-	var m = media.NewMedia()
-
-	if b.IsImageField {
-		m.AddJS(&media.JSAsset{})
-	}
-
-	return m
-}
-
 func (f *FileWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	var (
 		_, ok1 = files[name]
-		_, ok2 = data[fmt.Sprintf("%s_path", name)]
+		_, ok2 = data[fmt.Sprintf("%s__path", name)]
 	)
 
 	return !ok1 && !ok2
 }
 
+func (b *FileWidget) Media() media.Media {
+	var m = media.NewMedia()
+	m.AddCSS(media.CSS(django.Static("forms/css/file-input.css")))
+	return m
+}
+
 func (f *FileWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	var clearVal, ok = data[fmt.Sprintf("%s_clear", name)]
+	var clearVal, ok = data[fmt.Sprintf("%s__clear", name)]
 	if ok && len(clearVal) > 0 && (clearVal[0] == "on" || clearVal[0] == "true" || clearVal[0] == "1") {
 		return nil, nil
 	}
 
 	fileList, hasFile := files[name]
-	pathVal, ok := data[fmt.Sprintf("%s_path", name)]
+	pathVal, ok := data[fmt.Sprintf("%s__path", name)]
 	if ok && !hasFile && len(pathVal) > 0 && pathVal[0] != "" {
-		return &FileObject{
+		return &widgets.FileObject{
 			Name: pathVal[0],
 			File: nil,
 		}, nil
@@ -141,7 +137,7 @@ func (f *FileWidget) ValueFromDataDict(ctx context.Context, data url.Values, fil
 		}
 	}
 
-	var fileObj = &FileObject{
+	var fileObj = &widgets.FileObject{
 		Name: fileName,
 		File: buf,
 	}
@@ -155,7 +151,7 @@ func (f *FileWidget) ValueToForm(value interface{}) interface{} {
 	}
 
 	switch v := value.(type) {
-	case *FileObject:
+	case *widgets.FileObject:
 		return v.Name
 	case mediafiles.StoredObject:
 		return v.Path()
@@ -176,7 +172,7 @@ func (f *FileWidget) Validate(ctx context.Context, value interface{}) []error {
 		return nil
 	}
 
-	var fileObj, ok = value.(*FileObject)
+	var fileObj, ok = value.(*widgets.FileObject)
 	if !ok {
 		return append(errs, fmt.Errorf("expected *FileObject, got %T", value))
 	}
@@ -240,10 +236,17 @@ func (f *FileWidget) GetContextData(c context.Context, id, name string, value in
 		}
 	}
 
+	val := data["value"]
+	if val == nil {
+		val = f.PathPlaceholder
+	}
+
+	data["showPath"] = f.ForceShowPath
+	data["showClear"] = f.ForceShowClear
 	data["isImage"] = f.IsImageField
 	data["disallowClear"] = f.DisallowClear
 	data["extensionsAttr"] = extAttr.String()
-	data["file_value"] = data["value"]
+	data["file_value"] = val
 	data["context"] = c
 	delete(data, "value")
 	return widgetCtx

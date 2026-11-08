@@ -40,9 +40,7 @@ func init() {
 	RegisterLookup(patternLookup(LOOKUP_ENDSWITH, "%%%s"))
 
 	RegisterLookup(&InLookup{
-		BaseLookup: BaseLookup{
-			Identifier: LOOKUP_IN,
-		},
+		Identifier: LOOKUP_IN,
 	})
 
 	RegisterLookup(&IsNullLookup{BaseLookup: BaseLookup{

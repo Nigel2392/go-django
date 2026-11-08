@@ -409,6 +409,14 @@ func (plan *scanPlan) apply(
 			myPK = row[slot.pkRowIndex]
 		}
 
+		if bytes, ok := parentPK.([]byte); ok {
+			parentPK = string(bytes)
+		}
+
+		if bytes, ok := myPK.([]byte); ok {
+			myPK = string(bytes)
+		}
+
 		var cached scanCachedObject
 		var found bool
 

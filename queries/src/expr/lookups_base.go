@@ -222,7 +222,7 @@ func (l *InLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any, erro
 
 	values = flattenList(values)
 	if len(values) == 0 {
-		return nil, fmt.Errorf("lookup %s requires at least one value", l.Identifier)
+		return nil, nil
 	}
 
 	return values, nil
@@ -238,9 +238,7 @@ func (l *InLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpre
 		sb.WriteString(" IN (")
 
 		if len(values) == 0 {
-			sb.AddError(
-				fmt.Errorf("nil values provided to %T: %v", l, values),
-			)
+			sb.WriteString(")")
 			return
 		}
 

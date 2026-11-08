@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-telepath/telepath"
 )
 
@@ -65,6 +66,12 @@ func NewListBlock(block Block, minMax ...int) *ListBlock {
 	}
 	l.FormField = fields.CharField()
 	return l
+}
+
+func (b *ListBlock) Media() media.Media {
+	var m media.Media = media.NewMedia()
+	m = m.Merge(b.Child.Media())
+	return m
 }
 
 func (l *ListBlock) MinNum() int {
@@ -346,6 +353,37 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 	}
 
 	return data
+}
+
+func (l *ListBlock) Save(ctx context.Context, value interface{}) (interface{}, error) {
+	if fields.IsZero(value) {
+		return nil, nil
+	}
+
+	var errs = NewBlockErrors[int]()
+	var data = newListBlockValue(l, make([]*ListBlockData, 0))
+	for i, lbVal := range value.(*ListBlockValue).V {
+		var (
+			err error
+			v   = lbVal.Data
+		)
+
+		if saveable, ok := l.Child.(SaveableBlock); ok {
+			v, err = saveable.Save(ctx, v)
+			if err != nil {
+				errs.AddError(i, errors.Wrapf(err, "index %d", i))
+				v = lbVal.Data
+			}
+		}
+
+		data.V = append(data.V, &ListBlockData{
+			ID:    lbVal.ID,
+			Order: lbVal.Order,
+			Data:  v,
+		})
+	}
+
+	return data, nil
 }
 
 func (l *ListBlock) Clean(ctx context.Context, value interface{}) (interface{}, error) {

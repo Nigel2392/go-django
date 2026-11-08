@@ -15,12 +15,12 @@ import (
 
 type OptionsWidget struct {
 	*widgets.BaseWidget
-	Choices      func() []widgets.Option
+	Choices      func(ctx context.Context) []widgets.Option
 	IncludeBlank bool
 	BlankLabel   string
 }
 
-func NewOptionWidget(type_ string, templateName string, attrs map[string]string, choices func() []widgets.Option, options ...func(*OptionsWidget)) *OptionsWidget {
+func NewOptionWidget(type_ string, templateName string, attrs map[string]string, choices func(ctx context.Context) []widgets.Option, options ...func(*OptionsWidget)) *OptionsWidget {
 	var w = &OptionsWidget{
 		BaseWidget: widgets.NewBaseWidget(type_, templateName, attrs),
 		Choices:    choices,
@@ -31,21 +31,21 @@ func NewOptionWidget(type_ string, templateName string, attrs map[string]string,
 	return w
 }
 
-func NewCheckboxInput(attrs map[string]string, choices func() []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
+func NewCheckboxInput(attrs map[string]string, choices func(ctx context.Context) []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
 	return NewOptionWidget("checkbox", "forms/widgets/checkbox.html", attrs, choices, opts...)
 }
 
-func NewRadioInput(attrs map[string]string, choices func() []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
+func NewRadioInput(attrs map[string]string, choices func(ctx context.Context) []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
 	return NewOptionWidget("radio", "forms/widgets/radio.html", attrs, choices, opts...)
 }
 
-func NewSelectInput(attrs map[string]string, choices func() []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
+func NewSelectInput(attrs map[string]string, choices func(ctx context.Context) []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
 	return NewOptionWidget("select", "forms/widgets/select.html", attrs, choices, opts...)
 }
 
 func (o *OptionsWidget) GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var base_context = o.BaseWidget.GetContextData(ctx, id, name, value, attrs)
-	var choices = o.Choices()
+	var choices = o.Choices(ctx)
 
 	var values []string
 	if value != nil {
@@ -77,7 +77,7 @@ func (o *OptionsWidget) Validate(ctx context.Context, value interface{}) []error
 
 	var (
 		errors  []error
-		choices = o.Choices()
+		choices = o.Choices(ctx)
 		values  []string
 	)
 
@@ -117,7 +117,7 @@ type MultiSelectWidget struct {
 	*OptionsWidget
 }
 
-func NewMultiSelectInput(attrs map[string]string, choices func() []widgets.Option) widgets.Widget {
+func NewMultiSelectInput(attrs map[string]string, choices func(ctx context.Context) []widgets.Option) widgets.Widget {
 	return &MultiSelectWidget{
 		OptionsWidget: NewOptionWidget("select", "forms/widgets/multi-select.html", attrs, choices),
 	}

@@ -22,6 +22,10 @@
       "contrib/admin/static_src/**/*.ts",
       "contrib/admin/static_src/**/*.tsx",
 
+      "contrib/shop/assets/static_src/**/*.js",
+      "contrib/shop/assets/static_src/**/*.ts",
+      "contrib/shop/assets/static_src/**/*.tsx",
+
       "contrib/admin/chooser/static_src/**/*.js",
       "contrib/admin/chooser/static_src/**/*.ts",
       "contrib/admin/chooser/static_src/**/*.tsx",
@@ -60,6 +64,10 @@
       "contrib/admin/static_src/**/*.test.js",
       "contrib/admin/static_src/**/*.test.ts",
       "contrib/admin/static_src/**/*.test.tsx",
+
+      "contrib/shop/assets/static_src/**/*.test.js",
+      "contrib/shop/assets/static_src/**/*.test.ts",
+      "contrib/shop/assets/static_src/**/*.test.tsx",
 
       "contrib/admin/chooser/static_src/**/*.test.js",
       "contrib/admin/chooser/static_src/**/*.test.ts",

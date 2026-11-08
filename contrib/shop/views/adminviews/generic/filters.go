@@ -94,7 +94,7 @@ func (b amountFilterSpec[T]) Field(r *http.Request) fields.Field {
 	wOpts := b.getOptions(r, b.amounts)
 	fldOpts := slices.Clone(b.opts.formFieldOpts)
 	fldOpts = append(fldOpts, fields.Widget(options.NewSelectInput(
-		nil, func() []widgets.Option { return wOpts },
+		nil, func(ctx context.Context) []widgets.Option { return wOpts },
 	)))
 	return fields.CharField(
 		fldOpts...,

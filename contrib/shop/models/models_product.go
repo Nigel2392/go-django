@@ -7,12 +7,16 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/editor"
 	_ "github.com/Nigel2392/go-django/contrib/editor/features"
+	"github.com/Nigel2392/go-django/contrib/shop/supplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/shopspring/decimal"
 )
 
@@ -47,7 +51,7 @@ type syncData struct {
 // but only if there was a difference in those columns compared to the syncData.
 //
 // Otherwise it will perform an in-db update for all provided objects.
-func (qs *ProductQuery) SyncProducts(products ...*Product) error {
+func (qs *ProductQuery) Sync(products ...*Product) error {
 	qs = qs.Clone()
 
 	tx, err := qs.GetOrCreateTransaction()
@@ -62,6 +66,7 @@ func (qs *ProductQuery) SyncProducts(products ...*Product) error {
 	}
 
 	_, res, err := queries.GetQuerySet(&ProductSku{}).
+		WithContext(qs.Context()).
 		Select("ID", "Price", "Product").
 		Filter("Product__in", qs.Select("ID")).
 		OrderBy("Product").
@@ -147,12 +152,13 @@ func (qs *ProductQuery) SyncProducts(products ...*Product) error {
 }
 
 type Product struct {
-	ID      uint64
-	Title   string
-	Slug    string
-	Ranking uint64
-	Editor  *editor.EditorJSBlockData
-	Skus    *queries.RelRevFK[*ProductSku]
+	ID       uint64
+	Title    string
+	Slug     string
+	Ranking  uint64
+	Supplier string
+	Editor   *editor.EditorJSBlockData
+	Skus     *queries.RelRevFK[*ProductSku]
 
 	// Should be synchronised periodically
 	PriceMax decimal.Decimal
@@ -170,6 +176,7 @@ func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
 				admin.TitlePanel(admin.FieldPanel("Title")).
 					WithOutputFields("Slug"),
 				admin.FieldPanel("Slug"),
+				admin.FieldPanel("Supplier"),
 				admin.FieldPanel("Ranking"),
 				admin.FieldPanel("Editor").Class("fullsize"),
 			),
@@ -184,9 +191,19 @@ func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
 					DisallowAdd:    false,
 					DisallowRemove: false,
 					Panels: []admin.Panel{
-						admin.FieldPanel("Title"),
-						admin.FieldPanel("Price"),
-						admin.FieldPanel("Stock"),
+						admin.TabbedPanel(
+							admin.PanelTab("Sku",
+								admin.FieldPanel("Title"),
+								admin.FieldPanel("Price"),
+								admin.FieldPanel("Stock"),
+							),
+							admin.PanelTab("Images",
+								admin.FieldPanel("Images"),
+							),
+							admin.PanelTab("Supplier",
+								admin.FieldPanel("SupplierData"),
+							),
+						),
 					},
 				},
 			),
@@ -205,6 +222,7 @@ func (m *Product) EditPanels(ctx context.Context) []admin.Panel {
 					admin.FieldPanel("Slug"),
 					admin.FieldPanel("ID"),
 				),
+				admin.FieldPanel("Supplier"),
 				admin.FieldPanel("Ranking"),
 				admin.FieldPanel("Editor").Class("fullsize"),
 			),
@@ -219,9 +237,19 @@ func (m *Product) EditPanels(ctx context.Context) []admin.Panel {
 					DisallowAdd:    false,
 					DisallowRemove: false,
 					Panels: []admin.Panel{
-						admin.FieldPanel("Title"),
-						admin.FieldPanel("Price"),
-						admin.FieldPanel("Stock"),
+						admin.TabbedPanel(
+							admin.PanelTab("Sku",
+								admin.FieldPanel("Title"),
+								admin.FieldPanel("Price"),
+								admin.FieldPanel("Stock"),
+							),
+							admin.PanelTab("Images",
+								admin.FieldPanel("Images"),
+							),
+							admin.PanelTab("Supplier",
+								admin.FieldPanel("SupplierData"),
+							),
+						),
 					},
 				},
 			),
@@ -254,6 +282,24 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 					MinLength: 2,
 					MaxLength: 75,
 					ReadOnly:  true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Supplier", &m.Supplier, func() fattrs.PtrFieldConfig[*Product, string] {
+			return fattrs.PtrFieldConfig[*Product, string]{
+				Config: attrs.FieldConfig{
+					// ReadOnly: true,
+					FormField: func(opts ...func(fields.Field)) fields.Field {
+						var widget = options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
+							var wo = make([]widgets.Option, 0)
+							for _, backend := range supplier.IterBackends(true) {
+								wo = append(wo, widgets.NewOption(backend.InternalName(), backend.Label(ctx), backend.InternalName()))
+							}
+							return wo
+						})
+
+						return fields.CharField(append(opts, fields.Widget(widget))...)
+					},
 				},
 			}
 		}),

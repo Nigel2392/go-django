@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -119,6 +120,14 @@ func (m *StructBlock) ValueOmittedFromData(ctx context.Context, data url.Values,
 	return omitted
 }
 
+func (b *StructBlock) Media() media.Media {
+	var m media.Media = media.NewMedia()
+	for head := b.Fields.Front(); head != nil; head = head.Next() {
+		m = m.Merge(head.Value.Media())
+	}
+	return m
+}
+
 func (m *StructBlock) ValueFromDataDict(ctx context.Context, d url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var errors = NewBlockErrors[string]()
 	var data = newStructBlockValue(m, make(map[string]interface{}, m.Fields.Len()))
@@ -187,6 +196,38 @@ func (m *StructBlock) ValueToForm(value interface{}) interface{} {
 	}
 
 	return data
+}
+
+func (m *StructBlock) Save(ctx context.Context, value interface{}) (interface{}, error) {
+	if fields.IsZero(value) {
+		return value, nil
+	}
+
+	var errs = NewBlockErrors[string]()
+	var data = newStructBlockValue(m, make(map[string]interface{}))
+	var valueMap = value.(*StructBlockValue)
+	for head := m.Fields.Front(); head != nil; head = head.Next() {
+		var (
+			err error
+			v   = valueMap.V[head.Key]
+		)
+
+		if saveable, ok := head.Value.(SaveableBlock); ok {
+			v, err = saveable.Save(ctx, v)
+			if err != nil {
+				errs.AddError(head.Key, err)
+				v = valueMap.V[head.Key]
+			}
+		}
+
+		data.V[head.Key] = v
+	}
+
+	if errs.HasErrors() {
+		return data, errs
+	}
+
+	return data, nil
 }
 
 func (m *StructBlock) Clean(ctx context.Context, value interface{}) (interface{}, error) {
@@ -274,7 +315,7 @@ func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 	ctxData.Value = value
 
 	if valueMap, ok = value.(map[string]interface{}); !ok {
-		return fmt.Errorf("value must be a map[string]interface{}")
+		return fmt.Errorf("value must be a map[string]interface{}, got %T", value)
 	}
 
 	var errs = NewBlockErrors[string](errors...)

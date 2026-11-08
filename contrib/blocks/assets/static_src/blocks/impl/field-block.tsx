@@ -2,7 +2,7 @@ import { BoundBlock, Block, BlockMeta } from '../base';
 import { BoundWidget, Widget } from '../../widgets/widget';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
-import { copyAttrs } from '../utils';
+import { copyAttrs, slugify } from '../utils';
 
 class BoundFieldBlock extends BoundBlock<FieldBlock> {
     errorList: HTMLElement;
@@ -24,12 +24,10 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
            </div>
         )
 
-        const widgetPlaceholder = (
-            <div class="field-widget"></div>
-        );
+        const inputWrapper = block.newInputWrapper();
 
         const root = PanelComponent({
-            panelId: `${name}--panel`,
+            panelId: `panel-${slugify(name)}`,
             class: "field-block",
             allowPanelLink: !!block.meta.label,
             heading: labelWrapper,
@@ -37,7 +35,7 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
                 <div class="field-help">{block.meta.helpText}</div>
             ) : null,
             errors: errorList,
-            children: widgetPlaceholder,
+            children: inputWrapper,
         });
 
         copyAttrs(
@@ -49,6 +47,7 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
         placeholder.replaceWith(root);
 
         super(block, name, root);
+        this.inputWrapper = inputWrapper;
         this.errorList = errorList;
         this.labelWrapper = labelWrapper;
         this.attrs = attrs;
@@ -60,7 +59,7 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
         initialState = initialState ?? block.meta.default ?? null;
 
         this.widget = block.widget.render(
-           widgetPlaceholder, name, id, initialState, options,
+           this.inputWrapper, name, id, initialState, options,
         );
 
         if (initialError) {
@@ -87,6 +86,7 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
     }
 
     setState(state: any): void {
+        console.log("state", state);
         this.widget.setState(state);
     }
 
@@ -144,16 +144,24 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
 class FieldBlock extends Block {
     name: string;
     widget: Widget;
+    blockClass: any;
 
     constructor(name: string, widget: Widget, meta: BlockMeta) {
         super();
         this.name = name;
         this.widget = widget;
         this.meta = meta;
+        this.blockClass = BoundFieldBlock;
+    }
+
+    newInputWrapper() {
+        return (
+            <div class="field-widget"></div>
+        )
     }
     
     render(root: HTMLElement, id: string, name: string, initialState: any, initialError: any, attrs: any = {}): BoundFieldBlock {
-        return new BoundFieldBlock(
+        return new this.blockClass(
             this,
             root,
             name,

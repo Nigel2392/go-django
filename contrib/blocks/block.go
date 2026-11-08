@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/versatile"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -20,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-telepath/telepath"
+	"github.com/Nigel2392/versatile"
 )
 
 type Block interface {
@@ -43,6 +44,11 @@ type Block interface {
 	widgets.FormValuer
 	forms.Validator
 	forms.Cleaner
+}
+
+type SaveableBlock interface {
+	Block
+	Save(ctx context.Context, value interface{}) (interface{}, error)
 }
 
 var _ Block = (*BaseBlock)(nil)
@@ -89,7 +95,7 @@ func (b *BaseBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 		}
 		var v = reflect.New(rT)
 		if err := json.Unmarshal(value, v.Interface()); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to decode value into %s", rT)
 		}
 		var val any
 		if isPtr {
@@ -128,6 +134,17 @@ func (b *BaseBlock) Field() fields.Field {
 		b.SetField(fields.CharField())
 	}
 	return b.FormField
+}
+
+func (bw *BaseBlock) Save(ctx context.Context, value interface{}) (interface{}, error) {
+	field := bw.Field()
+	if saveable, ok := field.(fields.SaveableField); ok {
+		return saveable.Save(value)
+	}
+	if saveable, ok := field.(fields.SaveableCtxField); ok {
+		return saveable.Save(ctx, value)
+	}
+	return value, nil
 }
 
 func (b *BaseBlock) HasChanged(initial, data interface{}) bool {

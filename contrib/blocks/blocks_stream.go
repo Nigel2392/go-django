@@ -393,6 +393,53 @@ func (l *StreamBlock) ValueToForm(value interface{}) interface{} {
 	return newData
 }
 
+func (l *StreamBlock) Save(ctx context.Context, value interface{}) (interface{}, error) {
+	if fields.IsZero(value) {
+		return nil, nil
+	}
+
+	var blockData *StreamBlockValue
+	var ok bool
+	if blockData, ok = value.(*StreamBlockValue); !ok {
+		return value, fmt.Errorf("value must be of type StreamBlockValue, got %T", value)
+	}
+
+	var errs = NewBlockErrors[int]()
+	var newData = newStreamBlockValue(l, make([]*StreamBlockData, 0, len(blockData.V)))
+	for i, lbVal := range blockData.V {
+		var child, ok = l.Children.Get(lbVal.Type)
+		if !ok {
+			continue // this really shouldn't happen
+		}
+
+		var (
+			err error
+			v   = lbVal.Data
+		)
+
+		if saveable, ok := child.(SaveableBlock); ok {
+			v, err = saveable.Save(ctx, v)
+			if err != nil {
+				errs.AddError(i, errors.Wrapf(err, "index %d", i))
+				v = lbVal.Data
+			}
+		}
+
+		newData.V = append(newData.V, &StreamBlockData{
+			ID:    lbVal.ID,
+			Type:  lbVal.Type,
+			Order: lbVal.Order,
+			Data:  v,
+		})
+	}
+
+	if errs.HasErrors() {
+		return newData, errs
+	}
+
+	return newData, nil
+}
+
 func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}, error) {
 	if fields.IsZero(value) {
 		return nil, nil

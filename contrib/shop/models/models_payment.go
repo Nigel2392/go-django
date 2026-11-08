@@ -15,12 +15,13 @@ import (
 var _ queries.ActsBeforeCreate = (*Payment)(nil)
 
 type Payment struct {
-	ID        drivers.ULID
-	Amount    decimal.Decimal
-	Provider  prov.BaseProvider
-	State     paystate.PayState
-	CreatedAt drivers.Timestamp
-	UpdatedAt drivers.Timestamp
+	ID            drivers.ULID
+	Amount        decimal.Decimal
+	Provider      prov.BaseProvider
+	TransactionID string
+	State         paystate.PayState
+	CreatedAt     drivers.Timestamp
+	UpdatedAt     drivers.Timestamp
 }
 
 func (m *Payment) BeforeCreate(ctx context.Context) error {

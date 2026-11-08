@@ -459,7 +459,17 @@ func (r *ptrField[M, V]) AllowNull() bool         { return r.useOpts().AllowNull
 func (r *ptrField[M, V]) AllowBlank() bool        { return r.useOpts().AllowBlank() }
 func (r *ptrField[M, V]) AllowEdit() bool         { return r.useOpts().AllowEdit() }
 func (r *ptrField[M, V]) FormField() fields.Field { return r.useOpts().FormField() }
-func (r *ptrField[M, V]) ToString() string        { return attrs.ToString(r.GetValue()) }
+
+//	// impact of this is negligible, but utility is great for spaghetti code, allowing
+//	// for deep dependencies on instance values to determine which formfield to use
+//	func (r *ptrField[M, V]) FormField() fields.Field {
+//		attrsFld := attrs.NewField(
+//			r.obj, r.fieldName, &r.useOpts().config,
+//		)
+//		return attrsFld.FormField()
+//	}
+
+func (r *ptrField[M, V]) ToString() string { return attrs.ToString(r.GetValue()) }
 
 func (r *ptrField[M, V]) SetValue(v interface{}, force bool) error {
 	if bitcheck.Is(r.useOpts().flags, flagIsModel) {

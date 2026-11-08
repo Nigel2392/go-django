@@ -79,6 +79,21 @@ func NewContentType[T any](p T) *BaseContentType[T] {
 	}
 }
 
+// NewRContentType returns a new BaseContentType.
+// It takes the reflect.Type of the model object as an argument.
+func NewRContentType[T any](p reflect.Type) *BaseContentType[T] {
+	var rTypeElem = p
+	if p.Kind() == reflect.Ptr {
+		rTypeElem = p.Elem()
+	}
+	return &BaseContentType[T]{
+		rType:     p,
+		rTypeElem: rTypeElem,
+		pkgPath:   rTypeElem.PkgPath(),
+		modelName: rTypeElem.Name(),
+	}
+}
+
 // ChangeBaseType changes the BaseContentType to a new type.
 func ChangeBaseType[OldT, NewT any](c *BaseContentType[OldT]) *BaseContentType[NewT] {
 	return &BaseContentType[NewT]{

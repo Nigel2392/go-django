@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-telepath/telepath"
@@ -30,7 +31,16 @@ func RenderTelepathAdapterHTML(ctx context.Context, obj widgets.Widget) []interf
 		err == nil,
 		"error rendering widget for telepath: %v", err,
 	)
-	return []interface{}{sb.String()}
+
+	var args = []interface{}{sb.String()}
+
+	switch obj.FormType() {
+	case "file":
+		args = append(args, django.Media("__MEDIA_PATH__"))
+	default:
+	}
+
+	return args
 }
 
 func init() {
@@ -46,6 +56,8 @@ func init() {
 			adapter.JSConstructor = "django.widgets.RadioSelect"
 		case "select":
 			adapter.JSConstructor = "django.widgets.SelectWidget"
+		case "file":
+			adapter.JSConstructor = "django.widgets.FileWidget"
 		default:
 			adapter.JSConstructor = "django.widgets.Widget"
 		}

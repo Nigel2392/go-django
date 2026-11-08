@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	_ "github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/filewidget"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/pkg/errors"
 )
@@ -360,7 +361,7 @@ func TestNewFileInput(t *testing.T) {
 	}
 
 	// Create the file input widget with the mock validator
-	fileInput := widgets.NewFileInput(nil, []string{}, mockValidator)
+	fileInput := filewidget.NewFileInput(nil, []string{}, mockValidator)
 
 	// Check widget type
 	if fileInput.FormType() != "file" {
@@ -415,7 +416,7 @@ func TestNewFileInput(t *testing.T) {
 }
 
 // Mock options for testing
-func mockOptions() []widgets.Option {
+func mockOptions(ctx context.Context) []widgets.Option {
 	return []widgets.Option{
 		widgets.NewOption("option1", "Option 1", "1"),
 		widgets.NewOption("option2", "Option 2", "2"),

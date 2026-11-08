@@ -1,4 +1,4 @@
-import { Block, BlockMeta } from '../base';
+import { Block, BlockMeta, BoundBlock } from '../base';
 import { BoundSequenceBlock, BoundSequenceBlockValue } from './sequence-block';
 
 type ListBlockValue = {
@@ -7,22 +7,39 @@ type ListBlockValue = {
     data: any;
 };
 
+class BoundListBlockValue {
+    id: string;
+    order: number;
+    block: BoundBlock;
+
+    constructor(id: string, order: number, block: BoundBlock) {
+        this.id = id;
+        this.order = order;
+        this.block = block;
+    }
+
+    getState() {
+        return {
+            id: this.id,
+            order: this.order,
+            data: this.block.getState(),
+        }
+    }
+}
+
 class BoundListBlock extends BoundSequenceBlock<ListBlock> {
     _getChildBlock(value: any): Block | undefined {
         return this.block.childBlock;
     }
 
     _renderBoundBlock(child: Block, placeholder: HTMLElement, id: string, name: String, value: any, error: any): BoundSequenceBlockValue {
-        return {
-            id: value.id,
-            block: child.render(
-                placeholder,
-                id,
-                name,
-                value.data,
-                error,
-            )
-        };
+        return new BoundListBlockValue(value.id, value.order, child.render(
+            placeholder,
+            id,
+            name,
+            value.data,
+            error,
+        ))
     }
 
     _defaultChildState(block: Block): any {

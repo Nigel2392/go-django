@@ -53,7 +53,7 @@ func TestOptionsWidgetValidate(t *testing.T) {
 		widgets.NewOption("name3", "label3", "value3"),
 	}
 
-	var w = options.NewSelectInput(map[string]string{}, func() []widgets.Option {
+	var w = options.NewSelectInput(map[string]string{}, func(ctx context.Context) []widgets.Option {
 		return opts
 	})
 

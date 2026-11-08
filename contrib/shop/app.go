@@ -3,6 +3,7 @@ package shop
 import (
 	"context"
 	"embed"
+	"errors"
 	"io/fs"
 	"net/http"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/logging"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -58,7 +60,7 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Deps = []string{
-		"session", "auth", "admin", "editor",
+		"session", "auth", "admin", "editor", "blocks",
 	}
 
 	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
@@ -95,6 +97,9 @@ func NewAppConfig() (django.AppConfig, error) {
 		// Products
 		&models.ProductSku{},
 		&models.Product{},
+
+		// Suppliers
+		&supplier.SupplierModel{},
 	}
 
 	//	migrator.RegisterMigrateFunc(&models.Product{}, "0003_exec_test.mig", func(ctx context.Context, me *migrator.MigrationEngine, mt *migrator.ModelTable) error {
@@ -153,8 +158,10 @@ func NewAppConfig() (django.AppConfig, error) {
 		m.Get("home", NewHandler(adminviews.Home), "home")
 
 		products := m.Get("products/", NewHandler(adminviews.ViewProductList.ServeHTTP), "products")
-		products.Get("add/", NewHandler(adminviews.ViewAddProduct), "add")
-		products.Post("add/", NewHandler(adminviews.ViewAddProduct))
+		products.Get("supplier/add/", NewHandler(adminviews.ViewAddNewProductSupplier), "new_with_supplier")
+		products.Post("supplier/add/", NewHandler(adminviews.ViewAddNewProductSupplier))
+		products.Get("add/<<supplier>>/", NewHandler(adminviews.ViewAddProduct), "add")
+		products.Post("add/<<supplier>>/", NewHandler(adminviews.ViewAddProduct))
 		products.Get("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct), "edit")
 		products.Post("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct))
 
@@ -175,7 +182,10 @@ func NewAppConfig() (django.AppConfig, error) {
 	SHOP.Ready = func() error {
 		// always run the sync on startup
 		// /mostly/ handled in DB
-		return models.Products().SyncProducts()
+		return errors.Join(
+			models.Products().Sync(),
+			supplier.Suppliers().Sync(),
+		)
 	}
 
 	auditlogs.RegisterDefinition("shop:product:add", logging.NewShopLogDefinition())

@@ -10,47 +10,41 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
 var (
-	_ queries.QuerySetCanClone[attrs.Definer, *SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]], *queries.QuerySet[attrs.Definer]] = (*SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
-	_ queries.BaseReadQuerySet[Specific[attrs.Definer, attrs.Definer], *SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]]]          = (*SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
-	_ queries.BaseWriteQuerySet[attrs.Definer, *SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]]]                                  = (*SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
+	_ queries.QuerySetCanClone[Model, *SpecificQuerySet[Model, attrs.Definer, *queries.QuerySet[attrs.Definer]], *queries.QuerySet[attrs.Definer]] = (*SpecificQuerySet[Model, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
+	_ queries.BaseReadQuerySet[SpecificModel[Model, attrs.Definer], *SpecificQuerySet[Model, attrs.Definer, *queries.QuerySet[attrs.Definer]]]     = (*SpecificQuerySet[Model, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
+	_ queries.BaseWriteQuerySet[Model, *SpecificQuerySet[Model, attrs.Definer, *queries.QuerySet[attrs.Definer]]]                                  = (*SpecificQuerySet[Model, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
 )
 
-type BaseSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]] interface {
-	queries.BaseReadQuerySet[Specific[ORIGINAL, SPECIFIC], *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]]
+type BaseSpecificQuerySet[ORIGINAL Model, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]] interface {
+	queries.BaseReadQuerySet[SpecificModel[ORIGINAL, SPECIFIC], *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]]
 	queries.BaseWriteQuerySet[ORIGINAL, *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]]
 }
 
-type specific[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer] struct {
+type specific[ORIGINAL Model, SPECIFIC attrs.Definer] struct {
 	ids []any
-	s   map[any]*queries.Row[Specific[ORIGINAL, SPECIFIC]]
+	s   map[any]*queries.Row[SpecificModel[ORIGINAL, SPECIFIC]]
 }
 
-type Specific[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer] struct {
+type SpecificModel[ORIGINAL Model, SPECIFIC attrs.Definer] struct {
 	Original ORIGINAL
 	Specific SPECIFIC
 }
 
-type SpecificQuerySetOptions[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer] struct {
-	GetSpecificQuerySet    func(targetContentType *contenttypes.ContentTypeDefinition, target SPECIFIC) queries.BaseReadQuerySet[SPECIFIC, *queries.QuerySet[SPECIFIC]]
-	GetSpecificPreloadData func(obj ORIGINAL) (id any, contentType string, ok bool)
-	GetSpecificTargetID    func(target SPECIFIC) (id any, ok bool)
+type SpecificQuerySetOptions[ORIGINAL Model, SPECIFIC attrs.Definer] struct {
+	GetSpecificQuerySet func(targetContentType *contenttypes.ContentTypeDefinition, target SPECIFIC) queries.BaseReadQuerySet[SPECIFIC, *queries.QuerySet[SPECIFIC]]
+	GetSpecificTargetID func(target SPECIFIC) (id any, ok bool)
 }
 
-type SpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]] struct {
+type SpecificQuerySet[ORIGINAL Model, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]] struct {
 	*queries.WrappedQuerySet[ORIGINAL, *SpecificQuerySet[ORIGINAL, SPECIFIC, QS], QS]
 	opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]
 }
 
-func GetSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]](qs QS, opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
-	assert.False(
-		opts.GetSpecificPreloadData == nil,
-		"GetSpecificQuerySet: opts.GetSpecificPreloadData must be provided",
-	)
+func GetSpecificQuerySet[ORIGINAL Model, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]](qs QS, opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
 	assert.False(
 		opts.GetSpecificTargetID == nil,
 		"GetSpecificQuerySet: opts.GetSpecificTargetID must be provided",
@@ -72,13 +66,13 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) CloneQuerySet(wrapped *queri
 	}
 }
 
-func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) IterAll() (int, iter.Seq2[*queries.Row[Specific[ORIGINAL, SPECIFIC]], error], error) {
+func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) IterAll() (int, iter.Seq2[*queries.Row[SpecificModel[ORIGINAL, SPECIFIC]], error], error) {
 	var count, rows, err = qs.WrappedQuerySet.IterAll()
 	if err != nil {
 		return 0, nil, err
 	}
 
-	var iterable = func(yield func(*queries.Row[Specific[ORIGINAL, SPECIFIC]], error) bool) {
+	var iterable = func(yield func(*queries.Row[SpecificModel[ORIGINAL, SPECIFIC]], error) bool) {
 		for row, err := range rows {
 			if err != nil {
 				if !yield(nil, err) {
@@ -86,11 +80,11 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) IterAll() (int, iter.Seq2[*q
 				}
 			}
 
-			var specificRow = &queries.Row[Specific[ORIGINAL, SPECIFIC]]{
+			var specificRow = &queries.Row[SpecificModel[ORIGINAL, SPECIFIC]]{
 				ObjectFieldDefs: row.ObjectFieldDefs,
 				Through:         row.Through,
 				Annotations:     row.Annotations,
-				Object: Specific[ORIGINAL, SPECIFIC]{
+				Object: SpecificModel[ORIGINAL, SPECIFIC]{
 					Original: row.Object,
 				},
 			}
@@ -104,7 +98,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) IterAll() (int, iter.Seq2[*q
 	return count, iterable, nil
 }
 
-func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific[ORIGINAL, SPECIFIC]], error) {
+func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[SpecificModel[ORIGINAL, SPECIFIC]], error) {
 	// Use iter method of the base queryset to not have to
 	// iterate over all rows multiple times.
 	var rowCount, baseRows, err = qs.WrappedQuerySet.IterAll()
@@ -114,14 +108,14 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 
 	// Create a new map to hold the specific  content type and ID-list pairs.
 	var preloadMap = orderedmap.NewOrderedMap[string, *specific[ORIGINAL, SPECIFIC]]()
-	var rows = make(queries.Rows[Specific[ORIGINAL, SPECIFIC]], rowCount)
+	var rows = make(queries.Rows[SpecificModel[ORIGINAL, SPECIFIC]], rowCount)
 	var rowIdx int
 	for row, err := range baseRows {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get row %d for specific s", rowIdx)
 		}
 
-		var specificRow = &queries.Row[Specific[ORIGINAL, SPECIFIC]]{
+		var specificRow = &queries.Row[SpecificModel[ORIGINAL, SPECIFIC]]{
 			ObjectFieldDefs: row.ObjectFieldDefs,
 			Through:         row.Through,
 			Annotations:     row.Annotations,
@@ -129,34 +123,29 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 			// currently we set the object to the node isntead of the specific ,
 			// if a specific  can be found, it will be properly set to the right object
 			// later in the prefetch loop.
-			Object: Specific[ORIGINAL, SPECIFIC]{
+			Object: SpecificModel[ORIGINAL, SPECIFIC]{
 				Original: row.Object,
 			},
 		}
 
 		// If the object's SpecificPreloadData method returns ok as false,
 		// it cannot be preloaded - log a warning.
-		var preloadId, contentType, ok = qs.opts.GetSpecificPreloadData(row.Object)
-		if !ok {
-			logger.Warnf("object %T with preload ID %d cannot be preloaded", row.Object, preloadId)
-			rows[rowIdx] = specificRow
-			rowIdx++
-			continue
-		}
-
-		preloadId = attrs.PrimaryKey(qs.Context(), preloadId)
+		specificObj := row.Object.SpecificObject()
+		preloadId := specificObj.SpecificID
+		contentType := specificObj.SpecificContentType
+		typname := contentType.TypeName()
 
 		// Cache a reference to the specific  row in
 		// the preload map - this allows us to efficiently
 		// set the  object later in a single query
 		// for each content type and id list combination.
 		var preload, exists = preloadMap.Get(
-			contentType,
+			typname,
 		)
 		if !exists {
 			preload = &specific[ORIGINAL, SPECIFIC]{
 				ids: make([]any, 0, 1),
-				s:   make(map[any]*queries.Row[Specific[ORIGINAL, SPECIFIC]], 1),
+				s:   make(map[any]*queries.Row[SpecificModel[ORIGINAL, SPECIFIC]], 1),
 			}
 		}
 
@@ -164,7 +153,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 		preload.s[preloadId] = specificRow
 
 		preloadMap.Set(
-			contentType,
+			typname,
 			preload,
 		)
 
@@ -226,8 +215,8 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 	return rows, err
 }
 
-func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) Get() (*queries.Row[Specific[ORIGINAL, SPECIFIC]], error) {
-	var nillRow = &queries.Row[Specific[ORIGINAL, SPECIFIC]]{}
+func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) Get() (*queries.Row[SpecificModel[ORIGINAL, SPECIFIC]], error) {
+	var nillRow = &queries.Row[SpecificModel[ORIGINAL, SPECIFIC]]{}
 
 	// limit to max_get_results
 	*qs = *qs.Limit(queries.MAX_GET_RESULTS)
@@ -265,7 +254,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) Get() (*queries.Row[Specific
 //
 // It returns a Query that can be executed to get the result, which is a Row object
 // that contains the model object and a map of annotations.
-func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) First() (*queries.Row[Specific[ORIGINAL, SPECIFIC]], error) {
+func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) First() (*queries.Row[SpecificModel[ORIGINAL, SPECIFIC]], error) {
 	*qs = *qs.Limit(1)
 
 	var results, err = qs.All()
@@ -286,7 +275,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) First() (*queries.Row[Specif
 //
 // It returns a Query that can be executed to get the result, which is a Row object
 // that contains the model object and a map of annotations.
-func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) Last() (*queries.Row[Specific[ORIGINAL, SPECIFIC]], error) {
+func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) Last() (*queries.Row[SpecificModel[ORIGINAL, SPECIFIC]], error) {
 	*qs = *qs.Reverse()
 	return qs.First()
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/fields/filefield"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
@@ -328,7 +329,7 @@ func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 			Null:     true,
 			Blank:    true,
 			FormField: func(opts ...func(fields.Field)) fields.Field {
-				return fields.ImageFileField("", opts...)
+				return filefield.ImageFileField("", opts...)
 			},
 		}),
 		attrs.NewField(n, "Thumbnail", &attrs.FieldConfig{

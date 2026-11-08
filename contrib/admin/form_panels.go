@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/contrib/admin/compare"
-	"github.com/Nigel2392/versatile"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
@@ -25,9 +24,11 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/formsets"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
+	"github.com/Nigel2392/versatile"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -831,6 +832,19 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 			target = attrs.NewObject[TARGET](ctx, p.TargetType)
 		}
 
+		if revField != nil && isNew {
+			var fieldName = revField.Name()
+
+			targetDefs := attrs.Define(ctx, target)
+			instRevField, _ := targetDefs.Field(fieldName)
+
+			if err := instRevField.SetValue(source, true); err != nil {
+				logger.Warnf("failed to set source %T on target %T.%s", source, target, fieldName)
+			}
+		}
+
+		// fmt.Printf("SETTING REVERSE VAL\n\t%v\n\t%v\n\t%v\n\t%v\n", revField, isNew, source, target)
+
 		var form modelforms.ModelForm[TARGET]
 		if p.Form != nil {
 			form = p.Form()
@@ -839,7 +853,6 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 			var modelDef = FindDefinition(p.TargetType)
 			if modelDef == nil {
 				form = modelforms.NewBaseModelForm(ctx, target)
-				form.SetInstance(target)
 			} else {
 				var opts FormViewOptions
 				if isNew {
@@ -930,6 +943,13 @@ func (c *adminClusterForm[F, T1]) FormOrder() FORM_ORDERING {
 
 func (c *adminClusterForm[F, T1]) FormField() string {
 	return c.FieldForChild
+}
+
+func (c *adminClusterForm[F, T1]) Media() media.Media {
+	if m, ok := c.BaseFormSetForm.(media.MediaDefiner); ok {
+		return m.Media()
+	}
+	return nil
 }
 
 func (c *adminClusterForm[F, T1]) ParentField() string {

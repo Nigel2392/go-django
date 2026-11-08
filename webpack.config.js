@@ -128,6 +128,14 @@ module.exports = [
         ...baseConfig(),
     },
     {
+        entry: './contrib/shop/assets/static_src/index.ts',
+        output: {
+            'path': path.resolve(__dirname, 'contrib/shop/assets/static/shop/admin/js/'),
+            'filename': 'supplier-block.js'
+        },
+        ...baseConfig(),
+    },
+    {
         entry: './contrib/editor/static_src/index.ts',
         output: {
             'path': path.resolve(__dirname, 'contrib/editor/static/editorjs/js/'),

@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"net/mail"
 	"os"
+	"runtime"
+	"time"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/auth"
+	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/Nigel2392/go-django/contrib/editor"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/reports"
@@ -18,6 +21,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
+	mediafs "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -39,6 +44,10 @@ func main() {
 	//	io.Copy(dst, src)
 	//	dst.Close()
 	//	src.Close()
+	// This is the filesystem which will be used
+	var mediaBackend = mediafs.NewBackend("./.private/commerce/media", 0)
+	mediafiles.RegisterBackend("filesystem", mediaBackend)
+	mediafiles.SetDefault("filesystem")
 
 	db, err := drivers.Open(context.Background(), "sqlite3", "./.private/commerce/db.sqlite3")
 	if err != nil {
@@ -67,10 +76,16 @@ func main() {
 			reports.NewAppConfig,
 			migrator.NewAppConfig,
 			editor.NewAppConfig,
+			blocks.NewAppConfig,
 			shop.NewAppConfig,
 		),
 	)
-
+	go func() {
+		for {
+			time.Sleep(500 * time.Millisecond)
+			runtime.GC()
+		}
+	}()
 	err = app.Initialize()
 	if err != nil {
 		panic(err)

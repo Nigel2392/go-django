@@ -12,11 +12,15 @@ import (
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/versatile"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-func init() {
+type saveInformationDefiner interface {
+	Saved() bool
+}
 
+func init() {
 	goldcrest.Register(models.MODEL_SAVE_HOOK, 0, models.ModelFunc(func(c context.Context, m attrs.Definer) (changed bool, err error) {
 		if u, ok := m.(ForUseInQueries); ok && !u.ForUseInQueries() {
 			return false, nil
@@ -32,7 +36,16 @@ func init() {
 			return false, errors.ValueError.WithCause(err)
 		}
 
-		if primaryValue == nil || fields.IsZero(primaryValue) {
+		var mustCreate bool
+		if sinfo, ok := m.(saveInformationDefiner); ok {
+			if sinfo.Saved() {
+				goto updateObject
+			} else {
+				mustCreate = true
+			}
+		}
+
+		if mustCreate || primaryValue == nil || versatile.IsZero(primaryValue) {
 			var _, err = GetQuerySet(m).ExplicitSave().Create(m)
 			if err != nil {
 				return false, err
@@ -40,6 +53,7 @@ func init() {
 			return true, nil
 		}
 
+	updateObject:
 		ct, err := GetQuerySet(m).
 			ExplicitSave().
 			Filter(

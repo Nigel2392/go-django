@@ -31,6 +31,13 @@ func BlockField(block Block, opts ...func(fields.Field)) *BlockFormField {
 	return bf
 }
 
+func (bw *BlockFormField) Save(ctx context.Context, value interface{}) (interface{}, error) {
+	if saveable, ok := bw.Block.(SaveableBlock); ok {
+		return saveable.Save(ctx, value)
+	}
+	return value, nil
+}
+
 func (bw *BlockFormField) HasChanged(initial, data interface{}) bool {
 	return bw.Block.HasChanged(initial, data)
 }
@@ -42,7 +49,6 @@ func (bw *BlockFormField) ValueToGo(value interface{}) (interface{}, error) {
 
 func (bw *BlockFormField) ValueToForm(value interface{}) interface{} {
 	return bw.Block.ValueToForm(value)
-
 }
 
 func (bw *BlockFormField) Validate(ctx context.Context, value interface{}) []error {

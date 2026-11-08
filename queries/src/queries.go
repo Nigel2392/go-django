@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/resolver"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
 
 	// Register all schema editors for the migrator package.
 	_ "github.com/Nigel2392/go-django/queries/src/migrator/sql/mysql"
@@ -43,11 +44,14 @@ type CanSetup interface {
 
 // Setup allows a model to be setup properly if it adheres to the CanSetup interface.
 func setup[T attrs.Definer](ctx context.Context, model T) (T, error) {
+	embedder.Bind(ctx, model)
+
 	if setupModel, ok := any(model).(CanSetup); ok {
 		if err := setupModel.Setup(ctx, model); err != nil {
 			return model, fmt.Errorf("error setting up model %T: %w", model, err)
 		}
 	}
+
 	return model, nil
 }
 

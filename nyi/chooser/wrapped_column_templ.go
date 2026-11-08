@@ -59,7 +59,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(attrs.ToString(attrs.PrimaryKey(ctx, c.Instance)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mailman/chooser/wrapped_column.templ`, Line: 28, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `nyi/chooser/wrapped_column.templ`, Line: 28, Col: 127}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
@@ -72,7 +72,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(c._Definition.GetPreviewString(r.Context(), c.Instance))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mailman/chooser/wrapped_column.templ`, Line: 28, Col: 208}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `nyi/chooser/wrapped_column.templ`, Line: 28, Col: 208}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -85,7 +85,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(string(dataBytes))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mailman/chooser/wrapped_column.templ`, Line: 28, Col: 248}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `nyi/chooser/wrapped_column.templ`, Line: 28, Col: 248}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {

@@ -1,0 +1,11 @@
+package supplier
+
+import (
+    "github.com/Nigel2392/go-django/contrib/blocks"
+	"github.com/Nigel2392/go-django/src/core/ctx"
+)
+
+templ (s *SupplierBlock) RenderTempl(id, name string, valueArr *blocks.StreamBlockValue, telepath string, streamBlockErrors *blocks.BaseBlockValidationError[int], tplCtx ctx.Context) {
+    <div data-stream-block data-controller="block" class="stream-block" data-block-class-path-value="django.blocks.supplier-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueArr, streamBlockErrors}) }>
+    </div>
+}

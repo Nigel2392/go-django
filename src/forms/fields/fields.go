@@ -7,3 +7,4 @@ import (
 type Field = forms.Field
 
 type SaveableField = forms.SaveableField
+type SaveableCtxField = forms.SaveableCtxField

@@ -104,6 +104,13 @@ type MigrationFile struct {
 	// This is used to apply the migration to the database.
 	Table *ModelTable `json:"table"`
 
+	//	// AppData is a custom data field which apps can use to determine if custom migration actions need to be made
+	//	//
+	//	// This can be useful for initializing required models in the database
+	//	//
+	//	// <app_name>: <custom_app_data>
+	//	AppData map[string]any `json:"app_data,omitempty"`
+
 	// Actions are the actions that have been taken in this migration file.
 	//
 	// This is used to keep track of the actions that have been taken in the migration file.

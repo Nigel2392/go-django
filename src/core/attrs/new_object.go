@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
@@ -40,10 +41,14 @@ func createIfIface[T Definer](ctx context.Context, v any) (T, bool) {
 	return obj, true
 }
 
-func setup[T Definer](ctx context.Context, obj any) T {
+func Setup[T Definer](ctx context.Context, obj any) T {
+
+	embedder.Bind(ctx, obj)
+
 	if setupObj, ok := obj.(CanSetup); ok {
 		setupObj.Setup(ctx)
 	}
+
 	return obj.(T)
 }
 
@@ -106,12 +111,12 @@ func NewObject[T Definer](ctx context.Context, definer any) T {
 
 	var rT = reflect.TypeOf(obj)
 	if fn, ok := objectFuncRegistry.types[rT]; ok {
-		return setup[T](ctx, fn(ctx, obj))
+		return Setup[T](ctx, fn(ctx, obj))
 	}
 
 	var newObj, ok = createIfIface[T](ctx, obj)
 	if ok {
-		return setup[T](ctx, newObj)
+		return Setup[T](ctx, newObj)
 	}
 
 	if definerT == nil {
@@ -124,10 +129,10 @@ func NewObject[T Definer](ctx context.Context, definer any) T {
 
 	var cTypeDef = contenttypes.DefinitionForObject(definerT)
 	if cTypeDef != nil {
-		return cTypeDef.Object().(T)
+		return Setup[T](ctx, cTypeDef.Object())
 	}
 
 	definerT = definerT.Elem()
 	var newObjT = reflect.New(definerT)
-	return setup[T](ctx, newObjT.Interface())
+	return Setup[T](ctx, newObjT.Interface())
 }

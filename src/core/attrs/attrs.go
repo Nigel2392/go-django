@@ -5,15 +5,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/versatile"
@@ -36,41 +33,6 @@ func init() {
 	RegisterFormFieldType(time.Time{}, func(opts ...func(fields.Field)) fields.Field {
 		return fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
 	})
-
-	RegisterFormFieldGetter(
-		mediafiles.SimpleStoredObject{},
-		func(f Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
-			var attrs = f.Attrs()
-			var uploadTo, ok = attrs[AttrUploadToKey]
-			if !ok {
-				uploadTo = ""
-			}
-
-			var uploadToFn func(fileObject *widgets.FileObject) string
-			switch uploadTo := uploadTo.(type) {
-			case string:
-				uploadToFn = func(fileObject *widgets.FileObject) string {
-					if uploadTo == "" {
-						return fileObject.Name
-					}
-					return filepath.Join(uploadTo, fileObject.Name)
-				}
-			case func() string:
-				uploadToFn = func(fileObject *widgets.FileObject) string { return filepath.Join(uploadTo(), fileObject.Name) }
-			case func(fileObject *widgets.FileObject) string:
-				uploadToFn = uploadTo
-			default:
-				assert.Fail(
-					"invalid uploadTo type %T for field %s",
-					uploadTo, f.Name(),
-				)
-			}
-
-			var formfield = fields.FileField("", opts...)
-			formfield.UploadTo = uploadToFn
-			return formfield, true
-		},
-	)
 
 	versatile.RegisterCompareStep(75, func(ess *versatile.EqStepState) (eq bool, ok bool) {
 		a, ok := ess.A.(Definer)
@@ -95,6 +57,12 @@ func init() {
 	})
 }
 
+func versatileIsZeroSlice(rv reflect.Value) (zero, ok bool) {
+	kind := rv.Kind()
+	return (kind == reflect.Slice || kind == reflect.Array),
+		(kind == reflect.Slice || kind == reflect.Array)
+}
+
 // IsZero checks if a value is set to its zero value.
 // It works on any value, including pointers, slices, maps, and structs.
 //
@@ -104,7 +72,7 @@ func init() {
 //     or if the value it points to is a zero value.
 func IsZero(value interface{}) bool {
 	var rv = versatile.ReflectValue(value)
-	return versatile.IsZero(value) && rv.Kind() != reflect.Bool && rv.Kind() != reflect.String
+	return versatile.IsZero(value, versatileIsZeroSlice) && rv.Kind() != reflect.Bool && rv.Kind() != reflect.String
 }
 
 // CanCreateObject is an interface for models that can create new objects of the same type.

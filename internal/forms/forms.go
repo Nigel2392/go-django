@@ -162,6 +162,11 @@ type SaveableField interface {
 	Save(value interface{}) (interface{}, error)
 }
 
+type SaveableCtxField interface {
+	Field
+	Save(ctx context.Context, value interface{}) (interface{}, error)
+}
+
 type WithDataDefiner interface {
 	WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request)
 	Data() (url.Values, map[string][]filesystem.FileHeader)

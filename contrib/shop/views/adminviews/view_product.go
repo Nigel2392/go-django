@@ -1,10 +1,12 @@
 package adminviews
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"html/template"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
@@ -14,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews/generic"
@@ -24,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -65,9 +69,10 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 					return object, nil
 				}
 
-				return object.Filter(expr.Or(
+				return object.Distinct().Filter(expr.Or(
 					expr.Q("Title__icontains", value),
 					expr.Q("Slug__icontains", value),
+					expr.Q("Supplier__icontains", value),
 					expr.Q("Skus.Title__icontains", value),
 				)), nil
 			},
@@ -93,7 +98,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 			Icon: icons.Icon("icon-plus", map[string]string{}),
 			Type: components.ClassTypeSecondary,
 			URL: func(ctx context.Context) string {
-				return django.Reverse("admin:shop:products:add")
+				return django.Reverse("admin:shop:products:new_with_supplier")
 			},
 		})
 
@@ -137,13 +142,97 @@ type productSkuFormset interface {
 	Forms() ([]modelforms.ModelForm[*models.ProductSku], error)
 }
 
+func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+	if !permissions.HasObjectPermission(r, &models.Product{}, "products:add") {
+		admin.ReLogin(w, r, r.URL.Path)
+		return
+	}
+
+	qs := supplier.Suppliers().
+		WithContext(r.Context()).
+		OrderBy("Enabled")
+
+	rows, err := qs.All()
+	if errors.Is(err, errors.NoRows) {
+		except.RaiseNotFound("No suppliers found.")
+		return
+	}
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to retrieve suppliers: %v", err,
+		)
+	}
+
+	bound := make([]supplier.BoundBackend, 0, len(rows))
+	for _, row := range rows {
+		backend, ok := supplier.Retrieve(row.Object.InternalName)
+		if !ok {
+			backend = &supplier.Supplier{
+				Name:      row.Object.InternalName,
+				TextLabel: trans.S(row.Object.InternalName),
+			}
+		}
+
+		bound = append(bound, supplier.BoundBackend{
+			Context:  r.Context(),
+			Instance: row.Object,
+			Backend:  backend,
+		})
+	}
+
+	slices.SortStableFunc(bound, func(a, b supplier.BoundBackend) int {
+		if a.Instance.Enabled != b.Instance.Enabled {
+			if a.Instance.Enabled {
+				return -1
+			}
+			return 1
+		}
+
+		return cmp.Or(
+			cmp.Compare(a.Ordering(), b.Ordering()),
+			cmp.Compare(a.InternalName(), b.InternalName()),
+		)
+	})
+
+	var (
+		backURL = django.Reverse("admin:shop:products")
+		data    = admin.NewContext(r, admin.AdminSite, nil)
+	)
+
+	if q := r.URL.Query().Get("next"); q != "" {
+		backURL = q
+	}
+
+	data.Set("definitions", bound)
+	data.Set("BackURL", backURL)
+	data.SetPage(admin.PageOptions{
+		TitleFn:    trans.S("Choose product supplier"),
+		SubtitleFn: trans.S("Sets up any extra fields that the supplier might require on a per-product basis"),
+		BreadCrumbs: []admin.BreadCrumb{
+			{
+				Title: trans.T(r.Context(), "Products"),
+				URL:   django.Reverse("admin:shop:products"),
+			},
+		},
+	})
+
+	if err := tpl.FRender(w, data, "shop", "shop/products/admin/suppliers.tmpl"); err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to render suppliers: %v", err,
+		)
+	}
+}
+
 func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
 	if !permissions.HasObjectPermission(r, &models.Product{}, "products:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
-	var form = forms.NewAdminForm(r, &models.Product{}, func(p *models.Product) []admin.Panel {
+	var supplier = mux.Vars(r).Get("supplier")
+	var form = forms.NewAdminForm(r, &models.Product{Supplier: supplier}, func(p *models.Product) []admin.Panel {
 		return p.AddPanels(r.Context())
 	})
 
@@ -194,6 +283,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 				priceMax = sku.Price
 			}
 
+			sku.Product = p
 			form.CleanedData()["Product"] = p
 		}
 
@@ -219,8 +309,9 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 				backURL = q
 			}
 
+			context.Set("supplier", supplier)
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:shop:products:add"))
+			context.Set("PostURL", django.Reverse("admin:shop:products:add", supplier))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Add new product"),
 			})
@@ -235,6 +326,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			for _, field := range attrs.Define(r.Context(), &models.Product{}).Fields() {
 				initial[field.Name()] = field.GetDefault()
 			}
+			initial["Supplier"] = supplier
 			return initial
 		},
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]) {
@@ -397,6 +489,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				backURL = q
 			}
 
+			context.Set("supplier", productRow.Object.Supplier)
 			context.Set("BackURL", backURL)
 			context.Set("PostURL", django.Reverse("admin:shop:products:edit", productRow.Object.ID))
 			context.SetPage(admin.PageOptions{

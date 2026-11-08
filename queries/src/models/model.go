@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models/state"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-signals"
@@ -268,7 +269,7 @@ func (m *Model) State() *state.ModelState {
 //
 // This method is automatically called by the
 // [attrs.NewObject] function when a new object is created.
-func (m *Model) CreateObject(ctx context.Context, object attrs.Definer) attrs.Definer {
+func (_ Model) CreateObject(ctx context.Context, object attrs.Definer) attrs.Definer {
 	if !attrs.IsModelRegistered(object) {
 		return nil
 	}
@@ -289,9 +290,7 @@ func (m *Model) CreateObject(ctx context.Context, object attrs.Definer) attrs.De
 	}
 
 	var newObj = reflect.New(obj.Type().Elem())
-	var modelVal = newObj.Elem().FieldByIndex(
-		base.base.Index,
-	)
+	var _, modelVal = embedder.FieldByIndexNew(newObj.Elem(), base.base.Index)
 
 	var model = modelVal.Addr().Interface().(*Model)
 	if err := model.Setup(ctx, newObj.Interface().(attrs.Definer)); err != nil {

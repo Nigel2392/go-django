@@ -34,11 +34,9 @@ func (a *Author) FieldDefs(ctx context.Context) attrs.Definitions {
 
 type GenericComment[T any] struct {
 	models.Model
-	ID                  int64
-	Text                string
-	Specific            *T
-	SpecificID          int
-	SpecificContentType string
+	specific.Specific[*GenericComment[T]]
+	ID   int64
+	Text string
 }
 
 func (b *GenericComment[T]) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -52,28 +50,8 @@ func (b *GenericComment[T]) FieldDefs(ctx context.Context) attrs.Definitions {
 	).WithTableName("djstr_specific_c")
 }
 
-func (b *GenericComment[T]) BeforeSave(ctx context.Context) error {
-	if b.Specific != nil && (b.SpecificID == 0 || b.SpecificContentType == "") {
-		var pk = attrs.PrimaryKey(ctx, any(b.Specific).(attrs.Definer))
-		switch v := pk.(type) {
-		case int:
-			b.SpecificID = v
-		case int64:
-			b.SpecificID = int(v)
-		case uint64:
-			b.SpecificID = int(v)
-		case int32:
-			b.SpecificID = int(v)
-		case uint32:
-			b.SpecificID = int(v)
-		}
-		b.SpecificContentType = contenttypes.NewContentType(b.Specific).TypeName()
-	}
-	return nil
-}
-
 type CommentWithAuthor struct {
-	GenericComment[CommentWithAuthor]
+	*GenericComment[CommentWithAuthor]
 	ID     int
 	Author *Author
 }
@@ -94,12 +72,6 @@ func defaultSpecificOpts() specific.SpecificQuerySetOptions[*GenericComment[Comm
 	return specific.SpecificQuerySetOptions[*GenericComment[CommentWithAuthor], attrs.Definer]{
 		GetSpecificQuerySet: func(targetContentType *contenttypes.ContentTypeDefinition, target attrs.Definer) queries.BaseReadQuerySet[attrs.Definer, *queries.QuerySet[attrs.Definer]] {
 			return queries.GetQuerySet(target)
-		},
-		GetSpecificPreloadData: func(obj *GenericComment[CommentWithAuthor]) (id any, contentType string, ok bool) {
-			if obj.SpecificID != 0 && obj.SpecificContentType != "" {
-				return obj.SpecificID, obj.SpecificContentType, true
-			}
-			return nil, "", false
 		},
 		GetSpecificTargetID: func(target attrs.Definer) (id any, ok bool) {
 			var pk = attrs.PrimaryKey(context.Background(), target)
@@ -137,9 +109,9 @@ func TestSpecificQuerySet(t *testing.T) {
 		{Author: author},
 	}
 	var gcs = []*GenericComment[CommentWithAuthor]{
-		{Text: "Comment 1", Specific: cwas[0]},
-		{Text: "Comment 2", Specific: cwas[1]},
-		{Text: "Comment 3", Specific: cwas[2]},
+		{Text: "Comment 1", Specific: specific.Specific[*GenericComment[CommentWithAuthor]]{Specific: cwas[0]}},
+		{Text: "Comment 2", Specific: specific.Specific[*GenericComment[CommentWithAuthor]]{Specific: cwas[1]}},
+		{Text: "Comment 3", Specific: specific.Specific[*GenericComment[CommentWithAuthor]]{Specific: cwas[2]}},
 	}
 
 	logger.Setup(&logger.Logger{
@@ -203,7 +175,7 @@ func TestSpecificQuerySet(t *testing.T) {
 			}
 
 			if row.Object.Specific == nil {
-				t.Fatalf("Expected specific object to be present for ID %d => %d", row.Object.Original.ID, row.Object.Original.SpecificID)
+				t.Fatalf("Expected specific object to be present for ID %d => %s", row.Object.Original.ID, row.Object.Original.SpecificID)
 			}
 
 			t.Logf("ResultRow Original: %+v", row.Object.Original)
@@ -231,7 +203,7 @@ func TestSpecificQuerySet(t *testing.T) {
 			}
 
 			if row.Object.Specific == nil {
-				t.Fatalf("Expected specific object to be present for ID %d => %d", row.Object.Original.ID, row.Object.Original.SpecificID)
+				t.Fatalf("Expected specific object to be present for ID %d => %s", row.Object.Original.ID, row.Object.Original.SpecificID)
 			}
 
 			var specificObj = row.Object.Specific.(*CommentWithAuthor)
@@ -255,7 +227,7 @@ func TestSpecificQuerySet(t *testing.T) {
 			}
 
 			if first.Object.Specific == nil {
-				t.Fatalf("Expected specific object to be present for ID %d => %d", first.Object.Original.ID, first.Object.Original.SpecificID)
+				t.Fatalf("Expected specific object to be present for ID %d => %s", first.Object.Original.ID, first.Object.Original.SpecificID)
 			}
 
 			last, err := sqs.OrderBy("ID").Last()
@@ -267,7 +239,7 @@ func TestSpecificQuerySet(t *testing.T) {
 			}
 
 			if last.Object.Specific == nil {
-				t.Fatalf("Expected specific object to be present for ID %d => %d", last.Object.Original.ID, last.Object.Original.SpecificID)
+				t.Fatalf("Expected specific object to be present for ID %d => %s", last.Object.Original.ID, last.Object.Original.SpecificID)
 			}
 
 		},
@@ -330,7 +302,7 @@ func TestSpecificQuerySet(t *testing.T) {
 			for _, row := range results {
 
 				if row.Object.Specific == nil {
-					t.Fatalf("Expected specific object to be present for ID %d => %d", row.Object.Original.ID, row.Object.Original.SpecificID)
+					t.Fatalf("Expected specific object to be present for ID %d => %s", row.Object.Original.ID, row.Object.Original.SpecificID)
 				}
 
 				var specificObj = row.Object.Specific.(*CommentWithAuthor)

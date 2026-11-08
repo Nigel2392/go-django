@@ -43,7 +43,7 @@ var orderStateLabels = map[InternalOrderState]func(context.Context) string{
 	orderStateWorkflow: trans.S("Order Workflow"),
 }
 
-func stateActionOptions() []widgets.Option {
+func stateActionOptions(ctx context.Context) []widgets.Option {
 	return []widgets.Option{
 		&widgets.FormOption{OptLabel: orderStateLabels[orderStateAccepted], OptValue: string(orderStateAccepted)},
 		&widgets.FormOption{OptLabel: orderStateLabels[orderStateRejected], OptValue: string(orderStateRejected)},

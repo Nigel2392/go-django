@@ -32,3 +32,13 @@ export function copyAttrs(from: HTMLElement, has: (name: string) => boolean, set
         setter(key, attrs[key]);
     });
 }
+
+export function slugify(str: String) {
+  return str
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/[-\s]+/g, '-')
+    .replace(/\-$/g, '');
+}

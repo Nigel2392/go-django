@@ -16,9 +16,46 @@ class TabPanelController extends Controller<HTMLElement> {
         this.controlTargets[0].classList.add("active");
         this.hasParentTab = this.element.parentElement.closest(`[data-controller="${this.identifier}"]`) !== null;
 
+        let tabSelected: Boolean;
         if (!this.hasParentTab && window.location.hash && window.location.hash.startsWith("#tab-")) {
             const index = parseInt(window.location.hash.split("-").pop() || "0", 10);
             this.selectTab(index, false);
+            tabSelected = true;
+        }
+
+        if (!tabSelected && window.location.hash) {
+            const trySelectFromHash = (): boolean => {
+                for (let i = 0; i < this.tabTargets.length; i++) {
+                    const target = this.tabTargets[i];
+                    const elem = target.querySelector(window.location.hash);
+                    if (elem) {
+                        this.selectTab(i, false);
+                        elem.scrollIntoView();
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            tabSelected = trySelectFromHash();
+
+            if (!tabSelected) {
+                let timeout: ReturnType<typeof setTimeout>;
+                const obs = new MutationObserver((records: MutationRecord[], observer: MutationObserver) => {
+                    const hasAddedNodes = records.some((r) => r.addedNodes.length > 0);
+                    if (hasAddedNodes && trySelectFromHash()) {
+                        clearTimeout(timeout);
+                        observer.disconnect();
+                    }
+                });
+
+                obs.observe(this.element, {
+                    childList: true,
+                    subtree: true,
+                });
+
+                timeout = setTimeout(() => obs.disconnect(), 250);
+            }
         }
 
         this.setupValidation();
@@ -67,7 +104,10 @@ class TabPanelController extends Controller<HTMLElement> {
         // mark tabs invalid if it contains invalid inputs
         const onInvalid = (e: Event) => {
             // check if input is present in root tab element
-            if (!this.element.contains(e.target as Node)) return;
+            if (!this.element.contains(e.target as Node)) {
+                // console.warn("could not find target in current tab body")
+                return;
+            };
 
             e.preventDefault();
 

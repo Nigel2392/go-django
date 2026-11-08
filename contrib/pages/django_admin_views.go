@@ -278,7 +278,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		SpecName: "root_nodes",
 		FormField: fields.NumberField[int](
 			fields.HelpText(trans.S("Only show root nodes")),
-			fields.Widget(options.NewSelectInput(nil, func() []widgets.Option {
+			fields.Widget(options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
 				return []widgets.Option{
 					&widgets.FormOption{
 						OptValue: "0",
@@ -316,7 +316,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		FormField: fields.CharField(
 			fields.HelpText(trans.S("Filter by content type")),
 			fields.Widget(
-				options.NewSelectInput(nil, func() []widgets.Option {
+				options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
 					var vals, err = queries.GetQuerySet(&PageNode{}).Distinct().ValuesList("ContentType")
 					if err != nil {
 						logger.Errorf("Failed to get content types for audit logs: %v", err)

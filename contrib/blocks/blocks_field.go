@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/fields/filefield"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/filewidget"
 	"github.com/Nigel2392/go-telepath/telepath"
 )
 
@@ -48,6 +51,13 @@ func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	return base
 }
 
+func BooleanBlock(opts ...func(*FieldBlock)) *FieldBlock {
+	var base = NewFieldBlock(opts...)
+	base.DataType = bool(false)
+	base.SetField(fields.BooleanField())
+	return base
+}
+
 func NumberBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = int(0)
@@ -61,6 +71,30 @@ func TextBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	base.SetField(fields.CharField(
 		fields.Widget(widgets.NewTextarea(nil)),
 	))
+	return base
+}
+
+func FileBlock(engine string, opts ...func(*FieldBlock)) *FieldBlock {
+	var base = NewFieldBlock(opts...)
+	base.DataType = &mediafiles.SimpleStoredObject{}
+	var f = filefield.FileField(engine)
+	var w = filewidget.NewFileInput(f.Attributes, f.Extensions, f.Validators...)
+	w.DisallowClear = f.DisallowClear
+	w.ForceShowPath = true
+	f.FormWidget = w
+	base.SetField(f)
+	return base
+}
+
+func ImageBlock(engine string, opts ...func(*FieldBlock)) *FieldBlock {
+	var base = NewFieldBlock(opts...)
+	base.DataType = &mediafiles.SimpleStoredObject{}
+	var f = filefield.ImageFileField(engine)
+	var w = filewidget.NewImageFileInput(f.Attributes, f.Extensions, f.Validators...)
+	w.DisallowClear = f.DisallowClear
+	w.ForceShowPath = true
+	f.FormWidget = w
+	base.SetField(f)
 	return base
 }
 

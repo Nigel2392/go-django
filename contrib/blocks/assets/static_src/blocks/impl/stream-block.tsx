@@ -1,8 +1,28 @@
 
-import { Block, BlockMeta } from '../base';
+import { Block, BlockMeta, BoundBlock } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { BoundSequenceBlock, BoundSequenceBlockValue } from './sequence-block';
+
+class BoundStreamBlockValue {
+    id: string;
+    type: string;
+    block: BoundBlock;
+
+    constructor(id: string, type: string, block: BoundBlock) {
+        this.id = id;
+        this.type = type;
+        this.block = block;
+    }
+
+    getState() {
+        return {
+            id: this.id,
+            type: this.type,
+            data: this.block.getState(),
+        }
+    }
+}
 
 class BoundStreamBlock extends BoundSequenceBlock<StreamBlock> {
     dropdown: TippyInstance;
@@ -12,19 +32,13 @@ class BoundStreamBlock extends BoundSequenceBlock<StreamBlock> {
     }
 
     _renderBoundBlock(child: Block, placeholder: HTMLElement, id: string, name: String, value: any, error: any): BoundSequenceBlockValue {
-        const boundValue: BoundSequenceBlockValue = {
-            id: value.id,
-            type: value.type,
-            block: child.render(
-                placeholder,
-                id,
-                name,
-                value.data,
-                error,
-            )
-        };
-
-        return boundValue;
+        return new BoundStreamBlockValue(value.id, value.type, child.render(
+            placeholder,
+            id,
+            name,
+            value.data,
+            error,
+        ));
     }
 
     _defaultChildState(block: Block & { name: string }): any {
@@ -132,4 +146,5 @@ class StreamBlock extends Block {
 export {
     StreamBlock,
     BoundStreamBlock,
+    BoundStreamBlockValue,
 };

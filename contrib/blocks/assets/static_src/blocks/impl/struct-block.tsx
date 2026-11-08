@@ -1,7 +1,7 @@
 import { BoundBlock, Block, BlockMeta } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
-import { copyAttrs } from '../utils';
+import { copyAttrs, slugify } from '../utils';
 
 const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HTMLElement => {
     for (var i = 0; i < parent.children.length; i++) {
@@ -54,7 +54,7 @@ class BoundStructBlock extends BoundBlock {
         );
 
         const root = PanelComponent({
-            panelId: `${name}--panel`,
+            panelId: `panel-${slugify(name)}`,
             class: "field-block",
             allowPanelLink: !!block.meta.label,
             heading: labelWrapper,
@@ -95,7 +95,7 @@ class BoundStructBlock extends BoundBlock {
 
             childrenContainer.appendChild(childDom);
 
-            this.childBlocks[key] = (childBlock as Block).render(
+            this.childBlocks[childBlockName] = (childBlock as Block).render(
                 childDom.firstElementChild.firstElementChild as HTMLElement,
                 idKey,
                 key,
