@@ -3,7 +3,7 @@ package models
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django/contrib/shop/internal/prov"
+	"github.com/Nigel2392/go-django/contrib/shop/payments/prov"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"

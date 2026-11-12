@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
-	"github.com/Nigel2392/go-django/contrib/shop/internal/prov"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/payments/prov"
 	"github.com/Nigel2392/go-django/contrib/shop/supplier"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-signals"

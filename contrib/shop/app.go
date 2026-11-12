@@ -21,6 +21,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/changes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
@@ -197,8 +198,14 @@ func NewAppConfig() (django.AppConfig, error) {
 	})
 
 	SHOP.SIGNALS.Products.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
-		_, err := auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
-			"title": psd.Product.New.Title,
+		changes, err := changes.Changes(ctx, psd.Product.Old, psd.Product.New)
+		if err != nil {
+			return err
+		}
+
+		_, err = auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
+			"title":   psd.Product.New.Title,
+			"changes": changes,
 		})
 		return err
 	})

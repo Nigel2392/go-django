@@ -3,8 +3,8 @@ package payments
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django/contrib/shop/internal/prov"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/payments/prov"
 )
 
 type PaymentProvider interface {

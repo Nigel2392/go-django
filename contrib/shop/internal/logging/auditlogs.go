@@ -2,8 +2,11 @@ package logging
 
 import (
 	"fmt"
+	"html"
+	"html/template"
 	"net/http"
 	"slices"
+	"strings"
 
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	django "github.com/Nigel2392/go-django/src"
@@ -28,7 +31,6 @@ func (p *shopLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntr
 	var cTypeName = cType.ShortTypeName()
 	if cType != nil {
 		cTypeName = cTypeDef.Label(r.Context())
-
 	}
 
 	switch logEntry.Type() {
@@ -90,9 +92,46 @@ func (p *shopLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.Lo
 			label, logEntry.ObjectID(),
 		)
 	case "shop:product:edit":
-		return trans.T(r.Context(), "%q with id %v was edited",
+
+		initial := trans.T(r.Context(), "%q with id %v was edited",
 			label, logEntry.ObjectID(),
 		)
+
+		var sb strings.Builder
+		sb.WriteString("<div class=\"comparison\">")
+		sb.WriteString("<p>")
+		sb.WriteString(html.EscapeString(initial))
+		sb.WriteString("</p>")
+
+		sb.WriteString("<ul>")
+		var changes, _ = logEntry.Data()["changes"].([]any)
+		for _, _change := range changes {
+			change, ok := _change.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			name, ok := change["name"].(string)
+			if !ok {
+				continue
+			}
+
+			htmlVal, ok := change["html"].(string)
+			if !ok {
+				continue
+			}
+
+			sb.WriteString("<li>")
+			sb.WriteString("<strong>")
+			sb.WriteString(html.EscapeString(name))
+			sb.WriteString(":</strong>")
+			sb.WriteString(htmlVal)
+			sb.WriteString("</li>")
+		}
+		sb.WriteString("</ul>")
+		sb.WriteString("</div>")
+
+		return template.HTML(sb.String())
 	}
 
 	return trans.T(r.Context(), "Unknown shop log entry type")

@@ -10,7 +10,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -23,6 +22,7 @@ import (
 type ListViewConfig[T attrs.Definer] struct {
 	Model              T
 	UsePanelFilters    bool
+	Permissions        []string
 	ListTitle          func(context.Context) string
 	ListSubtitle       func(context.Context) string
 	Filters            []filters.FilterSpec[T]
@@ -65,7 +65,7 @@ func (l ListViewConfig[T]) getPageSidePanels(r *http.Request) *menu.SidePanels {
 }
 
 func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
-	if !permissions.HasObjectPermission(r, &models.Product{}, "products:list") {
+	if !permissions.HasObjectPermission(r, l.Model, l.Permissions...) {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}

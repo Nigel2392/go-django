@@ -13,10 +13,12 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
+	"github.com/shopspring/decimal"
 )
 
 type ProductQuery struct {
@@ -43,16 +45,16 @@ func (qs *ProductQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Product,
 
 type Product struct {
 	specific.Specific[*Product]
-	ID       drivers.ULID
-	Title    string
-	Slug     string
-	Ranking  uint64
-	Supplier supplier.SupplierValue
-	Editor   *editor.EditorJSBlockData
-}
-
-func (m *Product) ProductBase() *Product {
-	return m
+	Image         *mediafiles.SimpleStoredObject
+	ID            drivers.ULID
+	Title         string
+	Slug          string
+	Ranking       uint64
+	Price         decimal.Decimal
+	TaxRate       decimal.Decimal
+	DiscountPrice decimal.Decimal
+	Supplier      supplier.SupplierValue
+	Editor        *editor.EditorJSBlockData
 }
 
 func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
@@ -61,6 +63,9 @@ func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
 			WithOutputFields("Slug"),
 		admin.FieldPanel("Slug"),
 		admin.FieldPanel("Supplier"),
+		admin.FieldPanel("Price"),
+		admin.FieldPanel("TaxRate"),
+		admin.FieldPanel("DiscountPrice"),
 		admin.FieldPanel("Ranking"),
 		admin.FieldPanel("Editor").Class("fullsize"),
 	}
@@ -75,6 +80,9 @@ func (m *Product) EditPanels(ctx context.Context) []admin.Panel {
 			admin.FieldPanel("ID"),
 		),
 		admin.FieldPanel("Supplier"),
+		admin.FieldPanel("Price"),
+		admin.FieldPanel("TaxRate"),
+		admin.FieldPanel("DiscountPrice"),
 		admin.FieldPanel("Ranking"),
 		admin.FieldPanel("Editor").Class("fullsize"),
 	}
@@ -135,6 +143,42 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				"text-align",
 				"list",
 			},
+		}),
+		fattrs.Field(m, "Price", &m.Price, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 13,
+						attrs.AttrScaleKey:     4,
+					},
+					Null:  false,
+					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "TaxRate", &m.TaxRate, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 13,
+						attrs.AttrScaleKey:     4,
+					},
+					Null:  false,
+					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "DiscountPrice", &m.DiscountPrice, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 13,
+						attrs.AttrScaleKey:     4,
+					},
+					Null:  false,
+					Blank: false,
+				},
+			}
 		}),
 		fattrs.Field(m, "Ranking", &m.Ranking, func() fattrs.PtrFieldConfig[*Product, uint64] {
 			return fattrs.PtrFieldConfig[*Product, uint64]{

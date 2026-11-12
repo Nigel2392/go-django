@@ -3,7 +3,6 @@ package specific
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -19,6 +18,13 @@ import (
 
 type Model interface {
 	attrs.Definer
+	SpecificObject() *Specific[attrs.Definer]
+}
+
+type TModel[T any] interface {
+	attrs.Definer
+	Embedder() T
+
 	SpecificObject() *Specific[attrs.Definer]
 }
 
@@ -114,7 +120,6 @@ func (n *Specific[E]) SetupEmbedded(ctx context.Context, embedder attrs.Definer)
 
 	if n.SpecificID == "" && !attrs.ContextHasFlag(ctx, attrs.CtxFlagRegistering) {
 		pk := attrs.PrimaryKey(ctx, attrs.Define(ctx, n.Instance).Primary())
-		fmt.Printf("[SetupEmbedded] PRIMARY.KEY %v %T %v %T\n", pk, pk, n.Instance, n.Instance)
 
 		if versatile.IsZero(pk) {
 			return nil
@@ -124,8 +129,6 @@ func (n *Specific[E]) SetupEmbedded(ctx context.Context, embedder attrs.Definer)
 		if err != nil {
 			return err
 		}
-
-		fmt.Println("string(idBytes)", string(idBytes))
 
 		n.SpecificID = string(idBytes)
 	}
@@ -151,7 +154,6 @@ func (n *Specific[E]) PreSaveEmbedded(ctx context.Context, embedder attrs.Define
 
 	if n.SpecificID == "" {
 		pk := attrs.PrimaryKey(ctx, attrs.Define(ctx, n.Instance).Primary())
-		fmt.Printf("[PreSaveEmbedded] PRIMARY.KEY %v %T %v %T\n", pk, pk, n.Instance, n.Instance)
 
 		if versatile.IsZero(pk) {
 			return nil
@@ -216,6 +218,11 @@ func (n *Specific[E]) Specific(ctx context.Context, refresh bool) (attrs.Definer
 		return row.Object, nil
 	}
 
-	*ref = *n.SpecificObject()
+	if ref.embedder != nil && n.embedder != nil {
+		reflect.ValueOf(ref.embedder).Elem().Set(reflect.ValueOf(n.embedder).Elem())
+		n.Instance = row.Object
+	}
+
+	*ref = *(*Specific[attrs.Definer])(n)
 	return row.Object, nil
 }

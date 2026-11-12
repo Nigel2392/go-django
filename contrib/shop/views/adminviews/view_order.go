@@ -36,6 +36,9 @@ import (
 var ViewOrderList = generic.ListViewConfig[*models.Order]{
 	ListTitle: trans.S("Order List"),
 	Model:     &models.Order{},
+	Permissions: []string{
+		"orders:list",
+	},
 	GetEditLink: func(r *http.Request, v *models.Order) string {
 		return django.Reverse("admin:shop:orders:edit", v.ID)
 	},

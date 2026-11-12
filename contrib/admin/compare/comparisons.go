@@ -73,11 +73,20 @@ func (fc *fieldComparison) Label() string {
 
 func (fc *fieldComparison) HasChanged() (bool, error) {
 	var formField = fc.MetaField.FormField()
+	if formField == nil {
+		return false, ErrSkip
+	}
 	return formField.HasChanged(fc.Old, fc.New), nil
 }
 
 func (fc *fieldComparison) HTMLDiff() (template.HTML, error) {
-	var changed, _ = fc.HasChanged()
+	var changed, err = fc.HasChanged()
+	if err != nil {
+		if !errors.Is(err, ErrSkip) {
+			return "", err
+		}
+		return "", nil
+	}
 	if !changed {
 		var diff = TextDiff{
 			Changes: []Differential{
@@ -120,7 +129,10 @@ func (mc *multipleComparison) HasChanged() (bool, error) {
 	for _, comp := range mc.Comparisons {
 		changed, err := comp.HasChanged()
 		if err != nil {
-			return false, err
+			if !errors.Is(err, ErrSkip) {
+				return false, err
+			}
+			continue
 		}
 		if changed {
 			return true, nil

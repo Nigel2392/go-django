@@ -4,6 +4,7 @@ import (
 	"context"
 	"html/template"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -19,3 +20,5 @@ type ComparisonWrapper interface {
 }
 
 type ComparisonFactory func(ctx context.Context, label func(context.Context) string, fieldName string, modelMeta attrs.ModelMeta, old, new attrs.Definer) (Comparison, error)
+
+var ErrSkip error = errors.New(errors.CodeNotImplemented, "skip step")

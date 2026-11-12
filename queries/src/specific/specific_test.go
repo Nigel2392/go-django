@@ -382,6 +382,22 @@ func (m *CommentWithFattrs) FieldDefs(ctx context.Context) attrs.Definitions {
 	).WithTableName("djstr_specific_cwf")
 }
 
+func TestSpecificReferenceSet(t *testing.T) {
+	attrs.RegisterModel(&GenericComment[CommentWithAuthor]{})
+	attrs.RegisterModel(&CommentWithAuthor{})
+
+	var cwa = attrs.Setup[*CommentWithAuthor](t.Context(), &CommentWithAuthor{})
+	cwa.GenericComment.Text = "a"
+
+	*cwa.Specific.Embedder() = GenericComment[CommentWithAuthor]{
+		Text: "b",
+	}
+
+	if cwa.GenericComment.Text != "b" {
+		t.Fatalf("expected specific reference text to be set to 'b'")
+	}
+}
+
 func TestSpecificForeignKeyAndFattrsRegistration(t *testing.T) {
 	t.Run("ForeignKeyToSpecificBaseModel", func(t *testing.T) {
 		attrs.RegisterModel(&GenericComment[CommentWithAuthor]{})

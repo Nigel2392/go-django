@@ -46,7 +46,7 @@ func init() {
 		}
 
 		if mustCreate || primaryValue == nil || versatile.IsZero(primaryValue) {
-			var _, err = GetQuerySet(m).ExplicitSave().Create(m)
+			var _, err = GetQuerySetWithContext(c, m).ExplicitSave().Create(m)
 			if err != nil {
 				return false, err
 			}
@@ -54,7 +54,7 @@ func init() {
 		}
 
 	updateObject:
-		ct, err := GetQuerySet(m).
+		ct, err := GetQuerySetWithContext(c, m).
 			ExplicitSave().
 			Filter(
 				primaryField.Name(), primaryValue,
@@ -82,7 +82,7 @@ func init() {
 			return false, nil
 		}
 
-		ct, err := GetQuerySet(m).Filter(
+		ct, err := GetQuerySetWithContext(c, m).Filter(
 			primaryField.Name(),
 			primaryValue,
 		).Delete()

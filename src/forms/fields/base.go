@@ -151,8 +151,10 @@ func (i *BaseField) Default() interface{} {
 
 func isZero(v reflect.Value) bool {
 	switch v.Kind() {
-	case reflect.Array, reflect.Map, reflect.Slice, reflect.Func, reflect.Pointer, reflect.Interface:
+	case reflect.Map, reflect.Slice, reflect.Func, reflect.Pointer, reflect.Interface:
 		return v.IsNil()
+	case reflect.Array:
+		return v.IsZero()
 	case reflect.Invalid:
 		return true
 	}

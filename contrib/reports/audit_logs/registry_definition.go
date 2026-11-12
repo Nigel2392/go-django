@@ -25,6 +25,11 @@ func (bd BoundDefinition) Label() string {
 }
 
 func (bd BoundDefinition) Message() any {
+	defer func() {
+		if r := recover(); r != nil {
+			panic(fmt.Sprintf("%v: %s", r, string(debug.Stack())))
+		}
+	}()
 	return bd.Definition.FormatMessage(bd.Request, bd.LogEntry)
 }
 

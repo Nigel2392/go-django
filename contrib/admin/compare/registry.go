@@ -60,6 +60,10 @@ func GetComparison(ctx context.Context, typ any, label any, fieldname string, ol
 		meta = attrs.GetModelMeta(newInstance)
 	}
 
+	if meta == nil {
+		panic("model meta is nil")
+	}
+
 	var labelFn = trans.GetTextFunc(label)
 	if labelFn == nil {
 		var field, ok = meta.Definitions().Field(fieldname)

@@ -91,15 +91,8 @@ func (i *initializer) bind(ctx, rv, el reflect.Value) (pathReverse []string, err
 
 	var (
 		out []reflect.Value
-		in  = []reflect.Value{val}
 		nIn = i.node.method.Type.NumIn()
 	)
-
-	if i.node.flags&flagNoCtx != flagNoCtx {
-		in = append(in, ctx)
-	}
-
-	in = append(in, parent)
 
 	switch {
 	case i.node.flags&flagNoCtx == flagNoCtx && nIn == 3:

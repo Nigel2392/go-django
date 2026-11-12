@@ -34,6 +34,7 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
+	gosigs "github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/versatile/clone"
 )
@@ -41,6 +42,9 @@ import (
 var ViewProductList = generic.ListViewConfig[*models.Product]{
 	ListTitle: trans.S("Product List"),
 	Model:     &models.Product{},
+	Permissions: []string{
+		"products:list",
+	},
 	GetEditLink: func(r *http.Request, v *models.Product) string {
 		return django.Reverse("admin:shop:products:edit", v.ID)
 	},
@@ -206,8 +210,18 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 
 	form.Load()
 
+	transactionCtx, tx, err := queries.StartTransaction(r.Context())
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to start transaction",
+		)
+	}
+
+	defer tx.Rollback(transactionCtx)
+	r = r.WithContext(transactionCtx)
+
 	form.Form.SaveInstance = func(ctx context.Context, p supplier.ProductModel) error {
-		fmt.Println("p.SpecificObject()", p.SpecificObject())
 		saved, err := djmodels.SaveModel(ctx, p)
 		if err == nil && !saved {
 			err = fmt.Errorf("model %T not saved", p)
@@ -217,7 +231,6 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			return err
 		}
 
-		fmt.Println("p.SpecificObject()", p.SpecificObject())
 		product := p.SpecificObject().Embedder().(*models.Product)
 		product.Supplier = supplierVal
 
@@ -271,13 +284,36 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 				"instance is nil after form submission",
 			)
 
-			shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
+			err := shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
 				BaseSignal: signals.NewBaseSignal(req.Context(), r, nil, nil),
 				Product: signals.Changed[*models.Product]{
 					New: instance.SpecificObject().Embedder().(*models.Product),
 				},
-				Specific: signals.Changed[supplier.ProductModel]{},
+				Specific: signals.Changed[supplier.ProductModel]{
+					New: instance,
+				},
 			})
+			if err != nil {
+				e, ok := gosigs.SignalError(err)
+				if !ok || len(e.Related) != 1 {
+					except.Fail(
+						http.StatusInternalServerError,
+						"error while sending shop product created signal: %v", err,
+					)
+				}
+
+				except.Fail(
+					http.StatusInternalServerError,
+					"error while sending shop product created signal: %v", e.Related[0],
+				)
+			}
+
+			if err = tx.Commit(transactionCtx); err != nil {
+				except.Fail(
+					http.StatusInternalServerError,
+					"failed to commit transaction: %v", err,
+				)
+			}
 
 			messages.Success(r, "Product added")
 
@@ -316,18 +352,15 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		)
 	}
 
+	specific, err := productRow.Object.Specific.Specific(r.Context(), true)
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"error retrieving specific instance of product: %v", err,
+		)
+	}
+
 	var originalProduct *models.Product
-	// if r.Method == http.MethodPost {
-	// originalProduct, err = clone.Clone[*models.Product](
-	// r.Context(),
-	// productRow.Object,
-	// clone.Flag(clone.CF_NOVALIDATE),
-	// )
-	// if err != nil {
-	// logger.Fatal(http.StatusInternalServerError, err)
-	// }
-	// }
-	//
 	if r.Method == http.MethodPost {
 		err = clone.Copy(
 			r.Context(),
@@ -343,13 +376,16 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		}
 	}
 
-	specific, err := productRow.Object.Specific.Specific(r.Context(), true)
+	transactionCtx, tx, err := queries.StartTransaction(r.Context())
 	if err != nil {
 		except.Fail(
 			http.StatusInternalServerError,
-			"error retrieving specific instance of product: %v", err,
+			"failed to start transaction",
 		)
 	}
+
+	defer tx.Rollback(transactionCtx)
+	r = r.WithContext(transactionCtx)
 
 	var form = forms.NewAdminForm(r, specific.(supplier.ProductModel), func(p supplier.ProductModel) []admin.Panel {
 		return productRow.Object.Supplier.ProductEditPanel(r.Context())
@@ -371,6 +407,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		product := p.SpecificObject().Embedder().(*models.Product)
 
 		_, err = queries.GetQuerySet[attrs.Definer](&models.Product{}).
+			WithContext(ctx).
 			ExplicitSave().
 			Update(product)
 
@@ -419,17 +456,37 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				"instance is nil after form submission",
 			)
 
-			shop.SIGNALS.Products.Updated.Send(r.Context(), &signals.ProductSignalData{
+			err := shop.SIGNALS.Products.Updated.Send(r.Context(), &signals.ProductSignalData{
 				BaseSignal: signals.NewBaseSignal(r.Context(), r, nil, nil),
 				Product: signals.Changed[*models.Product]{
 					Old: originalProduct,
 					New: instance.SpecificObject().Embedder().(*models.Product),
 				},
 				Specific: signals.Changed[supplier.ProductModel]{
-					//	Old: originalProduct.Skus.AsList(),
-					//	New: instance.Skus.AsList(),
+					New: instance,
 				},
 			})
+			if err != nil {
+				e, ok := gosigs.SignalError(err)
+				if !ok || len(e.Related) != 1 {
+					except.Fail(
+						http.StatusInternalServerError,
+						"error while sending shop product updated signal: %v", err,
+					)
+				}
+
+				except.Fail(
+					http.StatusInternalServerError,
+					"error while sending shop product updated signal: %v", e.Related[0],
+				)
+			}
+
+			if err = tx.Commit(transactionCtx); err != nil {
+				except.Fail(
+					http.StatusInternalServerError,
+					"failed to commit transaction: %v", err,
+				)
+			}
 
 			messages.Success(r, "Product changed")
 

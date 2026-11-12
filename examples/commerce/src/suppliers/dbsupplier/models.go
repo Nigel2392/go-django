@@ -8,13 +8,12 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
-	"github.com/shopspring/decimal"
 	"golang.org/x/text/currency"
 )
 
 type Product struct {
 	*models.Product
-	Price decimal.Decimal
+	SupplierID string
 }
 
 func (p *Product) ProductPrice(ctx context.Context) supplier.Price {
@@ -30,15 +29,22 @@ func (p *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 	}
 	return attrs.Make[*Product, any](ctx, p,
 		fields.Embed(ctx, &p.Product, fields.EmbedOptions{
-			EmbedFields: []any{"ID", "Title", "Slug", "Editor", "Supplier", "Ranking"},
+			EmbedFields: []any{
+				"ID",
+				"Title",
+				"Slug",
+				"Editor",
+				"Supplier",
+				"Price",
+				"TaxRate",
+				"DiscountPrice",
+				"Ranking",
+			},
 		}),
-		fattrs.Field(p, "Price", &p.Price, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
-			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
+		fattrs.Field(p, "SupplierID", &p.SupplierID, func() fattrs.PtrFieldConfig[*Product, string] {
+			return fattrs.PtrFieldConfig[*Product, string]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
+					Blank: false,
 				},
 			}
 		}),
