@@ -180,6 +180,8 @@ func GetValue(arg any) (driver.Value, error) {
 			)
 		}
 
+		return GetValue(arg)
+
 	case attrs.Definer:
 		return GetValue(attrs.PrimaryKey(context.Background(), v))
 
