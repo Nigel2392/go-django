@@ -3600,8 +3600,8 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			autoNowAdd, okNowAdd := atts[attrs.AttrAutoNowAddKey]
 			autoNow, okNow := atts[attrs.AttrAutoNowKey]
 			if okNowAdd || okNow {
-				var autoNowAdd = autoNowAdd.(bool)
-				var autoNow = autoNow.(bool)
+				var autoNowAdd, _ = autoNowAdd.(bool)
+				var autoNow, _ = autoNow.(bool)
 				var now = time.Now()
 				if okNowAdd && autoNowAdd {
 					value = now
@@ -4005,7 +4005,7 @@ func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
 				))
 			}
 
-			v, ok = atts[attrs.AttrAutoNowKey]
+			v, ok = atts[attrs.AttrAutoNowKey].(bool)
 			if ok && v.(bool) {
 				value = time.Now()
 				if err := field.Scan(value); err != nil {
