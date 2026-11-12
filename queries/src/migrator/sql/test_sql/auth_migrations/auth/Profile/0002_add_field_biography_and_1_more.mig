@@ -3,7 +3,7 @@
     "users.User"
   ],
   "table": {
-    "table": "profile",
+    "table": "auth.profile",
     "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Profile",
     "fields": [
       {

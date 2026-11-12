@@ -4,7 +4,10 @@ import (
 	"context"
 	"reflect"
 	"runtime"
+	"strings"
 	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 /*
@@ -39,16 +42,16 @@ func NewRegistry(methodName string) Registry {
 //
 // Any objects that utilize the context cannot utilize the [context.Context]
 // variable any longer than the lifetime of the bind function.
-func (r *modelRegistry) Bind(ctx context.Context, obj any) {
+func (r *modelRegistry) Bind(ctx context.Context, obj any) error {
 	_rootCtx := RootValueContext{
 		Context: ctx,
 		Root:    obj,
 	}
-	rootCtx := (*RootValueContext)(noescape(unsafe.Pointer(&_rootCtx)))
+	rootCtx := &_rootCtx
 
-	r.bind(rootCtx, obj)
-
+	err := r.bind(rootCtx, obj)
 	runtime.KeepAlive(_rootCtx)
+	return err
 }
 
 // Register an object that might have an embedded type which requires setup.
@@ -153,7 +156,7 @@ func (r *modelRegistry) walk(obj any, walkFn func(depth int, field reflect.Struc
 // setup ensures any embedded types can be properly initialized
 //
 // when the obj does not embed any such types, this function will be as fast as a single map read
-func (r *modelRegistry) bind(ctx context.Context, obj any) {
+func (r *modelRegistry) bind(ctx context.Context, obj any) error {
 	var (
 		face         = (*eface)(unsafe.Pointer(&obj))
 		key  uintptr = face.typ
@@ -171,7 +174,7 @@ func (r *modelRegistry) bind(ctx context.Context, obj any) {
 
 	inits, ok := r.typeReg[key]
 	if !ok || len(inits) == 0 {
-		return
+		return nil
 	}
 
 	// key was not equal to [reflect_keyOfValue]
@@ -180,12 +183,26 @@ func (r *modelRegistry) bind(ctx context.Context, obj any) {
 	}
 
 	_ctx := reflect.ValueOf(ctx)
-
 	el := rv.Elem()
 	for _, i := range inits {
-		i.bind(_ctx, rv, el)
+		pathReverse, err := i.bind(_ctx, rv, el)
+		if err != nil {
+			var sb strings.Builder
+			for i := len(pathReverse) - 1; i >= 0; i-- {
+				sb.WriteString(pathReverse[i])
+				if i > 0 {
+					sb.WriteRune('.')
+				}
+			}
+
+			return errors.Wrap(
+				err,
+				sb.String(),
+			)
+		}
 	}
 
+	return nil
 }
 
 func (r *modelRegistry) register(obj any) {
@@ -251,6 +268,10 @@ func registerInitializer(objElem reflect.Type, i *initializer, index []int, seen
 
 	seen[fieldType] = struct{}{}
 
+	if field.Tag.Get("embedder") == "-" {
+		return false
+	}
+
 	if fieldType.Kind() == reflect.Interface {
 		return false
 	}
@@ -314,8 +335,8 @@ checkHasSetup:
 }
 
 func setupInitMethod(i *initializer) {
-	if i.node.method.Type.NumOut() != 0 {
-		panic("invalid SetupEmbedded function signature: no return parameters expected")
+	if i.node.method.Type.NumOut() > 1 {
+		panic("invalid SetupEmbedded function signature: no more than 1 error return parameter expected")
 	}
 
 	var (
@@ -335,6 +356,10 @@ func setupInitMethod(i *initializer) {
 
 	if i.node.method.Type.NumIn() == maxNum && i.node.method.Type.In(maxNum-1) != _type_reflectStructField {
 		panic("invalid SetupEmbedded function signature: expected none or reflect.StructField as last param")
+	}
+
+	if numOut := i.node.method.Type.NumOut(); numOut > 0 && i.node.method.Type.Out(numOut-1).AssignableTo(reflect.TypeFor[error]()) {
+		i.node.flags |= flagMethodErr
 	}
 
 	if i.node.method.Type.In(valIdx) == _type_reflectValue {

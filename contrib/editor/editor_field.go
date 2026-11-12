@@ -43,6 +43,9 @@ type FieldConfig struct {
 	// Column is the name of the column in the database.
 	Column string
 
+	// Embedded should be set to true if the value is from an model embedded inside of another model (i.e. proxy models)
+	Embedded bool
+
 	// Attributes are additional attributes for the field.
 	Attributes map[string]any
 
@@ -221,7 +224,10 @@ func (f *Field) Name() string {
 	return f.name
 }
 
-// no real column, special case for virtual fields
+func (e *Field) Embedded() bool {
+	return e.config.Embedded
+}
+
 func (e *Field) ColumnName() string {
 	if e.config.Column != "" {
 		return e.config.Column

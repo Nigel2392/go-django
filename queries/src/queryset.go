@@ -2715,6 +2715,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 		if obj == nil {
 			obj = reflect.New(reflect.TypeOf(qs.internals.Model.Object).Elem()).Interface().(attrs.Definer)
+			setup(qs.context, obj)
 		}
 
 		var (

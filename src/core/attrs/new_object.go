@@ -2,14 +2,16 @@ package attrs
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
-func createIfIface[T Definer](ctx context.Context, v any) (T, bool) {
+func createIfIface[T any](ctx context.Context, v any) (T, bool) {
 	var obj T = v.(T)
 	switch v := v.(type) {
 	case CanCreateObject[T]:
@@ -41,9 +43,12 @@ func createIfIface[T Definer](ctx context.Context, v any) (T, bool) {
 	return obj, true
 }
 
-func Setup[T Definer](ctx context.Context, obj any) T {
+func Setup[T any](ctx context.Context, obj any) T {
 
-	embedder.Bind(ctx, obj)
+	err := embedder.Init.Bind(ctx, obj)
+	if err != nil {
+		logger.Warnf("error during model object setup: %v", err)
+	}
 
 	if setupObj, ok := obj.(CanSetup); ok {
 		setupObj.Setup(ctx)
@@ -82,9 +87,10 @@ func RegisterNewObjectFuncReflect(typ reflect.Type, fn func(ctx context.Context,
 // - A string which is assumed to be the content type of T
 // - A contenttypes.ContentType from which a T can be derived.
 // - Any other value which can be safely cast to T
-func NewObject[T Definer](ctx context.Context, definer any) T {
+func NewObject[T any](ctx context.Context, definer any) T {
 	var (
 		obj      any
+		err      error
 		definerT reflect.Type
 	)
 	switch v := definer.(type) {
@@ -96,8 +102,14 @@ func NewObject[T Definer](ctx context.Context, definer any) T {
 			definerT = reflect.PointerTo(v)
 			obj = reflect.New(v).Interface()
 		}
+
+		err = embedder.Init.Bind(ctx, obj)
 	case contenttypes.ContentType:
 		obj = v.New()
+		err = embedder.Init.Bind(ctx, obj)
+	case *contenttypes.ContentTypeDefinition:
+		obj = v.Object()
+		err = embedder.Init.Bind(ctx, obj)
 	case string:
 		var cTypeDef = contenttypes.DefinitionForType(v)
 		assert.True(
@@ -105,11 +117,20 @@ func NewObject[T Definer](ctx context.Context, definer any) T {
 			"NewObject requires a valid content type, got %s",
 		)
 		obj = cTypeDef.Object()
+		err = embedder.Init.Bind(ctx, obj)
 	default:
 		obj = v
 	}
 
+	if err != nil {
+		panic(fmt.Sprintf("error during creation with NewObject: %v", err))
+	}
+
 	var rT = reflect.TypeOf(obj)
+	if obj == nil && rT == nil {
+		panic("nil object passed to NewObject")
+	}
+
 	if fn, ok := objectFuncRegistry.types[rT]; ok {
 		return Setup[T](ctx, fn(ctx, obj))
 	}
@@ -120,7 +141,7 @@ func NewObject[T Definer](ctx context.Context, definer any) T {
 	}
 
 	if definerT == nil {
-		definerT = reflect.TypeOf(definer)
+		definerT = reflect.TypeOf(obj)
 	}
 	assert.True(
 		definerT.Kind() == reflect.Ptr,

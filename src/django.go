@@ -36,6 +36,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	utils_text "github.com/Nigel2392/go-django/src/utils/text"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -179,13 +180,12 @@ func GetApp[T AppConfig](name string) T {
 }
 
 func GetAppForModel(model attrs.Definer) (AppConfig, bool) {
-	var rTyp = reflect.TypeOf(model)
-	var appName, ok = Global.models[rTyp]
+	var app, ok = djangoapps.GetAppForModel(model)
 	if !ok {
 		return nil, false
 	}
-	app, ok := Global.Apps.Get(appName)
-	return app, ok
+
+	return app.(AppConfig), true
 }
 
 func GetIP(r *http.Request) string {
@@ -819,8 +819,7 @@ func (a *Application) Initialize() error {
 			contenttypes.Register(&contenttypes.ContentTypeDefinition{
 				ContentObject: model,
 			})
-			var rTyp = reflect.TypeOf(model)
-			a.models[rTyp] = app.Name()
+			djangoapps.RegisterModel(model, app)
 			allModels = append(allModels, model)
 		}
 	}

@@ -183,45 +183,45 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 	switch which {
 	case actsBeforeSave:
 		fn = func(ctx context.Context) error {
+			if saver, ok := s.obj.(ActsBeforeSave); ok {
+				return saver.BeforeSave(ctx)
+			}
 			// we have not yet checked if the actor has been seen, wrap the signal
 			if err := s.sendSig(SignalPreModelSave, ctx); err != nil {
 				return err
-			}
-			if saver, ok := s.obj.(ActsBeforeSave); ok {
-				return saver.BeforeSave(ctx)
 			}
 			return nil
 		}
 	case actsAfterSave:
 		fn = func(ctx context.Context) error {
+			if saver, ok := s.obj.(ActsAfterSave); ok {
+				return saver.AfterSave(ctx)
+			}
 			// we have not yet checked if the actor has been seen, wrap the signal
 			if err := s.sendSig(SignalPreModelSave, ctx); err != nil {
 				return err
-			}
-			if saver, ok := s.obj.(ActsAfterSave); ok {
-				return saver.AfterSave(ctx)
 			}
 			return nil
 		}
 	case actsBeforeCreate:
 		fn = func(ctx context.Context) error {
+			if creator, ok := s.obj.(ActsBeforeCreate); ok {
+				return creator.BeforeCreate(ctx)
+			}
 			// we have not yet checked if the actor has been seen, wrap the signal
 			if err := s.sendSig(SignalPreModelCreate, ctx); err != nil {
 				return err
-			}
-			if creator, ok := s.obj.(ActsBeforeCreate); ok {
-				return creator.BeforeCreate(ctx)
 			}
 			return nil
 		}
 	case actsAfterCreate:
 		fn = func(ctx context.Context) error {
+			if creator, ok := s.obj.(ActsAfterCreate); ok {
+				return creator.AfterCreate(ctx)
+			}
 			// we have not yet checked if the actor has been seen, wrap the signal
 			if err := s.sendSig(SignalPostModelCreate, ctx); err != nil {
 				return err
-			}
-			if creator, ok := s.obj.(ActsAfterCreate); ok {
-				return creator.AfterCreate(ctx)
 			}
 			return nil
 		}
@@ -235,23 +235,23 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 		}
 	case actsBeforeDelete:
 		fn = func(ctx context.Context) error {
-			if err := s.sendSig(SignalPreModelDelete, ctx); err != nil {
-				return err
-			}
 			if deleter, ok := s.obj.(ActsBeforeDelete); ok {
 				// we have not yet checked if the actor has been seen, wrap the signal
 				return deleter.BeforeDelete(ctx)
+			}
+			if err := s.sendSig(SignalPreModelDelete, ctx); err != nil {
+				return err
 			}
 			return nil
 		}
 	case actsAfterDelete:
 		fn = func(ctx context.Context) error {
-			if err := s.sendSig(SignalPostModelDelete, ctx); err != nil {
-				return err
-			}
 			if deleter, ok := s.obj.(ActsAfterDelete); ok {
 				// we have not yet checked if the actor has been seen, wrap the signal
 				return deleter.AfterDelete(ctx)
+			}
+			if err := s.sendSig(SignalPostModelDelete, ctx); err != nil {
+				return err
 			}
 			return nil
 		}

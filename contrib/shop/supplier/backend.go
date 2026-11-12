@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"iter"
 
-	"github.com/Nigel2392/go-django/contrib/blocks"
+	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -19,7 +19,9 @@ type Backend interface {
 	Icon(ctx context.Context) template.HTML
 	Label(ctx context.Context) string
 	Description(ctx context.Context) string
-	ProductWidget() *blocks.StructBlock
+	ProductType(ctx context.Context) ProductModel
+	ProductAddPanel(ctx context.Context) []admin.Panel
+	ProductEditPanel(ctx context.Context) []admin.Panel
 }
 
 func Register(b Backend) {

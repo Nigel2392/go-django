@@ -6,12 +6,12 @@ import (
 	"iter"
 	"strings"
 
-	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/versatile"
 )
 
 // orderedMap is a lightweight ordered unique collection.
@@ -532,6 +532,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 					}
 
 					var val = attrs.PrimaryKey(ctx, field)
+					fmt.Printf("TARGETFIELD: %s %T %T\n", targetField.Name(), val, targetField.Instance())
 					if versatile.IsZero(val) {
 						zeroCount++
 						continue
@@ -617,6 +618,12 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 					preload.FieldName, preload.Field.Name(), r.qs.internals.Model.Object, preload,
 				)
 			}
+
+			fmt.Printf("rowdefs.Instance: %T.%s.%s: %v %v %T %T: %v\n\n",
+				rowDefs.Instance(), preload.Rel.Field().Name(), preload.Field.Name(),
+				sourceField.GetValue(), rowDefs.Primary().GetValue(),
+				sourceField.GetValue(), rowDefs.Primary().GetValue(),
+				seenObj.objects)
 
 			sourceVal = attrs.PrimaryKey(ctx, sourceField)
 			primaryVal = attrs.PrimaryKey(ctx, rowDefs.Primary())

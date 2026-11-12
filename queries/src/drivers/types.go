@@ -422,8 +422,7 @@ func (id ULID) Value() (driver.Value, error) {
 	if id.IsZero() {
 		return "", nil
 	}
-	v, err := (ulid.ULID)(id).MarshalText()
-	return string(v), err
+	return (ulid.ULID)(id).String(), nil
 }
 
 func NewUUID() UUID {

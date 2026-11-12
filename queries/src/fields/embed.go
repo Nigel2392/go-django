@@ -31,7 +31,10 @@ func (e *embedder) bind(d attrs.Definer) []attrs.Field {
 		rVal = reflect.ValueOf(d).Elem()
 	)
 
-	var fieldval reflect.Value
+	var (
+		fieldval  reflect.Value
+		fieldName = e.fieldName
+	)
 	switch v := e.fieldName.(type) {
 	case string:
 		var fieldTyp, ok = rTyp.FieldByName(v)
@@ -48,8 +51,14 @@ func (e *embedder) bind(d attrs.Definer) []attrs.Field {
 		)
 	case attrs.Definer:
 		fieldval = reflect.ValueOf(v)
-		e.fieldName = reflect.TypeOf(v).Elem().Name()
+		fieldName = reflect.TypeOf(v).Elem().Name()
 	default:
+		rv := reflect.ValueOf(v)
+		if rv.IsValid() && rv.Kind() == reflect.Ptr && rv.Type().Elem().Implements(reflect.TypeFor[attrs.Definer]()) {
+			fieldval = rv.Elem()
+			fieldName = fieldval.Type().Elem().Name()
+			break
+		}
 		assert.Fail("nameOrScan must be a string or attrs.Definer, got %T", v)
 	}
 
@@ -65,10 +74,26 @@ func (e *embedder) bind(d attrs.Definer) []attrs.Field {
 	}
 
 	definer, ok := fieldval.Interface().(attrs.Definer)
-	assert.True(ok, "field %q in %T must implement attrs.Definer, got %T", e.fieldName, d, fieldval.Interface())
+	assert.True(ok, "field %q in %T must implement attrs.Definer, got %T", fieldName, d, fieldval.Interface())
 
 	if len(e.options.EmbedFields) > 0 {
-		var fields, err = attrs.UnpackFieldsFromArgs(e.ctx, definer, e.options.EmbedFields)
+		var (
+			defs attrs.Definitions
+			args = make([]any, len(e.options.EmbedFields))
+		)
+		for i, item := range e.options.EmbedFields {
+			if str, ok := item.(string); ok {
+				if defs == nil {
+					defs = attrs.Define(e.ctx, definer)
+				}
+				if f, ok := defs.Field(str); ok {
+					args[i] = f
+					continue
+				}
+			}
+			args[i] = item
+		}
+		var fields, err = attrs.UnpackFieldsFromArgs(e.ctx, definer, args...)
 		assert.True(err == nil, "failed to unpack fields: %v", err)
 		return fields
 	}
@@ -81,6 +106,10 @@ func Embed(ctx context.Context, nameOrScan any, options ...EmbedOptions) func(d 
 	if len(options) > 0 {
 		opts = options[0]
 	}
+
+	ctx = attrs.ContextWithFlags(
+		ctx, attrs.CtxFlagEmbedded, true,
+	)
 
 	var e = &embedder{
 		fieldName: nameOrScan,

@@ -9,9 +9,10 @@ type flags uint32
 
 const (
 	flagNone       flags = iota
-	flagAddrMethod flags = iota << 1
+	flagAddrMethod flags = 1 << iota
 	flagElemMethod
 	flagReflectValue
+	flagMethodErr
 	flagNoCtx
 )
 
@@ -51,13 +52,16 @@ func (r *initializer) walk(depth int, walkFn func(depth int, field reflect.Struc
 	return false
 }
 
-func (i *initializer) bind(ctx, rv, el reflect.Value) {
+func (i *initializer) bind(ctx, rv, el reflect.Value) (pathReverse []string, err error) {
 	for _, init := range i.sub {
-		init.bind(ctx, rv, el)
+		pathReverse, err = init.bind(ctx, rv, el)
+		if err != nil {
+			return append(pathReverse, i.embedded.Name), err
+		}
 	}
 
 	if i.node == nil {
-		return
+		return nil, nil
 	}
 
 	// fmt.Printf("node %v for embedder %s.%s\n", i.node.embedded.Index, parent.Type(), i.node.embedded.Name)
@@ -85,27 +89,49 @@ func (i *initializer) bind(ctx, rv, el reflect.Value) {
 		parent = reflect.ValueOf(parent)
 	}
 
-	nIn := i.node.method.Type.NumIn()
+	var (
+		out []reflect.Value
+		in  = []reflect.Value{val}
+		nIn = i.node.method.Type.NumIn()
+	)
+
+	if i.node.flags&flagNoCtx != flagNoCtx {
+		in = append(in, ctx)
+	}
+
+	in = append(in, parent)
+
 	switch {
 	case i.node.flags&flagNoCtx == flagNoCtx && nIn == 3:
-		i.node.method.Func.Call([]reflect.Value{
+		out = i.node.method.Func.Call([]reflect.Value{
 			val, parent,
 			reflect.ValueOf(i.embedded),
 		})
 	case i.node.flags&flagNoCtx == flagNoCtx:
-		i.node.method.Func.Call([]reflect.Value{
+		out = i.node.method.Func.Call([]reflect.Value{
 			val, parent,
 		})
 	case i.node.flags&flagNoCtx != flagNoCtx && nIn == 4:
-		i.node.method.Func.Call([]reflect.Value{
+		out = i.node.method.Func.Call([]reflect.Value{
 			val, ctx, parent,
 			reflect.ValueOf(i.embedded),
 		})
 	case i.node.flags&flagNoCtx != flagNoCtx:
-		i.node.method.Func.Call([]reflect.Value{
+		out = i.node.method.Func.Call([]reflect.Value{
 			val, ctx, parent,
 		})
 	}
+
+	if i.node.flags&flagMethodErr == flagMethodErr {
+		errV := out[len(out)-1]
+		if !errV.IsValid() || errV.IsNil() {
+			return nil, nil
+		}
+
+		return []string{i.embedded.Name}, errV.Interface().(error)
+	}
+
+	return nil, nil
 }
 
 type FieldValue struct {

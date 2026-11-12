@@ -303,6 +303,11 @@ func flattenList(values []any) []any {
 			continue
 		}
 
+		if _, ok := v.(driver.Valuer); ok {
+			inList = append(inList, normalizeDefinerArg(v))
+			continue
+		}
+
 		if rV.Kind() == reflect.Slice || rV.Kind() == reflect.Array {
 			var inner = make([]any, 0, rV.Len())
 			for i := 0; i < rV.Len(); i++ {

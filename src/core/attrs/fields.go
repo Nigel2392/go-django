@@ -421,7 +421,10 @@ func (f *FieldDef) Label(ctx context.Context) string {
 
 	// if f.directlyInteractible {
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
-		return labeler.Label(ctx)
+		label := labeler.Label(ctx)
+		if label != "" {
+			return label
+		}
 	}
 	// }
 
@@ -911,6 +914,10 @@ func (f *FieldDef) FormField() fields.Field {
 	}
 
 returnField:
+	if formField == nil {
+		return nil
+	}
+
 	formField.SetName(f.Name())
 
 	if f.attrDef.WidgetAttrs != nil {

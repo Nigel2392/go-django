@@ -80,8 +80,11 @@ func checkWasCleaned(f wasCleanedChecker, finalChk func(formObj wasCleanedChecke
 }
 
 func checkUnwrappedForms[T any](ctx context.Context, formObj FormWrapper[T]) bool {
-
-	var valid = true
+	var (
+		valid    = true
+		selfPtr  = reflect.ValueOf(formObj).Pointer()
+		seenSelf = false
+	)
 	for _, form := range formObj.Unwrap() {
 		var rv = reflect.ValueOf(form)
 		if rv.Kind() != reflect.Pointer {
@@ -90,27 +93,27 @@ func checkUnwrappedForms[T any](ctx context.Context, formObj FormWrapper[T]) boo
 		if rv.IsNil() {
 			continue
 		}
-
-		// create a unique key for every form based on its pointer address
-		// so we don't get stuck in an infinite loop if the same form is included in the unwrap chain
-		var wrappedFormKey = pointerContextKey{
-			ptr: reflect.ValueOf(form).Pointer(),
+		if rv.Pointer() == selfPtr {
+			seenSelf = true
 		}
 
-		// make sure every form wrapped still gets cleaned and validated
-		// by using the & operator on isValid
+		var wrappedFormKey = pointerContextKey{
+			ptr: rv.Pointer(),
+		}
+
 		valid = valid && IsValid(
 			context.WithValue(ctx, wrappedFormKey, struct{}{}),
 			form,
 		)
 	}
 
-	if definer, ok := any(formObj).(IsValidDefiner); ok && valid {
-		return definer.IsValid(ctx)
+	if !seenSelf {
+		if definer, ok := any(formObj).(IsValidDefiner); ok && valid {
+			return definer.IsValid(ctx)
+		}
 	}
 
 	return valid
-
 }
 
 func IsValid[T any](ctx context.Context, formObj T) bool {

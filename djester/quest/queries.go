@@ -8,7 +8,6 @@ import (
 	"reflect"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -26,7 +25,7 @@ func CreateObjects[T attrs.Definer](t LogFatal, objects []T) (created []T, delet
 	var objType = reflect.TypeOf(objects[0])
 	created, err = queries.
 		GetQuerySet(objects[0]).
-		WithContext(drivers.SetLogSQLContext(context.Background(), false)).
+		// WithContext(drivers.SetLogSQLContext(context.Background(), false)).
 		BulkCreate(
 			objects,
 		)
@@ -44,7 +43,7 @@ func CreateObjects[T attrs.Definer](t LogFatal, objects []T) (created []T, delet
 		var newObj = attrs.NewObject[T](context.Background(), objType)
 		var deleted, err = queries.
 			GetQuerySet(newObj).
-			WithContext(drivers.SetLogSQLContext(context.Background(), false)).
+			// WithContext(drivers.SetLogSQLContext(context.Background(), false)).
 			Delete(
 				created...,
 			)

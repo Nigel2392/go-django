@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"html/template"
 	"net/http"
 	"slices"
 	"strconv"
@@ -28,10 +27,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	djmodels "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
@@ -39,8 +36,6 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/versatile/clone"
-	"github.com/elliotchance/orderedmap/v2"
-	"github.com/shopspring/decimal"
 )
 
 var ViewProductList = generic.ListViewConfig[*models.Product]{
@@ -48,15 +43,6 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 	Model:     &models.Product{},
 	GetEditLink: func(r *http.Request, v *models.Product) string {
 		return django.Reverse("admin:shop:products:edit", v.ID)
-	},
-	GetQuerySet: func(r *http.Request) *queries.QuerySet[*models.Product] {
-		return queries.GetQuerySet(&models.Product{}).Select("*").Annotate(
-			"LowestStock", queries.Subquery(queries.GetQuerySet(&models.ProductSku{}).
-				Select(expr.MIN("Stock")).
-				Filter("Product.ID", expr.OuterRef("ID")).
-				OrderBy("Stock").
-				Limit(1)),
-		)
 	},
 	Filters: []filters.FilterSpec[*models.Product]{
 		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
@@ -73,7 +59,6 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 					expr.Q("Title__icontains", value),
 					expr.Q("Slug__icontains", value),
 					expr.Q("Supplier__icontains", value),
-					expr.Q("Skus.Title__icontains", value),
 				)), nil
 			},
 		},
@@ -115,31 +100,13 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 				"ID",
 			),
 			list.FieldColumn[*models.Product](
-				trans.S("Skus"),
-				"SkuCount",
-			),
-			list.HTMLFieldColumn[*models.Product](
-				trans.S("Lowest Stock"),
-				"LowestStock",
-				func(r *http.Request, defs attrs.Definitions, row *models.Product) template.HTML {
-					return template.HTML(strconv.Itoa(row.LowestStock))
-				},
-			),
-			list.HTMLFieldColumn(
-				trans.S("Price (max)"),
-				"PriceMax",
-				func(r *http.Request, defs attrs.Definitions, row *models.Product) template.HTML {
-					return template.HTML(fmt.Sprintf("€ %s", row.PriceMax))
-				},
+				trans.S("Supplier"),
+				"Supplier",
 			),
 		}
 
 		return cols, nil
 	},
-}
-
-type productSkuFormset interface {
-	Forms() ([]modelforms.ModelForm[*models.ProductSku], error)
 }
 
 func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
@@ -231,74 +198,41 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 		return
 	}
 
-	var supplier = mux.Vars(r).Get("supplier")
-	var form = forms.NewAdminForm(r, &models.Product{Supplier: supplier}, func(p *models.Product) []admin.Panel {
-		return p.AddPanels(r.Context())
+	var supplierVal = supplier.SupplierValue(mux.Vars(r).Get("supplier"))
+	var model = supplierVal.ProductType(r.Context())
+	var form = forms.NewAdminForm(r, model, func(p supplier.ProductModel) []admin.Panel {
+		return supplierVal.ProductAddPanel(r.Context())
 	})
 
 	form.Load()
 
-	form.Form.SaveInstance = func(ctx context.Context, p *models.Product) error {
-
-		flist, err := form.FormSet().Forms()
-		if err != nil {
-			return err
-		}
-
-		var (
-			skuFormSet productSkuFormset
-		)
-
-		for i, form := range flist {
-			if c, ok := form.(admin.ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
-				flist[i] = c.Form()
-			}
-		}
-
-		for _, form := range flist {
-			switch f := form.(type) {
-			case productSkuFormset:
-				skuFormSet = f
-			default:
-				except.Fail(
-					http.StatusInternalServerError,
-					"unhandled form type: %T", f,
-				)
-			}
-		}
-
-		skuForms, err := skuFormSet.Forms()
-		if err != nil {
-			return err
-		}
-
-		var priceMax decimal.Decimal
-		var skuCache = p.Skus.Cache()
-		for idx, form := range skuForms {
-
-			sku := form.Instance()
-			skuCache.Set(idx, sku)
-
-			if sku.Price.GreaterThan(priceMax) {
-				priceMax = sku.Price
-			}
-
-			sku.Product = p
-			form.CleanedData()["Product"] = p
-		}
-
-		p.SkuCount = skuCache.Len()
-		p.PriceMax = priceMax
-
+	form.Form.SaveInstance = func(ctx context.Context, p supplier.ProductModel) error {
+		fmt.Println("p.SpecificObject()", p.SpecificObject())
 		saved, err := djmodels.SaveModel(ctx, p)
 		if err == nil && !saved {
 			err = fmt.Errorf("model %T not saved", p)
 		}
 
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("p.SpecificObject()", p.SpecificObject())
+		product := p.SpecificObject().Embedder().(*models.Product)
+		product.Supplier = supplierVal
+
+		_, err = queries.GetQuerySet[attrs.Definer](&models.Product{}).
+			ExplicitSave().
+			Create(product)
+
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 
-	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]]{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "shop",
 		TemplateName:    "shop/products/admin/add.tmpl",
@@ -309,16 +243,16 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 				backURL = q
 			}
 
-			context.Set("supplier", supplier)
+			context.Set("supplier", supplierVal)
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:shop:products:add", supplier))
+			context.Set("PostURL", django.Reverse("admin:shop:products:add", supplierVal))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Add new product"),
 			})
 
 			return context, nil
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel] {
 			return form
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
@@ -326,10 +260,10 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			for _, field := range attrs.Define(r.Context(), &models.Product{}).Fields() {
 				initial[field.Name()] = field.GetDefault()
 			}
-			initial["Supplier"] = supplier
+			initial["Supplier"] = supplierVal
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]) {
 			var instance = form.Instance()
 			except.Assert(
 				instance != nil,
@@ -340,11 +274,9 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
 				BaseSignal: signals.NewBaseSignal(req.Context(), r, nil, nil),
 				Product: signals.Changed[*models.Product]{
-					New: instance,
+					New: instance.SpecificObject().Embedder().(*models.Product),
 				},
-				Skus: signals.Changed[[]*models.ProductSku]{
-					New: instance.Skus.AsList(),
-				},
+				Specific: signals.Changed[supplier.ProductModel]{},
 			})
 
 			messages.Success(r, "Product added")
@@ -368,8 +300,8 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 
 	var vars = mux.Vars(r)
 	var productRow, err = queries.GetQuerySet(&models.Product{}).
-		Select("*", "Skus.*").
-		Filter("ID", vars.GetInt("product_id")).
+		Select("*").
+		Filter("ID", vars.Get("product_id")).
 		Get()
 
 	if errors.Is(err, errors.NoRows) {
@@ -404,80 +336,48 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			clone.Flag(clone.CF_NOVALIDATE),
 		)
 		if err != nil {
-			logger.Fatal(http.StatusInternalServerError, err)
+			except.Fail(
+				http.StatusInternalServerError,
+				"error retrieving cloning instance of product: %v", err,
+			)
 		}
-
-		logger.Warnf("%+v", originalProduct)
-		logger.Warnf("%+v", productRow.Object)
 	}
 
-	var form = forms.NewAdminForm(r, productRow.Object, func(p *models.Product) []admin.Panel {
-		return p.EditPanels(r.Context())
+	specific, err := productRow.Object.Specific.Specific(r.Context(), true)
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"error retrieving specific instance of product: %v", err,
+		)
+	}
+
+	var form = forms.NewAdminForm(r, specific.(supplier.ProductModel), func(p supplier.ProductModel) []admin.Panel {
+		return productRow.Object.Supplier.ProductEditPanel(r.Context())
 	})
 
 	form.Load()
 
-	form.Form.SaveInstance = func(ctx context.Context, p *models.Product) error {
-
-		flist, err := form.FormSet().Forms()
-		if err != nil {
-			return err
-		}
-
-		var (
-			skuFormSet productSkuFormset
-		)
-
-		for i, form := range flist {
-			if c, ok := form.(admin.ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
-				flist[i] = c.Form()
-			}
-		}
-
-		for _, form := range flist {
-			switch f := form.(type) {
-			case productSkuFormset:
-				skuFormSet = f
-			default:
-				except.Fail(
-					http.StatusInternalServerError,
-					"unhandled form type: %T", f,
-				)
-			}
-		}
-
-		skuForms, err := skuFormSet.Forms()
-		if err != nil {
-			return err
-		}
-
-		var priceMax decimal.Decimal
-		var skuCache = p.Skus.Cache()
-		*skuCache = *orderedmap.NewOrderedMap[any, *models.ProductSku]()
-		for idx, form := range skuForms {
-
-			sku := form.Instance()
-			skuCache.Set(idx, sku)
-
-			if sku.Price.GreaterThan(priceMax) {
-				priceMax = sku.Price
-			}
-
-			form.CleanedData()["Product"] = p
-		}
-
-		p.SkuCount = skuCache.Len()
-		p.PriceMax = priceMax
+	form.Form.SaveInstance = func(ctx context.Context, p supplier.ProductModel) error {
 
 		saved, err := djmodels.SaveModel(ctx, p)
 		if err == nil && !saved {
 			err = fmt.Errorf("model %T not saved", p)
 		}
 
-		return nil
+		if err != nil {
+			return err
+		}
+
+		product := p.SpecificObject().Embedder().(*models.Product)
+
+		_, err = queries.GetQuerySet[attrs.Definer](&models.Product{}).
+			ExplicitSave().
+			Update(product)
+
+		return err
 	}
 
-	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]]{
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]]{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "shop",
 		TemplateName:    "shop/products/admin/edit.tmpl",
@@ -498,17 +398,20 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 
 			return context, nil
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel] {
 			return form
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
+			for _, field := range attrs.Define(r.Context(), specific).Fields() {
+				initial[field.Name()] = field.GetValue()
+			}
 			for _, field := range attrs.Define(r.Context(), productRow.Object).Fields() {
 				initial[field.Name()] = field.GetValue()
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*models.Product], *models.Product]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]) {
 			var instance = form.Instance()
 			except.Assert(
 				instance != nil,
@@ -520,11 +423,11 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				BaseSignal: signals.NewBaseSignal(r.Context(), r, nil, nil),
 				Product: signals.Changed[*models.Product]{
 					Old: originalProduct,
-					New: instance,
+					New: instance.SpecificObject().Embedder().(*models.Product),
 				},
-				Skus: signals.Changed[[]*models.ProductSku]{
-					Old: originalProduct.Skus.AsList(),
-					New: instance.Skus.AsList(),
+				Specific: signals.Changed[supplier.ProductModel]{
+					//	Old: originalProduct.Skus.AsList(),
+					//	New: instance.Skus.AsList(),
 				},
 			})
 

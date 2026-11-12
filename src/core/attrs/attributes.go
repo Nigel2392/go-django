@@ -410,7 +410,7 @@ typeSwitch:
 typeCheck:
 	for rV.IsValid() {
 		switch {
-		case rT.Implements(_DRIVER_VALUE):
+		case rV.Type().Implements(_DRIVER_VALUE):
 			v, err := rV.Interface().(driver.Valuer).Value()
 			if err != nil {
 				panic("primary field value is not valid or suitable for use with PrimaryKey: " + err.Error())

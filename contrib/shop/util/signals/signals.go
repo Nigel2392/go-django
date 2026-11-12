@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/auth/users"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/prov"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/supplier"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -79,8 +80,8 @@ type Changed[TYP any] struct {
 
 type ProductSignalData struct {
 	BaseSignal
-	Product Changed[*models.Product]
-	Skus    Changed[[]*models.ProductSku]
+	Product  Changed[*models.Product]
+	Specific Changed[supplier.ProductModel]
 }
 
 type OrderSignalData struct {

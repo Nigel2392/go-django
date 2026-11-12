@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
 	"github.com/Nigel2392/go-signals"
 )
 
@@ -41,4 +42,13 @@ var (
 
 	// Signal to be executed after deleting a model instance.
 	SignalPostModelDelete = signals.Get[ModelSignal]("queries.model.post_delete")
+)
+
+var (
+	_, _ = SignalPreModelSave.Listen(context.Background(), func(ctx context.Context, s signals.Signal[ModelSignal], ms ModelSignal) error {
+		return embedder.PreSave.Bind(ctx, ms.Instance)
+	})
+	_, _ = SignalPostModelSave.Listen(context.Background(), func(ctx context.Context, s signals.Signal[ModelSignal], ms ModelSignal) error {
+		return embedder.PostSave.Bind(ctx, ms.Instance)
+	})
 )

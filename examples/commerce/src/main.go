@@ -15,8 +15,10 @@ import (
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/contrib/revisions"
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/shop"
+	"github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -78,6 +80,8 @@ func main() {
 			editor.NewAppConfig,
 			blocks.NewAppConfig,
 			shop.NewAppConfig,
+			revisions.NewAppConfig,
+			dbsupplier.NewAppConfig,
 		),
 	)
 	go func() {

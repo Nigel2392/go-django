@@ -25,7 +25,6 @@ func wrapDefinitions(definer Definer, defs Definitions) StaticDefinitions {
 		object: definer,
 		defs:   defs,
 		fields: staticFields,
-		Table:  defs.TableName(),
 	}
 	if prim != nil {
 		sDef.PrimaryField = prim.Name()
@@ -62,7 +61,6 @@ func newStaticDefinitions(d Definer) *staticDefinition {
 		sDef.PrimaryField = prim.Name()
 	}
 	sDef.defs = defs
-	sDef.Table = sDef.defs.TableName()
 	sDef.fields = m
 
 	return sDef

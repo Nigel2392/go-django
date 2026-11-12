@@ -292,11 +292,12 @@ type ptrField[MODEL attrs.Definer, VALUE any] struct {
 	defs      attrs.Definitions
 	fieldName string
 	opts      *ptrFieldOpts[MODEL, VALUE]
+	optsKey   []string
 	confFunc  func() PtrFieldConfig[MODEL, VALUE]
 }
 
-func Field[MODEL attrs.Definer, VALUE any](obj MODEL, name string, ptr *VALUE, cnf func() PtrFieldConfig[MODEL, VALUE]) attrs.Field {
-	var opts, ok = GetOptions[*ptrFieldOpts[MODEL, VALUE]](reflect.TypeOf(obj), name)
+func Field[MODEL attrs.Definer, VALUE any](obj MODEL, name string, ptr *VALUE, cnf func() PtrFieldConfig[MODEL, VALUE], optionsKey ...string) attrs.Field {
+	var opts, ok = GetOptions[*ptrFieldOpts[MODEL, VALUE]](reflect.TypeOf(obj), name, optionsKey...)
 	if !ok && cnf == nil {
 		panic(fmt.Sprintf("options were not configured for field %q in type %T", name, obj))
 	}
@@ -311,6 +312,7 @@ func Field[MODEL attrs.Definer, VALUE any](obj MODEL, name string, ptr *VALUE, c
 
 	if !ok {
 		f.confFunc = cnf
+		f.optsKey = optionsKey
 	}
 
 	return f
@@ -342,6 +344,7 @@ func (r *ptrField[M, V]) OnModelRegister(model attrs.Definer, outer attrs.FieldD
 			reflect.TypeOf(r.obj),
 			r.fieldName,
 			ptrFieldConfigToOptions(r, r.confFunc()),
+			r.optsKey...,
 		)
 	}
 	return nil
@@ -352,6 +355,7 @@ func (r *ptrField[M, V]) Embedded() bool {
 	if ok {
 		return f.Embedded()
 	}
+
 	return false
 }
 

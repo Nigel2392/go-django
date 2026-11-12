@@ -85,9 +85,9 @@ type QueryStore struct {
 }
 
 // NewQueryStore returns a new QueryStore instance, with a background cleanup goroutine
-// that runs every 5 minutes to remove expired session data.
+// that runs every 30 minutes to remove expired session data.
 func NewQueryStore(db drivers.Database) *QueryStore {
-	return NewQueryStoreWithCleanupInterval(db, 5*time.Minute)
+	return NewQueryStoreWithCleanupInterval(db, 30*time.Minute)
 }
 
 // NewQueryStoreWithCleanupInterval returns a new QueryStore instance. The cleanupInterval

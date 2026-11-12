@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -163,11 +162,11 @@ func (b *Backend) Open(name string) (mediafiles.StoredObject, error) {
 // The maxLength parameter is passed to GetAvailableName() and is used to limit the length of the filename before saving.
 // If the file is too large to be saved, this will raise a SuspiciousOperation exception.
 func (b *Backend) Save(path string, file io.Reader, maxLength ...int) (string, error) {
-	fmt.Println()
-	fmt.Println("_________")
-	fmt.Println(string(debug.Stack()))
-	fmt.Println("_________")
-	fmt.Println()
+	//	fmt.Println()
+	//	fmt.Println("_________")
+	//	fmt.Println(string(debug.Stack()))
+	//	fmt.Println("_________")
+	//	fmt.Println()
 
 	// do not lock here, GetAvailableName will lock
 	var (

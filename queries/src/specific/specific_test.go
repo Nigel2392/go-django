@@ -10,10 +10,13 @@ import (
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
 	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/specific"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
+	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -33,31 +36,40 @@ func (a *Author) FieldDefs(ctx context.Context) attrs.Definitions {
 }
 
 type GenericComment[T any] struct {
-	models.Model
+	// models.Model
 	specific.Specific[*GenericComment[T]]
-	ID   int64
+	ID   drivers.ULID
 	Text string
 }
 
+func (b *GenericComment[T]) BeforeSave(ctx context.Context) error {
+	if b.ID.IsZero() {
+		b.ID = drivers.NewULID()
+	}
+	return nil
+}
+
 func (b *GenericComment[T]) FieldDefs(ctx context.Context) attrs.Definitions {
-	return b.Model.Define(ctx, b,
+	return attrs.Make[*GenericComment[T], any](ctx, b,
 		attrs.NewField(b, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
 		attrs.NewField(b, "Text", nil),
-		attrs.NewField(b, "SpecificID", nil),
-		attrs.NewField(b, "SpecificContentType", nil),
+		b.Specific.Fields,
 	).WithTableName("djstr_specific_c")
 }
 
 type CommentWithAuthor struct {
 	*GenericComment[CommentWithAuthor]
-	ID     int
 	Author *Author
 }
 
 func (b *CommentWithAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
-	return b.Model.Define(ctx, b,
+	if b.GenericComment == nil {
+		b.GenericComment = &GenericComment[CommentWithAuthor]{}
+	}
+
+	return attrs.Make(ctx, b,
 		attrs.NewField(b, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -72,14 +84,6 @@ func defaultSpecificOpts() specific.SpecificQuerySetOptions[*GenericComment[Comm
 	return specific.SpecificQuerySetOptions[*GenericComment[CommentWithAuthor], attrs.Definer]{
 		GetSpecificQuerySet: func(targetContentType *contenttypes.ContentTypeDefinition, target attrs.Definer) queries.BaseReadQuerySet[attrs.Definer, *queries.QuerySet[attrs.Definer]] {
 			return queries.GetQuerySet(target)
-		},
-		GetSpecificTargetID: func(target attrs.Definer) (id any, ok bool) {
-			var pk = attrs.PrimaryKey(context.Background(), target)
-			switch v := pk.(type) {
-			case uint64:
-				return int(v), true
-			}
-			return pk, true
 		},
 	}
 }
@@ -109,9 +113,9 @@ func TestSpecificQuerySet(t *testing.T) {
 		{Author: author},
 	}
 	var gcs = []*GenericComment[CommentWithAuthor]{
-		{Text: "Comment 1", Specific: specific.Specific[*GenericComment[CommentWithAuthor]]{Specific: cwas[0]}},
-		{Text: "Comment 2", Specific: specific.Specific[*GenericComment[CommentWithAuthor]]{Specific: cwas[1]}},
-		{Text: "Comment 3", Specific: specific.Specific[*GenericComment[CommentWithAuthor]]{Specific: cwas[2]}},
+		{Text: "Comment 1", Instance: cwas[0]},
+		{Text: "Comment 2", Instance: cwas[1]},
+		{Text: "Comment 3", Instance: cwas[2]},
 	}
 
 	logger.Setup(&logger.Logger{
@@ -146,9 +150,11 @@ func TestSpecificQuerySet(t *testing.T) {
 				t.Fatalf("Expected %d results, got %d", len(cwas), len(results))
 			}
 
+			t.Logf("row.Object: %T: %#v", results[0].Object, results[0].Object)
+
 			for i, row := range results {
 				var specificObj = row.Object.Specific.(*CommentWithAuthor)
-				if specificObj.ID != cwas[i].ID || specificObj.ID == 0 {
+				if specificObj.ID != cwas[i].ID || specificObj.ID.IsZero() {
 					t.Fatalf("Expected specific object ID to be %d, got %d", cwas[i].ID, specificObj.ID)
 				}
 			}
@@ -179,10 +185,10 @@ func TestSpecificQuerySet(t *testing.T) {
 			}
 
 			t.Logf("ResultRow Original: %+v", row.Object.Original)
-			t.Logf("ResultRow Specific: %+v", row.Object.Specific)
+			t.Logf("ResultRow Instance: %+v", row.Object.Specific)
 
 			var specificObj = row.Object.Specific.(*CommentWithAuthor)
-			if specificObj.ID != cwas[1].ID || specificObj.ID == 0 {
+			if specificObj.ID != cwas[1].ID || specificObj.ID.IsZero() {
 				t.Fatalf("Expected specific object ID %d, got %d", cwas[1].ID, specificObj.ID)
 			}
 		},
@@ -286,7 +292,7 @@ func TestSpecificQuerySet(t *testing.T) {
 			var opts = defaultSpecificOpts()
 			opts.GetSpecificQuerySet = func(targetContentType *contenttypes.ContentTypeDefinition, target attrs.Definer) queries.BaseReadQuerySet[attrs.Definer, *queries.QuerySet[attrs.Definer]] {
 				// We pass ctx directly to ensure we use the testdb's active context
-				return queries.GetQuerySetWithContext(ctx, target).Preload("Author")
+				return queries.GetQuerySetWithContext(ctx, target).SelectRelated("Author")
 			}
 
 			var sqs = specific.GetSpecificQuerySet(qs, opts).WithContext(ctx)
@@ -324,4 +330,100 @@ func TestSpecificQuerySet(t *testing.T) {
 	t.Run("TestSpecificQuerySet_FirstAndLast", func(t *testing.T) { testFirstLast.Test(nil, t) })
 	t.Run("TestSpecificQuerySet_IterAll", func(t *testing.T) { testIterAll.Test(nil, t) })
 	t.Run("TestSpecificQuerySet_PreloadSpecific", func(t *testing.T) { testPreload.Test(nil, t) })
+}
+
+type CommentReaction struct {
+	ID      int64
+	Comment *GenericComment[CommentWithAuthor]
+	Emoji   string
+}
+
+func (m *CommentReaction) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
+		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*CommentReaction, int64] {
+			return fattrs.PtrFieldConfig[*CommentReaction, int64]{
+				Config: attrs.FieldConfig{
+					Primary:  true,
+					ReadOnly: true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Comment", &m.Comment, func() fattrs.PtrFieldConfig[*CommentReaction, *GenericComment[CommentWithAuthor]] {
+			return fattrs.PtrFieldConfig[*CommentReaction, *GenericComment[CommentWithAuthor]]{
+				Config: attrs.FieldConfig{
+					Column:        "comment_id",
+					RelForeignKey: attrs.Relate(&GenericComment[CommentWithAuthor]{}, "", nil),
+				},
+			}
+		}),
+		fattrs.Field(m, "Emoji", &m.Emoji, func() fattrs.PtrFieldConfig[*CommentReaction, string] {
+			return fattrs.PtrFieldConfig[*CommentReaction, string]{}
+		}),
+	).WithTableName("djstr_specific_reaction")
+}
+
+type CommentWithFattrs struct {
+	*GenericComment[CommentWithFattrs]
+	ID    int64
+	Extra string
+}
+
+func (m *CommentWithFattrs) FieldDefs(ctx context.Context) attrs.Definitions {
+	if m.GenericComment == nil {
+		m.GenericComment = &GenericComment[CommentWithFattrs]{}
+	}
+	return attrs.Make[*CommentWithFattrs, any](ctx, m,
+		fields.Embed(ctx, &m.GenericComment, fields.EmbedOptions{
+			EmbedFields: []any{"ID", "Text"},
+		}),
+		fattrs.Field(m, "Extra", &m.Extra, func() fattrs.PtrFieldConfig[*CommentWithFattrs, string] {
+			return fattrs.PtrFieldConfig[*CommentWithFattrs, string]{}
+		}),
+	).WithTableName("djstr_specific_cwf")
+}
+
+func TestSpecificForeignKeyAndFattrsRegistration(t *testing.T) {
+	t.Run("ForeignKeyToSpecificBaseModel", func(t *testing.T) {
+		attrs.RegisterModel(&GenericComment[CommentWithAuthor]{})
+		attrs.RegisterModel(&CommentWithAuthor{})
+		attrs.RegisterModel(&CommentReaction{})
+
+		reaction := attrs.NewObject[*CommentReaction](t.Context(), &CommentReaction{})
+		if reaction == nil {
+			t.Fatal("expected non-nil CommentReaction")
+		}
+		if reaction.Comment != nil && reaction.Comment.Instance != nil {
+			t.Fatalf("expected reaction.Comment.Instance to be nil, got %T (%+v)", reaction.Comment.Instance, reaction.Comment.Instance)
+		}
+
+		cwa := attrs.NewObject[*CommentWithAuthor](t.Context(), &CommentWithAuthor{})
+		cwa.ID = drivers.NewULID()
+		reaction.Comment = cwa.GenericComment
+		if err := embedder.PreSave.Bind(t.Context(), reaction); err != nil {
+			t.Fatalf("PreSave.Bind failed on reaction: %v", err)
+		}
+		if reaction.Comment.Instance != cwa {
+			t.Fatalf("expected reaction.Comment.Instance to remain cwa (%p), got %T (%+v)", cwa, reaction.Comment.Instance, reaction.Comment.Instance)
+		}
+	})
+
+	t.Run("SpecificSubtypeWithFattrs", func(t *testing.T) {
+		attrs.RegisterModel(&GenericComment[CommentWithFattrs]{})
+		attrs.RegisterModel(&CommentWithFattrs{})
+
+		cwf := attrs.NewObject[*CommentWithFattrs](t.Context(), &CommentWithFattrs{})
+		if cwf == nil {
+			t.Fatal("expected non-nil CommentWithFattrs")
+		}
+		if cwf.GenericComment == nil {
+			t.Fatal("expected embedded GenericComment to be initialized")
+		}
+		if cwf.GenericComment.Instance != cwf {
+			t.Fatalf("expected GenericComment.Instance to be %p, got %v", cwf, cwf.GenericComment.Instance)
+		}
+		defs := attrs.Define(t.Context(), cwf)
+		if defs.Primary() == nil {
+			t.Fatal("expected embedded ID field to be primary")
+		}
+	})
 }

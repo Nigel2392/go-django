@@ -44,7 +44,10 @@ type CanSetup interface {
 
 // Setup allows a model to be setup properly if it adheres to the CanSetup interface.
 func setup[T attrs.Definer](ctx context.Context, model T) (T, error) {
-	embedder.Bind(ctx, model)
+	err := embedder.Init.Bind(ctx, model)
+	if err != nil {
+		return model, err
+	}
 
 	if setupModel, ok := any(model).(CanSetup); ok {
 		if err := setupModel.Setup(ctx, model); err != nil {

@@ -79,7 +79,7 @@ func IsZero(value interface{}) bool {
 //
 // If the type is not the same as the model (for example when embedding a model),
 // the newly created object will not be used.
-type CanCreateObject[T Definer] interface {
+type CanCreateObject[T any] interface {
 	// CreateObject creates a new object being the same
 	// type as the source model provided in the method.
 	//
@@ -643,6 +643,16 @@ func IsEmbeddedField[T FieldDefinition](f T) bool {
 	if t, ok := any(f).(Embedder); ok {
 		return t.Embedded()
 	}
+
+	//	var rType = reflect.TypeOf(model)
+	//	var meta, ok = modelReg[rType]
+	//	if ok {
+	//		embed, _ := meta.stored[fmt.Sprintf("%s__embedded", f.Name())].(bool)
+	//		if embed {
+	//			return true
+	//		}
+	//	}
+
 	return false
 }
 

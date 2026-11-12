@@ -60,7 +60,7 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Deps = []string{
-		"session", "auth", "admin", "editor", "blocks",
+		"session", "auth", "admin", "editor", "blocks", "revisions",
 	}
 
 	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
@@ -95,7 +95,6 @@ func NewAppConfig() (django.AppConfig, error) {
 		&models.Payment{},
 
 		// Products
-		&models.ProductSku{},
 		&models.Product{},
 
 		// Suppliers
@@ -183,7 +182,6 @@ func NewAppConfig() (django.AppConfig, error) {
 		// always run the sync on startup
 		// /mostly/ handled in DB
 		return errors.Join(
-			models.Products().Sync(),
 			supplier.Suppliers().Sync(),
 		)
 	}
@@ -193,16 +191,14 @@ func NewAppConfig() (django.AppConfig, error) {
 
 	SHOP.SIGNALS.Products.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
 		_, err := auditlogs.Log(psd.Context, "shop:product:add", logger.INF, psd.Product.New, map[string]any{
-			"title":    psd.Product.New.Title,
-			"skuCount": len(psd.Skus.New),
+			"title": psd.Product.New.Title,
 		})
 		return err
 	})
 
 	SHOP.SIGNALS.Products.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
 		_, err := auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
-			"title":    psd.Product.New.Title,
-			"skuCount": len(psd.Skus.New),
+			"title": psd.Product.New.Title,
 		})
 		return err
 	})

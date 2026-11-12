@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 
+	"github.com/Nigel2392/go-django/contrib/revisions"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -15,7 +16,7 @@ var _ queries.ActsBeforeCreate = (*OrderItem)(nil)
 type OrderItem struct {
 	ID        drivers.ULID
 	Order     *Order
-	Product   *ProductSku
+	Product   *revisions.Revision
 	ItemPrice decimal.Decimal
 	Amount    int
 }
@@ -34,8 +35,8 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*OrderItem, *ProductSku] {
-			return fattrs.PtrFieldConfig[*OrderItem, *ProductSku]{
+		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*OrderItem, *revisions.Revision] {
+			return fattrs.PtrFieldConfig[*OrderItem, *revisions.Revision]{
 				Config: attrs.FieldConfig{
 					Null:  false,
 					Blank: false,

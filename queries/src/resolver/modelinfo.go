@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -42,6 +43,8 @@ func NewModelInfo(model attrs.Definer) (ModelInfo, error) {
 	if orderBy == nil && primary != nil {
 		orderBy = []string{primary.Name()}
 	}
+
+	model = attrs.Setup[attrs.Definer](context.Background(), model)
 
 	info := ModelInfo{
 		Primary:  primary,

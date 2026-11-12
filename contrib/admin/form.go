@@ -306,10 +306,10 @@ func (a *AdminForm[T1, T2]) IsValid(ctx context.Context) (valid bool) {
 		valid = validDef.IsValid(ctx)
 	}
 
-	var fs = a.FormSet()
-	if fs != nil {
-		valid = valid && forms.IsValid(ctx, fs)
-	}
+	//	var fs = a.FormSet()
+	//	if fs != nil {
+	//		valid = valid && forms.IsValid(ctx, fs)
+	//	}
 
 	return valid
 }
@@ -485,7 +485,12 @@ func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]in
 		}
 	}
 
-	for _, form := range preSaveForms {
+	for i, form := range preSaveForms {
+		if !form.HasChanged() {
+			logger.Debugf("preSaveForms form[%d] has not changed, skipping save: %T", i, form)
+			continue
+		}
+
 		a.saveFormSetForm(form)
 	}
 
@@ -495,8 +500,13 @@ func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]in
 	}
 
 outer:
-	for _, clusterable := range postSaveForms {
+	for i, clusterable := range postSaveForms {
 		form := clusterable.Form()
+
+		if !form.HasChanged() {
+			logger.Debugf("postSaveForms form[%d] has not changed, skipping save: %T", i, form)
+			continue
+		}
 
 		if p, ok := clusterable.(postSaveForm); ok && p.ParentField() != "" && p.FormField() != "" {
 			v, ok := data[p.ParentField()]
@@ -624,6 +634,10 @@ func (a *AdminForm[T1, T2]) saveFormSetForm(form formsets.BaseFormSetForm) {
 			logger.Warnf("could not delete model %T: unknown error", instanceVal)
 			a.Form.AddFormError(errors.New("could not delete model"))
 		}
+		return
+	}
+
+	if !form.HasChanged() {
 		return
 	}
 

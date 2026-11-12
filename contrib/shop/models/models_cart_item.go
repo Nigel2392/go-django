@@ -14,7 +14,7 @@ var _ queries.ActsBeforeCreate = (*CartItem)(nil)
 type CartItem struct {
 	ID      drivers.ULID
 	Cart    *Cart `json:"-"`
-	Product *ProductSku
+	Product *Product
 	Amount  uint64
 }
 
@@ -47,15 +47,15 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*CartItem, *ProductSku] {
-			return fattrs.PtrFieldConfig[*CartItem, *ProductSku]{
+		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*CartItem, *Product] {
+			return fattrs.PtrFieldConfig[*CartItem, *Product]{
 				Config: attrs.FieldConfig{
 					Column:   "product_id",
 					ReadOnly: true,
 					Attributes: map[string]interface{}{
 						attrs.AttrReverseAliasKey: "CartItems",
 					},
-					RelForeignKey: attrs.Relate(&ProductSku{}, "", nil),
+					RelForeignKey: attrs.Relate(&Product{}, "", nil),
 					Null:          false,
 					Blank:         false,
 				},

@@ -648,24 +648,22 @@ addProxies:
 				AllowEdit:   true,
 				TargetField: proxy.targetFieldName,
 				Rel:         attrs.Relate(newProxyObj, proxy.targetFieldName, nil),
-				DataModelFieldConfig: fields.DataModelFieldConfig{
-					ResultType: rNewProxyObj.Type(),
-				},
+				ResultType:  rNewProxyObj.Type(),
 			})
 		case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && !proxy.controlsSaving:
-			field = newProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
+			field = newProxyField(def, fieldName, &ProxyFieldConfig{
 				Proxy:            newProxyObj,
 				ContentTypeField: proxy.cTypeFieldName,
 				TargetField:      proxy.targetFieldName,
 				AllowEdit:        true,
-			})
+			}, attrsFieldFunc)
 
 		case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && proxy.controlsSaving:
-			field = newProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
+			field = newProxyField(def, fieldName, &ProxyFieldConfig{
 				Proxy:            newProxyObj,
 				ContentTypeField: proxy.cTypeFieldName,
 				TargetField:      proxy.targetFieldName,
-			})
+			}, attrsFieldFunc)
 		default:
 			panic(fmt.Errorf(
 				"proxy %s in model %T does not have a content type field or target field defined",

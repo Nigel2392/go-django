@@ -20,10 +20,9 @@ var (
 
 type proxyField struct {
 	attrs.Field
-	cnf   *ProxyFieldConfig
-	obj   attrs.Definer
-	model *Model
-	meta  attrs.ModelMeta
+	cnf  *ProxyFieldConfig
+	obj  attrs.Definer
+	meta attrs.ModelMeta
 
 	targetPrimaryField attrs.FieldDefinition
 	targetCtypeField   attrs.FieldDefinition
@@ -36,29 +35,31 @@ type ProxyFieldConfig struct {
 	AllowEdit        bool
 }
 
-func newProxyField(model *Model, definer attrs.Definer, niceName string, internalName string, cnf *ProxyFieldConfig) *proxyField {
+func NewProxyField(definer attrs.Definer, name string, cnf *ProxyFieldConfig, fieldFunc func(attrs.Definer, string, *ProxyFieldConfig, attrs.FieldConfig) attrs.Field) *proxyField {
+	return newProxyField(definer, name, cnf, fieldFunc)
+}
+
+func attrsFieldFunc(def attrs.Definer, name string, _ *ProxyFieldConfig, cnf attrs.FieldConfig) attrs.Field {
+	return attrs.NewField(def, name, &cnf)
+}
+
+func newProxyField(definer attrs.Definer, name string, cnf *ProxyFieldConfig, fieldFunc func(attrs.Definer, string, *ProxyFieldConfig, attrs.FieldConfig) attrs.Field) *proxyField {
 	if cnf == nil || cnf.Proxy == nil {
 		panic("ProxyFieldConfig.Proxy must not be nil")
 	}
 
 	return &proxyField{
-		Field: attrs.NewField(
-			definer,
-			niceName,
-			&attrs.FieldConfig{
-				// AutoInit:     true,
-				ReadOnly:     true,
-				NameOverride: internalName,
-				RelOneToOne: attrs.Relate(
-					cnf.Proxy,
-					"", nil,
-				),
-			},
-		),
-		meta:  attrs.GetModelMeta(definer),
-		model: model,
-		obj:   definer,
-		cnf:   cnf,
+		Field: fieldFunc(definer, name, cnf, attrs.FieldConfig{
+			ReadOnly:     true,
+			NameOverride: name,
+			RelOneToOne: attrs.Relate(
+				cnf.Proxy,
+				"", nil,
+			),
+		}),
+		meta: attrs.GetModelMeta(definer),
+		obj:  definer,
+		cnf:  cnf,
 	}
 }
 
@@ -86,7 +87,7 @@ func (f *proxyField) CanMigrate() bool {
 }
 
 func (f *proxyField) GetSourcePrimary() attrs.FieldDefinition {
-	var primary = f.model.internals.Defs.Primary()
+	var primary = f.meta.Primary()
 	if primary == nil {
 		panic(fmt.Errorf(
 			"ProxyFieldConfig.Proxy: %T (%s) does not have a primary field defined (%T)",

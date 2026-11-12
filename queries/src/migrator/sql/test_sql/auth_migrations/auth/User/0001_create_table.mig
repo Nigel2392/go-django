@@ -1,6 +1,6 @@
 {
   "table": {
-    "table": "user",
+    "table": "auth.user",
     "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User",
     "fields": [
       {

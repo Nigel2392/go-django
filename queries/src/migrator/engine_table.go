@@ -232,7 +232,8 @@ func (t *ModelTable) UnmarshalJSON(data []byte) error {
 		t.Index = append(t.Index, idx)
 	}
 
-	var defs = attrs.Define(context.Background(), t.Object)
+	var object = attrs.Setup[attrs.Definer](context.Background(), t.Object)
+	var defs = attrs.Define(context.Background(), object)
 	for _, col := range s.Fields {
 		col.Table = t
 		var f, ok = defs.Field(col.Name)

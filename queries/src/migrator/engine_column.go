@@ -212,6 +212,10 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 
 func (c *Column) DBType() dbtype.Type {
 	var fieldType = c.FieldType()
+	if fieldType == nil {
+		panic(fmt.Sprintf("fieldType is nil for column %q and model %T", c.Name, c.Table.Model()))
+	}
+
 	var fieldVal = reflect.New(fieldType).Elem()
 	var dbType dbtype.Type
 	if dbTypeDefiner, ok := fieldVal.Interface().(CanColumnDBType); ok {
@@ -366,6 +370,9 @@ func (c *Column) ChangeList(other *Column) []string {
 	}
 	if c.Auto != other.Auto {
 		l = append(l, "Auto")
+	}
+	if c.UseInDB != other.UseInDB {
+		l = append(l, "UseInDB")
 	}
 	if c.DBType() != other.DBType() {
 		l = append(l, "DBType")

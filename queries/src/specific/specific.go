@@ -7,7 +7,6 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
@@ -36,7 +35,6 @@ type SpecificModel[ORIGINAL Model, SPECIFIC attrs.Definer] struct {
 
 type SpecificQuerySetOptions[ORIGINAL Model, SPECIFIC attrs.Definer] struct {
 	GetSpecificQuerySet func(targetContentType *contenttypes.ContentTypeDefinition, target SPECIFIC) queries.BaseReadQuerySet[SPECIFIC, *queries.QuerySet[SPECIFIC]]
-	GetSpecificTargetID func(target SPECIFIC) (id any, ok bool)
 }
 
 type SpecificQuerySet[ORIGINAL Model, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]] struct {
@@ -45,11 +43,6 @@ type SpecificQuerySet[ORIGINAL Model, SPECIFIC attrs.Definer, QS queries.Abstrac
 }
 
 func GetSpecificQuerySet[ORIGINAL Model, SPECIFIC attrs.Definer, QS queries.AbstractQuerySet[ORIGINAL, QS]](qs QS, opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
-	assert.False(
-		opts.GetSpecificTargetID == nil,
-		"GetSpecificQuerySet: opts.GetSpecificTargetID must be provided",
-	)
-
 	var specific = &SpecificQuerySet[ORIGINAL, SPECIFIC, QS]{
 		opts: opts,
 	}
@@ -131,7 +124,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 		// If the object's SpecificPreloadData method returns ok as false,
 		// it cannot be preloaded - log a warning.
 		specificObj := row.Object.SpecificObject()
-		preloadId := specificObj.SpecificID
+		preloadId := specificObj.SpecificPK()
 		contentType := specificObj.SpecificContentType
 		typname := contentType.TypeName()
 
@@ -178,7 +171,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 		}
 
 		var (
-			model        = definition.Object().(SPECIFIC)
+			model        = attrs.NewObject[SPECIFIC](qs.Context(), definition)
 			defs         = attrs.Define(qs.Context(), model)
 			primaryField = defs.Primary()
 		)
@@ -203,8 +196,8 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 			var originalRow, exists = head.Value.s[pk]
 			if !exists || attrs.IsZero(row.Object) {
 				return nil, errors.New(errors.CodeNoRows, fmt.Sprintf(
-					"no original row found for content type %s with PK %d",
-					head.Key, pk,
+					"no original row found for content type %s with PK %v: %t",
+					head.Key, pk, exists,
 				))
 			}
 

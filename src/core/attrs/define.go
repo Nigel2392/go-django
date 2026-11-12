@@ -27,6 +27,10 @@ const (
 	// This does (and should) not mean fields will immediately
 	// validate when the signal is sent.
 	CtxFlagDeferValidation
+
+	// CtxFlagEmbedded is a context flag which should be set when Define()
+	// is called within attrs.Make() of an embedded model.
+	CtxFlagEmbedded
 )
 
 type ContextSignalFlag bitcheck.Flag

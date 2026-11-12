@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/versatile"
+	"io"
+	"database/sql/driver"
 )
 
 templ input(typ string, name string, value any, atts map[string]any) {
@@ -35,6 +37,11 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 		return templ.Raw(attrs.ToString(val))
 	case templ.Component:
 		return val
+	case interface{ Label(context.Context)string }:
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+			_, err = w.Write([]byte(templ.EscapeString(val.Label(ctx))))
+			return err
+		})
 	}
 
 	var rV = reflect.ValueOf(value)
@@ -52,6 +59,7 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 		}
 		return col.Component(r, defs, row)
 	}
+
 
 	switch rV.Kind() {
 	case reflect.Invalid:
@@ -395,17 +403,19 @@ func (c *fieldColumn[T, VAL]) data(r *http.Request, defs attrs.Definitions, row 
 		return nil
 	}
 
-	var fieldValue, err = field.Value()
-	assert.True(
-		err == nil,
-		"Field %q (%T) Value method has returned an error: %v",
-		c.fieldName, field, err,
-	)
+	var err error
+	var fieldValue = field.GetValue()
+	if v, ok := fieldValue.(driver.Valuer); ok {
+		fieldValue, err = v.Value()
+		assert.True(
+			err == nil,
+			"Field %q (%T) Value method has returned an error: %v",
+			c.fieldName, field, err,
+		)
+	}
 
 	var rV = reflect.ValueOf(fieldValue)
-	var _dst VAL
-	var dstTyp = reflect.TypeOf(_dst)
-
+	var dstTyp = reflect.TypeFor[VAL]()
 	if dstTyp == __reflect_type_any || dstTyp == reflect.TypeOf(nil) {
 		goto skipConversionChecks
 	}
@@ -439,6 +449,7 @@ skipConversionChecks:
 		case drivers.Timestamp:
 			return trans.Time(r.Context(), time.Time(f), trans.SHORT_TIME_FORMAT)
 	}
+
 
 	return fieldValue
 }

@@ -9,7 +9,7 @@ require (
 	github.com/Nigel2392/goldcrest v1.0.7
 	github.com/Nigel2392/mux v1.6.1
 	github.com/Nigel2392/tags v1.0.0
-	github.com/Nigel2392/versatile v1.0.7
+	github.com/Nigel2392/versatile v1.0.8
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/a-h/templ v0.3.1020
 	github.com/alexedwards/scs/v2 v2.9.0

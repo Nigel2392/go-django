@@ -4,8 +4,10 @@ import (
 	"context"
 	"iter"
 	"reflect"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 type ObjectDefinitions struct {
@@ -158,7 +160,16 @@ func (d *ObjectDefinitions) TableName() string {
 	if d.Table != "" {
 		return d.Table
 	}
-	return ColumnName(d.ObjType.Name())
+
+	var sb strings.Builder
+	app, ok := djangoapps.GetAppForModel(d.Object)
+	if ok {
+		sb.WriteString(app.Name())
+		sb.WriteRune('.')
+	}
+
+	sb.WriteString(ColumnName(d.ObjType.Name()))
+	return sb.String()
 }
 
 func (d *ObjectDefinitions) WithTableName(name string) *ObjectDefinitions {
