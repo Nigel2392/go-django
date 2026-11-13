@@ -46,7 +46,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 		"products:list",
 	},
 	GetEditLink: func(r *http.Request, v *models.Product) string {
-		return django.Reverse("admin:shop:products:edit", v.ID)
+		return django.Reverse("admin:apps:model:edit", "shop", "product", v.ID)
 	},
 	Filters: []filters.FilterSpec[*models.Product]{
 		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
@@ -79,7 +79,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 
 		var actions = make([]components.ShowableComponent, 0)
 		actions = append(actions, generic.AmountHeaderAction(
-			r, amount, "admin:shop:products", nil,
+			r, amount, "admin:apps:model", nil, "shop", "products",
 		))
 
 		actions = append(actions, components.LinkConfig{
@@ -87,7 +87,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 			Icon: icons.Icon("icon-plus", map[string]string{}),
 			Type: components.ClassTypeSecondary,
 			URL: func(ctx context.Context) string {
-				return django.Reverse("admin:shop:products:new_with_supplier")
+				return django.Reverse("admin:apps:model:add", "shop", "products")
 			},
 		})
 
@@ -110,6 +110,10 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 			list.FieldColumn[*models.Product](
 				trans.S("Discount"),
 				"DiscountPrice",
+			),
+			list.FieldColumn[*models.Product](
+				trans.S("Category"),
+				"Category",
 			),
 			list.FieldColumn[*models.Product](
 				trans.S("Supplier"),
@@ -175,7 +179,7 @@ func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app
 	})
 
 	var (
-		backURL = django.Reverse("admin:shop:products")
+		backURL = django.Reverse("admin:apps:model", "shop", "products")
 		data    = admin.NewContext(r, admin.AdminSite, nil)
 	)
 
@@ -191,7 +195,7 @@ func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app
 		BreadCrumbs: []admin.BreadCrumb{
 			{
 				Title: trans.T(r.Context(), "Products"),
-				URL:   django.Reverse("admin:shop:products"),
+				URL:   django.Reverse("admin:apps:model", "shop", "products"),
 			},
 		},
 	})
@@ -266,7 +270,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 
 			context.Set("supplier", supplierVal)
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:shop:products:add", supplierVal))
+			context.Set("PostURL", django.Reverse("admin:commerce:new_with_supplier", supplierVal))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Add new product"),
 			})
@@ -325,7 +329,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 
 			messages.Success(r, "Product added")
 
-			http.Redirect(w, r, django.Reverse("admin:shop:products"), http.StatusSeeOther)
+			http.Redirect(w, r, django.Reverse("admin:apps:model", "shop", "products"), http.StatusSeeOther)
 
 		},
 	}
@@ -436,7 +440,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 
 			context.Set("supplier", productRow.Object.Supplier)
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:shop:products:edit", productRow.Object.ID))
+			context.Set("PostURL", django.Reverse("admin:apps:model:edit", "shop", "products", productRow.Object.ID))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Change product"),
 			})
@@ -498,7 +502,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 
 			messages.Success(r, "Product changed")
 
-			http.Redirect(w, r, django.Reverse("admin:shop:products"), http.StatusSeeOther)
+			http.Redirect(w, r, django.Reverse("admin:apps:model", "shop", "products"), http.StatusSeeOther)
 		},
 	}
 

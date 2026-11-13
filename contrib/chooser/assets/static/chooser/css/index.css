@@ -1,0 +1,228 @@
+:root {
+    --modal-background-color: rgba(0, 0, 0, 0.5);
+    --modal-header-background-color: #f8f9fa;
+    --modal-footer-background-color: #f8f9fa;
+    --modal-text-color: #212529;
+    /* --border-color: var(--border-color, var(--body-dark-bg-color)); */
+    --border-radius: 0.3125rem;
+}
+.godjango-modal-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    background-color: var(--modal-background-color);
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+.godjango-modal-wrapper:has(dialog[open]) {
+    display: flex;
+}
+dialog.godjango-modal {
+    --modalSize: calc(100% - 2em);
+    position: relative;
+    border: none;
+    color: var(--modal-text-color);
+    background-color: var(--modal-header-background-color);
+    border-radius: var(--border-radius, .3125rem);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: var(--modal-text-color);
+    display: flex;
+    flex-direction: column;
+    max-width: var(--modalSize);
+    max-height: var(--modalSize);
+}
+dialog.godjango-modal[fullscreen] {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+}
+dialog.godjango-modal:not([fullscreen]) {
+    width: 100%;
+    max-width: min(1200px, var(--modalSize));
+    max-height: 60vh;
+}
+.godjango-modal-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+.godjango-modal-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: var(--modal-header-background-color);
+    border: var(--secondary-bg-color) dotted 1px;
+    cursor: pointer;    
+}
+.godjango-modal-control:first-of-type {
+    border-radius: 0 0 0 var(--border-radius, .3125rem);
+}
+.godjango-modal-control:last-of-type {
+    border-radius: 0 var(--border-radius, .3125rem) 0 0;
+}
+.godjango-modal-control > svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: var(--secondary-bg-color);
+    cursor: pointer;
+}
+.godjango-modal-controls-modal-size {
+    
+}
+.godjango-modal-controls-modal-close {
+    
+}
+
+.godjango-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--modal-header-background-color);
+}
+.godjango-modal-errors:has(*) {
+    padding: 0.5rem;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: var(--border-radius, .3125rem);
+    margin-bottom: 1rem;
+}
+.godjango-modal-content {
+    overflow-y: auto;
+    min-height: 200px;
+    height: 100%;
+}
+.godjango-modal-footer {
+    height: var(--border-radius, .3125rem);
+    width: 100%;
+    background-color: var(--modal-footer-background-color);
+}
+
+.chooser-widget {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 225px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius, .3125rem);
+}
+.chooser-widget .dropdown__toggle-icon {
+    transition: fill 0.3s ease;
+}
+.chooser-widget:hover .dropdown__toggle-icon {
+    fill: var(--secondary-bg-color);
+}
+.chooser-widget-preview {
+    flex: 1;
+    max-width: 190px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    
+    display: flex;
+    align-items: center;
+}
+.chooser-widget-preview img {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: var(--border-radius, .3125rem);
+}
+.chooser-widget-controls {
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0.5rem;
+    width: 35px;
+}
+.chooser-widget-controls .dropdown {
+
+}
+.chooser-widget-controls .dropdown .dropdown__content button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0.5rem;
+    border: none;
+    background-color: transparent;
+    color: var(--dropdown-text-color);
+    cursor: pointer;
+}
+
+
+.godjango-chooser-list {
+
+}
+.godjango-chooser-actions {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px dotted var(--secondary-bg-color);
+    padding-bottom: 1.5rem;
+}
+.godjango-chooser-create .godjango-chooser-actions {
+    justify-content: flex-start;
+    margin-bottom: 1rem;
+}
+.godjango-chooser-list-form .form-field {
+    display: flex;
+    flex-direction: row;
+}
+.godjango-chooser-list-form .form-field input {
+    border-radius: var(--border-radius, .3125rem) 0 0 var(--border-radius, .3125rem);
+    width: unset;
+}
+.godjango-chooser-list-form .form-field button {
+    border-radius: 0 var(--border-radius, .3125rem) var(--border-radius, .3125rem) 0;
+}
+.godjango-chooser-list-column {
+
+}
+.godjango-chooser-list-group {
+    transition: background-color 0.3s ease;
+}
+.godjango-chooser-list-group:hover {
+    cursor: pointer;
+}
+.godjango-chooser-list-group:hover *:is(a, .link):not(.chooser-list-link) {
+    color: var(--secondary-text-color) !important;
+    pointer-events: none;
+    cursor: default;
+}
+.godjango-chooser-list-group:not(.default-style):hover {
+    background-color: var(--secondary-bg-color) !important;
+    color: var(--secondary-text-color) !important;
+}
+.godjango-chooser-list-header-column {
+
+}
+.godjango-chooser-list-header-group {
+
+}
+.godjango-chooser-create .admin-form .godjango-chooser-panels {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 1rem;
+}
+.godjango-chooser-create .admin-form .godjango-chooser-panels .panel__icon {
+    display: none;
+}
+.godjango-chooser-create .admin-form .godjango-chooser-panels .panel__heading:has(> .panel__icon+.panel__title) {
+    transform: unset;
+}

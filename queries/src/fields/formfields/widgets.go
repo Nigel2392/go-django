@@ -34,10 +34,17 @@ type ModelSelect struct {
 	BlankLabel   string
 }
 
-func ModelSelectWidget(allowBlank bool, blankLabel string, opts chooser.BaseChooserOptions, attrs map[string]string) *ModelSelect {
-	var chooser = chooser.BaseChooserWidget(opts, attrs)
+func ModelSelectWidget(allowBlank bool, blankLabel string, opts chooser.BaseChooserOptions, atts map[string]string) *ModelSelect {
+	if opts.GetPrimaryKey == nil {
+		opts.GetPrimaryKey = func(ctx context.Context, i interface{}) interface{} {
+			return attrs.PrimaryKey(ctx, i)
+		}
+	}
+
+	var chooser = chooser.BaseChooserWidget(opts, atts)
 	chooser.BaseWidget.Type = "select"
 	chooser.BaseWidget.TemplateName = "forms/widgets/model-select.html"
+
 	return &ModelSelect{
 		BaseChooser:  chooser,
 		ExcludeBlank: !allowBlank,

@@ -170,7 +170,16 @@ func databaseError(d *Driver, err error) error {
 // driverValue prepares the value for the driver to be used in a query.
 // it makes sure that the value adheres to the [driver.Value] interface.
 func GetValue(arg any) (driver.Value, error) {
+
+	var rVal = reflect.ValueOf(arg)
+	if !rVal.IsValid() || rVal.Kind() == reflect.Pointer && rVal.IsNil() {
+		return nil, nil
+	}
+
 	switch v := arg.(type) {
+	case nil:
+		return nil, nil
+
 	case driver.Valuer:
 		var err error
 		arg, err = v.Value()
@@ -185,14 +194,9 @@ func GetValue(arg any) (driver.Value, error) {
 	case attrs.Definer:
 		return GetValue(attrs.PrimaryKey(context.Background(), v))
 
-	case nil, time.Time, string, []byte, int64, uint64, float64, bool:
+	case time.Time, string, []byte, int64, uint64, float64, bool:
 		// these types are already compatible with driver.Value
 		return v, nil
-	}
-
-	var rVal = reflect.ValueOf(arg)
-	if !rVal.IsValid() || rVal.Kind() == reflect.Pointer && rVal.IsNil() {
-		return nil, nil
 	}
 
 	switch rVal.Kind() {

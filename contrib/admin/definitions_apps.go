@@ -229,14 +229,12 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 				}
 
 				var item = &menu.Item{
-					BaseItem: menu.BaseItem{
-						Label:    model.getMenuLabel(r.Context()),
-						Ordering: model.MenuOrder,
-						Logo:     menuIcon,
-						Hidden: !permissions.HasObjectPermission(
-							r, model.NewInstance(), "admin:view_list",
-						),
-					},
+					Label:    model.getMenuLabel(r.Context()),
+					Ordering: model.MenuOrder,
+					Logo:     menuIcon,
+					Hidden: !permissions.HasObjectPermission(
+						r, model.NewInstance(), "admin:view_list",
+					),
 					Link: func() string {
 						return django.Reverse("admin:apps:model", a.Name, model.GetName())
 					},
@@ -249,15 +247,13 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 
 	var hookFunc = RegisterMenuItemHookFunc(func(r *http.Request, site *AdminApplication, items components.Items[menu.MenuItem]) {
 		var menuItem = &menu.SubmenuItem{
-			BaseItem: menu.BaseItem{
-				ItemName: a.Name,
-				Label:    menuLabel(r.Context()),
-				Logo:     menuIcon,
-				Ordering: a.Options.MenuOrder,
-				Hidden: !permissions.HasPermission(
-					r, fmt.Sprintf("admin:view_app:%s", a.Name),
-				),
-			},
+			ItemName: a.Name,
+			Label:    menuLabel(r.Context()),
+			Logo:     menuIcon,
+			Ordering: a.Options.MenuOrder,
+			Hidden: !permissions.HasPermission(
+				r, fmt.Sprintf("admin:view_app:%s", a.Name),
+			),
 			Menu: &menu.Menu{
 				Items: make([]menu.MenuItem, 0),
 			},
@@ -269,9 +265,7 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 				menuLabel = trans.S(a.Name)
 			}
 			menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
-				BaseItem: menu.BaseItem{
-					Label: menuLabel(r.Context()),
-				},
+				Label: menuLabel(r.Context()),
 				Link: func() string {
 					return django.Reverse("admin:apps", a.Name)
 				},

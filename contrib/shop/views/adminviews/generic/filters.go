@@ -136,7 +136,7 @@ var AMOUNT_OPTIONS = []int{
 	100,
 }
 
-func AmountHeaderAction(r *http.Request, currentAmount int, reverseURL string, amounts []int) components.ShowableComponent {
+func AmountHeaderAction(r *http.Request, currentAmount int, reverseURL string, amounts []int, reverseArgs ...any) components.ShowableComponent {
 	if len(amounts) == 0 {
 		amounts = AMOUNT_OPTIONS
 	}
@@ -146,7 +146,7 @@ func AmountHeaderAction(r *http.Request, currentAmount int, reverseURL string, a
 		q.Del("amount")
 
 		w.Write([]byte(`<form method="GET" action="`))
-		w.Write([]byte(django.Reverse(reverseURL)))
+		w.Write([]byte(django.Reverse(reverseURL, reverseArgs...)))
 		w.Write([]byte("?"))
 		w.Write([]byte(q.Encode()))
 		w.Write([]byte(`" class="amount-form form-field">`))

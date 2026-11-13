@@ -59,7 +59,7 @@ func (p *shopLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []
 		actions = append(actions, &auditlogs.BaseAction{
 			DisplayLabel: trans.T(r.Context(), "Edit Product"),
 			ActionURL: fmt.Sprintf("%s?%s=%s",
-				django.Reverse("admin:shop:products:edit", id),
+				django.Reverse("admin:apps:model:edit", "shop", "products", id),
 				"next",
 				r.URL.Path,
 			),

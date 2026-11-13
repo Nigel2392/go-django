@@ -4,9 +4,13 @@ import (
 	"context"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
 )
 
 type CategoryQuery struct {
@@ -39,7 +43,8 @@ func (c *Category) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(c, "ID", &c.ID, func() fattrs.PtrFieldConfig[*Category, uint64] {
 			return fattrs.PtrFieldConfig[*Category, uint64]{
 				Config: attrs.FieldConfig{
-					Primary: true,
+					Primary:  true,
+					ReadOnly: true,
 				},
 			}
 		}),
@@ -65,18 +70,29 @@ func (c *Category) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*Category, *Category]{
 				Config: attrs.FieldConfig{
 					Null:          true,
+					Blank:         true,
 					Column:        "parent_id",
 					RelForeignKey: attrs.Relate(&Category{}, "", nil),
+					FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+						return formfields.ModelSelectWidget(
+							true, "-----",
+							chooser.BaseChooserOptions{TargetObject: &Category{}},
+							nil,
+						)
+					},
 				},
 			}
 		}),
 		fattrs.Field(c, "Children", &c.Children, func() fattrs.PtrFieldConfig[*Category, *queries.RelRevFK[*Category]] {
 			return fattrs.PtrFieldConfig[*Category, *queries.RelRevFK[*Category]]{
 				Config: attrs.FieldConfig{
+					ReadOnly:             true,
 					Label:                trans.S("Child Categories."),
 					HelpText:             trans.S("Subcategories bound to this category."),
-					ReadOnly:             true,
 					RelForeignKeyReverse: attrs.Relate(&Category{}, "", nil),
+					FormField: func(opts ...func(fields.Field)) fields.Field {
+						return nil
+					},
 				},
 			}
 		}),

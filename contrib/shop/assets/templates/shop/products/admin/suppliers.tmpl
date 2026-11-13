@@ -13,7 +13,7 @@
     <div class="admin-list">
         {{ $request := .Request }} 
         {{ range $backend := (.Get "definitions") }}
-            <a href="{{ url "admin:shop:products:add" $backend.InternalName }}" class="admin-list-item"{{ if not $backend.Instance.Enabled }} disabled{{ end }}>
+            <a href="{{ url "admin:commerce:new_with_supplier" $backend.InternalName }}" class="admin-list-item"{{ if not $backend.Instance.Enabled }} disabled{{ end }}>
                 <div class="header">
                     <div class="icon">
                         {{ $icon := $backend.Icon }}

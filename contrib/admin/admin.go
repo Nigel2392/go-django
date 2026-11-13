@@ -290,6 +290,11 @@ func NewAppConfig() django.AppConfig {
 			"search", // admin:search
 		)
 
+		var hooks = goldcrest.Get[RegisterRouteHookFunc](RegisterRouteHook)
+		for _, hook := range hooks {
+			hook(AdminSite, AdminSite.Route)
+		}
+
 		// Initialize authenticated routes
 		var baseApps = AdminSite.Route.Handle(
 			mux.ANY, "apps/<<app_name>>/",
@@ -327,7 +332,7 @@ func NewAppConfig() django.AppConfig {
 			"bulk_delete", // admin:apps:model:bulk_delete
 		)
 
-		var hooks = goldcrest.Get[RegisterModelsRouteHookFunc](AdminModelHookRegisterRoute)
+		hooks = goldcrest.Get[RegisterRouteHookFunc](AdminModelHookRegisterRoute)
 		for _, hook := range hooks {
 			hook(AdminSite, baseModelsRoute)
 		}

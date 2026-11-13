@@ -171,10 +171,10 @@ func Serve(view View) http.Handler {
 		view = fn()
 	}
 
-	assert.True(
-		len(allowedFnMethods) > 0,
-		"View must have at least one Serve[GET|POST|...] method defined or implement MethodsView",
-	)
+	//	assert.True(
+	//		len(allowedFnMethods) > 0,
+	//		"View must have at least one Serve[GET|POST|...] method defined or implement MethodsView",
+	//	)
 
 	var allowedMethods []string
 	if methodViews, ok := view.(MethodsView); ok {

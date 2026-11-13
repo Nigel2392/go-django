@@ -9,7 +9,6 @@
     {{ end }}
 {{ end }}
 
-
 {{ define "content" }}
     <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form compact" enctype="multipart/form-data" data-controller="form">
         {{ csrf_field }}
@@ -25,7 +24,7 @@
             {{ if $BackURL }}
                 <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
             {{ else }}
-                <a class="button warning" href="{{ url "admin:shop:orders" }}">{{ T "Back" }}</a>
+                <a class="button warning" href="{{ url "admin:apps:model" "shop" "orders" }}">{{ T "Back" }}</a>
             {{ end }}
         </div>
     </form>

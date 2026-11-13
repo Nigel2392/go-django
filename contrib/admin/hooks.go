@@ -21,6 +21,7 @@ const (
 	RegisterNavBreadCrumbHook  = "admin:register_breadcrumb"
 	RegisterNavActionHook      = "admin:register_nav_action"
 	RegisterSearchHook         = "admin:register_search"
+	RegisterRouteHook          = "admin:register_route"
 
 	RegisterHomePageBreadcrumbHook   = "admin:home:register_breadcrumb"
 	RegisterHomePageActionHook       = "admin:home:register_action"
@@ -59,9 +60,9 @@ type (
 
 	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
 
-	AdminModelHookFunc          = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
-	AdminModelDeleteFunc        = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instances []attrs.Definer)
-	RegisterModelsRouteHookFunc = func(adminSite *AdminApplication, route mux.Multiplexer)
+	AdminModelHookFunc    = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
+	AdminModelDeleteFunc  = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instances []attrs.Definer)
+	RegisterRouteHookFunc = func(adminSite *AdminApplication, route mux.Multiplexer)
 )
 
 // Register an item to the django admin menu (sidebar).
@@ -128,7 +129,12 @@ func RegisterModelDeleteHook(f AdminModelDeleteFunc) {
 }
 
 // Register a hook to register a route for models.
-func RegisterModelsRouteHook(f RegisterModelsRouteHookFunc) {
+func RegisterRoute(f RegisterRouteHookFunc) {
+	goldcrest.Register(RegisterRouteHook, 0, f)
+}
+
+// Register a hook to register a route for models.
+func RegisterModelsRouteHook(f RegisterRouteHookFunc) {
 	goldcrest.Register(AdminModelHookRegisterRoute, 0, f)
 }
 

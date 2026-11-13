@@ -325,7 +325,7 @@ func (o *ModelDefinition) NewInstance() attrs.Definer {
 
 func (o *ModelDefinition) GetName() string {
 	if o.ModelOptions.Name == "" {
-		return o._cType.Name()
+		return attrs.ColumnName(o._cType.Name())
 	}
 	return o.ModelOptions.Name
 }

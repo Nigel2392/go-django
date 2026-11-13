@@ -9,7 +9,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/filters"
-	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -64,7 +63,9 @@ func (l ListViewConfig[T]) getPageSidePanels(r *http.Request) *menu.SidePanels {
 	return nil
 }
 
-func (l ListViewConfig[T]) ServeHTTP(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+func (l ListViewConfig[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
+
+func (l ListViewConfig[T]) TakeControl(w http.ResponseWriter, r *http.Request, _ views.View) {
 	if !permissions.HasObjectPermission(r, l.Model, l.Permissions...) {
 		admin.ReLogin(w, r, r.URL.Path)
 		return

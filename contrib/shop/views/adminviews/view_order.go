@@ -40,7 +40,7 @@ var ViewOrderList = generic.ListViewConfig[*models.Order]{
 		"orders:list",
 	},
 	GetEditLink: func(r *http.Request, v *models.Order) string {
-		return django.Reverse("admin:shop:orders:edit", v.ID)
+		return django.Reverse("admin:apps:model:edit", "shop", "orders", v.ID)
 	},
 	GetQuerySet: func(r *http.Request) *queries.QuerySet[*models.Order] {
 		return queries.GetQuerySet(&models.Order{}).Select("*", "Payment.*")
@@ -73,7 +73,7 @@ var ViewOrderList = generic.ListViewConfig[*models.Order]{
 
 		var actions = make([]components.ShowableComponent, 0)
 		actions = append(actions, generic.AmountHeaderAction(
-			r, amount, "admin:shop:orders", nil,
+			r, amount, "admin:apps:model", nil, "shop", "orders",
 		))
 
 		return actions
@@ -184,7 +184,7 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 			}
 
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:shop:orders:add"))
+			context.Set("PostURL", django.Reverse("admin:apps:model:add", "shop", "orders"))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Change order"),
 			})
@@ -211,7 +211,7 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 
 			messages.Success(r, "Order changed")
 
-			http.Redirect(w, r, django.Reverse("admin:shop:orders"), http.StatusSeeOther)
+			http.Redirect(w, r, django.Reverse("admin:apps:model", "shop", "orders"), http.StatusSeeOther)
 		},
 	}
 
@@ -326,7 +326,7 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 			}
 
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:shop:orders:edit", orderRow.Object.ID))
+			context.Set("PostURL", django.Reverse("admin:apps:model:edit", "shop", "orders", orderRow.Object.ID))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Change order"),
 			})
@@ -353,7 +353,7 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 
 			messages.Success(r, "Order changed")
 
-			http.Redirect(w, r, django.Reverse("admin:shop:orders"), http.StatusSeeOther)
+			http.Redirect(w, r, django.Reverse("admin:apps:model", "shop", "orders"), http.StatusSeeOther)
 		},
 	}
 

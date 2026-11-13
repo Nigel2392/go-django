@@ -28,6 +28,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
@@ -49,7 +51,6 @@ func NewAppConfig() (django.AppConfig, error) {
 		return SHOP, nil
 	}
 
-	var NewHandler = app.ShopToHttpHandlerBuilder(SHOP)
 	tplFS, err := fs.Sub(assetFilesystem, "assets/templates")
 	if err != nil {
 		return SHOP, err
@@ -137,52 +138,124 @@ func NewAppConfig() (django.AppConfig, error) {
 				ItemName: "index",
 				Label:    trans.T(r.Context(), "Home"),
 				Link: func() string {
-					return django.Reverse("admin:shop:home")
+					return django.Reverse("admin:apps", "shop")
 				},
 			},
 			&menu.Item{
 				ItemName: "products",
 				Label:    trans.T(r.Context(), "Products"),
 				Link: func() string {
-					return django.Reverse("admin:shop:products")
+					return django.Reverse("admin:apps:model", "shop", "products")
 				},
 			},
 			&menu.Item{
 				ItemName: "orders",
 				Label:    trans.T(r.Context(), "Orders"),
 				Link: func() string {
-					return django.Reverse("admin:shop:orders")
+					return django.Reverse("admin:apps:model", "shop", "orders")
 				},
 			},
 		}
 	}
 
 	SHOP.Routing = func(m mux.Multiplexer) {
-		m.Get("home", NewHandler(adminviews.Home), "home")
 
-		products := m.Get("products/", NewHandler(adminviews.ViewProductList.ServeHTTP), "products")
-		products.Get("supplier/add/", NewHandler(adminviews.ViewAddNewProductSupplier), "new_with_supplier")
-		products.Post("supplier/add/", NewHandler(adminviews.ViewAddNewProductSupplier))
-		products.Get("add/<<supplier>>/", NewHandler(adminviews.ViewAddProduct), "add")
-		products.Post("add/<<supplier>>/", NewHandler(adminviews.ViewAddProduct))
-		products.Get("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct), "edit")
-		products.Post("edit/<<product_id>>/", NewHandler(adminviews.ViewEditProduct))
-
-		orders := m.Get("orders/", NewHandler(adminviews.ViewOrderList.ServeHTTP), "orders")
-		orders.Get("add/", NewHandler(adminviews.ViewAddOrder), "add")
-		orders.Post("add/", NewHandler(adminviews.ViewAddOrder))
-		orders.Get("edit/<<order_id>>/", NewHandler(adminviews.ViewEditOrder), "edit")
-		orders.Post("edit/<<order_id>>/", NewHandler(adminviews.ViewEditOrder))
 	}
 
 	SHOP.Init = func(settings django.Settings, db drivers.Database) error {
 
+		goldcrest.Register(admin.RegisterRouteHook, 0, admin.RegisterRouteHookFunc(func(adminSite *admin.AdminApplication, route mux.Multiplexer) {
+			sub := route.Any("commerce/", nil, "commerce")
+			sub.Handle(
+				mux.ANY, "products/add/<<supplier>>",
+				views.Serve(app.ShopHandler{
+					Shop:   SHOP,
+					Handle: adminviews.ViewAddProduct,
+				}),
+				"new_with_supplier",
+			)
+		}))
+
+		admin.RegisterApp(
+			"shop",
+			admin.AppOptions{
+				AppLabel:            trans.S("Shop"),
+				MenuLabel:           trans.S("Commerce"),
+				FullAdminMenu:       true,
+				RegisterToAdminMenu: true,
+				MenuIcon: func() string {
+					return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart4" viewBox="0 0 16 16">
+  	<path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5M3.14 5l.5 2H5V5zM6 5v2h2V5zm3 0v2h2V5zm3 0v2h1.36l.5-2zm1.11 3H12v2h.61zM11 8H9v2h2zM8 8H6v2h2zM5 8H3.89l.5 2H5zm0 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0m9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0"/>
+</svg>`
+				},
+			},
+			admin.ModelOptions{
+				Model:               &models.Category{},
+				MenuLabel:           trans.S("Category"),
+				RegisterToAdminMenu: true,
+			},
+			admin.ModelOptions{
+				Name:                "orders",
+				Model:               &models.Order{},
+				MenuLabel:           trans.S("Orders"),
+				RegisterToAdminMenu: true,
+				ListView: admin.ListViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition) views.View {
+						return adminviews.ViewOrderList
+					},
+				},
+				AddView: admin.FormViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
+						return app.ShopHandler{
+							Shop:   SHOP,
+							Handle: adminviews.ViewAddOrder,
+						}
+					},
+				},
+				EditView: admin.FormViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
+						return app.ShopHandler{
+							Shop:   SHOP,
+							Handle: adminviews.ViewEditOrder,
+						}
+					},
+				},
+			},
+			admin.ModelOptions{
+				Name:                "products",
+				Model:               &models.Product{},
+				MenuLabel:           trans.S("Products"),
+				RegisterToAdminMenu: true,
+				ListView: admin.ListViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition) views.View {
+						return adminviews.ViewProductList
+					},
+				},
+				AddView: admin.FormViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
+						return app.ShopHandler{
+							Shop:   SHOP,
+							Handle: adminviews.ViewAddNewProductSupplier,
+						}
+					},
+				},
+				EditView: admin.FormViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
+						return app.ShopHandler{
+							Shop:   SHOP,
+							Handle: adminviews.ViewEditProduct,
+						}
+					},
+				},
+			},
+		)
 		// admin.RegisterSearchHook
 
 		return nil
 	}
 
 	SHOP.Ready = func() error {
+
 		// always run the sync on startup
 		// /mostly/ handled in DB
 		return errors.Join(
