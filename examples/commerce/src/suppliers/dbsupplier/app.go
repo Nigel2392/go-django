@@ -59,23 +59,54 @@ func (s *DBSupplierAppConfig) ProductType(ctx context.Context) supplier.ProductM
 
 func (s *DBSupplierAppConfig) ProductAddPanel(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
-		admin.TitlePanel(admin.FieldPanel("Title")).
-			WithOutputFields("Slug"),
-		admin.FieldPanel("Slug"),
-		admin.FieldPanel("Price"),
-		admin.FieldPanel("Supplier"),
-		admin.FieldPanel("Editor").Class("fullsize"),
+		admin.TabbedPanel(
+			admin.PanelTab(
+				trans.S("Content"),
+				admin.TitlePanel(admin.FieldPanel("Title")).
+					WithOutputFields("Slug"),
+				admin.FieldPanel("Slug"),
+				admin.FieldPanel("Image"),
+				admin.FieldPanel("Editor").Class("fullsize"),
+			),
+			admin.PanelTab(
+				trans.S("Metadata"),
+				admin.FieldPanel("Ranking"),
+				admin.FieldPanel("Category"),
+				admin.RowPanel(
+					admin.FieldPanel("Price"),
+					admin.FieldPanel("TaxRate"),
+					admin.FieldPanel("DiscountPrice"),
+				),
+				admin.FieldPanel("Supplier"),
+				admin.FieldPanel("SupplierID"),
+			),
+		),
 	}
 }
 
 func (s *DBSupplierAppConfig) ProductEditPanel(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
-		admin.TitlePanel(admin.FieldPanel("Title")).
-			WithOutputFields("Slug"),
-		admin.FieldPanel("Slug"),
-		admin.FieldPanel("Price"),
-		admin.FieldPanel("Supplier"),
-		admin.FieldPanel("Ranking"),
-		admin.FieldPanel("Editor").Class("fullsize"),
+		admin.TabbedPanel(
+			admin.PanelTab(
+				trans.S("Content"),
+				admin.TitlePanel(admin.FieldPanel("Title")).
+					WithOutputFields("Slug"),
+				admin.FieldPanel("Slug"),
+				admin.FieldPanel("Image"),
+				admin.FieldPanel("Editor").Class("fullsize"),
+			),
+			admin.PanelTab(
+				trans.S("Metadata"),
+				admin.FieldPanel("Ranking"),
+				admin.FieldPanel("Category"),
+				admin.RowPanel(
+					admin.FieldPanel("Price"),
+					admin.FieldPanel("TaxRate"),
+					admin.FieldPanel("DiscountPrice"),
+				),
+				admin.FieldPanel("Supplier"),
+				admin.FieldPanel("SupplierID"),
+			),
+		),
 	}
 }

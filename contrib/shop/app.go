@@ -98,6 +98,9 @@ func NewAppConfig() (django.AppConfig, error) {
 		// Products
 		&models.Product{},
 
+		// Categories
+		&models.Category{},
+
 		// Suppliers
 		&supplier.SupplierModel{},
 	}

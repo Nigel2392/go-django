@@ -104,6 +104,14 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 				"ID",
 			),
 			list.FieldColumn[*models.Product](
+				trans.S("Price"),
+				"Price",
+			),
+			list.FieldColumn[*models.Product](
+				trans.S("Discount"),
+				"DiscountPrice",
+			),
+			list.FieldColumn[*models.Product](
 				trans.S("Supplier"),
 				"Supplier",
 			),

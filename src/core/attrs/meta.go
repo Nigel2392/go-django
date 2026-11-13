@@ -204,6 +204,13 @@ func registerReverseRelation(
 	if !final {
 		// Store in reverseRelations
 		if rel, ok := meta.reverse.Get(reverseAlias); ok {
+
+			if f, ok := fromField.(Embedder); ok {
+				if f.Embedded() {
+					return
+				}
+			}
+
 			// Cannot register a reverse relation with the same name twice
 			// This is a programming error and can happen if you have two reverse relations
 			// from two different models to the same model with the same name

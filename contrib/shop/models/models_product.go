@@ -43,6 +43,32 @@ func (qs *ProductQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Product,
 	}
 }
 
+//	type ProductCategory struct {
+//		Category *Category
+//		Product  *Product
+//	}
+//
+//	func (m *ProductCategory) FieldDefs(ctx context.Context) attrs.Definitions {
+//		return attrs.Make[*ProductCategory, any](ctx, m,
+//			fattrs.Field(m, "Category", &m.Category, func() fattrs.PtrFieldConfig[*ProductCategory, *Category] {
+//				return fattrs.PtrFieldConfig[*ProductCategory, *Category]{
+//					Config: attrs.FieldConfig{
+//						RelOneToOne: attrs.Relate(&Category{}, "", nil),
+//						Column:      "category_id",
+//					},
+//				}
+//			}),
+//			fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*ProductCategory, *Product] {
+//				return fattrs.PtrFieldConfig[*ProductCategory, *Product]{
+//					Config: attrs.FieldConfig{
+//						RelForeignKey: attrs.Relate(&Product{}, "", nil),
+//						Column:        "product_id",
+//					},
+//				}
+//			}),
+//		)
+//	}
+
 type Product struct {
 	specific.Specific[*Product]
 	Image         *mediafiles.SimpleStoredObject
@@ -54,6 +80,7 @@ type Product struct {
 	TaxRate       decimal.Decimal
 	DiscountPrice decimal.Decimal
 	Supplier      supplier.SupplierValue
+	Category      *Category
 	Editor        *editor.EditorJSBlockData
 }
 
@@ -111,9 +138,18 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
+		fattrs.Field(m, "Image", &m.Image, func() fattrs.PtrFieldConfig[*Product, *mediafiles.SimpleStoredObject] {
+			return fattrs.PtrFieldConfig[*Product, *mediafiles.SimpleStoredObject]{
+				Config: attrs.FieldConfig{
+					Embedded: embedded,
+					HelpText: trans.S("This image should depict the product you are selling."),
+				},
+			}
+		}, key...),
 		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*Product, string] {
 			return fattrs.PtrFieldConfig[*Product, string]{
 				Config: attrs.FieldConfig{
+					HelpText:  trans.S("The name of your product as visible to users."),
 					Embedded:  embedded,
 					MinLength: 2,
 					MaxLength: 75,
@@ -124,6 +160,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Slug", &m.Slug, func() fattrs.PtrFieldConfig[*Product, string] {
 			return fattrs.PtrFieldConfig[*Product, string]{
 				Config: attrs.FieldConfig{
+					HelpText:  trans.S("The path part of this product in the browsers' search bar."),
 					Embedded:  embedded,
 					MinLength: 2,
 					MaxLength: 75,
@@ -133,6 +170,16 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}, key...),
+		fattrs.Field(m, "Category", &m.Category, func() fattrs.PtrFieldConfig[*Product, *Category] {
+			return fattrs.PtrFieldConfig[*Product, *Category]{
+				Config: attrs.FieldConfig{
+					HelpText:      trans.S("The category this product falls under."),
+					Embedded:      embedded,
+					RelForeignKey: attrs.Relate(&Category{}, "", nil),
+					Column:        "category_id",
+				},
+			}
+		}),
 		editor.NewField(m, "Editor", editor.FieldConfig{
 			Embedded: embedded,
 			Label:    trans.S("Description"),
@@ -147,6 +194,8 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Price", &m.Price, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
+					HelpText: trans.S("The price you are selling this product for."),
+					Embedded: embedded,
 					Attributes: map[string]interface{}{
 						attrs.AttrPrecisionKey: 13,
 						attrs.AttrScaleKey:     4,
@@ -159,6 +208,8 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "TaxRate", &m.TaxRate, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
+					HelpText: trans.S("The additional tax fee to add to the purchase price."),
+					Embedded: embedded,
 					Attributes: map[string]interface{}{
 						attrs.AttrPrecisionKey: 13,
 						attrs.AttrScaleKey:     4,
@@ -171,18 +222,21 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "DiscountPrice", &m.DiscountPrice, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
+					HelpText: trans.S("The discount price you are selling this product for. (Precedence over price)"),
+					Embedded: embedded,
 					Attributes: map[string]interface{}{
 						attrs.AttrPrecisionKey: 13,
 						attrs.AttrScaleKey:     4,
 					},
 					Null:  false,
-					Blank: false,
+					Blank: true,
 				},
 			}
 		}),
 		fattrs.Field(m, "Ranking", &m.Ranking, func() fattrs.PtrFieldConfig[*Product, uint64] {
 			return fattrs.PtrFieldConfig[*Product, uint64]{
 				Config: attrs.FieldConfig{
+					HelpText: trans.S("How well this product ranks generally measured across all products. (1-10)"),
 					Embedded: embedded,
 					ReadOnly: true,
 				},
@@ -191,6 +245,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Supplier", &m.Supplier, func() fattrs.PtrFieldConfig[*Product, supplier.SupplierValue] {
 			return fattrs.PtrFieldConfig[*Product, supplier.SupplierValue]{
 				Config: attrs.FieldConfig{
+					HelpText: trans.S("The supplier that handles delivery of this product."),
 					Embedded: embedded,
 					ReadOnly: true,
 					FormField: func(opts ...func(fields.Field)) fields.Field {

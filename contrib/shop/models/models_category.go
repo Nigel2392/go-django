@@ -9,12 +9,29 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
+type CategoryQuery struct {
+	*queries.WrappedQuerySet[*Product, *CategoryQuery, *queries.QuerySet[*Category]]
+}
+
+func Categories() *CategoryQuery {
+	base := &CategoryQuery{}
+	base.WrappedQuerySet = queries.WrapQuerySet[*Product](
+		queries.GetQuerySet(&Category{}),
+		base,
+	)
+	return base
+}
+
+func (c *CategoryQuery) ChildrenOf(cat *Category) *CategoryQuery {
+	return c.Filter("ParentCategory", cat.ParentCategory.ID)
+}
+
 type Category struct {
 	ID             uint64
-	ParentCategory *Category
-	Children       *queries.RelRevFK[*Category]
 	Name           string
 	Slug           string
+	ParentCategory *Category
+	Children       *queries.RelRevFK[*Category]
 }
 
 func (c *Category) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -56,9 +73,10 @@ func (c *Category) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(c, "Children", &c.Children, func() fattrs.PtrFieldConfig[*Category, *queries.RelRevFK[*Category]] {
 			return fattrs.PtrFieldConfig[*Category, *queries.RelRevFK[*Category]]{
 				Config: attrs.FieldConfig{
-					Label:    trans.S("Child Categories."),
-					HelpText: trans.S("Subcategories bound to this category."),
-					ReadOnly: true,
+					Label:                trans.S("Child Categories."),
+					HelpText:             trans.S("Subcategories bound to this category."),
+					ReadOnly:             true,
+					RelForeignKeyReverse: attrs.Relate(&Category{}, "", nil),
 				},
 			}
 		}),

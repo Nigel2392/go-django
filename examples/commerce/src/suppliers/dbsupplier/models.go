@@ -31,9 +31,11 @@ func (p *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fields.Embed(ctx, &p.Product, fields.EmbedOptions{
 			EmbedFields: []any{
 				"ID",
+				"Image",
 				"Title",
 				"Slug",
 				"Editor",
+				"Category",
 				"Supplier",
 				"Price",
 				"TaxRate",

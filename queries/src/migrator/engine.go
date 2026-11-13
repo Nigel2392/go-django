@@ -740,7 +740,10 @@ func (m *MigrationEngine) MakeMigrations(ctx context.Context, apps ...string) er
 						"Adding dependency \"%s/%s\" to migration \"%s/%s\"",
 						depMig.ModelName, depMig.FileName(), mig.ModelName, mig.FileName(),
 					)
-					mig.addDependency(relAppName, relModel, depMig.FileName())
+
+					if relAppName != mig.AppName || relModel != mig.ModelName {
+						mig.addDependency(relAppName, relModel, depMig.FileName())
+					}
 				}
 			}
 		}
