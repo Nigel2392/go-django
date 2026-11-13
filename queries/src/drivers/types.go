@@ -402,15 +402,28 @@ func NewULID() ULID {
 	return ULID(ulid.Make())
 }
 
-func (id ULID) Bytes() []byte                      { return (ulid.ULID)(id).Bytes() }
-func (id ULID) Compare(other ulid.ULID) int        { return (ulid.ULID)(id).Compare(other) }
-func (id ULID) Entropy() []byte                    { return (ulid.ULID)(id).Entropy() }
-func (id ULID) IsZero() bool                       { return (ulid.ULID)(id).IsZero() }
-func (id ULID) MarshalBinary() ([]byte, error)     { return (ulid.ULID)(id).MarshalBinary() }
-func (id ULID) MarshalBinaryTo(dst []byte) error   { return (ulid.ULID)(id).MarshalBinaryTo(dst) }
-func (id ULID) MarshalText() ([]byte, error)       { return (ulid.ULID)(id).MarshalText() }
-func (id ULID) MarshalTextTo(dst []byte) error     { return (ulid.ULID)(id).MarshalTextTo(dst) }
-func (id *ULID) Scan(src interface{}) error        { return (*ulid.ULID)(id).Scan(src) }
+func (id ULID) Bytes() []byte                    { return (ulid.ULID)(id).Bytes() }
+func (id ULID) Compare(other ulid.ULID) int      { return (ulid.ULID)(id).Compare(other) }
+func (id ULID) Entropy() []byte                  { return (ulid.ULID)(id).Entropy() }
+func (id ULID) IsZero() bool                     { return (ulid.ULID)(id).IsZero() }
+func (id ULID) MarshalBinary() ([]byte, error)   { return (ulid.ULID)(id).MarshalBinary() }
+func (id ULID) MarshalBinaryTo(dst []byte) error { return (ulid.ULID)(id).MarshalBinaryTo(dst) }
+func (id ULID) MarshalText() ([]byte, error)     { return (ulid.ULID)(id).MarshalText() }
+func (id ULID) MarshalTextTo(dst []byte) error   { return (ulid.ULID)(id).MarshalTextTo(dst) }
+func (id *ULID) Scan(src interface{}) error {
+	switch x := src.(type) {
+	case nil:
+		return nil
+	case string:
+		return id.UnmarshalText([]byte(x))
+	case []byte:
+		if len(x) == 26 {
+			return id.UnmarshalText([]byte(x))
+		}
+		return id.UnmarshalBinary(x)
+	}
+	return errors.TypeMismatch.Wrapf("%T != %T", id, src)
+}
 func (id *ULID) SetEntropy(e []byte) error         { return (*ulid.ULID)(id).SetEntropy(e) }
 func (id *ULID) SetTime(ms uint64) error           { return (*ulid.ULID)(id).SetTime(ms) }
 func (id ULID) String() string                     { return (ulid.ULID)(id).String() }
