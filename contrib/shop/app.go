@@ -227,6 +227,38 @@ func NewAppConfig() (django.AppConfig, error) {
 				MenuLabel:           trans.S("Products"),
 				RegisterToAdminMenu: true,
 				ListView: admin.ListViewOptions{
+					//	Prefetch: admin.Prefetch{
+					//		SelectRelated: []string{"Category"},
+					//	},
+					//	ViewOptions: admin.ViewOptions{
+					//		Fields: []string{"Title", "ID", "Price", "DiscountPrice", "Category", "Supplier"},
+					//	},
+					//	Columns: map[string]list.ListColumn[attrs.Definer]{
+					//		"Title": list.FieldColumn[attrs.Definer](
+					//			trans.S("Title"),
+					//			"Title",
+					//		),
+					//		"ID": list.FieldColumn[attrs.Definer](
+					//			trans.S("Product ID"),
+					//			"ID",
+					//		),
+					//		"Price": list.FieldColumn[attrs.Definer](
+					//			trans.S("Price"),
+					//			"Price",
+					//		),
+					//		"DiscountPrice": list.FieldColumn[attrs.Definer](
+					//			trans.S("Discount"),
+					//			"DiscountPrice",
+					//		),
+					//		"Category": list.FieldColumn[attrs.Definer](
+					//			trans.S("Category"),
+					//			"Category",
+					//		),
+					//		"Supplier": list.FieldColumn[attrs.Definer](
+					//			trans.S("Supplier"),
+					//			"Supplier",
+					//		),
+					//	},
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition) views.View {
 						return adminviews.ViewProductList
 					},

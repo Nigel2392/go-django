@@ -48,6 +48,9 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 	GetEditLink: func(r *http.Request, v *models.Product) string {
 		return django.Reverse("admin:apps:model:edit", "shop", "products", v.ID)
 	},
+	GetQuerySet: func(r *http.Request) *queries.QuerySet[*models.Product] {
+		return queries.GetQuerySet(&models.Product{}).SelectRelated("Category")
+	},
 	Filters: []filters.FilterSpec[*models.Product]{
 		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
 			SpecName: "search",
@@ -63,6 +66,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 					expr.Q("Title__icontains", value),
 					expr.Q("Slug__icontains", value),
 					expr.Q("Supplier__icontains", value),
+					expr.Q("Category.Name__icontains", value),
 				)), nil
 			},
 		},

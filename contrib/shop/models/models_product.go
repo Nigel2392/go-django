@@ -170,16 +170,22 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}, key...),
-		fattrs.Field(m, "Category", &m.Category, func() fattrs.PtrFieldConfig[*Product, *Category] {
-			return fattrs.PtrFieldConfig[*Product, *Category]{
-				Config: attrs.FieldConfig{
-					HelpText:      trans.S("The category this product falls under."),
-					Embedded:      embedded,
-					RelForeignKey: attrs.Relate(&Category{}, "", nil),
-					Column:        "category_id",
-				},
-			}
-		}, key...),
+		//	fattrs.Field(m, "Category", &m.Category, func() fattrs.PtrFieldConfig[*Product, *Category] {
+		//		return fattrs.PtrFieldConfig[*Product, *Category]{
+		//			Config: attrs.FieldConfig{
+		//				HelpText:      trans.S("The category this product falls under."),
+		//				Embedded:      embedded,
+		//				RelForeignKey: attrs.Relate(&Category{}, "", nil),
+		//				Column:        "category_id",
+		//			},
+		//		}
+		//	}, key...),
+		attrs.NewField(m, "Category", &attrs.FieldConfig{
+			HelpText:      trans.S("The category this product falls under."),
+			Embedded:      embedded,
+			RelForeignKey: attrs.Relate(&Category{}, "", nil),
+			Column:        "category_id",
+		}),
 		editor.NewField(m, "Editor", editor.FieldConfig{
 			Embedded: embedded,
 			Label:    trans.S("Description"),

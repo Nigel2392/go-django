@@ -38,6 +38,10 @@ type Category struct {
 	Children       *queries.RelRevFK[*Category]
 }
 
+func (c *Category) String() string {
+	return c.Name
+}
+
 func (c *Category) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, c,
 		fattrs.Field(c, "ID", &c.ID, func() fattrs.PtrFieldConfig[*Category, uint64] {

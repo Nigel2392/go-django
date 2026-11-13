@@ -450,6 +450,9 @@ skipConversionChecks:
 			return trans.Time(r.Context(), time.Time(f), trans.SHORT_TIME_FORMAT)
 	}
 
+	if stringer, ok := fieldValue.(fmt.Stringer); ok {
+		return stringer.String()
+	}
 
 	return fieldValue
 }
