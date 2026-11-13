@@ -179,7 +179,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 					Column:        "category_id",
 				},
 			}
-		}),
+		}, key...),
 		editor.NewField(m, "Editor", editor.FieldConfig{
 			Embedded: embedded,
 			Label:    trans.S("Description"),
@@ -204,7 +204,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 					Blank: false,
 				},
 			}
-		}),
+		}, key...),
 		fattrs.Field(m, "TaxRate", &m.TaxRate, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
@@ -218,7 +218,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 					Blank: false,
 				},
 			}
-		}),
+		}, key...),
 		fattrs.Field(m, "DiscountPrice", &m.DiscountPrice, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
@@ -232,7 +232,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 					Blank: true,
 				},
 			}
-		}),
+		}, key...),
 		fattrs.Field(m, "Ranking", &m.Ranking, func() fattrs.PtrFieldConfig[*Product, uint64] {
 			return fattrs.PtrFieldConfig[*Product, uint64]{
 				Config: attrs.FieldConfig{

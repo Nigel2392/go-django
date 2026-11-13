@@ -241,9 +241,10 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 				EditView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return app.ShopHandler{
-							Shop:   SHOP,
-							Handle: adminviews.ViewEditProduct,
+						return app.ShopInstanceHandler[*models.Product]{
+							Shop:     SHOP,
+							Instance: instance.(*models.Product),
+							Handle:   adminviews.ViewEditProduct,
 						}
 					},
 				},

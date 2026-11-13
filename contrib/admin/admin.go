@@ -650,7 +650,7 @@ func NewInstanceHandler(appnameVar, modelVar, idVar string, handler func(w http.
 
 		model, ok := app.modelsByName[modelName]
 		if !ok {
-			except.Fail(http.StatusBadRequest, "Model not found")
+			except.Fail(http.StatusBadRequest, "Model %q not found", modelName)
 			return
 		}
 

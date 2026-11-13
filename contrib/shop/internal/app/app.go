@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux"
 )
@@ -20,7 +21,18 @@ func (s ShopHandler) ServeXXX(w http.ResponseWriter, r *http.Request) {}
 
 func (s ShopHandler) TakeControl(w http.ResponseWriter, r *http.Request, _ views.View) {
 	s.Handle(w, r, s.Shop)
+}
 
+type ShopInstanceHandler[T attrs.Definer] struct {
+	Shop     *ShopAppConfig
+	Instance T
+	Handle   func(w http.ResponseWriter, r *http.Request, shop *ShopAppConfig, instance T)
+}
+
+func (s ShopInstanceHandler[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
+
+func (s ShopInstanceHandler[T]) TakeControl(w http.ResponseWriter, r *http.Request, _ views.View) {
+	s.Handle(w, r, s.Shop, s.Instance)
 }
 
 type ShopAppConfig struct {

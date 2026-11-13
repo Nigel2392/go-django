@@ -46,7 +46,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 		"products:list",
 	},
 	GetEditLink: func(r *http.Request, v *models.Product) string {
-		return django.Reverse("admin:apps:model:edit", "shop", "product", v.ID)
+		return django.Reverse("admin:apps:model:edit", "shop", "products", v.ID)
 	},
 	Filters: []filters.FilterSpec[*models.Product]{
 		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
@@ -340,31 +340,13 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 	}
 }
 
-func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig, instance *models.Product) {
 	if !permissions.HasObjectPermission(r, &models.Product{}, "products:edit") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
-	var vars = mux.Vars(r)
-	var productRow, err = queries.GetQuerySet(&models.Product{}).
-		Select("*").
-		Filter("ID", vars.Get("product_id")).
-		Get()
-
-	if errors.Is(err, errors.NoRows) {
-		except.RaiseNotFound("No product found.")
-		return
-	}
-
-	if err != nil {
-		except.Fail(
-			http.StatusInternalServerError,
-			"failed to retrieve product: %v", err,
-		)
-	}
-
-	specific, err := productRow.Object.Specific.Specific(r.Context(), true)
+	specific, err := instance.Specific.Specific(r.Context(), true)
 	if err != nil {
 		except.Fail(
 			http.StatusInternalServerError,
@@ -377,7 +359,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		err = clone.Copy(
 			r.Context(),
 			&originalProduct,
-			productRow.Object,
+			instance,
 			clone.Flag(clone.CF_NOVALIDATE),
 		)
 		if err != nil {
@@ -400,7 +382,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 	r = r.WithContext(transactionCtx)
 
 	var form = forms.NewAdminForm(r, specific.(supplier.ProductModel), func(p supplier.ProductModel) []admin.Panel {
-		return productRow.Object.Supplier.ProductEditPanel(r.Context())
+		return instance.Supplier.ProductEditPanel(r.Context())
 	})
 
 	form.Load()
@@ -438,9 +420,9 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				backURL = q
 			}
 
-			context.Set("supplier", productRow.Object.Supplier)
+			context.Set("supplier", instance.Supplier)
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:apps:model:edit", "shop", "products", productRow.Object.ID))
+			context.Set("PostURL", django.Reverse("admin:apps:model:edit", "shop", "products", instance.ID))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Change product"),
 			})
@@ -455,7 +437,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			for _, field := range attrs.Define(r.Context(), specific).Fields() {
 				initial[field.Name()] = field.GetValue()
 			}
-			for _, field := range attrs.Define(r.Context(), productRow.Object).Fields() {
+			for _, field := range attrs.Define(r.Context(), instance).Fields() {
 				initial[field.Name()] = field.GetValue()
 			}
 			return initial
