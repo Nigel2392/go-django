@@ -1,0 +1,48 @@
+{{ define "display" }}
+    {{ $Form := (.Get "form") }}
+    {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
+    {{ include $Form.UnpackErrors "admin/shared/forms/error_unpack.tmpl" }}
+    <div class="settings-change-form--fields">
+        {{ range $Field := $Form.Fields }}
+            <div class="settings-change-form--fieldset">
+                <!-- Mimics the panel components from form_panels_bound  -->
+                <!-- Is used for regular form boundfield interface types as opposed to the panels itself -->
+                <div class="panel panel-default">
+                    <div class="panel__heading">
+                        <div class="panel__title">
+                            <h2 class="group-list-item--heading">
+                                <strong>{{ $Field.Label }}</strong>
+                            </h2>
+                        </div>
+                    </div>
+                
+                    {{ $errors := $Field.Errors }}
+                    {{ if gt (len $errors) 0 }}
+                        <div class="panel__errors">
+                            <ul>
+                                {{ range $err := $errors }}
+                                    <li class="panel__error">{{ $err }}</li>
+                                {{ end }}
+                            </ul>
+                        </div>
+                    {{ end }}
+                    
+                    {{ $help := $Field.HelpText }}
+                    {{ if gt (len $help) 0 }}
+                        <div class="panel__help">
+                            {{ $help }}
+                        </div>
+                    {{ end }}
+                    
+                    <div class="panel__body settings-change-form--field-group">
+                        <div class="form-field-wrapper">
+                            <div class="form-field">
+                                {{ $Field.Field }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {{ end }}
+    </div>
+{{ end }}

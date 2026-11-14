@@ -1,0 +1,30 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Site Settings" }}{{ end }}
+
+{{ define "extra_css" }}
+    {{ range $css := .Page.Media.CSS }}
+        {{ $css }}
+    {{ end }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+    <link rel="stylesheet" href="{{ static "settings/css/settings.css" }}">
+{{ end }}
+
+{{ define "content" }}
+    <div class="admin-form settings-change-form">
+        {{ include . "settings/shared/display.tmpl" }}
+    </div>
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ range $js := .Page.Media.JS }}
+        {{ $js }}
+    {{ end }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
+{{ end }}

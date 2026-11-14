@@ -1,0 +1,44 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Site Settings" }}{{ end }}
+
+{{ define "extra_css" }}
+    {{ range $css := .Page.Media.CSS }}
+        {{ $css }}
+    {{ end }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+    <link rel="stylesheet" href="{{ static "settings/css/settings.css" }}">
+{{ end }}
+
+{{ define "content" }}
+
+    <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form settings-change-form" enctype="multipart/form-data" data-controller="form">
+        {{ csrf_field }}
+
+        {{ include . "settings/shared/display.tmpl" }}
+
+        <div class="form-buttons">
+            <input class="button secondary" type="submit" value="{{ T "Save Changes" }}">
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+            {{ else }}
+                <a class="button warning" href="{{ url "admin:settings" }}">{{ T "Back" }}</a>
+            {{ end }}
+        </div>
+    </form>
+
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ range $js := .Page.Media.JS }}
+        {{ $js }}
+    {{ end }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
+{{ end }}

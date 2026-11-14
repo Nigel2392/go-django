@@ -1,0 +1,43 @@
+{
+  "table": {
+    "table": "settings.registered_setting",
+    "model": "github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "db_type": "UINT"
+      },
+      {
+        "name": "InternalName",
+        "column": "internal_name",
+        "use_in_db": true,
+        "min_length": 2,
+        "max_length": 75,
+        "nullable": true,
+        "default": {
+          "go_type": "string",
+          "value": ""
+        },
+        "db_type": "STRING"
+      },
+      {
+        "name": "Data",
+        "column": "data",
+        "use_in_db": true,
+        "nullable": true,
+        "db_type": "JSON"
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

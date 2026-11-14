@@ -1,0 +1,15 @@
+.settings-change-form {
+    width: 100%;
+}
+.settings-change-form--fields {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+.settings-change-form--fieldset {
+    width: max(30%, 300px);
+}
+.settings-change-form--field-group {
+    margin-top: 1em;
+    margin-inline-start: 40px;
+}
