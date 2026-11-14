@@ -313,7 +313,7 @@ func (v *BoundChooserListPage[T]) Setup(w http.ResponseWriter, req *http.Request
 	v.ResponseWriter = w
 	v.Request = req
 
-	//	if !permissions.HasObjectPermission(req, v.Model, "admin:view_list") {
+	//	if !permissions.HasObjectPermission(req, v.Model, "chooser:view_list") {
 	//		except.Fail(
 	//			http.StatusForbidden,
 	//			"User does not have permission to view this object",

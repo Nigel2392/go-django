@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 )
 
@@ -42,7 +43,7 @@ type ChooserDefinition[T attrs.Definer] struct {
 	ExtraData     func(ctx context.Context, instance T) map[string]any
 
 	ListPage    *ChooserListPage[T]
-	DjangoApp   django.AppConfig
+	DjangoApp   djangoapps.BaseAppConfig
 	ContentType contenttypes.ContentType
 	MediaFn     func() media.Media
 }
@@ -98,7 +99,7 @@ func (c *ChooserDefinition[T]) Setup(chooserKey string) error {
 		return errors.TypeMismatch.Wrap("ChooserDefinition.Model cannot be nil")
 	}
 
-	var djangoApp, ok = django.GetAppForModel(c.Model)
+	var djangoApp, ok = djangoapps.GetAppForModel(c.Model)
 	if !ok {
 		return errors.TypeMismatch.Wrapf(
 			"ChooserDefinition.Model is not a valid Django model, no app found for %T",

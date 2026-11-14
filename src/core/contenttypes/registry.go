@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-signals"
 )
 
@@ -118,12 +119,23 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 		p.aliasesRev = make(map[string]string)
 	}
 
-	var alias = fmt.Sprintf(
-		"%s.%s",
-		contentType.AppLabel(),
-		contentType.Model(),
+	var (
+		labels        = []string{contentType.AppLabel()}
+		djangoApp, ok = djangoapps.GetAppForModel(definition.ContentObject)
 	)
-	p.RegisterAlias(alias, typeName)
+	if ok && djangoApp.Name() != labels[0] {
+		labels = append(labels, djangoApp.Name())
+	}
+
+	for _, appLabel := range labels {
+		var alias = fmt.Sprintf(
+			"%s.%s",
+			appLabel,
+			contentType.Model(),
+		)
+
+		p.RegisterAlias(alias, typeName)
+	}
 
 	if definition.Aliases != nil {
 		for _, alias := range definition.Aliases {

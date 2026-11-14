@@ -74,13 +74,13 @@ func (b *SessionBackend) Get() (msgs []Message, AllRetrieved bool) {
 
 	var sessionMessages = session.Get(sessionBackendKey)
 	if sessionMessages == nil {
-		logger.NameSpace(MESSAGES_NAMESPACE).Debug("No messages found in session")
+		// logger.NameSpace(MESSAGES_NAMESPACE).Debug("No messages found in session")
 		return nil, false
 	}
 
 	var ok bool
 	if msgs, ok = sessionMessages.([]Message); ok {
-		logger.NameSpace(MESSAGES_NAMESPACE).Debugf("Retrieved %d messages from session", len(msgs))
+		// logger.NameSpace(MESSAGES_NAMESPACE).Debugf("Retrieved %d messages from session", len(msgs))
 		return msgs, true
 	}
 

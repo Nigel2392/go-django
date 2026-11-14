@@ -84,10 +84,10 @@ func AddMessage(r *http.Request, tag MessageTag, message string, extraTags ...Me
 		return ErrBackendNotConfigured
 	}
 
-	app.Logger().Debugf(
-		"Adding message: %s, level: %d, extraTags: %v",
-		message, TagLevels[tag], extraTags,
-	)
+	//	app.Logger().Debugf(
+	//		"Adding message: %s, level: %d, extraTags: %v",
+	//		message, TagLevels[tag], extraTags,
+	//	)
 
 	return backend.Store(&BaseMessage{
 		Level:       tag,
