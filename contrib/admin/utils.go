@@ -5,11 +5,14 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 
 	"github.com/Nigel2392/go-django/contrib/messages"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views/list"
 )
 
@@ -25,6 +28,47 @@ func sortComponents(components []AdminPageComponent) []AdminPageComponent {
 		return 0
 	})
 	return components
+}
+
+func ModelURL(model attrs.Definer, extra []string, vars ...any) string {
+	djangoApp, ok := djangoapps.GetAppForModel(model)
+	if !ok {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to find model %T in djangoapps registry",
+			model,
+		)
+	}
+
+	app, ok := AdminSite.Apps.Get(djangoApp.Name())
+	if !ok {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to find app %q in djangoapps registry",
+			app,
+		)
+	}
+
+	modelType := contenttypes.NewContentType(model)
+	modelTypeName := modelType.Model()
+	m, ok := app.Models.Get(modelTypeName)
+	if !ok {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to find model %q in adminsite registry",
+			modelTypeName,
+		)
+	}
+
+	var sb strings.Builder
+	sb.WriteString("admin:apps:model")
+
+	for _, e := range extra {
+		sb.WriteRune(':')
+		sb.WriteString(e)
+	}
+
+	return django.Reverse(sb.String(), append([]any{app.Name, m.GetName()}, vars...)...)
 }
 
 func FindDefinition(model any, appName ...string) *ModelDefinition {

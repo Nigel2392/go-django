@@ -683,13 +683,18 @@ flex-direction is set to row above 70em.
     text-align: center;
 }
 .panel__heading label:not(.default-label),
-.form-field label:not(.default-label) {
+.form-field label:not(.default-label),
+.text-label {
     color: hsl( 254.3 50.4% 24.5% );
     display: block;
-    font-weight: 600;
     line-height: 1.3;
     margin-bottom: 0.25rem;
     margin-top: 0;
+}
+.panel__heading label:not(.default-label, strong label),
+.form-field label:not(.default-label, strong label),
+.text-label:not(strong .text-label) {
+    font-weight: 600;
 }
 .panel .help-text,
 .form-field .help-text {

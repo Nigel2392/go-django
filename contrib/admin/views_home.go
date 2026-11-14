@@ -66,13 +66,13 @@ func init() {
 		for _, fn := range panelFuncs {
 			var panels = fn(r, a)
 			for i, panel := range panels {
-				var count, err = panel.QuerySet(r).Count()
-				if err != nil {
-					logger.Errorf("Error counting panel items for panel %d: %v", i, err)
+				if panel.IsShown != nil && !panel.IsShown(r) {
 					continue
 				}
 
-				if panel.IsShown != nil && !panel.IsShown(r) {
+				var count, err = panel.QuerySet(r).Count()
+				if err != nil {
+					logger.Errorf("Error counting panel items for panel %d: %v", i, err)
 					continue
 				}
 
