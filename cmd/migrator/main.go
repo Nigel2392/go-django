@@ -10,6 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/Nigel2392/go-django/cmd/migrator/conf"
+	"github.com/Nigel2392/go-django/cmd/migrator/pkg/yml"
 	"github.com/Nigel2392/go-django/contrib/auth"
 	"github.com/Nigel2392/go-django/contrib/documents"
 	"github.com/Nigel2392/go-django/contrib/images"
@@ -18,7 +19,6 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/revisions"
 	"github.com/Nigel2392/go-django/contrib/session"
-	"github.com/Nigel2392/go-django/pkg/yml"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"

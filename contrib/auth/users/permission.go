@@ -4,6 +4,7 @@ import (
 	"context"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -17,6 +18,68 @@ type Permission struct {
 	Description      string                                    `json:"description"`
 	GroupPermissions *queries.RelM2M[*Group, *GroupPermission] `json:"-"`
 	UserPermissions  *queries.RelM2M[User, *UserPermission]    `json:"-"`
+}
+
+func CreatePermissions(ctx context.Context, permissions ...*Permission) (createdAny bool, err error) {
+	ctx, tx, err := queries.StartTransaction(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "CreatePermissions/StartTransaction")
+	}
+
+	defer tx.Rollback(ctx)
+
+	permissionNames := make([]string, 0, len(permissions))
+	for _, perm := range permissions {
+		permissionNames = append(permissionNames, perm.Name)
+	}
+
+	qs := queries.GetQuerySetWithContext(ctx, &Permission{})
+	n, r, err := qs.
+		Select("Name").
+		Filter("Name__in", permissionNames).
+		IterAll()
+	if err != nil {
+		return false, errors.Wrap(err, "CreatePermissions/IterAll")
+	}
+
+	if n == len(permissions) {
+		return false, nil
+	}
+
+	exists := make(map[string]struct{}, n)
+	for l, err := range r {
+		if err != nil {
+			return false, errors.Wrap(err, "CreatePermissions/iterExisting")
+		}
+
+		exists[l.Object.Name] = struct{}{}
+	}
+
+	if len(exists) == len(permissions) {
+		return false, nil
+	}
+
+	newPerms := make([]*Permission, 0, len(permissions)-len(exists))
+	for _, perm := range permissions {
+		_, ok := exists[perm.Name]
+		if ok {
+			continue
+		}
+
+		newPerms = append(newPerms, perm)
+	}
+
+	_, err = qs.BulkCreate(newPerms)
+	if err != nil {
+		return false, errors.Wrap(err, "CreatePermissions/BulkCreate")
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return false, errors.Wrap(err, "CreatePermissions/Commit")
+	}
+
+	return true, nil
 }
 
 func (p *Permission) String() string {

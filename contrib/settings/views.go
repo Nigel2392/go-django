@@ -113,7 +113,7 @@ func viewSettings(w http.ResponseWriter, r *http.Request) {
 		Request: r,
 		TitleFn: trans.S("Site Settings"),
 		HeaderActions: []components.ShowableComponent{
-			components.NewShowableComponent(r, func(r *http.Request) bool { return true }, components.Link(
+			components.NewShowableComponent(r, func(r *http.Request) bool { return permissions.HasPermission(r, "settings:edit") }, components.Link(
 				components.ButtonConfig{
 					Text: trans.S("Change"),
 					Type: components.ClassTypeSecondary,

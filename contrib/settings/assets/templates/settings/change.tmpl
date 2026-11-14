@@ -22,12 +22,7 @@
 
         <div class="form-buttons">
             <input class="button secondary" type="submit" value="{{ T "Save Changes" }}">
-            {{ $BackURL := (.Get "BackURL") }}
-            {{ if $BackURL }}
-                <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
-            {{ else }}
-                <a class="button warning" href="{{ url "admin:settings" }}">{{ T "Back" }}</a>
-            {{ end }}
+            <a class="button warning" href="{{ url "admin:settings" }}">{{ T "Cancel" }}</a>
         </div>
     </form>
 

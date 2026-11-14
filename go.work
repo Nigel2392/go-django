@@ -15,7 +15,6 @@ use (
 	./examples/todoapp
 	./examples/views
 	./nyi
-	./pkg/yml
 	./queries
 )
 

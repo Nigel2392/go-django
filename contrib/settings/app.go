@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
@@ -85,6 +86,10 @@ func NewAppConfig() django.AppConfig {
 		}
 
 		goldcrest.Register(SettingsMenuHook, 1000, SettingsMenuHookFunc(func(r *http.Request) []menu.MenuItem {
+			if !permissions.HasPermission(r, "settings:view") {
+				return []menu.MenuItem{}
+			}
+
 			menuLogo := templ.ComponentFunc(icons.Component("toggles.svg"))
 			return []menu.MenuItem{&menu.Item{
 				Label:    trans.T(r.Context(), "Settings"),
@@ -110,6 +115,10 @@ func NewAppConfig() django.AppConfig {
 
 					var items = f(r)
 					menuItems = append(menuItems, items...)
+				}
+
+				if len(menuItems) == 0 {
+					return
 				}
 
 				if len(menuItems) == 1 {

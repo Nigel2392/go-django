@@ -832,14 +832,14 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 			target = attrs.NewObject[TARGET](ctx, p.TargetType)
 		}
 
-		if revField != nil && isNew {
+		if revField != nil && isNew && !revField.IsPrimary() {
 			var fieldName = revField.Name()
 
 			targetDefs := attrs.Define(ctx, target)
 			instRevField, _ := targetDefs.Field(fieldName)
 
 			if err := instRevField.SetValue(source, true); err != nil {
-				logger.Warnf("failed to set source %T on target %T.%s", source, target, fieldName)
+				logger.Warnf("failed to set source %T on target %T.%s: %v", source, target, fieldName, err)
 			}
 		}
 

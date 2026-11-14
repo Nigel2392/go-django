@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nigel2392/go-django/pkg/yml"
+	"github.com/Nigel2392/go-django/cmd/migrator/pkg/yml"
 )
 
 //	name: abc

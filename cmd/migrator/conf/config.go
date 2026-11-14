@@ -1,6 +1,6 @@
 package conf
 
-import "github.com/Nigel2392/go-django/pkg/yml"
+import "github.com/Nigel2392/go-django/cmd/migrator/pkg/yml"
 
 type MigrationTarget struct {
 	Setup       string `yaml:"setup"`

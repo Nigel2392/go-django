@@ -53,11 +53,12 @@ func (m *Order) AddPanels(ctx context.Context) []admin.Panel {
 			FieldName:  "OrderItems",
 			Classname:  "collapsible",
 			// SubClassname: "collapsed",
-			MinNum:         0,
-			DisallowAdd:    true,
-			DisallowRemove: true,
+			MinNum: 1,
+			// DisallowAdd:    true,
+			// DisallowRemove: true,
 			Panels: []admin.Panel{
 				admin.FieldPanel("ID"),
+				admin.FieldPanel("Amount"),
 			},
 		},
 	}
@@ -92,11 +93,12 @@ func (m *Order) EditPanels(ctx context.Context) []admin.Panel {
 			FieldName:  "OrderItems",
 			Classname:  "collapsible",
 			// SubClassname: "collapsed",
-			MinNum:         0,
-			DisallowAdd:    true,
-			DisallowRemove: true,
+			MinNum: 1,
+			// DisallowAdd:    true,
+			// DisallowRemove: true,
 			Panels: []admin.Panel{
 				admin.FieldPanel("ID"),
+				admin.FieldPanel("Amount"),
 			},
 		},
 	}
