@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -62,7 +63,9 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Deps = []string{
-		"session", "auth", "admin", "editor", "blocks", "revisions",
+		"session", "auth", "admin",
+		"editor", "blocks", "revisions",
+		"settings",
 	}
 
 	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
@@ -82,6 +85,29 @@ func NewAppConfig() (django.AppConfig, error) {
 	icons.Register(staticFS,
 		"shop/admin/icons/funnel.svg",
 	)
+
+	auditlogs.RegisterDefinition("shop:product:add", logging.NewShopLogDefinition())
+	auditlogs.RegisterDefinition("shop:product:edit", logging.NewShopLogDefinition())
+
+	SHOP.SIGNALS.Products.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
+		_, err := auditlogs.Log(psd.Context, "shop:product:add", logger.INF, psd.Product.New, map[string]any{
+			"title": psd.Product.New.Title,
+		})
+		return err
+	})
+
+	SHOP.SIGNALS.Products.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
+		changes, err := changes.Changes(ctx, psd.Product.Old, psd.Product.New)
+		if err != nil {
+			return err
+		}
+
+		_, err = auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
+			"title":   psd.Product.New.Title,
+			"changes": changes,
+		})
+		return err
+	})
 
 	SHOP.ModelObjects = []attrs.Definer{
 		// Cart
@@ -176,6 +202,21 @@ func NewAppConfig() (django.AppConfig, error) {
 			)
 		}))
 
+		goldcrest.Register(admin.RegisterHomePageDisplayPanelHook, 2, admin.RegisterHomePageDisplayPanelHookFunc(func(*http.Request, *admin.AdminApplication) []admin.DisplayPanel {
+			return []admin.DisplayPanel{{
+				IconName: "icon-file-document",
+				Title: func(ctx context.Context, count int64) string {
+					return trans.P(ctx, "Product", "Products", count)
+				},
+				QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+					return queries.GetQuerySet[attrs.Definer](&models.Product{})
+				},
+				URL: func(r *http.Request) string {
+					return django.Reverse("admin:apps:model", "documents", "document")
+				},
+			}}
+		}))
+
 		admin.RegisterApp(
 			"shop",
 			admin.AppOptions{
@@ -183,6 +224,8 @@ func NewAppConfig() (django.AppConfig, error) {
 				MenuLabel:           trans.S("Commerce"),
 				FullAdminMenu:       true,
 				RegisterToAdminMenu: true,
+				EnableIndexView:     true,
+				AppDescription:      trans.S("The commerce module is intended to manage your webshop, such as product stock, orders, refunds, etc."),
 				MenuIcon: func() string {
 					return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart4" viewBox="0 0 16 16">
   	<path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5M3.14 5l.5 2H5V5zM6 5v2h2V5zm3 0v2h2V5zm3 0v2h1.36l.5-2zm1.11 3H12v2h.61zM11 8H9v2h2zM8 8H6v2h2zM5 8H3.89l.5 2H5zm0 5a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0m9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0"/>
@@ -227,38 +270,6 @@ func NewAppConfig() (django.AppConfig, error) {
 				MenuLabel:           trans.S("Products"),
 				RegisterToAdminMenu: true,
 				ListView: admin.ListViewOptions{
-					//	Prefetch: admin.Prefetch{
-					//		SelectRelated: []string{"Category"},
-					//	},
-					//	ViewOptions: admin.ViewOptions{
-					//		Fields: []string{"Title", "ID", "Price", "DiscountPrice", "Category", "Supplier"},
-					//	},
-					//	Columns: map[string]list.ListColumn[attrs.Definer]{
-					//		"Title": list.FieldColumn[attrs.Definer](
-					//			trans.S("Title"),
-					//			"Title",
-					//		),
-					//		"ID": list.FieldColumn[attrs.Definer](
-					//			trans.S("Product ID"),
-					//			"ID",
-					//		),
-					//		"Price": list.FieldColumn[attrs.Definer](
-					//			trans.S("Price"),
-					//			"Price",
-					//		),
-					//		"DiscountPrice": list.FieldColumn[attrs.Definer](
-					//			trans.S("Discount"),
-					//			"DiscountPrice",
-					//		),
-					//		"Category": list.FieldColumn[attrs.Definer](
-					//			trans.S("Category"),
-					//			"Category",
-					//		),
-					//		"Supplier": list.FieldColumn[attrs.Definer](
-					//			trans.S("Supplier"),
-					//			"Supplier",
-					//		),
-					//	},
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition) views.View {
 						return adminviews.ViewProductList
 					},
@@ -295,29 +306,6 @@ func NewAppConfig() (django.AppConfig, error) {
 			supplier.Suppliers().Sync(),
 		)
 	}
-
-	auditlogs.RegisterDefinition("shop:product:add", logging.NewShopLogDefinition())
-	auditlogs.RegisterDefinition("shop:product:edit", logging.NewShopLogDefinition())
-
-	SHOP.SIGNALS.Products.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
-		_, err := auditlogs.Log(psd.Context, "shop:product:add", logger.INF, psd.Product.New, map[string]any{
-			"title": psd.Product.New.Title,
-		})
-		return err
-	})
-
-	SHOP.SIGNALS.Products.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
-		changes, err := changes.Changes(ctx, psd.Product.Old, psd.Product.New)
-		if err != nil {
-			return err
-		}
-
-		_, err = auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
-			"title":   psd.Product.New.Title,
-			"changes": changes,
-		})
-		return err
-	})
 
 	return SHOP, nil
 }

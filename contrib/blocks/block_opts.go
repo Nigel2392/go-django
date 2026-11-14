@@ -39,6 +39,12 @@ func WithHelpText[T Block](text any) OptFunc[T] {
 	}
 }
 
+func WithReadOnly[T Block](readonly bool) OptFunc[T] {
+	return func(t T) {
+		t.SetReadOnly(readonly)
+	}
+}
+
 func WithDefault[T Block](def interface{}) OptFunc[T] {
 	return func(t T) {
 		t.SetDefault(def)

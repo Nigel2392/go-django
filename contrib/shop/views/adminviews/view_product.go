@@ -91,7 +91,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 			Icon: icons.Icon("icon-plus", map[string]string{}),
 			Type: components.ClassTypeSecondary,
 			URL: func(ctx context.Context) string {
-				return django.Reverse("admin:apps:model:add", "shop", "products")
+				return admin.ModelURL(&models.Product{}, []string{"add"}) // django.Reverse("admin:apps:model:add", "shop", "products")
 			},
 		})
 

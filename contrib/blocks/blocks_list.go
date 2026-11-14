@@ -82,6 +82,10 @@ func (l *ListBlock) MaxNum() int {
 	return l.Max
 }
 
+func (b *ListBlock) SetReadOnly(readonly bool) {
+	b.Child.SetReadOnly(readonly)
+}
+
 func (l *ListBlock) makeError(err error) error {
 	return err
 }

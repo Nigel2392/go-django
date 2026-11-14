@@ -30,7 +30,7 @@ class BoundStructBlock extends BoundBlock {
         initialError = initialError || {};
 
         let labelWrapper = null;
-        if (block.meta.label) {
+        if (block.meta.label && (!placeholder.dataset.isRootBlock)) {
             labelWrapper = (
                 <div class="field-label">
                     <label>{block.meta.label}</label>
@@ -58,7 +58,7 @@ class BoundStructBlock extends BoundBlock {
             class: "field-block",
             allowPanelLink: !!block.meta.label,
             heading: labelWrapper,
-            helpText: block.meta.helpText ? (
+            helpText: block.meta.helpText && (!placeholder.dataset.isRootBlock) ? (
                 <div class="field-help">{block.meta.helpText}</div>
             ) : null,
             errors: errorsList,

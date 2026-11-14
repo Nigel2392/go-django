@@ -61,6 +61,10 @@ func (bw *BlockFormField) Clean(ctx context.Context, value interface{}) (interfa
 	return v, err
 }
 
+func (bw *BlockFormField) SetReadOnly(b bool) {
+	bw.Block.SetReadOnly(b)
+}
+
 func (bw *BlockFormField) SetLabel(label func(ctx context.Context) string) {
 	bw.BaseField.SetLabel(label)
 	bw.Block.SetLabel(label)

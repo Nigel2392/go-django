@@ -17,6 +17,7 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/revisions"
 	"github.com/Nigel2392/go-django/contrib/session"
+	"github.com/Nigel2392/go-django/contrib/settings"
 	"github.com/Nigel2392/go-django/contrib/shop"
 	"github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -82,6 +83,7 @@ func main() {
 			shop.NewAppConfig,
 			revisions.NewAppConfig,
 			dbsupplier.NewAppConfig,
+			settings.NewAppConfig,
 		),
 	)
 	go func() {

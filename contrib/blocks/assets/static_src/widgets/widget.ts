@@ -43,12 +43,18 @@ class BoundWidget<T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaE
     widget: Widget;
     idForLabel: string | null = null;
 
-    constructor(widget: Widget, element: HTMLElement | (HTMLElement | ChildNode)[], name: string) {
+    constructor(widget: Widget, element: HTMLElement | (HTMLElement | ChildNode)[], name: string, options: any) {
         this.widget = widget;
         const selector = `:is(input,select,textarea,button)[name="${name}"]`;
         this.input = querySelectorIncludingSelf(element, selector) as T | null;
         if (!this.input) {
-          throw new InputNotFoundError(name);
+            throw new InputNotFoundError(name);
+        }
+
+        if (options?.attributes) {
+            for (const [key, value] of Object.entries(options.attributes)) {
+                this.input.setAttribute(key, value as string);
+            }
         }
 
         this.idForLabel = this.input.id;
@@ -96,7 +102,7 @@ class BoundWidget<T extends HTMLInputElement | HTMLSelectElement | HTMLTextAreaE
 }
 
 type BoundWidgetType = {
-    new(element: HTMLElement | (HTMLElement | ChildNode)[], name: string): BoundWidget;
+    new(element: HTMLElement | (HTMLElement | ChildNode)[], name: string, options: any): BoundWidget;
     setState(state: any): void;
     setValue(value: any): void;
     getState(): any;
@@ -131,16 +137,11 @@ class Widget {
           (node) => node.nodeType === Node.ELEMENT_NODE,
         );
 
-        if (typeof options?.attributes === 'object') {
-            for (const [key, value] of Object.entries(options.attributes)) {
-                (childElements[0] as HTMLElement).setAttribute(key, value as string);
-            }
-        }
-
         const boundWidget = new this.boundWidgetClass(
             this,
             childElements.length === 1 ? childElements[0] as HTMLElement : children,
             name,
+            options,
         );
 
         boundWidget.setState(initialState);
@@ -170,21 +171,23 @@ class CheckboxInput extends Widget {
     boundWidgetClass = BoundCheckboxInput;
 }
 
-class BoundRadioSelect {
+class BoundRadioSelect extends BoundWidget {
     element: HTMLElement;
+    input: HTMLInputElement;
     name: string;
     idForLabel: string;
     isMultiple: boolean;
     selector: string;
 
-    constructor(element: HTMLElement, name: string) {
-        this.element = element;
+    constructor(widget: Widget, element: HTMLElement | (HTMLElement | ChildNode)[], name: string, options: any) {
+        super(widget, element, name, options);
         this.name = name;
         this.idForLabel = '';
         this.isMultiple = !!this.element.querySelector(
           `input[name="${name}"][type="checkbox"]`,
         );
         this.selector = `input[name="${name}"]:checked`;
+        this.input = this.element.querySelector(`input[name="${name}"]`)
     }
 
     getValueForLabel() {
@@ -293,8 +296,8 @@ class BoundFileWidget extends BoundWidget<HTMLInputElement> {
     pathInputWrapper: HTMLElement | null;
     clearInputWrapper: HTMLElement | null;
 
-    constructor(widget: FileWidget, element: HTMLElement | (HTMLElement | ChildNode)[], name: string) {
-        super(widget, element, name);
+    constructor(widget: FileWidget, element: HTMLElement | (HTMLElement | ChildNode)[], name: string, options: any) {
+        super(widget, element, name, options);
 
         var el: HTMLElement;
         if (Array.isArray(element)) {

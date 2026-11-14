@@ -28,6 +28,7 @@ func (b *FieldBlock) Adapter(ctx context.Context) telepath.Adapter {
 					"required": field.Required(),
 					"attrs":    field.Attrs(),
 					"default":  field.ValueToForm(obj.GetDefault()),
+					"readonly": field.ReadOnly(),
 				},
 			}
 		},

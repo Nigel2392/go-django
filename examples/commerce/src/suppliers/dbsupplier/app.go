@@ -2,14 +2,83 @@ package dbsupplier
 
 import (
 	"context"
+	"encoding/json"
 	"html/template"
+	"reflect"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/settings"
 	"github.com/Nigel2392/go-django/contrib/shop/supplier"
+	"github.com/Nigel2392/go-django/internal/forms"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 )
+
+type BaseSetting struct {
+	Type               dbtype.Type
+	Default            any
+	Permission         []string
+	DisplayIcon        func(ctx context.Context) template.HTML
+	DisplayLabel       func(ctx context.Context) string
+	DisplayDescription func(ctx context.Context) string
+	Field              func(ctx context.Context) forms.Field
+}
+
+func (b BaseSetting) DBType() dbtype.Type {
+	return b.Type
+}
+
+func (b BaseSetting) Permissions() []string {
+	return b.Permission
+}
+
+func (b BaseSetting) DefaultValue() any {
+	return b.Default
+}
+
+func (b BaseSetting) Icon(ctx context.Context) template.HTML {
+	if b.DisplayIcon != nil {
+		return b.DisplayIcon(ctx)
+	}
+	return ""
+}
+
+func (b BaseSetting) Label(ctx context.Context) string {
+	if b.DisplayLabel != nil {
+		return b.DisplayLabel(ctx)
+	}
+	return ""
+}
+
+func (b BaseSetting) Description(ctx context.Context) string {
+	if b.DisplayDescription != nil {
+		return b.DisplayDescription(ctx)
+	}
+	return ""
+}
+
+func (b BaseSetting) FormField(ctx context.Context) forms.Field {
+	if b.Field == nil {
+		return nil
+	}
+	return b.Field(ctx)
+}
+
+func (b BaseSetting) ValueFromDB(ctx context.Context, val json.RawMessage) (any, error) {
+	var (
+		typ  = drivers.DBToDefaultGoType(b.Type)
+		nval = reflect.New(typ)
+	)
+
+	err := json.Unmarshal(val, nval.Interface())
+	return nval.Elem().Interface(), err
+}
 
 type DBSupplierAppConfig struct {
 	*apps.DBRequiredAppConfig
@@ -27,7 +96,31 @@ func NewAppConfig() *DBSupplierAppConfig {
 	}
 
 	supplier.Register(CONFIG)
-
+	settings.RegisterGroup(0, "suppliers", settings.SettingsGroup{
+		Label:       trans.S("Suppliers"),
+		Description: trans.S("Supplier specific settings"),
+	})
+	settings.RegisterSetting(0, "suppliers", "commerce.dbsupplier.backend", BaseSetting{
+		Type:               dbtype.Bool,
+		DisplayLabel:       trans.S("Datebase Supplier Enabled"),
+		DisplayDescription: trans.S("Wether to enable or disable the database supplier backend."),
+		Field: func(ctx context.Context) forms.Field {
+			return fields.BooleanField()
+		},
+	})
+	settings.RegisterSetting(0, "suppliers", "commerce.dbsupplier.backend.storage", BaseSetting{
+		Type:               dbtype.String,
+		DisplayLabel:       trans.S("Datebase Supplier Storage"),
+		DisplayDescription: trans.S("Which storage backend to use for the database supplier."),
+		Field: func(ctx context.Context) forms.Field {
+			return fields.CharField(fields.Widget(options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
+				return []widgets.Option{
+					widgets.NewOption("local", trans.T(ctx, "Local"), "local"),
+					widgets.NewOption("cloud", trans.T(ctx, "Cloud"), "cloud"),
+				}
+			})))
+		},
+	})
 	return CONFIG
 }
 

@@ -67,7 +67,7 @@ templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath s
     </div>
 }
 
-templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
+templ (b *StructBlock) RenderTempl(id, name string, valueMap *StructBlockValue, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
 	{{ var c = tplCtx.(*BlockContext) }}
     <div id={ id } data-struct-block data-controller="block" data-block-class-path-value="django.blocks.struct-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueMap, errors, c.Attrs}) }>
 	   //    for head := b.Fields.Front(); head != nil; head = head.Next() {

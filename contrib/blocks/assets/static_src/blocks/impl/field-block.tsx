@@ -74,6 +74,10 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
             attrs['required'] = 'required';
         }
 
+        if (this.block.meta.readonly) {
+            attrs['disabled'] = 'disabled';
+        }
+
         return attrs;
     }
 

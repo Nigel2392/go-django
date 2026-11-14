@@ -33,6 +33,7 @@ type Block interface {
 	HelpText(ctx context.Context) string
 	Field() fields.Field
 	SetField(field fields.Field)
+	SetReadOnly(readonly bool)
 	ValueAtPath(bound BoundBlockValue, parts []string) (interface{}, error)
 	ValueFromDB(value json.RawMessage) (interface{}, error)
 	RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
@@ -123,6 +124,10 @@ func (b *BaseBlock) ValueAtPath(bound BoundBlockValue, parts []string) (interfac
 
 func (b *BaseBlock) SetLabel(label any) {
 	b.LabelFunc = trans.GetTextFunc(label)
+}
+
+func (b *BaseBlock) SetReadOnly(readonly bool) {
+	b.Field().SetReadOnly(readonly)
 }
 
 func (b *BaseBlock) SetHelpText(helpText any) {

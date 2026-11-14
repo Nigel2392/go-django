@@ -78,6 +78,12 @@ func (m *StructBlock) SetName(name string) {
 	m.Name_ = name
 }
 
+func (m *StructBlock) SetReadOnly(readonly bool) {
+	for head := m.Fields.Front(); head != nil; head = head.Next() {
+		head.Value.SetReadOnly(readonly)
+	}
+}
+
 func (m *StructBlock) Field() fields.Field {
 	if m.FormField == nil {
 		var field = fields.CharField()
@@ -92,6 +98,10 @@ func (m *StructBlock) HasChanged(initial, data interface{}) bool {
 	if !ok1 && !ok2 {
 		logger.Warnf("StructBlock HasChanged: both initial and data are not *StructBlockValue (initial: %T, data: %T)", initial, data)
 		return false
+	}
+	if ok1 != ok2 {
+		logger.Warnf("StructBlock HasChanged: one of initial or data is not *StructBlockValue (initial: %T, data: %T)", initial, data)
+		return true
 	}
 	if len(initialMap.V) != len(dataMap.V) {
 		return true
@@ -296,13 +306,16 @@ func (m *StructBlock) GetDefault() interface{} {
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
 		data[head.Key] = head.Value.GetDefault()
 	}
-	return data
+	return &StructBlockValue{
+		BlockObject: m,
+		V:           data,
+	}
 }
 
 func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {
 	var (
 		ctxData  = NewBlockContext(m, tplCtx)
-		valueMap map[string]interface{}
+		valueMap *StructBlockValue
 		ok       bool
 	)
 
@@ -314,8 +327,8 @@ func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 	ctxData.Name = name
 	ctxData.Value = value
 
-	if valueMap, ok = value.(map[string]interface{}); !ok {
-		return fmt.Errorf("value must be a map[string]interface{}, got %T", value)
+	if valueMap, ok = value.(*StructBlockValue); !ok {
+		return fmt.Errorf("value must be a *StructBlockValue, got %T", value)
 	}
 
 	var errs = NewBlockErrors[string](errors...)

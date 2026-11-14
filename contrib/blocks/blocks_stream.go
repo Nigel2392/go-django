@@ -118,6 +118,12 @@ func (l *StreamBlock) AddField(name string, block Block) {
 	block.SetName(name)
 }
 
+func (m *StreamBlock) SetReadOnly(readonly bool) {
+	for head := m.Children.Front(); head != nil; head = head.Next() {
+		head.Value.SetReadOnly(readonly)
+	}
+}
+
 func (l *StreamBlock) makeError(err error) error {
 	return err
 }
