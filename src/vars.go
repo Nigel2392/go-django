@@ -28,6 +28,9 @@ const (
 	// The backend to serve media files from, e.g. "/media/"
 	APPVAR_MEDIA_BACKEND = "MEDIA_BACKEND" // string
 
+	// The maximum memory to pass to request.ParseMultiPartForm
+	APPVAR_MAX_FORM_MEMORY = "APPVAR_MAX_FORM_MEMORY" // int
+
 	// The port to bind the application's server to for TLS, e.g. "443"
 	APPVAR_TLS_PORT = "TLS_PORT" // string
 
@@ -70,6 +73,8 @@ const (
 	// APPVAR_TRANSLATIONS_DEFAULT_LOCALE
 	APPVAR_TRANSLATIONS_DEFAULT_LOCALE = "TRANSLATIONS_DEFAULT_LOCALE" // string
 )
+
+const DEFAULT_MAX_FORM_MEMORY int = 1024 * 1024 * 64
 
 func APPVAR_ErrorCode(code int) string {
 	return fmt.Sprintf("HandleErrorCode%d", code)

@@ -259,7 +259,6 @@ postValidateErrCheck:
 }
 
 func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, files map[string][]filesystem.FileHeader) (invalid_, defaults_, cleaned_ map[string]any) {
-
 	var (
 		base_invalid  = make(map[string]any)
 		base_defaults = make(map[string]any)

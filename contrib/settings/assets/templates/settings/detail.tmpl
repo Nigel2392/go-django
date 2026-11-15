@@ -15,6 +15,13 @@
 
 {{ define "content" }}
     <div class="admin-form settings-change-form">
+        <div class="alert info">
+            <div class="alert-title">
+                {{ T "Site settings for the entire website." }}
+            </div>
+            <p>{{ T "It is possible you cannot see all settings, you may need to contact your administrator for extra permissions." }}</p>
+        </div>
+
         {{ include . "settings/shared/display.tmpl" }}
     </div>
 {{ end }}

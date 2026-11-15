@@ -322,7 +322,6 @@ returnCartResponse:
 			"failed to encode the cart item response: %v", err,
 		)
 	}
-
 }
 
 func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {

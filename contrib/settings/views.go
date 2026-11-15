@@ -14,7 +14,6 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -189,10 +188,7 @@ func viewSettingsEdit(w http.ResponseWriter, r *http.Request) {
 				value = setting.DefaultValue()
 			}
 
-			initialBlock.V[setting.instance.InternalName] = &blocks.FieldBlockValue{
-				BlockObject: fieldBlock,
-				V:           value,
-			}
+			initialBlock.V[setting.instance.InternalName] = value
 		}
 
 		opts := make([]func(fields.Field), 0)
@@ -244,7 +240,7 @@ func viewSettingsEdit(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if !field.HasChanged(initial[group.name], data) {
-					logger.Debugf("%q has not changed", group.name)
+					// logger.Debugf("%q has not changed", group.name)
 					continue
 				}
 
@@ -259,6 +255,12 @@ func viewSettingsEdit(w http.ResponseWriter, r *http.Request) {
 					val, ok := sb.V[setting.instance.InternalName]
 					if !ok {
 						// logger.Debugf("%q is not found in cleaned data %v", setting.instance.InternalName, slices.Collect(maps.Keys(sb.V)))
+						continue
+					}
+
+					initialFieldVal, ok := initial[group.name].(*blocks.StructBlockValue)
+					if ok && !setting.FormField().HasChanged(initialFieldVal.V[setting.Name()], val) {
+						// logger.Debugf("%s.%s has not changed", group.name, setting.Name())
 						continue
 					}
 
