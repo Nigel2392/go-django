@@ -29,10 +29,10 @@ type TModel[T any] interface {
 }
 
 type Specific[EMBEDDER attrs.Definer] struct {
-	SpecificID          string
-	SpecificContentType *contenttypes.BaseContentType[attrs.Definer]
-	Instance            attrs.Definer `proxy:"-"`
-	embedder            attrs.Definer `proxy:"-"`
+	SpecificID          string                                       `json:"specific_id,omitempty"`
+	SpecificContentType *contenttypes.BaseContentType[attrs.Definer] `json:"specific_content_type,omitempty"`
+	Instance            attrs.Definer                                `json:"-" proxy:"-"`
+	embedder            attrs.Definer                                `json:"-" proxy:"-"`
 }
 
 func (n *Specific[E]) SpecificObject() *Specific[attrs.Definer] {

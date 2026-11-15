@@ -18,12 +18,12 @@ var (
 )
 
 type Cart struct {
-	ID        drivers.ULID
+	ID        drivers.ULID                 `json:"id"`
 	User      users.User                   `json:"-"`
 	Session   string                       `json:"-"`
 	CartItems *queries.RelRevFK[*CartItem] `json:"-"`
-	CreatedAt time.Time
-	Active    bool
+	CreatedAt time.Time                    `json:"created_at"`
+	Active    bool                         `json:"active"`
 }
 
 func (m *Cart) BeforeCreate(ctx context.Context) error {

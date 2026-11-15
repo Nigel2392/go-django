@@ -13,12 +13,12 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/handlers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
-	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -26,12 +26,10 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/attrs/changes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
@@ -109,28 +107,21 @@ func NewAppConfig() (django.AppConfig, error) {
 		"shop/admin/icons/funnel.svg",
 	)
 
+	products.Signals.Created.Listen(context.Background(), handlers.ProductsSignalsCreated)
+	products.Signals.Updated.Listen(context.Background(), handlers.ProductsSignalsUpdated)
+
 	auditlogs.RegisterDefinition("shop:product:add", products.NewShopLogDefinition())
 	auditlogs.RegisterDefinition("shop:product:edit", products.NewShopLogDefinition())
 
-	products.Signals.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[products.ProductCreatedSignal], psd products.ProductCreatedSignal) error {
-		_, err := auditlogs.Log(ctx, "shop:product:add", logger.INF, psd.Product, map[string]any{
-			"title": psd.Product.Title,
-		})
-		return err
-	})
+	carts.Signals.Created.Listen(context.Background(), handlers.CartsSignalsCreated)
+	carts.Signals.Cleared.Listen(context.Background(), handlers.CartsSignalsCleared)
+	carts.Signals.Item.Add.Listen(context.Background(), handlers.CartsSignalsItemAdd)
+	carts.Signals.Item.Remove.Listen(context.Background(), handlers.CartsSignalsItemRemoved)
 
-	products.Signals.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[products.ProductUpdatedSignal], psd products.ProductUpdatedSignal) error {
-		changes, err := changes.Changes(ctx, psd.Product.Old, psd.Product.New)
-		if err != nil {
-			return err
-		}
-
-		_, err = auditlogs.Log(ctx, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
-			"title":   psd.Product.New.Title,
-			"changes": changes,
-		})
-		return err
-	})
+	auditlogs.RegisterDefinition("shop:carts:create", auditlogs.SimpleDefinition())
+	auditlogs.RegisterDefinition("shop:carts:clear", auditlogs.SimpleDefinition())
+	auditlogs.RegisterDefinition("shop:carts:items:add", auditlogs.SimpleDefinition())
+	auditlogs.RegisterDefinition("shop:carts:items:remove", auditlogs.SimpleDefinition())
 
 	SHOP.ModelObjects = []attrs.Definer{
 		// Cart
@@ -322,7 +313,7 @@ func NewAppConfig() (django.AppConfig, error) {
 	SHOP.Ready = func() error {
 		baseApiRoute := django.Global.Mux.Get("/api", nil, "api")
 
-		c := public.NewCartAPI()
+		c := public.CartAPI{}
 		cartBase := baseApiRoute.Get("/carts", http.HandlerFunc(c.GetOrCreateCart), "carts")
 		cartBase.Post("/clear", http.HandlerFunc(c.ClearCart), "clear")
 		cartBase.Post("/items/add", http.HandlerFunc(c.AddCartItem), "add_item")

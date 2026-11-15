@@ -13,10 +13,10 @@ import (
 var _ queries.ActsBeforeCreate = (*CartItem)(nil)
 
 type CartItem struct {
-	ID      drivers.ULID
-	Cart    *Cart `json:"-"`
-	Product *products.Product
-	Amount  uint64
+	ID      drivers.ULID      `json:"id"`
+	Cart    *Cart             `json:"-"`
+	Product *products.Product `json:"product,omitempty"`
+	Amount  uint64            `json:"amount"`
 }
 
 func (m *CartItem) BeforeCreate(ctx context.Context) error {

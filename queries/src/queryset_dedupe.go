@@ -532,7 +532,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 					}
 
 					var val = attrs.PrimaryKey(ctx, field)
-					fmt.Printf("TARGETFIELD: %s %T %T\n", targetField.Name(), val, targetField.Instance())
+					// fmt.Printf("TARGETFIELD: %s %T %T\n", targetField.Name(), val, targetField.Instance())
 					if versatile.IsZero(val) {
 						zeroCount++
 						continue
@@ -619,11 +619,11 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 				)
 			}
 
-			fmt.Printf("rowdefs.Instance: %T.%s.%s: %v %v %T %T: %v\n\n",
-				rowDefs.Instance(), preload.Rel.Field().Name(), preload.Field.Name(),
-				sourceField.GetValue(), rowDefs.Primary().GetValue(),
-				sourceField.GetValue(), rowDefs.Primary().GetValue(),
-				seenObj.objects)
+			//	fmt.Printf("rowdefs.Instance: %T.%s.%s: %v %v %T %T: %v\n\n",
+			//		rowDefs.Instance(), preload.Rel.Field().Name(), preload.Field.Name(),
+			//		sourceField.GetValue(), rowDefs.Primary().GetValue(),
+			//		sourceField.GetValue(), rowDefs.Primary().GetValue(),
+			//		seenObj.objects)
 
 			sourceVal = attrs.PrimaryKey(ctx, sourceField)
 			primaryVal = attrs.PrimaryKey(ctx, rowDefs.Primary())

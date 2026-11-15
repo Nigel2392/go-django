@@ -99,11 +99,6 @@ func NewAppConfig() django.AppConfig {
 			Auth.LoginReverseURL = "auth:login"
 		}
 
-		_, ok = settings.Get(users.APPVAR_USER_FROM_REQUEST)
-		if !ok {
-			settings.Set(users.APPVAR_USER_FROM_REQUEST, UserFromRequest)
-		}
-
 		sessInt, ok := settings.Get(django.APPVAR_SESSION_MANAGER)
 		assert.True(ok, "%s setting is required for 'auth' app", django.APPVAR_SESSION_MANAGER)
 

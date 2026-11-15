@@ -72,17 +72,17 @@ func (qs *ProductQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Product,
 
 type Product struct {
 	specific.Specific[*Product]
-	Image         *mediafiles.SimpleStoredObject
-	ID            drivers.ULID
-	Title         string
-	Slug          string
-	Ranking       uint64
-	Price         decimal.Decimal
-	TaxRate       decimal.Decimal
-	DiscountPrice decimal.Decimal
-	Supplier      supplier.SupplierValue
-	Category      *models.Category
-	Editor        *editor.EditorJSBlockData
+	Image         *mediafiles.SimpleStoredObject `json:"image,omitempty"`
+	ID            drivers.ULID                   `json:"id"`
+	Title         string                         `json:"title"`
+	Slug          string                         `json:"slug,omitempty"`
+	Ranking       uint64                         `json:"ranking,omitempty"`
+	Price         decimal.Decimal                `json:"price,omitempty"`
+	TaxRate       decimal.Decimal                `json:"tax_rate,omitempty"`
+	DiscountPrice decimal.Decimal                `json:"discount_price,omitempty"`
+	Supplier      supplier.SupplierValue         `json:"supplier,omitempty"`
+	Category      *models.Category               `json:"category,omitempty"`
+	Editor        *editor.EditorJSBlockData      `json:"editor,omitempty"`
 }
 
 func (m *Product) AddPanels(ctx context.Context) []admin.Panel {

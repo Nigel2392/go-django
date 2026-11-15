@@ -104,6 +104,7 @@ type Preload struct {
 	FieldName  string
 	Path       string
 	ParentPath string
+	NoJoins    bool
 	Chain      []string
 	Rel        attrs.Relation
 	Model      attrs.Definer
@@ -1554,7 +1555,6 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 		// queries/test/benchmarks/many_to_many_test.go completely
 		// go insane. I have no idea why.
 		var autoJoin = false
-
 		switch v := field.(type) {
 		case string:
 			preload = Preload{
@@ -1568,6 +1568,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 			v.Chain = strings.Split(v.Path, ".")
 			preload = v
+			autoJoin = !v.NoJoins
 		case NoJoins:
 			autoJoin = false
 			preload = Preload{
