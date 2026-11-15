@@ -160,12 +160,34 @@
         "db_type": "UINT"
       }
     ],
-    "indexes": null,
+    "indexes": [
+      {
+        "name": "UniqueIdentifier_ProviderName_unique_together_idx",
+        "columns": [
+          "UniqueIdentifier",
+          "ProviderName"
+        ],
+        "unique": true
+      }
+    ],
     "comment": ""
   },
   "actions": [
     {
       "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "UniqueIdentifier_ProviderName_unique_together_idx",
+          "columns": [
+            "UniqueIdentifier",
+            "ProviderName"
+          ],
+          "unique": true
+        }
+      }
     }
   ]
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/resolver"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -391,10 +392,7 @@ type ForUseInQueries interface {
 
 // A model can adhere to this interface to indicate fields which are
 // unique together.
-type UniqueTogetherDefiner interface {
-	attrs.Definer
-	UniqueTogether() [][]string
-}
+type UniqueTogetherDefiner = migrator.UniqueTogetherDefiner
 
 // A model can adhere to this interface to indicate that the queries package
 // should use the queryset returned by `GetQuerySet()` to execute the query.

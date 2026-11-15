@@ -3229,6 +3229,7 @@ func (qs *QuerySet[T]) GetOrCreate(value T) (T, bool, error) {
 
 	// If the queryset is already in a transaction, that transaction will be used
 	// automatically.
+	qs = qs.clone()
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
 		return *new(T), false, errors.FailedStartTransaction.WithCause(err)

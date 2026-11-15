@@ -19,6 +19,12 @@ type CartItem struct {
 	Amount  uint64            `json:"amount"`
 }
 
+func (m *CartItem) UniqueTogether() [][]string {
+	return [][]string{
+		{"Cart", "Product"},
+	}
+}
+
 func (m *CartItem) BeforeCreate(ctx context.Context) error {
 	m.ID = drivers.NewULID()
 	return nil

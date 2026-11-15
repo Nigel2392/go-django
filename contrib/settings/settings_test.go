@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/auth"
 	autherrors "github.com/Nigel2392/go-django/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/contrib/auth/users"
 	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/session"
@@ -949,7 +950,7 @@ func TestSettings(t *testing.T) {
 		t.Fatalf("d.Setup failed: %v", err)
 	}
 
-	var tables = quest.Table(t, &settings.RegisteredSetting{})
+	var tables = quest.Table(t, &settings.RegisteredSetting{}, &users.Permission{}, &users.Group{})
 	tables.IfNotExists = true
 	tables.Create()
 	defer tables.Drop()

@@ -84,9 +84,8 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Deps = []string{
-		"session", "auth", "admin",
-		"editor", "blocks", "revisions",
-		"settings",
+		"session", "admin", "editor",
+		"blocks", "revisions", "settings",
 	}
 
 	staticfiles.AddFS(staticFS, filesystem.MatchAnd(

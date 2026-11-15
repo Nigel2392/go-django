@@ -16,12 +16,34 @@
         "db_type": "UINT"
       }
     ],
-    "indexes": null,
+    "indexes": [
+      {
+        "name": "UserID_PermissionID_unique_together_idx",
+        "columns": [
+          "UserID",
+          "PermissionID"
+        ],
+        "unique": true
+      }
+    ],
     "comment": ""
   },
   "actions": [
     {
       "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "UserID_PermissionID_unique_together_idx",
+          "columns": [
+            "UserID",
+            "PermissionID"
+          ],
+          "unique": true
+        }
+      }
     }
   ]
 }

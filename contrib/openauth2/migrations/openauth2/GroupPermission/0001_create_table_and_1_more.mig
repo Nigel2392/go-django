@@ -16,12 +16,34 @@
         "db_type": "UINT"
       }
     ],
-    "indexes": null,
+    "indexes": [
+      {
+        "name": "GroupID_PermissionID_unique_together_idx",
+        "columns": [
+          "GroupID",
+          "PermissionID"
+        ],
+        "unique": true
+      }
+    ],
     "comment": ""
   },
   "actions": [
     {
       "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "GroupID_PermissionID_unique_together_idx",
+          "columns": [
+            "GroupID",
+            "PermissionID"
+          ],
+          "unique": true
+        }
+      }
     }
   ]
 }

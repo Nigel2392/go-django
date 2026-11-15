@@ -75,6 +75,7 @@ func main() {
 		django.Apps(
 			session.NewAppConfig,
 			messages.NewAppConfig,
+			// openauth2.NewAppConfig(openauth2.Config{}),
 			auth.NewAppConfig,
 			admin.NewAppConfig,
 			auditlogs.NewAppConfig,

@@ -94,7 +94,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) IterAll() (int, iter.Seq2[*q
 func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[SpecificModel[ORIGINAL, SPECIFIC]], error) {
 	// Use iter method of the base queryset to not have to
 	// iterate over all rows multiple times.
-	var rowCount, baseRows, err = qs.WrappedQuerySet.IterAll()
+	var rowCount, baseRows, err = qs.IterAll()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get all rows for specific s")
 	}
@@ -108,22 +108,9 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 			return nil, errors.Wrapf(err, "failed to get row %d for specific s", rowIdx)
 		}
 
-		var specificRow = &queries.Row[SpecificModel[ORIGINAL, SPECIFIC]]{
-			ObjectFieldDefs: row.ObjectFieldDefs,
-			Through:         row.Through,
-			Annotations:     row.Annotations,
-
-			// currently we set the object to the node isntead of the specific ,
-			// if a specific  can be found, it will be properly set to the right object
-			// later in the prefetch loop.
-			Object: SpecificModel[ORIGINAL, SPECIFIC]{
-				Original: row.Object,
-			},
-		}
-
 		// If the object's SpecificPreloadData method returns ok as false,
 		// it cannot be preloaded - log a warning.
-		specificObj := row.Object.SpecificObject()
+		specificObj := row.Object.Original.SpecificObject()
 		preloadId := specificObj.SpecificPK()
 		contentType := specificObj.SpecificContentType
 		typname := contentType.TypeName()
@@ -143,7 +130,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 		}
 
 		preload.ids = append(preload.ids, preloadId)
-		preload.s[preloadId] = specificRow
+		preload.s[preloadId] = row
 
 		preloadMap.Set(
 			typname,
@@ -151,7 +138,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 		)
 
 		// add the row to the results, increase idx
-		rows[rowIdx] = specificRow
+		rows[rowIdx] = row
 		rowIdx++
 	}
 

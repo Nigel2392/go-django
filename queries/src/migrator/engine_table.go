@@ -2,6 +2,7 @@ package migrator
 
 import (
 	"context"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -37,6 +38,11 @@ func changed[T any](old, new T) *Changed[T] {
 
 type IndexDefiner interface {
 	DatabaseIndexes(obj attrs.Definer) []Index
+}
+
+type UniqueTogetherDefiner interface {
+	attrs.Definer
+	UniqueTogether() [][]string
 }
 
 type Index struct {
@@ -123,6 +129,16 @@ func (t *ModelTable) String() string {
 	return sb.String()
 }
 
+func uqTogetherKey(s []string) string {
+	s = slices.Clone(s)
+	slices.Sort(s)
+	h := sha1.New()
+	for _, w := range s {
+		h.Write([]byte(w))
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
 func NewModelTable(obj attrs.Definer) *ModelTable {
 
 	var (
@@ -166,10 +182,17 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 		t.Fields.Set(field.Name(), col)
 	}
 
+	m := make(map[string]struct{})
 	if idxDef, ok := obj.(IndexDefiner); ok {
 		indexes := idxDef.DatabaseIndexes(obj)
 		t.Index = make([]Index, 0, len(indexes))
 		for _, idx := range indexes {
+			k := uqTogetherKey(idx.Fields)
+			if _, ok := m[k]; ok {
+				panic(fmt.Sprintf("database index defined multiple times: %+v", idx))
+			}
+
+			m[k] = struct{}{}
 			t.Index = append(t.Index, Index{
 				table:      t,
 				Identifier: idx.Identifier,
@@ -177,6 +200,24 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 				Fields:     idx.Fields,
 				Unique:     idx.Unique,
 				Comment:    idx.Comment,
+			})
+		}
+	}
+
+	if uqDef, ok := obj.(UniqueTogetherDefiner); ok {
+		uqTogether := uqDef.UniqueTogether()
+		for _, uq := range uqTogether {
+			k := uqTogetherKey(uq)
+			if _, ok := m[k]; ok {
+				// literal index defined
+				continue
+			}
+
+			t.Index = append(t.Index, Index{
+				table:      t,
+				Identifier: strings.Join(append(uq, "unique_together_idx"), "_"),
+				Fields:     uq,
+				Unique:     true,
 			})
 		}
 	}
