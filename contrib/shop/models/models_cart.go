@@ -21,8 +21,9 @@ type Cart struct {
 	ID        drivers.ULID
 	User      users.User
 	Session   string
-	CartItems *queries.RelRevFK[*CartItem]
+	CartItems *queries.RelRevFK[*CartItem] `json:"-"`
 	CreatedAt time.Time
+	Active    bool
 }
 
 func (m *Cart) BeforeCreate(ctx context.Context) error {
@@ -79,6 +80,13 @@ func (m *Cart) FieldDefs(ctx context.Context) attrs.Definitions {
 					Column:   "session_id",
 					ReadOnly: true,
 					Null:     true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Active", &m.Active, func() fattrs.PtrFieldConfig[*Cart, bool] {
+			return fattrs.PtrFieldConfig[*Cart, bool]{
+				Config: attrs.FieldConfig{
+					Blank: true,
 				},
 			}
 		}),

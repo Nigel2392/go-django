@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/logging"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
@@ -236,6 +237,9 @@ func NewAppConfig() (django.AppConfig, error) {
 				Model:               &models.Category{},
 				MenuLabel:           trans.S("Category"),
 				RegisterToAdminMenu: true,
+				ListView: admin.ListViewOptions{
+					Fields: []string{"Name", "ParentCategory"},
+				},
 			},
 			admin.ModelOptions{
 				Name:                "orders",
@@ -299,6 +303,13 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Ready = func() error {
+
+		c := carts.CartAPI{}
+		cartBase := django.Global.Mux.Get(
+			"/api/carts", http.HandlerFunc(c.GetOrCreateCart), "carts",
+		)
+
+		_ = cartBase
 
 		// always run the sync on startup
 		// /mostly/ handled in DB

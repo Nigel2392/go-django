@@ -51,7 +51,7 @@ type User struct {
 	ID        uint64           `json:"id" attrs:"primary;readonly"`
 	Email     *drivers.Email   `json:"email"`
 	Username  string           `json:"username"`
-	Password  *Password        `json:"password"`
+	Password  *Password        `json:"-"`
 	FirstName string           `json:"first_name"`
 	LastName  string           `json:"last_name"`
 	CreatedAt drivers.DateTime `json:"created_at" attrs:"readonly"`

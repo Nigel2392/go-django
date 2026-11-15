@@ -34,6 +34,9 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 	case template.HTML:
 		return templ.Raw(string(val))
 	case attrs.Definer:
+		if val == nil {
+			return templ.Raw("")
+		}
 		return templ.Raw(attrs.ToString(val))
 	case templ.Component:
 		return val
@@ -60,8 +63,11 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 		return col.Component(r, defs, row)
 	}
 
-
 	switch rV.Kind() {
+	case reflect.Pointer, reflect.Interface:
+		if rV.IsNil() {
+			return templ.Raw("")
+		}
 	case reflect.Invalid:
 		return templ.Raw("")
 	case reflect.String:
@@ -448,6 +454,10 @@ skipConversionChecks:
 			return trans.Time(r.Context(), time.Time(f), trans.SHORT_TIME_FORMAT)
 		case drivers.Timestamp:
 			return trans.Time(r.Context(), time.Time(f), trans.SHORT_TIME_FORMAT)
+	}
+
+	if fieldValue == nil || rV.Kind() == reflect.Pointer && rV.IsNil() {
+		return ""
 	}
 
 	if stringer, ok := fieldValue.(fmt.Stringer); ok {

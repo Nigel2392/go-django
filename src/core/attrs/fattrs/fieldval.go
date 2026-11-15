@@ -580,10 +580,30 @@ func (r *ptrField[M, V]) Scan(v any) error {
 	// if is model we can create new value of type V
 	// and set the scanned v as it's primary key.
 	// this wont work if the field type itself is an interface.
-	if bitcheck.Is(r.opts.flags, flagIsModel) && r.opts.typ != _DEFINER {
+	if bitcheck.Is(r.opts.flags, flagIsModel) {
 
-		var newModelV any = r.opts.newValue()
+		var newModelV any
+		if r.opts.isNil(r.val) {
+			newModelV = r.opts.newValue()
+		} else {
+			newModelV = any(*r.val).(attrs.Definer)
+		}
+
 		var newModel = reflect.ValueOf(newModelV)
+		if (!newModel.IsValid() || newModel.IsNil()) && r.opts.typ.Kind() == reflect.Interface {
+			rel := r.Rel()
+			if rel != nil && (rel.Type() != attrs.RelManyToOne && rel.Type() != attrs.RelOneToOne) {
+				return fmt.Errorf("%s is not valid for field %q", newModel, r.fieldName)
+			}
+
+			newModel = reflect.New(reflect.TypeOf(rel.Model()).Elem())
+			newModelV = newModel.Interface()
+		}
+
+		if !newModel.IsValid() || newModel.IsNil() {
+			return fmt.Errorf("%s is not valid for field %q", newModel, r.fieldName)
+		}
+
 		if err := attrs.SetPrimaryKey(r.defs.Context(), newModelV.(attrs.Definer), v); err != nil {
 			return err
 		}

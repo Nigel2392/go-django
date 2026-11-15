@@ -112,6 +112,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		//	return errors.New("OpenAuth2: No providers configured")
 		//}
 
+		_, ok := settings.Get(users.APPVAR_USER_FROM_REQUEST)
+		if !ok {
+			settings.Set(users.APPVAR_USER_FROM_REQUEST, UserFromRequest)
+		}
+
 		if !django.AppInstalled("migrator") {
 			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
 			if err != nil {
