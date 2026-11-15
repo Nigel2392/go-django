@@ -1,12 +1,12 @@
-package api
+package public
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
+	"github.com/Nigel2392/go-django/contrib/shop/api"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -40,25 +40,6 @@ func NewCartAPI() CartAPI {
 	return CartAPI{}
 }
 
-func (c CartAPI) respondError(w http.ResponseWriter, statusCode int, message string, args ...any) {
-	w.WriteHeader(statusCode)
-
-	if len(args) > 0 {
-		message = fmt.Sprintf(message, args...)
-	}
-
-	enc := json.NewEncoder(w)
-	err := enc.Encode(ErrorResponse{
-		Message: message,
-	})
-	if err != nil {
-		except.Fail(
-			http.StatusInternalServerError,
-			"failed to encode the error response: %v", err,
-		)
-	}
-}
-
 func (c CartAPI) cartQuery(ctx context.Context, r *http.Request, u authentication.User) *queries.QuerySet[*carts.Cart] {
 	var session = sessions.Retrieve(r)
 	var q expr.ClauseExpression = expr.Q("Session", session.Token())
@@ -84,7 +65,7 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 		Session: sessions.Retrieve(r).Token(),
 	})
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to get or create the cart: %v", err,
 		)
@@ -98,7 +79,7 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 			User:    u,
 		})
 		if err != nil {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusInternalServerError,
 				"error processing cart created signal: %v", err,
 			)
@@ -126,7 +107,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	err := dec.Decode(&request)
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusBadRequest,
 			"failed to read or decode request body: %v", err,
 		)
@@ -134,7 +115,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request.Amount <= 0 {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusBadRequest,
 			"amount cannot be less than 0: %v", request.Amount,
 		)
@@ -143,7 +124,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 
 	ctx, tx, err := queries.StartTransaction(r.Context())
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to start transaction: %v", err,
 		)
@@ -160,14 +141,14 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 		Get()
 	if err != nil {
 		if errors.Is(err, errors.NoRows) {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusNotFound,
 				"failed to retrieve product to add to cart: %v", err,
 			)
 			return
 		}
 
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to retrieve product to add to cart: %v", err,
 		)
@@ -183,7 +164,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 		Session: sessions.Retrieve(r).Token(),
 	})
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to get or create the cart: %v", err,
 		)
@@ -210,7 +191,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 				Amount:  uint64(request.Amount),
 			})
 		if err != nil {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusInternalServerError,
 				"failed to get or create the cart item: %v", err,
 			)
@@ -236,7 +217,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 					expr.As("Amount", expr.Logical("Amount").ADD(request.Amount)),
 				)
 			if err != nil {
-				c.respondError(w,
+				api.RespondError(w,
 					http.StatusInternalServerError,
 					"failed to update the existing cart item: %v", err,
 				)
@@ -258,7 +239,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 			Amount:  uint64(request.Amount),
 		})
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to create a new cart item: %v", err,
 		)
@@ -273,7 +254,7 @@ returnCartResponse:
 			User:    u,
 		})
 		if err != nil {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusInternalServerError,
 				"error processing cart created signal: %v", err,
 			)
@@ -288,7 +269,7 @@ returnCartResponse:
 		CartItem: item,
 	})
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"error processing cart item added signal: %v", err,
 		)
@@ -297,7 +278,7 @@ returnCartResponse:
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to commit the changes to the database: %v", err,
 		)
@@ -326,7 +307,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	err := dec.Decode(&request)
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusBadRequest,
 			"failed to read or decode request body: %v", err,
 		)
@@ -334,7 +315,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request.Amount <= 0 {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusBadRequest,
 			"amount cannot be less than 0: %v", request.Amount,
 		)
@@ -343,7 +324,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 
 	ctx, tx, err := queries.StartTransaction(r.Context())
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to start transaction: %v", err,
 		)
@@ -360,14 +341,14 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 		Get()
 	if err != nil {
 		if errors.Is(err, errors.NoRows) {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusNotFound,
 				"failed to retrieve product to remove from cart: %v", err,
 			)
 			return
 		}
 
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to retrieve product to remove from cart: %v", err,
 		)
@@ -380,14 +361,14 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 	cart, err := q.Get()
 	if err != nil {
 		if errors.Is(err, errors.NoRows) {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusNotFound,
 				"cart does not exist, cannot remove items: %v", err,
 			)
 			return
 		}
 
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to retrieve the cart: %v", err,
 		)
@@ -405,14 +386,14 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 		Get()
 	if err != nil {
 		if errors.Is(err, errors.NoRows) {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusNotFound,
 				"cart item doesn't exist, cannot remove item: %v", err,
 			)
 			return
 		}
 
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to retrieve cart item to remove: %v", err,
 		)
@@ -428,7 +409,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 			Filter("ID", item.Object.ID).
 			Delete()
 		if err != nil {
-			c.respondError(w,
+			api.RespondError(w,
 				http.StatusInternalServerError,
 				"failed to remove cart item: %v", err,
 			)
@@ -451,7 +432,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 			expr.As("Amount", expr.Logical("Amount").SUB(request.Amount)),
 		)
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to update the existing cart item: %v", err,
 		)
@@ -466,7 +447,7 @@ returnCartResponse:
 		CartItem: item.Object,
 	})
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"error processing cart item removed signal: %v", err,
 		)
@@ -475,7 +456,7 @@ returnCartResponse:
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to commit the changes to the database: %v", err,
 		)
@@ -505,7 +486,7 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 		expr.As("Active", expr.Value(false)),
 	)
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to update the cart: %v", err,
 		)
@@ -518,7 +499,7 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 		User:    u,
 	})
 	if err != nil {
-		c.respondError(w,
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"error processing cart cleared signal: %v", err,
 		)

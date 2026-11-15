@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 
@@ -11,9 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
-	"github.com/Nigel2392/go-django/contrib/shop/api"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
@@ -21,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
+	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
@@ -41,7 +41,27 @@ import (
 //go:embed assets/**
 var assetFilesystem embed.FS
 
-type ShopAppConfig = app.ShopAppConfig
+type ShopAppConfig struct {
+	*apps.DBRequiredAppConfig
+	ADMIN_ROUTE *mux.Route
+	ADMIN_MENU  func(r *http.Request) []menu.MenuItem
+}
+
+func (a *ShopAppConfig) BuildRouting(m mux.Multiplexer) {
+	if a.ADMIN_ROUTE == nil {
+		panic(fmt.Sprintf("admin route not set for %T", a))
+	}
+
+	a.Routing(a.ADMIN_ROUTE)
+}
+
+func (a *ShopAppConfig) OnReady() error {
+	if err := a.DBRequiredAppConfig.OnReady(); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 var SHOP = &ShopAppConfig{
 	DBRequiredAppConfig: apps.NewDBAppConfig("shop"),
@@ -197,7 +217,7 @@ func NewAppConfig() (django.AppConfig, error) {
 			sub := route.Any("commerce/", nil, "commerce")
 			sub.Handle(
 				mux.ANY, "products/add/<<supplier>>",
-				views.Serve(app.ShopHandler{
+				views.Serve(ShopHandler{
 					Handle: adminviews.ViewAddProduct,
 				}),
 				"new_with_supplier",
@@ -254,14 +274,14 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 				AddView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return app.ShopHandler{
+						return ShopHandler{
 							Handle: adminviews.ViewAddOrder,
 						}
 					},
 				},
 				EditView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return app.ShopHandler{
+						return ShopHandler{
 							Handle: adminviews.ViewEditOrder,
 						}
 					},
@@ -279,14 +299,14 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 				AddView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return app.ShopHandler{
+						return ShopHandler{
 							Handle: adminviews.ViewAddNewProductSupplier,
 						}
 					},
 				},
 				EditView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return app.ShopInstanceHandler[*products.Product]{
+						return ShopInstanceHandler[*products.Product]{
 							Instance: instance.(*products.Product),
 							Handle:   adminviews.ViewEditProduct,
 						}
@@ -300,13 +320,13 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Ready = func() error {
-		c := api.NewCartAPI()
-		cartBase := django.Global.Mux.Get("/api/carts", http.HandlerFunc(c.GetOrCreateCart), "carts")
+		baseApiRoute := django.Global.Mux.Get("/api", nil, "api")
+
+		c := public.NewCartAPI()
+		cartBase := baseApiRoute.Get("/carts", http.HandlerFunc(c.GetOrCreateCart), "carts")
 		cartBase.Post("/clear", http.HandlerFunc(c.ClearCart), "clear")
 		cartBase.Post("/items/add", http.HandlerFunc(c.AddCartItem), "add_item")
 		cartBase.Post("/items/remove", http.HandlerFunc(c.RemoveCartItem), "remove_item")
-
-		_ = cartBase
 
 		// always run the sync on startup
 		// /mostly/ handled in DB
