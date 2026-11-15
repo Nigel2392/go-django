@@ -1,145 +1,26 @@
 package signals
 
 import (
-	"context"
-	"maps"
-	"net"
 	"net/http"
-	"time"
 
-	"github.com/Nigel2392/go-django/contrib/auth/users"
-	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
-	"github.com/Nigel2392/go-django/contrib/shop/payments/prov"
-	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
-// var (
-// productPool = signals.NewPool[]()
-// cartPool    = signals.NewPool[*CartSignalData]()
-// orderPool   = signals.NewPool[*OrderSignalData]()
-// paymentPool = signals.NewPool[*PaymentSignalData]()
-// )
-
 type BaseSignal struct {
-	Context   context.Context `json:"-"`
-	Timestamp time.Time       `json:"timestamp"`
-	User      users.User      `json:"user"`
-	IPAddr    net.IP          `json:"ipaddr"`
-	Meta      map[string]any  `json:"meta"`
+	Request *http.Request
 }
 
 type Signal[T any] = signals.Signal[T]
-
-func NewBaseSignal(ctx context.Context, r *http.Request, user users.User, meta map[string]any) BaseSignal {
-	var (
-		ipAddr = django.GetIP(r)
-		netIp  = net.ParseIP(ipAddr)
-		newM   = make(map[string]any)
-	)
-
-	if user == nil && r != nil {
-		u, ok := authentication.Retrieve(r).(users.User)
-		if ok {
-			user = u
-		}
-	}
-
-	maps.Copy(newM, meta)
-
-	newM["request"] = map[string]any{
-		"method":     r.Method,
-		"user_agent": r.UserAgent(),
-		"url":        r.URL,
-	}
-
-	return BaseSignal{
-		Context:   ctx,
-		Timestamp: time.Now(),
-		User:      user,
-		IPAddr:    netIp,
-		Meta:      meta,
-	}
-}
-
-type PaymentSignalData struct {
-	BaseSignal
-	Provider prov.BaseProvider
-	Last     *payments.Payment
-	Payment  *payments.Payment
-	Order    *orders.Order
-	RawBytes []byte
-}
 
 type Changed[TYP any] struct {
 	Old TYP
 	New TYP
 }
 
-type ProductSignalData struct {
-	BaseSignal
-	Product  Changed[*products.Product]
-	Specific Changed[supplier.ProductModel]
-}
-
-type OrderSignalData struct {
-	BaseSignal
-	Last       *orders.Order
-	Current    *orders.Order
-	OrderItems []*orders.OrderItem
-	Reason     string
-}
-
-type CartSignalData struct {
-	BaseSignal
-	Cart *carts.Cart
-}
-
-type ModelManager[SIGNAL_T any] struct {
+type ModelSignals[SIGNAL_T any] struct {
 	Created signals.Signal[SIGNAL_T]
 	Updated signals.Signal[SIGNAL_T]
 	Deleted signals.Signal[SIGNAL_T]
 }
 
-type PaymentManager struct {
-	Started   signals.Signal[*PaymentSignalData]
-	Cancelled signals.Signal[*PaymentSignalData]
-	Refunded  signals.Signal[*PaymentSignalData]
-}
-
-type Manager struct {
-	Products ModelManager[*ProductSignalData]
-	Cart     ModelManager[*CartSignalData]
-	Orders   ModelManager[*OrderSignalData]
-	Payment  PaymentManager
-}
-
-func NewManager() Manager {
-	return Manager{
-		Products: ModelManager[*ProductSignalData]{
-			Created: signals.Get[*ProductSignalData]("products:created"),
-			Updated: signals.Get[*ProductSignalData]("products:updated"),
-			Deleted: signals.Get[*ProductSignalData]("products:deleted"),
-		},
-		Cart: ModelManager[*CartSignalData]{
-			Created: signals.Get[*CartSignalData]("cart:created"),
-			Updated: signals.Get[*CartSignalData]("cart:updated"),
-			Deleted: signals.Get[*CartSignalData]("cart:deleted"),
-		},
-		Orders: ModelManager[*OrderSignalData]{
-			Created: signals.Get[*OrderSignalData]("orders:created"),
-			Updated: signals.Get[*OrderSignalData]("orders:updated"),
-			Deleted: signals.Get[*OrderSignalData]("orders:deleted"),
-		},
-		Payment: PaymentManager{
-			Started:   signals.Get[*PaymentSignalData]("payments:started"),
-			Cancelled: signals.Get[*PaymentSignalData]("payments:cancelled"),
-			Refunded:  signals.Get[*PaymentSignalData]("payments:refunded"),
-		},
-	}
-}
+var Pool = signals.NewGPool()

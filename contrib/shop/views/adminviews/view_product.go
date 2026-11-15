@@ -13,7 +13,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
-	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
@@ -129,7 +128,7 @@ var ViewProductList = generic.ListViewConfig[*products.Product]{
 	},
 }
 
-func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request) {
 	if !permissions.HasObjectPermission(r, &products.Product{}, "products:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
@@ -212,7 +211,7 @@ func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app
 	}
 }
 
-func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 	if !permissions.HasObjectPermission(r, &products.Product{}, "products:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
@@ -300,14 +299,10 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 				"instance is nil after form submission",
 			)
 
-			err := shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
-				BaseSignal: signals.NewBaseSignal(req.Context(), r, nil, nil),
-				Product: signals.Changed[*products.Product]{
-					New: instance.SpecificObject().Embedder().(*products.Product),
-				},
-				Specific: signals.Changed[supplier.ProductModel]{
-					New: instance,
-				},
+			err := products.Signals.Created.Send(r.Context(), products.ProductCreatedSignal{
+				Request:  r,
+				Product:  instance.SpecificObject().Embedder().(*products.Product),
+				Specific: instance,
 			})
 			if err != nil {
 				e, ok := gosigs.SignalError(err)
@@ -344,13 +339,13 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 	}
 }
 
-func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig, instance *products.Product) {
+func ViewEditProduct(w http.ResponseWriter, r *http.Request, instance *products.Product) {
 	if !permissions.HasObjectPermission(r, &products.Product{}, "products:edit") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
-	specific, err := instance.Specific.Specific(r.Context(), true)
+	specificObj, err := instance.Specific.Specific(r.Context(), true)
 	if err != nil {
 		except.Fail(
 			http.StatusInternalServerError,
@@ -358,12 +353,29 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		)
 	}
 
-	var originalProduct *products.Product
+	var (
+		specific         = specificObj.(supplier.ProductModel)
+		originalProduct  *products.Product
+		originalInstance supplier.ProductModel
+	)
 	if r.Method == http.MethodPost {
 		err = clone.Copy(
 			r.Context(),
 			&originalProduct,
 			instance,
+			clone.Flag(clone.CF_NOVALIDATE),
+		)
+		if err != nil {
+			except.Fail(
+				http.StatusInternalServerError,
+				"error retrieving cloning instance of product: %v", err,
+			)
+		}
+
+		err = clone.Copy(
+			r.Context(),
+			&originalInstance,
+			specific,
 			clone.Flag(clone.CF_NOVALIDATE),
 		)
 		if err != nil {
@@ -385,7 +397,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 	defer tx.Rollback(transactionCtx)
 	r = r.WithContext(transactionCtx)
 
-	var form = forms.NewAdminForm(r, specific.(supplier.ProductModel), func(p supplier.ProductModel) []admin.Panel {
+	var form = forms.NewAdminForm(r, specific, func(p supplier.ProductModel) []admin.Panel {
 		return instance.Supplier.ProductEditPanel(r.Context())
 	})
 
@@ -454,13 +466,14 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 				"instance is nil after form submission",
 			)
 
-			err := shop.SIGNALS.Products.Updated.Send(r.Context(), &signals.ProductSignalData{
-				BaseSignal: signals.NewBaseSignal(r.Context(), r, nil, nil),
+			err := products.Signals.Updated.Send(r.Context(), products.ProductUpdatedSignal{
+				Request: r,
 				Product: signals.Changed[*products.Product]{
 					Old: originalProduct,
 					New: instance.SpecificObject().Embedder().(*products.Product),
 				},
 				Specific: signals.Changed[supplier.ProductModel]{
+					Old: originalInstance,
 					New: instance,
 				},
 			})

@@ -5,8 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
-	"github.com/Nigel2392/go-django/contrib/shop/api"
-	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/views"
@@ -14,32 +12,28 @@ import (
 )
 
 type ShopHandler struct {
-	Shop   *ShopAppConfig
-	Handle func(w http.ResponseWriter, r *http.Request, shop *ShopAppConfig)
+	Handle func(w http.ResponseWriter, r *http.Request)
 }
 
 func (s ShopHandler) ServeXXX(w http.ResponseWriter, r *http.Request) {}
 
 func (s ShopHandler) TakeControl(w http.ResponseWriter, r *http.Request, _ views.View) {
-	s.Handle(w, r, s.Shop)
+	s.Handle(w, r)
 }
 
 type ShopInstanceHandler[T attrs.Definer] struct {
-	Shop     *ShopAppConfig
 	Instance T
-	Handle   func(w http.ResponseWriter, r *http.Request, shop *ShopAppConfig, instance T)
+	Handle   func(w http.ResponseWriter, r *http.Request, instance T)
 }
 
 func (s ShopInstanceHandler[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
 
 func (s ShopInstanceHandler[T]) TakeControl(w http.ResponseWriter, r *http.Request, _ views.View) {
-	s.Handle(w, r, s.Shop, s.Instance)
+	s.Handle(w, r, s.Instance)
 }
 
 type ShopAppConfig struct {
 	*apps.DBRequiredAppConfig
-	CartAPI     api.CartAPI
-	SIGNALS     signals.Manager
 	ADMIN_ROUTE *mux.Route
 	ADMIN_MENU  func(r *http.Request) []menu.MenuItem
 }

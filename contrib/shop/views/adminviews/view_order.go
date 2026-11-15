@@ -10,10 +10,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
-	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
-	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews/generic"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -98,7 +96,7 @@ type orderItemFormset interface {
 	Forms() ([]modelforms.ModelForm[*orders.OrderItem], error)
 }
 
-func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+func ViewAddOrder(w http.ResponseWriter, r *http.Request) {
 	if !permissions.HasObjectPermission(r, &orders.Order{}, "orders:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
@@ -163,11 +161,10 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 			err = fmt.Errorf("model %T not saved", p)
 		}
 
-		return shop.SIGNALS.Orders.Created.Send(r.Context(), &signals.OrderSignalData{
-			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
-			Current:    p,
-			OrderItems: skus,
-			Reason:     "admin_add",
+		return orders.Signals.Created.Send(r.Context(), orders.OrderCreatedSignal{
+			Request: r,
+			Order:   p,
+			Lines:   skus,
 		})
 	}
 
@@ -221,7 +218,7 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 	}
 }
 
-func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
+func ViewEditOrder(w http.ResponseWriter, r *http.Request) {
 	if !permissions.HasObjectPermission(r, &orders.Order{}, "orders:edit") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
@@ -304,13 +301,11 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 			err = fmt.Errorf("model %T not saved", p)
 		}
 
-		return shop.SIGNALS.Orders.Updated.Send(r.Context(), &signals.OrderSignalData{
-			BaseSignal: signals.NewBaseSignal(ctx, r, nil, nil),
-			Current:    p,
-			OrderItems: skus,
-			Reason:     "admin_update",
+		return orders.Signals.Updated.Send(r.Context(), orders.OrderUpdatedSignal{
+			Request: r,
+			Order:   p,
+			Lines:   skus,
 		})
-
 	}
 
 	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*orders.Order], *orders.Order]]{

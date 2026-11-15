@@ -13,7 +13,6 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/except"
-	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
@@ -34,46 +33,11 @@ type CartItemResponse struct {
 	Product *products.Product `json:"product"`
 }
 
-type CartAPISignal struct {
-	Cart    *carts.Cart
-	Request *http.Request
-	User    authentication.User
-}
-
-type CartItemSignal struct {
-	CartAPISignal
-	CartItem *carts.CartItem
-}
-
-type cartItemSignals struct {
-	Add    signals.Signal[CartItemSignal]
-	Remove signals.Signal[CartItemSignal]
-}
-
-type cartSignals struct {
-	pool    *signals.Pool[any]
-	Created signals.Signal[CartAPISignal]
-	Cleared signals.Signal[CartAPISignal]
-	Item    cartItemSignals
-}
-
 type CartAPI struct {
-	Cart cartSignals
 }
 
 func NewCartAPI() CartAPI {
-	pool := signals.NewGPool()
-	return CartAPI{
-		Cart: cartSignals{
-			pool:    (*signals.Pool[any])(pool),
-			Created: pool.Get[CartAPISignal]("CartApi.Cart.Created"),
-			Cleared: pool.Get[CartAPISignal]("CartApi.Cart.Cleared"),
-			Item: cartItemSignals{
-				Add:    pool.Get[CartItemSignal]("CartApi.Cart.Item.Add"),
-				Remove: pool.Get[CartItemSignal]("CartApi.Cart.Item.Remove"),
-			},
-		},
-	}
+	return CartAPI{}
 }
 
 func (c CartAPI) respondError(w http.ResponseWriter, statusCode int, message string, args ...any) {
@@ -128,7 +92,7 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if created {
-		err = c.Cart.Created.Send(r.Context(), CartAPISignal{
+		err = carts.Signals.Created.Send(r.Context(), carts.CartAPISignal{
 			Cart:    cart,
 			Request: r,
 			User:    u,
@@ -303,7 +267,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 
 returnCartResponse:
 	if cartAdded {
-		err = c.Cart.Created.Send(ctx, CartAPISignal{
+		err = carts.Signals.Created.Send(ctx, carts.CartAPISignal{
 			Cart:    cart,
 			Request: r,
 			User:    u,
@@ -317,7 +281,7 @@ returnCartResponse:
 		}
 	}
 
-	err = c.Cart.Item.Add.Send(ctx, CartItemSignal{
+	err = carts.Signals.Item.Add.Send(ctx, carts.CartItemAPISignal{
 		Cart:     cart,
 		Request:  r,
 		User:     u,
@@ -495,7 +459,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 returnCartResponse:
-	err = c.Cart.Item.Remove.Send(ctx, CartItemSignal{
+	err = carts.Signals.Item.Remove.Send(ctx, carts.CartItemAPISignal{
 		Cart:     cart.Object,
 		Request:  r,
 		User:     u,
@@ -548,7 +512,7 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.Cart.Cleared.Send(r.Context(), CartAPISignal{
+	err = carts.Signals.Cleared.Send(r.Context(), carts.CartAPISignal{
 		Cart:    nil,
 		Request: r,
 		User:    u,

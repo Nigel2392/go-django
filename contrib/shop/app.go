@@ -48,8 +48,6 @@ var SHOP = &ShopAppConfig{
 	ADMIN_ROUTE: admin.AdminSite.Route.Any(
 		"shop/", nil, "shop",
 	),
-	SIGNALS: signals.NewManager(),
-	CartAPI: api.NewCartAPI(),
 }
 
 func NewAppConfig() (django.AppConfig, error) {
@@ -94,20 +92,20 @@ func NewAppConfig() (django.AppConfig, error) {
 	auditlogs.RegisterDefinition("shop:product:add", products.NewShopLogDefinition())
 	auditlogs.RegisterDefinition("shop:product:edit", products.NewShopLogDefinition())
 
-	SHOP.SIGNALS.Products.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
-		_, err := auditlogs.Log(psd.Context, "shop:product:add", logger.INF, psd.Product.New, map[string]any{
-			"title": psd.Product.New.Title,
+	products.Signals.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[products.ProductCreatedSignal], psd products.ProductCreatedSignal) error {
+		_, err := auditlogs.Log(ctx, "shop:product:add", logger.INF, psd.Product, map[string]any{
+			"title": psd.Product.Title,
 		})
 		return err
 	})
 
-	SHOP.SIGNALS.Products.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
+	products.Signals.Updated.Listen(context.Background(), func(ctx context.Context, s signals.Signal[products.ProductUpdatedSignal], psd products.ProductUpdatedSignal) error {
 		changes, err := changes.Changes(ctx, psd.Product.Old, psd.Product.New)
 		if err != nil {
 			return err
 		}
 
-		_, err = auditlogs.Log(psd.Context, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
+		_, err = auditlogs.Log(ctx, "shop:product:edit", logger.INF, psd.Product.New, map[string]any{
 			"title":   psd.Product.New.Title,
 			"changes": changes,
 		})
@@ -200,7 +198,6 @@ func NewAppConfig() (django.AppConfig, error) {
 			sub.Handle(
 				mux.ANY, "products/add/<<supplier>>",
 				views.Serve(app.ShopHandler{
-					Shop:   SHOP,
 					Handle: adminviews.ViewAddProduct,
 				}),
 				"new_with_supplier",
@@ -258,7 +255,6 @@ func NewAppConfig() (django.AppConfig, error) {
 				AddView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
 						return app.ShopHandler{
-							Shop:   SHOP,
 							Handle: adminviews.ViewAddOrder,
 						}
 					},
@@ -266,7 +262,6 @@ func NewAppConfig() (django.AppConfig, error) {
 				EditView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
 						return app.ShopHandler{
-							Shop:   SHOP,
 							Handle: adminviews.ViewEditOrder,
 						}
 					},
@@ -285,7 +280,6 @@ func NewAppConfig() (django.AppConfig, error) {
 				AddView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
 						return app.ShopHandler{
-							Shop:   SHOP,
 							Handle: adminviews.ViewAddNewProductSupplier,
 						}
 					},
@@ -293,7 +287,6 @@ func NewAppConfig() (django.AppConfig, error) {
 				EditView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
 						return app.ShopInstanceHandler[*products.Product]{
-							Shop:     SHOP,
 							Instance: instance.(*products.Product),
 							Handle:   adminviews.ViewEditProduct,
 						}
@@ -307,11 +300,11 @@ func NewAppConfig() (django.AppConfig, error) {
 	}
 
 	SHOP.Ready = func() error {
-
-		cartBase := django.Global.Mux.Get("/api/carts", http.HandlerFunc(SHOP.CartAPI.GetOrCreateCart), "carts")
-		cartBase.Post("/clear", http.HandlerFunc(SHOP.CartAPI.ClearCart), "clear")
-		cartBase.Post("/items/add", http.HandlerFunc(SHOP.CartAPI.AddCartItem), "add_item")
-		cartBase.Post("/items/remove", http.HandlerFunc(SHOP.CartAPI.RemoveCartItem), "remove_item")
+		c := api.NewCartAPI()
+		cartBase := django.Global.Mux.Get("/api/carts", http.HandlerFunc(c.GetOrCreateCart), "carts")
+		cartBase.Post("/clear", http.HandlerFunc(c.ClearCart), "clear")
+		cartBase.Post("/items/add", http.HandlerFunc(c.AddCartItem), "add_item")
+		cartBase.Post("/items/remove", http.HandlerFunc(c.RemoveCartItem), "remove_item")
 
 		_ = cartBase
 
