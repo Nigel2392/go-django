@@ -8,7 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/settings"
-	"github.com/Nigel2392/go-django/contrib/shop/supplier"
+	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/internal/forms"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"

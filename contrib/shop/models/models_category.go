@@ -14,12 +14,12 @@ import (
 )
 
 type CategoryQuery struct {
-	*queries.WrappedQuerySet[*Product, *CategoryQuery, *queries.QuerySet[*Category]]
+	*queries.WrappedQuerySet[*Category, *CategoryQuery, *queries.QuerySet[*Category]]
 }
 
 func Categories() *CategoryQuery {
 	base := &CategoryQuery{}
-	base.WrappedQuerySet = queries.WrapQuerySet[*Product](
+	base.WrappedQuerySet = queries.WrapQuerySet[*Category](
 		queries.GetQuerySet(&Category{}),
 		base,
 	)

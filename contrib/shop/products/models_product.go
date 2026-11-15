@@ -1,4 +1,4 @@
-package models
+package products
 
 import (
 	"context"
@@ -6,7 +6,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/editor"
 	_ "github.com/Nigel2392/go-django/contrib/editor/features"
-	"github.com/Nigel2392/go-django/contrib/shop/supplier"
+	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/specific"
@@ -80,7 +81,7 @@ type Product struct {
 	TaxRate       decimal.Decimal
 	DiscountPrice decimal.Decimal
 	Supplier      supplier.SupplierValue
-	Category      *Category
+	Category      *models.Category
 	Editor        *editor.EditorJSBlockData
 }
 
@@ -170,12 +171,12 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}, key...),
-		fattrs.Field(m, "Category", &m.Category, func() fattrs.PtrFieldConfig[*Product, *Category] {
-			return fattrs.PtrFieldConfig[*Product, *Category]{
+		fattrs.Field(m, "Category", &m.Category, func() fattrs.PtrFieldConfig[*Product, *models.Category] {
+			return fattrs.PtrFieldConfig[*Product, *models.Category]{
 				Config: attrs.FieldConfig{
 					HelpText:      trans.S("The category this product falls under."),
 					Embedded:      embedded,
-					RelForeignKey: attrs.Relate(&Category{}, "", nil),
+					RelForeignKey: attrs.Relate(&models.Category{}, "", nil),
 					Column:        "category_id",
 				},
 			}

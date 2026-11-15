@@ -14,8 +14,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/supplier"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews/generic"
@@ -39,25 +39,25 @@ import (
 	"github.com/Nigel2392/versatile/clone"
 )
 
-var ViewProductList = generic.ListViewConfig[*models.Product]{
+var ViewProductList = generic.ListViewConfig[*products.Product]{
 	ListTitle: trans.S("Product List"),
-	Model:     &models.Product{},
+	Model:     &products.Product{},
 	Permissions: []string{
 		"products:list",
 	},
-	GetEditLink: func(r *http.Request, v *models.Product) string {
+	GetEditLink: func(r *http.Request, v *products.Product) string {
 		return django.Reverse("admin:apps:model:edit", "shop", "products", v.ID)
 	},
-	GetQuerySet: func(r *http.Request) *queries.QuerySet[*models.Product] {
-		return queries.GetQuerySet(&models.Product{}).SelectRelated("Category")
+	GetQuerySet: func(r *http.Request) *queries.QuerySet[*products.Product] {
+		return queries.GetQuerySet(&products.Product{}).SelectRelated("Category")
 	},
-	Filters: []filters.FilterSpec[*models.Product]{
-		&filters.BaseFilterSpec[*queries.QuerySet[*models.Product]]{
+	Filters: []filters.FilterSpec[*products.Product]{
+		&filters.BaseFilterSpec[*queries.QuerySet[*products.Product]]{
 			SpecName: "search",
 			FormField: fields.CharField(
 				fields.Placeholder("Search..."),
 			),
-			Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*models.Product]) (*queries.QuerySet[*models.Product], error) {
+			Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*products.Product]) (*queries.QuerySet[*products.Product], error) {
 				if fields.IsZero(value) {
 					return object, nil
 				}
@@ -70,7 +70,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 				)), nil
 			},
 		},
-		//	generic.FilterSpecAmount[*models.Product]("amount", AMOUNT_OPTIONS,
+		//	generic.FilterSpecAmount[*products.Product]("amount", AMOUNT_OPTIONS,
 		//		generic.OptFilterSpecApplyAmount(false),
 		//	),
 	},
@@ -91,35 +91,35 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 			Icon: icons.Icon("icon-plus", map[string]string{}),
 			Type: components.ClassTypeSecondary,
 			URL: func(ctx context.Context) string {
-				return admin.ModelURL(&models.Product{}, []string{"add"}) // django.Reverse("admin:apps:model:add", "shop", "products")
+				return admin.ModelURL(&products.Product{}, []string{"add"}) // django.Reverse("admin:apps:model:add", "shop", "products")
 			},
 		})
 
 		return actions
 	},
-	GetColumns: func(r *http.Request) ([]list.ListColumn[*models.Product], error) {
-		var cols = []list.ListColumn[*models.Product]{
-			list.FieldColumn[*models.Product](
+	GetColumns: func(r *http.Request) ([]list.ListColumn[*products.Product], error) {
+		var cols = []list.ListColumn[*products.Product]{
+			list.FieldColumn[*products.Product](
 				trans.S("Title"),
 				"Title",
 			),
-			list.FieldColumn[*models.Product](
+			list.FieldColumn[*products.Product](
 				trans.S("Product ID"),
 				"ID",
 			),
-			list.FieldColumn[*models.Product](
+			list.FieldColumn[*products.Product](
 				trans.S("Price"),
 				"Price",
 			),
-			list.FieldColumn[*models.Product](
+			list.FieldColumn[*products.Product](
 				trans.S("Discount"),
 				"DiscountPrice",
 			),
-			list.FieldColumn[*models.Product](
+			list.FieldColumn[*products.Product](
 				trans.S("Category"),
 				"Category",
 			),
-			list.FieldColumn[*models.Product](
+			list.FieldColumn[*products.Product](
 				trans.S("Supplier"),
 				"Supplier",
 			),
@@ -130,7 +130,7 @@ var ViewProductList = generic.ListViewConfig[*models.Product]{
 }
 
 func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
-	if !permissions.HasObjectPermission(r, &models.Product{}, "products:add") {
+	if !permissions.HasObjectPermission(r, &products.Product{}, "products:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
@@ -213,7 +213,7 @@ func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request, shop *app
 }
 
 func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
-	if !permissions.HasObjectPermission(r, &models.Product{}, "products:add") {
+	if !permissions.HasObjectPermission(r, &products.Product{}, "products:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
@@ -247,10 +247,10 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 			return err
 		}
 
-		product := p.SpecificObject().Embedder().(*models.Product)
+		product := p.SpecificObject().Embedder().(*products.Product)
 		product.Supplier = supplierVal
 
-		_, err = queries.GetQuerySet[attrs.Definer](&models.Product{}).
+		_, err = queries.GetQuerySet[attrs.Definer](&products.Product{}).
 			ExplicitSave().
 			Create(product)
 
@@ -286,7 +286,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
-			for _, field := range attrs.Define(r.Context(), &models.Product{}).Fields() {
+			for _, field := range attrs.Define(r.Context(), &products.Product{}).Fields() {
 				initial[field.Name()] = field.GetDefault()
 			}
 			initial["Supplier"] = supplierVal
@@ -302,8 +302,8 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 
 			err := shop.SIGNALS.Products.Created.Send(r.Context(), &signals.ProductSignalData{
 				BaseSignal: signals.NewBaseSignal(req.Context(), r, nil, nil),
-				Product: signals.Changed[*models.Product]{
-					New: instance.SpecificObject().Embedder().(*models.Product),
+				Product: signals.Changed[*products.Product]{
+					New: instance.SpecificObject().Embedder().(*products.Product),
 				},
 				Specific: signals.Changed[supplier.ProductModel]{
 					New: instance,
@@ -344,8 +344,8 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCon
 	}
 }
 
-func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig, instance *models.Product) {
-	if !permissions.HasObjectPermission(r, &models.Product{}, "products:edit") {
+func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig, instance *products.Product) {
+	if !permissions.HasObjectPermission(r, &products.Product{}, "products:edit") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
@@ -358,7 +358,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 		)
 	}
 
-	var originalProduct *models.Product
+	var originalProduct *products.Product
 	if r.Method == http.MethodPost {
 		err = clone.Copy(
 			r.Context(),
@@ -402,9 +402,9 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 			return err
 		}
 
-		product := p.SpecificObject().Embedder().(*models.Product)
+		product := p.SpecificObject().Embedder().(*products.Product)
 
-		_, err = queries.GetQuerySet[attrs.Definer](&models.Product{}).
+		_, err = queries.GetQuerySet[attrs.Definer](&products.Product{}).
 			WithContext(ctx).
 			ExplicitSave().
 			Update(product)
@@ -456,9 +456,9 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, shop *app.ShopAppCo
 
 			err := shop.SIGNALS.Products.Updated.Send(r.Context(), &signals.ProductSignalData{
 				BaseSignal: signals.NewBaseSignal(r.Context(), r, nil, nil),
-				Product: signals.Changed[*models.Product]{
+				Product: signals.Changed[*products.Product]{
 					Old: originalProduct,
-					New: instance.SpecificObject().Embedder().(*models.Product),
+					New: instance.SpecificObject().Embedder().(*products.Product),
 				},
 				Specific: signals.Changed[supplier.ProductModel]{
 					New: instance,

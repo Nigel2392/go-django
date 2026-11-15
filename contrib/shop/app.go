@@ -11,11 +11,14 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/contrib/shop/api"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
-	"github.com/Nigel2392/go-django/contrib/shop/internal/logging"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/supplier"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -46,7 +49,7 @@ var SHOP = &ShopAppConfig{
 		"shop/", nil, "shop",
 	),
 	SIGNALS: signals.NewManager(),
-	CartAPI: carts.NewCartAPI(),
+	CartAPI: api.NewCartAPI(),
 }
 
 func NewAppConfig() (django.AppConfig, error) {
@@ -88,8 +91,8 @@ func NewAppConfig() (django.AppConfig, error) {
 		"shop/admin/icons/funnel.svg",
 	)
 
-	auditlogs.RegisterDefinition("shop:product:add", logging.NewShopLogDefinition())
-	auditlogs.RegisterDefinition("shop:product:edit", logging.NewShopLogDefinition())
+	auditlogs.RegisterDefinition("shop:product:add", products.NewShopLogDefinition())
+	auditlogs.RegisterDefinition("shop:product:edit", products.NewShopLogDefinition())
 
 	SHOP.SIGNALS.Products.Created.Listen(context.Background(), func(ctx context.Context, s signals.Signal[*signals.ProductSignalData], psd *signals.ProductSignalData) error {
 		_, err := auditlogs.Log(psd.Context, "shop:product:add", logger.INF, psd.Product.New, map[string]any{
@@ -113,19 +116,19 @@ func NewAppConfig() (django.AppConfig, error) {
 
 	SHOP.ModelObjects = []attrs.Definer{
 		// Cart
-		&models.CartItem{},
-		&models.Cart{},
+		&carts.CartItem{},
+		&carts.Cart{},
 
 		// Orders
-		&models.OrderState{},
-		&models.OrderItem{},
-		&models.Order{},
+		&orders.OrderState{},
+		&orders.OrderItem{},
+		&orders.Order{},
 
 		// Payments
-		&models.Payment{},
+		&payments.Payment{},
 
 		// Products
-		&models.Product{},
+		&products.Product{},
 
 		// Categories
 		&models.Category{},
@@ -211,7 +214,7 @@ func NewAppConfig() (django.AppConfig, error) {
 					return trans.P(ctx, "Product", "Products", count)
 				},
 				QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
-					return queries.GetQuerySet[attrs.Definer](&models.Product{})
+					return queries.GetQuerySet[attrs.Definer](&products.Product{})
 				},
 				URL: func(r *http.Request) string {
 					return django.Reverse("admin:apps:model", "documents", "document")
@@ -244,7 +247,7 @@ func NewAppConfig() (django.AppConfig, error) {
 			},
 			admin.ModelOptions{
 				Name:                "orders",
-				Model:               &models.Order{},
+				Model:               &orders.Order{},
 				MenuLabel:           trans.S("Orders"),
 				RegisterToAdminMenu: true,
 				ListView: admin.ListViewOptions{
@@ -271,7 +274,7 @@ func NewAppConfig() (django.AppConfig, error) {
 			},
 			admin.ModelOptions{
 				Name:                "products",
-				Model:               &models.Product{},
+				Model:               &products.Product{},
 				MenuLabel:           trans.S("Products"),
 				RegisterToAdminMenu: true,
 				ListView: admin.ListViewOptions{
@@ -289,9 +292,9 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 				EditView: admin.FormViewOptions{
 					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return app.ShopInstanceHandler[*models.Product]{
+						return app.ShopInstanceHandler[*products.Product]{
 							Shop:     SHOP,
-							Instance: instance.(*models.Product),
+							Instance: instance.(*products.Product),
 							Handle:   adminviews.ViewEditProduct,
 						}
 					},
@@ -306,7 +309,9 @@ func NewAppConfig() (django.AppConfig, error) {
 	SHOP.Ready = func() error {
 
 		cartBase := django.Global.Mux.Get("/api/carts", http.HandlerFunc(SHOP.CartAPI.GetOrCreateCart), "carts")
-		cartBase.Get("/clear", http.HandlerFunc(SHOP.CartAPI.ClearCart), "clear")
+		cartBase.Post("/clear", http.HandlerFunc(SHOP.CartAPI.ClearCart), "clear")
+		cartBase.Post("/items/add", http.HandlerFunc(SHOP.CartAPI.AddCartItem), "add_item")
+		cartBase.Post("/items/remove", http.HandlerFunc(SHOP.CartAPI.RemoveCartItem), "remove_item")
 
 		_ = cartBase
 

@@ -1,4 +1,4 @@
-package logging
+package products
 
 import (
 	"fmt"
@@ -15,17 +15,17 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 )
 
-type shopLogDefinition struct {
+type productsLogDefinition struct {
 	auditlogs.Definition
 }
 
-func NewShopLogDefinition() *shopLogDefinition {
-	return &shopLogDefinition{
+func NewShopLogDefinition() *productsLogDefinition {
+	return &productsLogDefinition{
 		Definition: auditlogs.SimpleDefinition(),
 	}
 }
 
-func (p *shopLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntry) string {
+func (p *productsLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntry) string {
 	var cType = logEntry.ContentType()
 	var cTypeDef = contenttypes.DefinitionForType(cType.TypeName())
 	var cTypeName = cType.ShortTypeName()
@@ -48,7 +48,7 @@ func (p *shopLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntr
 	return trans.T(r.Context(), "Unknown shop log entry type")
 }
 
-func (p *shopLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []auditlogs.LogEntryAction {
+func (p *productsLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []auditlogs.LogEntryAction {
 	var id = l.ObjectID()
 	if id == nil {
 		return nil
@@ -73,7 +73,7 @@ func in(needle string, haystack ...string) bool {
 	return slices.Contains(haystack, needle)
 }
 
-func (p *shopLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.LogEntry) any {
+func (p *productsLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.LogEntry) any {
 	var label, _ = logEntry.Data()["title"].(string)
 	var cType = logEntry.ContentType()
 	var cTypeDef = contenttypes.DefinitionForType(cType.TypeName())

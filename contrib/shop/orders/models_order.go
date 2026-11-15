@@ -1,9 +1,10 @@
-package models
+package orders
 
 import (
 	"context"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -16,7 +17,7 @@ var _ queries.ActsBeforeCreate = (*Order)(nil)
 type Order struct {
 	ID         drivers.ULID
 	State      *OrderState
-	Payment    *Payment
+	Payment    *payments.Payment
 	OrderItems *queries.RelRevFK[*OrderItem]
 }
 
@@ -28,8 +29,8 @@ func (m *Order) BeforeCreate(ctx context.Context) error {
 func (m *Order) AddPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
 		admin.FieldPanel("State"),
-		&admin.ModelFormPanel[*Payment, modelforms.ModelForm[*Payment]]{
-			TargetType:     &Payment{},
+		&admin.ModelFormPanel[*payments.Payment, modelforms.ModelForm[*payments.Payment]]{
+			TargetType:     &payments.Payment{},
 			FieldName:      "Payment",
 			Classname:      "collapsible",
 			MinNum:         1,
@@ -68,8 +69,8 @@ func (m *Order) EditPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
 		admin.FieldPanel("ID"),
 		admin.FieldPanel("State"),
-		&admin.ModelFormPanel[*Payment, modelforms.ModelForm[*Payment]]{
-			TargetType:     &Payment{},
+		&admin.ModelFormPanel[*payments.Payment, modelforms.ModelForm[*payments.Payment]]{
+			TargetType:     &payments.Payment{},
 			FieldName:      "Payment",
 			Classname:      "collapsible",
 			MinNum:         1,
@@ -122,11 +123,11 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Payment", &m.Payment, func() fattrs.PtrFieldConfig[*Order, *Payment] {
-			return fattrs.PtrFieldConfig[*Order, *Payment]{
+		fattrs.Field(m, "Payment", &m.Payment, func() fattrs.PtrFieldConfig[*Order, *payments.Payment] {
+			return fattrs.PtrFieldConfig[*Order, *payments.Payment]{
 				Config: attrs.FieldConfig{
 					Column:        "payment_id",
-					RelForeignKey: attrs.Relate(&Payment{}, "", nil),
+					RelForeignKey: attrs.Relate(&payments.Payment{}, "", nil),
 				},
 			}
 		}),

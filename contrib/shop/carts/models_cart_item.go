@@ -1,8 +1,9 @@
-package models
+package carts
 
 import (
 	"context"
 
+	"github.com/Nigel2392/go-django/contrib/shop/products"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -14,7 +15,7 @@ var _ queries.ActsBeforeCreate = (*CartItem)(nil)
 type CartItem struct {
 	ID      drivers.ULID
 	Cart    *Cart `json:"-"`
-	Product *Product
+	Product *products.Product
 	Amount  uint64
 }
 
@@ -47,15 +48,15 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*CartItem, *Product] {
-			return fattrs.PtrFieldConfig[*CartItem, *Product]{
+		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*CartItem, *products.Product] {
+			return fattrs.PtrFieldConfig[*CartItem, *products.Product]{
 				Config: attrs.FieldConfig{
 					Column:   "product_id",
 					ReadOnly: true,
 					Attributes: map[string]interface{}{
 						attrs.AttrReverseAliasKey: "CartItems",
 					},
-					RelForeignKey: attrs.Relate(&Product{}, "", nil),
+					RelForeignKey: attrs.Relate(&products.Product{}, "", nil),
 					Null:          false,
 					Blank:         false,
 				},

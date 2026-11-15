@@ -1,4 +1,4 @@
-package models
+package carts
 
 import (
 	"context"

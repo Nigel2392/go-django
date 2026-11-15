@@ -3,8 +3,8 @@ package dbsupplier
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/supplier"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
@@ -12,7 +12,7 @@ import (
 )
 
 type Product struct {
-	*models.Product
+	*products.Product
 	SupplierID string
 }
 
@@ -25,7 +25,7 @@ func (p *Product) ProductPrice(ctx context.Context) supplier.Price {
 
 func (p *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 	if p.Product == nil {
-		p.Product = &models.Product{Instance: p}
+		p.Product = &products.Product{Instance: p}
 	}
 	return attrs.Make[*Product, any](ctx, p,
 		fields.Embed(ctx, &p.Product, fields.EmbedOptions{

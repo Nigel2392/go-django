@@ -8,9 +8,12 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/payments/prov"
-	"github.com/Nigel2392/go-django/contrib/shop/supplier"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -67,9 +70,9 @@ func NewBaseSignal(ctx context.Context, r *http.Request, user users.User, meta m
 type PaymentSignalData struct {
 	BaseSignal
 	Provider prov.BaseProvider
-	Last     *models.Payment
-	Payment  *models.Payment
-	Order    *models.Order
+	Last     *payments.Payment
+	Payment  *payments.Payment
+	Order    *orders.Order
 	RawBytes []byte
 }
 
@@ -80,21 +83,21 @@ type Changed[TYP any] struct {
 
 type ProductSignalData struct {
 	BaseSignal
-	Product  Changed[*models.Product]
+	Product  Changed[*products.Product]
 	Specific Changed[supplier.ProductModel]
 }
 
 type OrderSignalData struct {
 	BaseSignal
-	Last       *models.Order
-	Current    *models.Order
-	OrderItems []*models.OrderItem
+	Last       *orders.Order
+	Current    *orders.Order
+	OrderItems []*orders.OrderItem
 	Reason     string
 }
 
 type CartSignalData struct {
 	BaseSignal
-	Cart *models.Cart
+	Cart *carts.Cart
 }
 
 type ModelManager[SIGNAL_T any] struct {

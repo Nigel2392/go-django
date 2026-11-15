@@ -11,7 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/shop/internal/app"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews/generic"
@@ -33,25 +33,25 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-var ViewOrderList = generic.ListViewConfig[*models.Order]{
+var ViewOrderList = generic.ListViewConfig[*orders.Order]{
 	ListTitle: trans.S("Order List"),
-	Model:     &models.Order{},
+	Model:     &orders.Order{},
 	Permissions: []string{
 		"orders:list",
 	},
-	GetEditLink: func(r *http.Request, v *models.Order) string {
+	GetEditLink: func(r *http.Request, v *orders.Order) string {
 		return django.Reverse("admin:apps:model:edit", "shop", "orders", v.ID)
 	},
-	GetQuerySet: func(r *http.Request) *queries.QuerySet[*models.Order] {
-		return queries.GetQuerySet(&models.Order{}).Select("*", "Payment.*")
+	GetQuerySet: func(r *http.Request) *queries.QuerySet[*orders.Order] {
+		return queries.GetQuerySet(&orders.Order{}).Select("*", "Payment.*")
 	},
-	Filters: []filters.FilterSpec[*models.Order]{
-		&filters.BaseFilterSpec[*queries.QuerySet[*models.Order]]{
+	Filters: []filters.FilterSpec[*orders.Order]{
+		&filters.BaseFilterSpec[*queries.QuerySet[*orders.Order]]{
 			SpecName: "search",
 			FormField: fields.CharField(
 				fields.Placeholder("Search..."),
 			),
-			Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*models.Order]) (*queries.QuerySet[*models.Order], error) {
+			Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*orders.Order]) (*queries.QuerySet[*orders.Order], error) {
 				if fields.IsZero(value) {
 					return object, nil
 				}
@@ -78,13 +78,13 @@ var ViewOrderList = generic.ListViewConfig[*models.Order]{
 
 		return actions
 	},
-	GetColumns: func(r *http.Request) ([]list.ListColumn[*models.Order], error) {
-		var cols = []list.ListColumn[*models.Order]{
-			list.FieldColumn[*models.Order](
+	GetColumns: func(r *http.Request) ([]list.ListColumn[*orders.Order], error) {
+		var cols = []list.ListColumn[*orders.Order]{
+			list.FieldColumn[*orders.Order](
 				trans.S("Order ID"),
 				"ID",
 			),
-			list.FieldColumn[*models.Order](
+			list.FieldColumn[*orders.Order](
 				trans.S("Payment ID"),
 				"Payment.ID",
 			),
@@ -95,22 +95,22 @@ var ViewOrderList = generic.ListViewConfig[*models.Order]{
 }
 
 type orderItemFormset interface {
-	Forms() ([]modelforms.ModelForm[*models.OrderItem], error)
+	Forms() ([]modelforms.ModelForm[*orders.OrderItem], error)
 }
 
 func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
-	if !permissions.HasObjectPermission(r, &models.Order{}, "orders:add") {
+	if !permissions.HasObjectPermission(r, &orders.Order{}, "orders:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
-	var form = forms.NewAdminForm(r, &models.Order{}, func(p *models.Order) []admin.Panel {
+	var form = forms.NewAdminForm(r, &orders.Order{}, func(p *orders.Order) []admin.Panel {
 		return p.AddPanels(r.Context())
 	})
 
 	form.Load()
 
-	form.Form.SaveInstance = func(ctx context.Context, p *models.Order) error {
+	form.Form.SaveInstance = func(ctx context.Context, p *orders.Order) error {
 
 		flist, err := form.FormSet().Forms()
 		if err != nil {
@@ -142,7 +142,7 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 		}
 
 		// var priceMax decimal.Decimal
-		var skus = make([]*models.OrderItem, 0, len(skuForms))
+		var skus = make([]*orders.OrderItem, 0, len(skuForms))
 		for _, form := range skuForms {
 
 			sku := form.Instance()
@@ -171,7 +171,7 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 		})
 	}
 
-	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order]]{
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*orders.Order], *orders.Order]]{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "shop",
 		TemplateName:    "shop/orders/admin/add.tmpl",
@@ -191,17 +191,17 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 
 			return context, nil
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*orders.Order], *orders.Order] {
 			return form
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
-			for _, field := range attrs.Define(r.Context(), &models.Order{}).Fields() {
+			for _, field := range attrs.Define(r.Context(), &orders.Order{}).Fields() {
 				initial[field.Name()] = field.GetValue()
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*orders.Order], *orders.Order]) {
 			var instance = form.Instance()
 			except.Assert(
 				instance != nil,
@@ -222,13 +222,13 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfi
 }
 
 func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConfig) {
-	if !permissions.HasObjectPermission(r, &models.Order{}, "orders:edit") {
+	if !permissions.HasObjectPermission(r, &orders.Order{}, "orders:edit") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
 	var vars = mux.Vars(r)
-	var orderRow, err = queries.GetQuerySet(&models.Order{}).
+	var orderRow, err = queries.GetQuerySet(&orders.Order{}).
 		Select("*", "Payment.*", "OrderItem.*").
 		Filter("ID", vars.GetInt("order_id")).
 		Get()
@@ -245,13 +245,13 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 		)
 	}
 
-	var form = forms.NewAdminForm(r, orderRow.Object, func(p *models.Order) []admin.Panel {
+	var form = forms.NewAdminForm(r, orderRow.Object, func(p *orders.Order) []admin.Panel {
 		return p.EditPanels(r.Context())
 	})
 
 	form.Load()
 
-	form.Form.SaveInstance = func(ctx context.Context, p *models.Order) error {
+	form.Form.SaveInstance = func(ctx context.Context, p *orders.Order) error {
 
 		flist, err := form.FormSet().Forms()
 		if err != nil {
@@ -283,7 +283,7 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 		}
 
 		// var priceMax decimal.Decimal
-		var skus = make([]*models.OrderItem, 0, len(skuForms))
+		var skus = make([]*orders.OrderItem, 0, len(skuForms))
 		for _, form := range skuForms {
 
 			sku := form.Instance()
@@ -313,7 +313,7 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 
 	}
 
-	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order]]{
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[*orders.Order], *orders.Order]]{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "shop",
 		TemplateName:    "shop/orders/admin/edit.tmpl",
@@ -333,7 +333,7 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 
 			return context, nil
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[*orders.Order], *orders.Order] {
 			return form
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
@@ -343,7 +343,7 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request, shop *app.ShopAppConf
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*models.Order], *models.Order]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[*orders.Order], *orders.Order]) {
 			var instance = form.Instance()
 			except.Assert(
 				instance != nil,

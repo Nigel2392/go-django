@@ -1,4 +1,4 @@
-package carts
+package api
 
 import (
 	"context"
@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -17,66 +18,62 @@ import (
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-type CartAPISignal struct {
-	Cart    *models.Cart
-	Request *http.Request
-	User    authentication.User
-}
-
-type CartItemSignal struct {
-	CartAPISignal
-	CartItem *models.CartItem
-}
-
-type itemSigs struct {
-	Add    signals.Signal[CartItemSignal]
-	Remove signals.Signal[CartItemSignal]
-}
-
-type sigs struct {
-	pool    *signals.Pool[any]
-	Created signals.Signal[CartAPISignal]
-	Cleared signals.Signal[CartAPISignal]
-	Item    itemSigs
-}
-
-type CartAPI struct {
-	Cart sigs
-}
-
-func NewCartAPI() CartAPI {
-	pool := signals.NewGPool()
-	return CartAPI{
-		Cart: sigs{
-			pool:    (*signals.Pool[any])(pool),
-			Created: pool.Get[CartAPISignal]("CartApi.Cart.Created"),
-			Cleared: pool.Get[CartAPISignal]("CartApi.Cart.Cleared"),
-			Item: itemSigs{
-				Add:    pool.Get[CartItemSignal]("CartApi.Cart.Item.Add"),
-				Remove: pool.Get[CartItemSignal]("CartApi.Cart.Item.Remove"),
-			},
-		},
-	}
-}
-
-type ErrorResponse struct {
-	Message string `json:"message"`
-}
-
 type CartItemRequest struct {
 	ProductID string `json:"product_id"`
 	Amount    int    `json:"amount"`
 }
 
 type CartResponse struct {
-	Cart  *models.Cart       `json:"cart"`
-	Items []*models.CartItem `json:"items"`
+	Cart  *carts.Cart       `json:"cart"`
+	Items []*carts.CartItem `json:"items"`
 }
 
 type CartItemResponse struct {
-	Cart    *models.Cart     `json:"cart"`
-	Item    *models.CartItem `json:"item"`
-	Product *models.Product  `json:"product"`
+	Cart    *carts.Cart       `json:"cart"`
+	Item    *carts.CartItem   `json:"item"`
+	Product *products.Product `json:"product"`
+}
+
+type CartAPISignal struct {
+	Cart    *carts.Cart
+	Request *http.Request
+	User    authentication.User
+}
+
+type CartItemSignal struct {
+	CartAPISignal
+	CartItem *carts.CartItem
+}
+
+type cartItemSignals struct {
+	Add    signals.Signal[CartItemSignal]
+	Remove signals.Signal[CartItemSignal]
+}
+
+type cartSignals struct {
+	pool    *signals.Pool[any]
+	Created signals.Signal[CartAPISignal]
+	Cleared signals.Signal[CartAPISignal]
+	Item    cartItemSignals
+}
+
+type CartAPI struct {
+	Cart cartSignals
+}
+
+func NewCartAPI() CartAPI {
+	pool := signals.NewGPool()
+	return CartAPI{
+		Cart: cartSignals{
+			pool:    (*signals.Pool[any])(pool),
+			Created: pool.Get[CartAPISignal]("CartApi.Cart.Created"),
+			Cleared: pool.Get[CartAPISignal]("CartApi.Cart.Cleared"),
+			Item: cartItemSignals{
+				Add:    pool.Get[CartItemSignal]("CartApi.Cart.Item.Add"),
+				Remove: pool.Get[CartItemSignal]("CartApi.Cart.Item.Remove"),
+			},
+		},
+	}
 }
 
 func (c CartAPI) respondError(w http.ResponseWriter, statusCode int, message string, args ...any) {
@@ -98,7 +95,7 @@ func (c CartAPI) respondError(w http.ResponseWriter, statusCode int, message str
 	}
 }
 
-func (c CartAPI) cartQuery(ctx context.Context, r *http.Request, u authentication.User) *queries.QuerySet[*models.Cart] {
+func (c CartAPI) cartQuery(ctx context.Context, r *http.Request, u authentication.User) *queries.QuerySet[*carts.Cart] {
 	var session = sessions.Retrieve(r)
 	var q expr.ClauseExpression = expr.Q("Session", session.Token())
 	if u.IsAuthenticated() {
@@ -108,7 +105,7 @@ func (c CartAPI) cartQuery(ctx context.Context, r *http.Request, u authenticatio
 	q = q.And(expr.Q("Active", true))
 
 	return queries.
-		GetQuerySetWithContext(ctx, &models.Cart{}).
+		GetQuerySetWithContext(ctx, &carts.Cart{}).
 		Preload(queries.NoJoins("CartItems")).
 		Filter(q).
 		OrderBy("CreatedAt")
@@ -117,7 +114,7 @@ func (c CartAPI) cartQuery(ctx context.Context, r *http.Request, u authenticatio
 func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 	u := users.UserFromRequest(r)
 	q := c.cartQuery(r.Context(), r, u)
-	cart, created, err := q.GetOrCreate(&models.Cart{
+	cart, created, err := q.GetOrCreate(&carts.Cart{
 		Active:  true,
 		User:    u.(users.User),
 		Session: sessions.Retrieve(r).Token(),
@@ -193,7 +190,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// retrieve the requested product
 	productRow, err := queries.
-		GetQuerySet(&models.Product{}).
+		GetQuerySet(&products.Product{}).
 		WithContext(ctx).
 		Filter("ID", request.ProductID).
 		Get()
@@ -216,7 +213,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 	// retrieve or create the users' cart
 	u := users.UserFromRequest(r)
 	q := c.cartQuery(ctx, r, u)
-	cart, cartAdded, err := q.GetOrCreate(&models.Cart{
+	cart, cartAdded, err := q.GetOrCreate(&carts.Cart{
 		Active:  true,
 		User:    u.(users.User),
 		Session: sessions.Retrieve(r).Token(),
@@ -230,20 +227,20 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		item    *models.CartItem
+		item    *carts.CartItem
 		created bool
 	)
 
 	if !cartAdded {
 		// try to retrieve or create the existing cart item
 		item, created, err = queries.
-			GetQuerySet(&models.CartItem{}).
+			GetQuerySet(&carts.CartItem{}).
 			WithContext(ctx).
 			Filter(
 				expr.Q("Cart", cart),
 				expr.Q("Product", productRow.Object),
 			).
-			GetOrCreate(&models.CartItem{
+			GetOrCreate(&carts.CartItem{
 				Cart:    cart,
 				Product: productRow.Object,
 				Amount:  uint64(request.Amount),
@@ -265,7 +262,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 
 			// update atomically in the DB
 			_, err = queries.
-				GetQuerySet(&models.CartItem{}).
+				GetQuerySet(&carts.CartItem{}).
 				WithContext(ctx).
 				Filter(
 					expr.Q("Cart", cart),
@@ -289,9 +286,9 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 	// create a new product when the cart was newly added
 	// saves a SELECT query, skipping GetOrCreate
 	item, err = queries.
-		GetQuerySet(&models.CartItem{}).
+		GetQuerySet(&carts.CartItem{}).
 		WithContext(ctx).
-		Create(&models.CartItem{
+		Create(&carts.CartItem{
 			Cart:    cart,
 			Product: productRow.Object,
 			Amount:  uint64(request.Amount),
@@ -393,7 +390,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// retrieve the requested product
 	productRow, err := queries.
-		GetQuerySet(&models.Product{}).
+		GetQuerySet(&products.Product{}).
 		WithContext(ctx).
 		Filter("ID", request.ProductID).
 		Get()
@@ -435,7 +432,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// retrieve the specified cart item
 	item, err := queries.
-		GetQuerySet(&models.CartItem{}).
+		GetQuerySet(&carts.CartItem{}).
 		WithContext(ctx).
 		Filter(
 			expr.Q("Cart", cart.Object),
@@ -462,7 +459,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 	// of requested items, it is safe to delete the entire cartitem instance
 	if request.Amount >= int(item.Object.Amount) {
 		// remove the cart item from the cart entirely
-		_, err = queries.GetQuerySet(&models.CartItem{}).
+		_, err = queries.GetQuerySet(&carts.CartItem{}).
 			WithContext(ctx).
 			Filter("ID", item.Object.ID).
 			Delete()
@@ -483,7 +480,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// subtract the amount atomically in the DB
 	_, err = queries.
-		GetQuerySet(&models.CartItem{}).
+		GetQuerySet(&carts.CartItem{}).
 		WithContext(ctx).
 		Filter("ID", item.Object.ID).
 		BulkUpdate(

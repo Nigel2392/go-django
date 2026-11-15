@@ -3,16 +3,15 @@ package payments
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/payments/prov"
 )
 
 type PaymentProvider interface {
 	prov.BasePaymentProvider
 
-	CreateTransaction(ctx context.Context, order *models.Order) (*models.Payment, error)
+	CreateTransaction(ctx context.Context, order any) (*Payment, error)
 	ParseWebhook(ctx context.Context, rawPayload []byte) (*PaymentSignalPayload, error)
-	Cancel(ctx context.Context, payment *models.Payment) error
+	Cancel(ctx context.Context, payment *Payment) error
 }
 
 type PaymentSignalPayload struct {
