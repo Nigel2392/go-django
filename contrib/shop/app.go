@@ -308,6 +308,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		cartBase := django.Global.Mux.Get(
 			"/api/carts", http.HandlerFunc(c.GetOrCreateCart), "carts",
 		)
+		cartBase.Get("/clear", http.HandlerFunc(c.ClearCart), "clear")
 
 		_ = cartBase
 

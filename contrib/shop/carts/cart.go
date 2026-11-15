@@ -13,12 +13,12 @@ import (
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
+type CartAPI struct{}
+
 type CartResponse struct {
 	Cart  *models.Cart       `json:"cart,omitempty"`
 	Items []*models.CartItem `json:"items,omitempty"`
 }
-
-type CartAPI struct{}
 
 func (c CartAPI) cartQuery(r *http.Request, u authentication.User) *queries.QuerySet[*models.Cart] {
 	var session = sessions.Retrieve(r)
@@ -73,6 +73,26 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
+func (c CartAPI) IncrementCartItem(w http.ResponseWriter, r *http.Request) {
 
+}
+
+func (c CartAPI) DecrementCartItem(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
+	u := users.UserFromRequest(r)
+	q := c.cartQuery(r, u)
+	_, err := q.Select("Active").BulkUpdate(
+		expr.As("Active", expr.Value(false)),
+	)
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to encode the cart: %v", err,
+		)
+	}
+
+	c.GetOrCreateCart(w, r)
 }

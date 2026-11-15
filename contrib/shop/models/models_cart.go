@@ -19,8 +19,8 @@ var (
 
 type Cart struct {
 	ID        drivers.ULID
-	User      users.User
-	Session   string
+	User      users.User                   `json:"-"`
+	Session   string                       `json:"-"`
 	CartItems *queries.RelRevFK[*CartItem] `json:"-"`
 	CreatedAt time.Time
 	Active    bool
