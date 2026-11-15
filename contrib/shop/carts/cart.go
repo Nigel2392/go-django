@@ -9,11 +9,45 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-type CartAPI struct{}
+type CartAPISignal struct {
+	Cart    *models.Cart
+	Request *http.Request
+	User    authentication.User
+}
+
+type sigs struct {
+	pool      signals.SignalPool[CartAPISignal]
+	Created   signals.Signal[CartAPISignal]
+	Increment signals.Signal[CartAPISignal]
+	Decrement signals.Signal[CartAPISignal]
+	AddItem   signals.Signal[CartAPISignal]
+	DelItem   signals.Signal[CartAPISignal]
+	Cleared   signals.Signal[CartAPISignal]
+}
+
+type CartAPI struct {
+	Signals sigs
+}
+
+func NewCartAPI() CartAPI {
+	pool := signals.NewPool[CartAPISignal]()
+	return CartAPI{
+		Signals: sigs{
+			pool:      pool,
+			Created:   pool.Get("CartApi.Cart.Created"),
+			Increment: pool.Get("CartApi.CartItem.Increment"),
+			Decrement: pool.Get("CartApi.CartItem.Decrement"),
+			AddItem:   pool.Get("CartApi.CartItem.Add"),
+			DelItem:   pool.Get("CartApi.CartItem.Delete"),
+			Cleared:   pool.Get("CartApi.Cart.Cleared"),
+		},
+	}
+}
 
 type CartResponse struct {
 	Cart  *models.Cart       `json:"cart,omitempty"`
@@ -39,7 +73,7 @@ func (c CartAPI) cartQuery(r *http.Request, u authentication.User) *queries.Quer
 func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 	u := users.UserFromRequest(r)
 	q := c.cartQuery(r, u)
-	cart, _, err := q.GetOrCreate(&models.Cart{
+	cart, created, err := q.GetOrCreate(&models.Cart{
 		Active:  true,
 		User:    u.(users.User),
 		Session: sessions.Retrieve(r).Token(),
@@ -49,6 +83,14 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 			http.StatusInternalServerError,
 			"failed to get or create the cart: %v", err,
 		)
+	}
+
+	if created {
+		c.Signals.Created.Send(r.Context(), CartAPISignal{
+			Cart:    cart,
+			Request: r,
+			User:    u,
+		})
 	}
 
 	enc := json.NewEncoder(w)
@@ -93,6 +135,12 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 			"failed to encode the cart: %v", err,
 		)
 	}
+
+	c.Signals.Cleared.Send(r.Context(), CartAPISignal{
+		Cart:    nil,
+		Request: r,
+		User:    u,
+	})
 
 	c.GetOrCreateCart(w, r)
 }

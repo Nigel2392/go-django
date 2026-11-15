@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -37,6 +38,7 @@ func (s ShopInstanceHandler[T]) TakeControl(w http.ResponseWriter, r *http.Reque
 
 type ShopAppConfig struct {
 	*apps.DBRequiredAppConfig
+	CartAPI     carts.CartAPI
 	SIGNALS     signals.Manager
 	ADMIN_ROUTE *mux.Route
 	ADMIN_MENU  func(r *http.Request) []menu.MenuItem

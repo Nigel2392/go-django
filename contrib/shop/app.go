@@ -46,6 +46,7 @@ var SHOP = &ShopAppConfig{
 		"shop/", nil, "shop",
 	),
 	SIGNALS: signals.NewManager(),
+	CartAPI: carts.NewCartAPI(),
 }
 
 func NewAppConfig() (django.AppConfig, error) {
@@ -304,11 +305,8 @@ func NewAppConfig() (django.AppConfig, error) {
 
 	SHOP.Ready = func() error {
 
-		c := carts.CartAPI{}
-		cartBase := django.Global.Mux.Get(
-			"/api/carts", http.HandlerFunc(c.GetOrCreateCart), "carts",
-		)
-		cartBase.Get("/clear", http.HandlerFunc(c.ClearCart), "clear")
+		cartBase := django.Global.Mux.Get("/api/carts", http.HandlerFunc(SHOP.CartAPI.GetOrCreateCart), "carts")
+		cartBase.Get("/clear", http.HandlerFunc(SHOP.CartAPI.ClearCart), "clear")
 
 		_ = cartBase
 
