@@ -3,7 +3,7 @@
 
 name: Test package
 on:
-  # Trigger on push to specific branches or all branches
+  # Trigger on push to specific branches or all branches.
   push:
     paths:
       - 'src/go.mod'
