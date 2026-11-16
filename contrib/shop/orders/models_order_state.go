@@ -33,12 +33,14 @@ func (i InternalOrderState) Label(ctx context.Context) string {
 
 const (
 	orderStateAccepted InternalOrderState = "order_accepted"
+	orderStatePending  InternalOrderState = "order_pending"
 	orderStateRejected InternalOrderState = "order_rejected"
 	orderStateWorkflow InternalOrderState = "order_workflow"
 )
 
 var orderStateLabels = map[InternalOrderState]func(context.Context) string{
 	orderStateAccepted: trans.S("Order Accepted"),
+	orderStatePending:  trans.S("Order Pending"),
 	orderStateRejected: trans.S("Order Rejected"),
 	orderStateWorkflow: trans.S("Order Workflow"),
 }
@@ -46,8 +48,9 @@ var orderStateLabels = map[InternalOrderState]func(context.Context) string{
 func stateActionOptions(ctx context.Context) []widgets.Option {
 	return []widgets.Option{
 		&widgets.FormOption{OptLabel: orderStateLabels[orderStateAccepted], OptValue: string(orderStateAccepted)},
+		&widgets.FormOption{OptLabel: orderStateLabels[orderStatePending], OptValue: string(orderStatePending)},
 		&widgets.FormOption{OptLabel: orderStateLabels[orderStateRejected], OptValue: string(orderStateRejected)},
-		&widgets.FormOption{OptLabel: orderStateLabels[orderStateWorkflow], OptValue: string(orderStateWorkflow)},
+		// &widgets.FormOption{OptLabel: orderStateLabels[orderStateWorkflow], OptValue: string(orderStateWorkflow)},
 	}
 }
 

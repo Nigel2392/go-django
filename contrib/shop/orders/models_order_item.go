@@ -3,7 +3,7 @@ package orders
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django/contrib/revisions"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -14,11 +14,13 @@ import (
 var _ queries.ActsBeforeCreate = (*OrderItem)(nil)
 
 type OrderItem struct {
-	ID        drivers.ULID
-	Order     *Order
-	Product   *revisions.Revision
-	ItemPrice decimal.Decimal
-	Amount    int
+	ID            drivers.ULID
+	Order         *Order
+	Product       drivers.JSON[products.Product]
+	ItemPrice     decimal.Decimal
+	TaxRate       decimal.Decimal
+	DiscountPrice decimal.Decimal
+	Amount        int
 }
 
 func (m *OrderItem) BeforeCreate(ctx context.Context) error {
@@ -35,8 +37,8 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*OrderItem, *revisions.Revision] {
-			return fattrs.PtrFieldConfig[*OrderItem, *revisions.Revision]{
+		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*OrderItem, drivers.JSON[products.Product]] {
+			return fattrs.PtrFieldConfig[*OrderItem, drivers.JSON[products.Product]]{
 				Config: attrs.FieldConfig{
 					Null:  false,
 					Blank: false,
@@ -52,6 +54,22 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 					},
 					Null:  false,
 					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "TaxRate", &m.TaxRate, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Null:  false,
+					Blank: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "DiscountPrice", &m.DiscountPrice, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Null:  true,
+					Blank: true,
 				},
 			}
 		}),

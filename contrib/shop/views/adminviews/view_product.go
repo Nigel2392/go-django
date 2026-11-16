@@ -217,7 +217,14 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var supplierVal = supplier.SupplierValue(mux.Vars(r).Get("supplier"))
+	var supplierVal, ok = supplier.Retrieve(mux.Vars(r).Get("supplier"))
+	if !ok {
+		except.Fail(
+			http.StatusNotFound,
+			"supplier %q not found in registry",
+		)
+	}
+
 	var model = supplierVal.ProductType(r.Context())
 	var form = forms.NewAdminForm(r, model, func(p supplier.ProductModel) []admin.Panel {
 		return supplierVal.ProductAddPanel(r.Context())
@@ -247,7 +254,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 		}
 
 		product := p.SpecificObject().Embedder().(*products.Product)
-		product.Supplier = supplierVal
+		product.Supplier = supplier.SupplierValue(supplierVal.InternalName())
 
 		_, err = queries.GetQuerySet[attrs.Definer](&products.Product{}).
 			ExplicitSave().

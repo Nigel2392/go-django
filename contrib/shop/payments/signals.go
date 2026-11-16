@@ -16,14 +16,20 @@ type PaymentRefundedSignal struct {
 	signals.BaseSignal
 }
 
+type PaymentVoidedSignal struct {
+	signals.BaseSignal
+}
+
 type productSignalManager struct {
-	Started  signals.Signal[PaymentStartedSignal]
-	Updated  signals.Signal[PaymentUpdatedSignal]
-	Refunded signals.Signal[PaymentRefundedSignal]
+	Start  signals.Signal[PaymentStartedSignal]
+	Update signals.Signal[PaymentUpdatedSignal]
+	Refund signals.Signal[PaymentRefundedSignal]
+	Void   signals.Signal[PaymentVoidedSignal]
 }
 
 var Signals = productSignalManager{
-	Started:  signals.Pool.Get[PaymentStartedSignal]("shop.payments.Payment.Started"),
-	Updated:  signals.Pool.Get[PaymentUpdatedSignal]("shop.payments.Payment.Updated"),
-	Refunded: signals.Pool.Get[PaymentRefundedSignal]("shop.payments.Payment.Refunded"),
+	Start:  signals.Pool.Get[PaymentStartedSignal]("shop.payments.Payment.Start"),
+	Update: signals.Pool.Get[PaymentUpdatedSignal]("shop.payments.Payment.Update"),
+	Refund: signals.Pool.Get[PaymentRefundedSignal]("shop.payments.Payment.Refund"),
+	Void:   signals.Pool.Get[PaymentVoidedSignal]("shop.payments.Payment.Void"),
 }

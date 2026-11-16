@@ -10,15 +10,20 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 )
 
 var _ queries.ActsBeforeCreate = (*Order)(nil)
 
 type Order struct {
-	ID         drivers.ULID
-	State      *OrderState
+	ID drivers.ULID
+	// State      *OrderState
+	State      InternalOrderState
 	Payment    *payments.Payment
 	OrderItems *queries.RelRevFK[*OrderItem]
+	Completed  bool
+	Processed  bool
 }
 
 func (m *Order) BeforeCreate(ctx context.Context) error {
@@ -115,11 +120,39 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "State", &m.State, func() fattrs.PtrFieldConfig[*Order, *OrderState] {
-			return fattrs.PtrFieldConfig[*Order, *OrderState]{
+		//	fattrs.Field(m, "State", &m.State, func() fattrs.PtrFieldConfig[*Order, *OrderState] {
+		//		return fattrs.PtrFieldConfig[*Order, *OrderState]{
+		//			Config: attrs.FieldConfig{
+		//				Column:        "state_id",
+		//				RelForeignKey: attrs.Relate(&OrderState{}, "", nil),
+		//			},
+		//		}
+		//	}),
+		fattrs.Field(m, "State", &m.State, func() fattrs.PtrFieldConfig[*Order, InternalOrderState] {
+			return fattrs.PtrFieldConfig[*Order, InternalOrderState]{
 				Config: attrs.FieldConfig{
-					Column:        "state_id",
-					RelForeignKey: attrs.Relate(&OrderState{}, "", nil),
+					FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+						return options.NewSelectInput(
+							fc.WidgetAttrs,
+							stateActionOptions,
+						)
+					},
+				},
+			}
+		}),
+		fattrs.Field(m, "Completed", &m.Completed, func() fattrs.PtrFieldConfig[*Order, bool] {
+			return fattrs.PtrFieldConfig[*Order, bool]{
+				Config: attrs.FieldConfig{
+					Blank:   true,
+					Default: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "Processed", &m.Processed, func() fattrs.PtrFieldConfig[*Order, bool] {
+			return fattrs.PtrFieldConfig[*Order, bool]{
+				Config: attrs.FieldConfig{
+					Blank:   true,
+					Default: false,
 				},
 			}
 		}),
@@ -128,6 +161,8 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					Column:        "payment_id",
 					RelForeignKey: attrs.Relate(&payments.Payment{}, "", nil),
+					Null:          true,
+					Blank:         false,
 				},
 			}
 		}),
