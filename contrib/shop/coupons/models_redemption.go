@@ -37,36 +37,6 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "DiscountAmount", &m.DiscountAmount, func() fattrs.PtrFieldConfig[*Redemption, decimal.Decimal] {
-			return fattrs.PtrFieldConfig[*Redemption, decimal.Decimal]{
-				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: false,
-				},
-			}
-		}),
-		fattrs.Field(m, "Order", &m.Order, func() fattrs.PtrFieldConfig[*Redemption, attrs.Definer] {
-			return fattrs.PtrFieldConfig[*Redemption, attrs.Definer]{
-				Config: attrs.FieldConfig{
-					Column:   "order_id",
-					ReadOnly: true,
-					Null:     true,
-					Blank:    true,
-					RelForeignKey: attrs.RelatedDeferred(
-						attrs.RelManyToOne,
-						modelkeys.OrderModelKey,
-						"", nil,
-					),
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "Redemptions",
-					},
-				},
-			}
-		}),
 		fattrs.Field(m, "Coupon", &m.Coupon, func() fattrs.PtrFieldConfig[*Redemption, *Coupon] {
 			return fattrs.PtrFieldConfig[*Redemption, *Coupon]{
 				Config: attrs.FieldConfig{
@@ -89,6 +59,17 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
+		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*Redemption, *products.Product] {
+			return fattrs.PtrFieldConfig[*Redemption, *products.Product]{
+				Config: attrs.FieldConfig{
+					Column:        "product_id",
+					ReadOnly:      true,
+					Null:          false,
+					Blank:         false,
+					RelForeignKey: attrs.Relate(&products.Product{}, "", nil),
+				},
+			}
+		}),
 		fattrs.Field(m, "Cart", &m.Cart, func() fattrs.PtrFieldConfig[*Redemption, attrs.Definer] {
 			return fattrs.PtrFieldConfig[*Redemption, attrs.Definer]{
 				Config: attrs.FieldConfig{
@@ -104,14 +85,34 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*Redemption, *products.Product] {
-			return fattrs.PtrFieldConfig[*Redemption, *products.Product]{
+		fattrs.Field(m, "Order", &m.Order, func() fattrs.PtrFieldConfig[*Redemption, attrs.Definer] {
+			return fattrs.PtrFieldConfig[*Redemption, attrs.Definer]{
 				Config: attrs.FieldConfig{
-					Column:        "product_id",
-					ReadOnly:      true,
-					Null:          false,
-					Blank:         false,
-					RelForeignKey: attrs.Relate(&products.Product{}, "", nil),
+					Column:   "order_id",
+					ReadOnly: true,
+					Null:     true,
+					Blank:    true,
+					RelForeignKey: attrs.RelatedDeferred(
+						attrs.RelManyToOne,
+						modelkeys.OrderModelKey,
+						"", nil,
+					),
+					Attributes: map[string]interface{}{
+						attrs.AttrReverseAliasKey: "Redemptions",
+					},
+				},
+			}
+		}),
+		fattrs.Field(m, "DiscountAmount", &m.DiscountAmount, func() fattrs.PtrFieldConfig[*Redemption, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*Redemption, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 13,
+						attrs.AttrScaleKey:     4,
+					},
+					ReadOnly: true,
+					Null:     false,
+					Blank:    false,
 				},
 			}
 		}),
@@ -119,9 +120,6 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*Redemption, time.Time]{
 				Config: attrs.FieldConfig{
 					ReadOnly: true,
-					Attributes: map[string]interface{}{
-						attrs.AttrAutoNowAddKey: true,
-					},
 				},
 			}
 		}),
