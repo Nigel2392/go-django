@@ -78,11 +78,32 @@ type Product struct {
 	Slug          string                         `json:"slug,omitempty"`
 	Ranking       uint64                         `json:"ranking,omitempty"`
 	Price         decimal.Decimal                `json:"price,omitempty"`
+	AdditionalFee decimal.Decimal                `json:"additional_fee,omitempty"`
 	TaxRate       decimal.Decimal                `json:"tax_rate,omitempty"`
 	DiscountPrice decimal.Decimal                `json:"discount_price,omitempty"`
 	Supplier      supplier.SupplierValue         `json:"supplier,omitempty"`
 	Category      *models.Category               `json:"category,omitempty"`
 	Editor        *editor.EditorJSBlockData      `json:"editor,omitempty"`
+}
+
+func (m *Product) ActualPrice() decimal.Decimal {
+	// 	productprice:     50.00 €
+	// 	service cost:      2.50 €
+	// 				    --------- +
+	// 				      52.50 €
+	//  tax rate:	      21.00 %
+	// 				    --------- *
+	// 				    1102.50 €
+	// 				     100.00 €
+	//                  --------- /
+	// 				     11.025 €
+	//                   52.50  €
+	// 				    --------- +
+	// 			        [63.525] = €63.53
+	return m.Price.Add(m.Price.
+		Add(m.AdditionalFee).
+		Mul(m.TaxRate).
+		Div(decimal.NewFromInt(100)))
 }
 
 func (m *Product) AddPanels(ctx context.Context) []admin.Panel {
@@ -196,6 +217,20 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
 					HelpText: trans.S("The price you are selling this product for."),
+					Embedded: embedded,
+					Attributes: map[string]interface{}{
+						attrs.AttrPrecisionKey: 13,
+						attrs.AttrScaleKey:     4,
+					},
+					Null:  false,
+					Blank: false,
+				},
+			}
+		}, key...),
+		fattrs.Field(m, "AdditionalFee", &m.AdditionalFee, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
+			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
+				Config: attrs.FieldConfig{
+					HelpText: trans.S("The fee to add to the price per product."),
 					Embedded: embedded,
 					Attributes: map[string]interface{}{
 						attrs.AttrPrecisionKey: 13,

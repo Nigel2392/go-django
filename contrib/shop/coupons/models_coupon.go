@@ -79,8 +79,7 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(c, "UsageLimit", &c.UsageLimit, func() fattrs.PtrFieldConfig[*Coupon, uint64] {
 			return fattrs.PtrFieldConfig[*Coupon, uint64]{
 				Config: attrs.FieldConfig{
-					Blank:    true,
-					ReadOnly: true,
+					Blank: true,
 				},
 			}
 		}),
