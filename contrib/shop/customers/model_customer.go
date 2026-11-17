@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
@@ -19,6 +20,7 @@ type Customer struct {
 	LastName  string
 	User      users.User
 	FirstSeen time.Time
+	Orders    *queries.RelRevFK[attrs.Definer]
 }
 
 func (m *Customer) BeforeSave(ctx context.Context) error {
@@ -96,5 +98,8 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
+		//	fattrs.Field(m, "Orders", &m.Orders, func() fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]] {
+		//		return fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]]{}
+		//	}),
 	)
 }

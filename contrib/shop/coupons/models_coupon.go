@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/shopspring/decimal"
@@ -35,6 +36,9 @@ type Coupon struct {
 
 	// the user that created this coupon code
 	CreatedBy users.User
+
+	// The redemptions related to this coupon
+	RedemptionSet *queries.RelRevFK[*Redemption]
 }
 
 func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -161,6 +165,9 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 					),
 				},
 			}
+		}),
+		fattrs.Field(c, "RedemptionSet", &c.RedemptionSet, func() fattrs.PtrFieldConfig[*Coupon, *queries.RelRevFK[*Redemption]] {
+			return fattrs.PtrFieldConfig[*Coupon, *queries.RelRevFK[*Redemption]]{}
 		}),
 	)
 }

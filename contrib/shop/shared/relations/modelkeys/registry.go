@@ -1,9 +1,6 @@
 package modelkeys
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
@@ -18,7 +15,6 @@ var (
 	})
 	_ = contenttypes.NewLazyRegistry(OrderModelKey, func(ctd *contenttypes.ContentTypeDefinition) bool {
 		var app, ok = djangoapps.GetAppForModel(ctd.ContentObject)
-		fmt.Printf("%T / %q / %q\n", ctd.ContentObject, strconv.FormatBool(ok), ctd.Name())
 		if !ok {
 			return false
 		}
@@ -26,7 +22,6 @@ var (
 	})
 	_ = contenttypes.NewLazyRegistry(CartModelKey, func(ctd *contenttypes.ContentTypeDefinition) bool {
 		var app, ok = djangoapps.GetAppForModel(ctd.ContentObject)
-		fmt.Printf("%T / %q / %q\n", ctd.ContentObject, strconv.FormatBool(ok), ctd.Name())
 		if !ok {
 			return false
 		}
@@ -34,7 +29,6 @@ var (
 	})
 	_ = contenttypes.NewLazyRegistry(CategoryModelKey, func(ctd *contenttypes.ContentTypeDefinition) bool {
 		var app, ok = djangoapps.GetAppForModel(ctd.ContentObject)
-		fmt.Printf("%T / %q / %q\n", ctd.ContentObject, strconv.FormatBool(ok), ctd.Name())
 		if !ok {
 			return false
 		}
@@ -42,7 +36,6 @@ var (
 	})
 	_ = contenttypes.NewLazyRegistry(PaymentModelKey, func(ctd *contenttypes.ContentTypeDefinition) bool {
 		var app, ok = djangoapps.GetAppForModel(ctd.ContentObject)
-		fmt.Printf("%T / %q / %q\n", ctd.ContentObject, strconv.FormatBool(ok), ctd.Name())
 		if !ok {
 			return false
 		}

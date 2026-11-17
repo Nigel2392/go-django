@@ -90,9 +90,6 @@ func (m *Cart) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "CartItems", &m.CartItems, func() fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*CartItem]] {
-			return fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*CartItem]]{}
-		}),
 		fattrs.Field(m, "CreatedAt", &m.CreatedAt, func() fattrs.PtrFieldConfig[*Cart, time.Time] {
 			return fattrs.PtrFieldConfig[*Cart, time.Time]{
 				Config: attrs.FieldConfig{
@@ -104,6 +101,9 @@ func (m *Cart) FieldDefs(ctx context.Context) attrs.Definitions {
 					Blank: false,
 				},
 			}
+		}),
+		fattrs.Field(m, "CartItems", &m.CartItems, func() fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*CartItem]] {
+			return fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*CartItem]]{}
 		}),
 	)
 }
