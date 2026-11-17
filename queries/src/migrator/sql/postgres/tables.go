@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -315,6 +317,14 @@ func (m *PostgresSchemaEditor) AlterField(ctx context.Context, table migrator.Ta
 	return nil
 }
 
+func (m *PostgresSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	return errors.NotImplemented.Wrap("AddConstraint is not implemented")
+}
+
+func (m *PostgresSchemaEditor) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	return errors.NotImplemented.Wrap("DropConstraint is not implemented")
+}
+
 func (m *PostgresSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column) {
 	w.WriteString(`"`)
 	w.WriteString(col.Field.ColumnName())
@@ -392,13 +402,13 @@ checkRels:
 			attrs.GetModelMeta(col.Rel.Model()).Definitions().TableName(),
 			relField.ColumnName(),
 		))
-		if col.Rel.OnDelete != 0 {
-			w.WriteString(" ON DELETE ")
-			w.WriteString(col.Rel.OnDelete.String())
-		}
-		if col.Rel.OnUpdate != 0 {
-			w.WriteString(" ON UPDATE ")
-			w.WriteString(col.Rel.OnUpdate.String())
-		}
+		// if col.Rel.OnDelete != 0 {
+		w.WriteString(" ON DELETE ")
+		w.WriteString(col.Rel.OnDelete.String())
+		// }
+		// if col.Rel.OnUpdate != 0 {
+		w.WriteString(" ON UPDATE ")
+		w.WriteString(col.Rel.OnUpdate.String())
+		// }
 	}
 }

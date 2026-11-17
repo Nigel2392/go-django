@@ -4,51 +4,19 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/pkg/errors"
 )
 
-type (
-	// Action is the action to take when the target model is deleted or updated.
-	Action int
-)
-
-func (a Action) String() string {
-	var action, ok = actions_map[a]
-	if !ok {
-		return "<ACTION_UNKNOWN>"
-	}
-	return action
-}
-
-const (
-	// OnDeleteCascade is the action to cascade the delete to the target model.
-	CASCADE Action = iota
-	// OnDeleteRestrict is the action to restrict the delete of the target model.
-	RESTRICT
-	// OnDeleteSetNull is the action to set the field to null when the target model is deleted.
-	SET_NULL
-
-	// not yet supported:
-	//	// OnDeleteSetDefault is the action to set the field to the default value when the target model is deleted.
-	//	SET_DEFAULT
-)
-
-var actions_map = map[Action]string{
-	SET_NULL: "SET NULL",
-	CASCADE:  "CASCADE",
-	RESTRICT: "RESTRICT",
-	// SET_DEFAULT: "SET DEFAULT",
-}
-
 type migrationRelationSerialized struct {
-	Type        attrs.RelationType        `json:"type"`                // The type of the relation
-	TargetModel *MigrationModel           `json:"model"`               // The target model of the relation
-	TargetField string                    `json:"field,omitempty"`     // The field in the target model
-	Through     *MigrationRelationThrough `json:"through,omitempty"`   // The through model of the relation
-	OnDelete    Action                    `json:"on_delete,omitempty"` // The on delete action of the relation
-	OnUpdate    Action                    `json:"on_update,omitempty"` // The on update action of the relation
+	Type        attrs.RelationType         `json:"type"`                // The type of the relation
+	TargetModel *MigrationModel            `json:"model"`               // The target model of the relation
+	TargetField string                     `json:"field,omitempty"`     // The field in the target model
+	Through     *MigrationRelationThrough  `json:"through,omitempty"`   // The through model of the relation
+	OnDelete    constraints.MutationAction `json:"on_delete,omitempty"` // The on delete action of the relation
+	OnUpdate    constraints.MutationAction `json:"on_update,omitempty"` // The on update action of the relation
 }
 
 type MigrationRelationThrough struct {
@@ -105,12 +73,12 @@ func (m *MigrationModel) ContentType() contenttypes.ContentType {
 }
 
 type MigrationRelation struct {
-	Type        attrs.RelationType        `json:"type"`                // The type of the relation
-	TargetModel *MigrationModel           `json:"model"`               // The target model of the relation
-	TargetField attrs.FieldDefinition     `json:"field,omitempty"`     // The field in the target model
-	Through     *MigrationRelationThrough `json:"through,omitempty"`   // The through model of the relation
-	OnDelete    Action                    `json:"on_delete,omitempty"` // The on delete action of the relation
-	OnUpdate    Action                    `json:"on_update,omitempty"` // The on update action of the relation
+	Type        attrs.RelationType         `json:"type"`              // The type of the relation
+	TargetModel *MigrationModel            `json:"model"`             // The target model of the relation
+	TargetField attrs.FieldDefinition      `json:"field,omitempty"`   // The field in the target model
+	Through     *MigrationRelationThrough  `json:"through,omitempty"` // The through model of the relation
+	OnDelete    constraints.MutationAction `json:"on_delete"`         // The on delete action of the relation
+	OnUpdate    constraints.MutationAction `json:"on_update"`         // The on update action of the relation
 }
 
 func (m *MigrationRelation) Model() attrs.Definer {

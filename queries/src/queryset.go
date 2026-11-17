@@ -138,6 +138,7 @@ func (p *QuerySetPreloads) Copy() *QuerySetPreloads {
 			FieldName:  preload.FieldName,
 			Path:       preload.Path,
 			ParentPath: preload.ParentPath,
+			NoJoins:    preload.NoJoins,
 			Chain:      preload.Chain,
 			Rel:        preload.Rel,
 			Model:      preload.Model,
@@ -1638,9 +1639,13 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 				)
 			}
 
-			// Set the QuerySet for the preload
+			// Set or merge the QuerySet for the preload
 			if partIdx == len(relationChain.Chain)-1 && preload.QuerySet != nil {
-				loadDef.QuerySet = preload.QuerySet
+				if loadDef.QuerySet == nil {
+					loadDef.QuerySet = preload.QuerySet.clone()
+				} else {
+					loadDef.QuerySet = mergeQuerySets(loadDef.QuerySet, preload.QuerySet)
+				}
 			}
 
 			var joins []JoinDef
@@ -1685,6 +1690,382 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 	}
 
 	return qs
+}
+
+// mergeQuerySets merges incoming into a cloned copy of existing without
+// mutating either input, deduplicating selected fields, joins, group-bys, and order-bys.
+func mergeQuerySets[T attrs.Definer](existing, incoming *QuerySet[T]) *QuerySet[T] {
+	if existing == nil {
+		return incoming.clone()
+	}
+	if incoming == nil {
+		return existing.clone()
+	}
+
+	if existing.internals.Model.Table != incoming.internals.Model.Table {
+		panic(fmt.Errorf(
+			"Preload: cannot merge QuerySets for different models (%s vs %s)",
+			existing.internals.Model.Table, incoming.internals.Model.Table,
+		))
+	}
+
+	merged := existing.clone()
+	if merged.internals.joinsMap == nil {
+		merged.internals.joinsMap = make(map[string]struct{}, len(merged.internals.Joins))
+		for _, j := range merged.internals.Joins {
+			if j.JoinDefCondition != nil {
+				merged.internals.joinsMap[j.JoinDefCondition.String()] = struct{}{}
+			}
+		}
+	}
+	merged.internals.Fields = make([]*FieldInfo[attrs.FieldDefinition], len(existing.internals.Fields))
+	merged.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], len(existing.internals.Fields))
+	for i, fi := range existing.internals.Fields {
+		clonedFI := cloneFieldInfoWithAlias(fi, nil)
+		merged.internals.Fields[i] = clonedFI
+		if key, err := generateFieldInfoKey(clonedFI); err == nil {
+			merged.internals.fieldsMap[key] = clonedFI
+		}
+	}
+	if merged.internals.proxyMap == nil {
+		merged.internals.proxyMap = make(map[string]struct{})
+	}
+	for k := range incoming.internals.proxyMap {
+		merged.internals.proxyMap[k] = struct{}{}
+	}
+
+	aliasRemap := buildMergeAliasRemap(merged, incoming)
+
+	mergeQuerySetJoins(merged, incoming, aliasRemap)
+	mergeQuerySetFields(merged, incoming, aliasRemap)
+	mergeQuerySetAnnotations(merged, incoming)
+
+	if len(incoming.internals.Where) > 0 {
+		merged.internals.Where = append(merged.internals.Where, incoming.internals.Where...)
+	}
+	if len(incoming.internals.Having) > 0 {
+		merged.internals.Having = append(merged.internals.Having, incoming.internals.Having...)
+	}
+
+	mergeQuerySetGroupBy(merged, incoming, aliasRemap)
+	merged.internals.OrderBy = make([]expr.OrderBy, len(incoming.internals.OrderBy))
+	for i, ord := range incoming.internals.OrderBy {
+		ord.Column.TableOrAlias = remapTableAlias(ord.Column.TableOrAlias, aliasRemap)
+		merged.internals.OrderBy[i] = ord
+	}
+	mergeQuerySetPreloads(merged, incoming)
+
+	merged.internals.Distinct = merged.internals.Distinct || incoming.internals.Distinct
+	merged.internals.ForUpdate = merged.internals.ForUpdate || incoming.internals.ForUpdate
+	merged.explicitSave = merged.explicitSave || incoming.explicitSave
+	if incoming.internals.Limit > 0 && incoming.internals.Limit != MAX_DEFAULT_RESULTS {
+		merged.internals.Limit = incoming.internals.Limit
+	}
+	if incoming.internals.Offset > 0 {
+		merged.internals.Offset = incoming.internals.Offset
+	}
+	if len(incoming.internals.Unions) > 0 {
+		merged.internals.Unions = append(merged.internals.Unions, incoming.internals.Unions...)
+	}
+	if (merged.context == nil || merged.context == context.Background()) && incoming.context != nil {
+		merged.context = incoming.context
+	}
+	if incoming.forEachRow != nil {
+		prevForEach := merged.forEachRow
+		nextForEach := incoming.forEachRow
+		if prevForEach == nil {
+			merged.forEachRow = nextForEach
+		} else {
+			merged.forEachRow = func(q *QuerySet[T], row *Row[T]) error {
+				if err := prevForEach(q, row); err != nil {
+					return err
+				}
+				return nextForEach(q, row)
+			}
+		}
+	}
+
+	return merged
+}
+
+func buildMergeAliasRemap[T attrs.Definer](merged, incoming *QuerySet[T]) map[string]string {
+	aliasRemap := make(map[string]string)
+	if incoming.AliasGen == nil {
+		return aliasRemap
+	}
+
+	incMapping := incoming.AliasGen.Mapping()
+	if len(incMapping) == 0 {
+		return aliasRemap
+	}
+
+	aliasTableNames := make(map[string]string)
+	for _, j := range incoming.internals.Joins {
+		if j.Table.Alias != "" && j.Table.Name != "" {
+			aliasTableNames[j.Table.Alias] = j.Table.Name
+		}
+	}
+	for _, fi := range incoming.internals.Fields {
+		if fi.Table.Alias != "" && fi.Table.Name != "" {
+			aliasTableNames[fi.Table.Alias] = fi.Table.Name
+		}
+		if fi.Through != nil && fi.Through.Table.Alias != "" && fi.Through.Table.Name != "" {
+			aliasTableNames[fi.Through.Table.Alias] = fi.Through.Table.Name
+		}
+	}
+
+	keys := make([]string, 0, len(incMapping))
+	for k := range incMapping {
+		if k != "" {
+			keys = append(keys, k)
+		}
+	}
+	// Process shallow relation chains before deeper nested ones.
+	slices.SortFunc(keys, func(a, b string) int {
+		if da, db := strings.Count(a, "."), strings.Count(b, "."); da != db {
+			return da - db
+		}
+		return strings.Compare(a, b)
+	})
+
+	aliasGen := merged.Alias()
+	for _, chainKey := range keys {
+		oldAlias := incMapping[chainKey]
+		tableName := aliasTableNames[oldAlias]
+		if oldAlias == "" || tableName == "" {
+			continue
+		}
+		newAlias := aliasGen.GetTableAlias(tableName, chainKey)
+		if newAlias != oldAlias {
+			aliasRemap[oldAlias] = newAlias
+		}
+	}
+
+	return aliasRemap
+}
+
+func remapTableAlias(alias string, aliasRemap map[string]string) string {
+	if mapped, ok := aliasRemap[alias]; ok {
+		return mapped
+	}
+	return alias
+}
+
+func cloneAndRemapJoinCondition(cond *JoinDefCondition, aliasRemap map[string]string) *JoinDefCondition {
+	if cond == nil {
+		return nil
+	}
+	c := *cond
+	c.ConditionA.TableOrAlias = remapTableAlias(c.ConditionA.TableOrAlias, aliasRemap)
+	c.ConditionB.TableOrAlias = remapTableAlias(c.ConditionB.TableOrAlias, aliasRemap)
+	c.Next = cloneAndRemapJoinCondition(cond.Next, aliasRemap)
+	return &c
+}
+
+func mergeQuerySetJoins[T attrs.Definer](merged, incoming *QuerySet[T], aliasRemap map[string]string) {
+	if len(incoming.internals.Joins) == 0 {
+		return
+	}
+
+	existingAliasConds := make(map[string]string, len(merged.internals.Joins))
+	for _, j := range merged.internals.Joins {
+		if j.Table.Alias != "" && j.JoinDefCondition != nil {
+			existingAliasConds[j.Table.Alias] = j.JoinDefCondition.String()
+		}
+	}
+
+	for _, j := range incoming.internals.Joins {
+		remapped := JoinDef{
+			TypeJoin: j.TypeJoin,
+			Table: Table{
+				Name:  j.Table.Name,
+				Alias: remapTableAlias(j.Table.Alias, aliasRemap),
+			},
+			JoinDefCondition: cloneAndRemapJoinCondition(j.JoinDefCondition, aliasRemap),
+		}
+
+		if remapped.Table.Alias != "" && remapped.JoinDefCondition != nil {
+			condStr := remapped.JoinDefCondition.String()
+			if existingCond, collision := existingAliasConds[remapped.Table.Alias]; collision && existingCond != condStr {
+				freshAlias := merged.Alias().GetTableAlias(remapped.Table.Name, "__join__"+condStr)
+				aliasRemap[remapped.Table.Alias] = freshAlias
+				remapped.Table.Alias = freshAlias
+				remapped.JoinDefCondition = cloneAndRemapJoinCondition(j.JoinDefCondition, aliasRemap)
+			}
+			existingAliasConds[remapped.Table.Alias] = remapped.JoinDefCondition.String()
+		}
+
+		merged.internals.AddJoin(remapped)
+	}
+}
+
+func fieldChainBucketKey[FT attrs.FieldDefinition](fi *FieldInfo[FT]) string {
+	if fi.Model == nil && fi.Table.Name != "" {
+		return "__annotations__:" + fi.Table.Name
+	}
+	return strings.Join(fi.Chain, ".")
+}
+
+func fieldDefKey(fld attrs.FieldDefinition) string {
+	if af, ok := fld.(AliasField); ok && af.Alias() != "" {
+		return af.Alias()
+	}
+	return fld.Name()
+}
+
+func cloneFieldInfoWithAlias[FT attrs.FieldDefinition](fi *FieldInfo[FT], aliasRemap map[string]string) *FieldInfo[FT] {
+	c := *fi
+	c.Table.Alias = remapTableAlias(c.Table.Alias, aliasRemap)
+	c.Chain = slices.Clone(fi.Chain)
+	c.Fields = slices.Clone(fi.Fields)
+	if fi.Through != nil {
+		t := *fi.Through
+		t.Table.Alias = remapTableAlias(t.Table.Alias, aliasRemap)
+		t.Chain = slices.Clone(fi.Through.Chain)
+		t.Fields = slices.Clone(fi.Through.Fields)
+		c.Through = &t
+	}
+	return &c
+}
+
+func mergeQuerySetFields[T attrs.Definer](merged, incoming *QuerySet[T], aliasRemap map[string]string) {
+	seenByChain := make(map[string]map[string]struct{}, len(merged.internals.Fields))
+	for _, fi := range merged.internals.Fields {
+		bucket := fieldChainBucketKey(fi)
+		set, ok := seenByChain[bucket]
+		if !ok {
+			set = make(map[string]struct{}, len(fi.Fields))
+			seenByChain[bucket] = set
+		}
+		for _, fld := range fi.Fields {
+			set[fieldDefKey(fld)] = struct{}{}
+		}
+	}
+
+	for _, fi := range incoming.internals.Fields {
+		fCopy := cloneFieldInfoWithAlias(fi, aliasRemap)
+		key, err := generateFieldInfoKey(fCopy)
+		if err != nil {
+			continue
+		}
+
+		if existingInfo, exists := merged.internals.fieldsMap[key]; exists && fCopy.Through != nil && existingInfo.Through == nil {
+			existingInfo.Through = fCopy.Through
+		}
+
+		bucket := fieldChainBucketKey(fCopy)
+		seen, ok := seenByChain[bucket]
+		if !ok {
+			seen = make(map[string]struct{}, len(fCopy.Fields))
+			seenByChain[bucket] = seen
+		}
+
+		deduped := make([]attrs.FieldDefinition, 0, len(fCopy.Fields))
+		for _, fld := range fCopy.Fields {
+			fk := fieldDefKey(fld)
+			if _, dup := seen[fk]; dup {
+				continue
+			}
+			seen[fk] = struct{}{}
+			deduped = append(deduped, fld)
+		}
+		if len(deduped) == 0 {
+			continue
+		}
+
+		fCopy.Fields = deduped
+		newKey, err := generateFieldInfoKey(fCopy)
+		if err != nil {
+			continue
+		}
+
+		if existingInfo, exists := merged.internals.fieldsMap[newKey]; exists &&
+			existingInfo.RelType == fCopy.RelType &&
+			existingInfo.Table.Alias == fCopy.Table.Alias {
+			existingInfo.Fields = append(existingInfo.Fields, deduped...)
+			continue
+		}
+
+		merged.internals.AddField(fCopy)
+	}
+}
+
+func mergeQuerySetAnnotations[T attrs.Definer](merged, incoming *QuerySet[T]) {
+	if incoming.internals.Annotations == nil || incoming.internals.Annotations.Len() == 0 {
+		return
+	}
+	if merged.internals.Annotations == nil {
+		merged.internals.Annotations = orderedmap.NewOrderedMap[string, attrs.Field]()
+	}
+	for head := incoming.internals.Annotations.Front(); head != nil; head = head.Next() {
+		if !merged.internals.Annotations.Has(head.Key) {
+			merged.internals.Annotations.Set(head.Key, head.Value)
+		}
+	}
+}
+
+func mergeQuerySetGroupBy[T attrs.Definer](merged, incoming *QuerySet[T], aliasRemap map[string]string) {
+	if len(incoming.internals.GroupBy) == 0 {
+		return
+	}
+	seen := make(map[string]struct{})
+	for _, fi := range merged.internals.GroupBy {
+		bucket := fieldChainBucketKey(fi)
+		for _, fld := range fi.Fields {
+			seen[bucket+"."+fieldDefKey(fld)] = struct{}{}
+		}
+	}
+	for _, fi := range incoming.internals.GroupBy {
+		fCopy := cloneFieldInfoWithAlias(fi, aliasRemap)
+		bucket := fieldChainBucketKey(fCopy)
+		deduped := make([]attrs.FieldDefinition, 0, len(fCopy.Fields))
+		for _, fld := range fCopy.Fields {
+			k := bucket + "." + fieldDefKey(fld)
+			if _, dup := seen[k]; dup {
+				continue
+			}
+			seen[k] = struct{}{}
+			deduped = append(deduped, fld)
+		}
+		if len(deduped) > 0 {
+			fCopy.Fields = deduped
+			merged.internals.GroupBy = append(merged.internals.GroupBy, fCopy)
+		}
+	}
+}
+
+func mergeQuerySetPreloads[T attrs.Definer](merged, incoming *QuerySet[T]) {
+	if incoming.internals.Preload == nil || len(incoming.internals.Preload.Preloads) == 0 {
+		return
+	}
+	if merged.internals.Preload == nil {
+		merged.internals.Preload = &QuerySetPreloads{
+			Preloads: make([]*Preload, 0, len(incoming.internals.Preload.Preloads)),
+			mapping:  make(map[string]*Preload, len(incoming.internals.Preload.Preloads)),
+		}
+	}
+	for _, p := range incoming.internals.Preload.Preloads {
+		existingP, ok := merged.internals.Preload.mapping[p.Path]
+		if !ok {
+			copied := *p
+			if copied.QuerySet != nil {
+				copied.QuerySet = copied.QuerySet.clone()
+			}
+			merged.internals.Preload.mapping[p.Path] = &copied
+			merged.internals.Preload.Preloads = append(merged.internals.Preload.Preloads, &copied)
+			continue
+		}
+		if p.QuerySet != nil {
+			if existingP.QuerySet == nil {
+				existingP.QuerySet = p.QuerySet.clone()
+			} else {
+				existingP.QuerySet = mergeQuerySets(existingP.QuerySet, p.QuerySet)
+			}
+		}
+	}
+	slices.SortStableFunc(merged.internals.Preload.Preloads, func(a, b *Preload) int {
+		return strings.Compare(a.Path, b.Path)
+	})
 }
 
 type joinResults struct {

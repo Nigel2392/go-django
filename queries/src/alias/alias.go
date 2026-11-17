@@ -130,3 +130,10 @@ func (a *Generator) Set(chainOrKey any, val string) {
 
 	a.mapping[key] = val
 }
+
+func (a *Generator) Mapping() map[string]string {
+	if a == nil {
+		return nil
+	}
+	return maps.Clone(a.mapping)
+}

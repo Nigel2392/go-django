@@ -43,6 +43,9 @@ const (
 	ActionRenameIndex
 	// ActionAlterUniqueTogether
 	// ActionAlterIndexTogether
+	ActionAddConstraint
+	ActionDropConstraint
+
 	ActionAddField
 	ActionAlterField
 	ActionRemoveField
@@ -59,6 +62,9 @@ var actionTypeToString = map[ActionType]string{
 	ActionRenameIndex: "rename_index",
 	// ActionAlterUniqueTogether: "alter_unique_together",
 	// ActionAlterIndexTogether:  "alter_index_together",
+	ActionAddConstraint:  "add_constraint",
+	ActionDropConstraint: "drop_constraint",
+
 	ActionAddField:    "add_field",
 	ActionAlterField:  "alter_field",
 	ActionRemoveField: "remove_field",
@@ -74,6 +80,9 @@ var stringToActionType = map[string]ActionType{
 	actionTypeToString[ActionRenameIndex]: ActionRenameIndex,
 	// actionTypeToString[ActionAlterUniqueTogether]: ActionAlterUniqueTogether,
 	// actionTypeToString[ActionAlterIndexTogether]:  ActionAlterIndexTogether,
+	actionTypeToString[ActionAddConstraint]:  ActionAddConstraint,
+	actionTypeToString[ActionDropConstraint]: ActionDropConstraint,
+
 	actionTypeToString[ActionAddField]:    ActionAddField,
 	actionTypeToString[ActionAlterField]:  ActionAlterField,
 	actionTypeToString[ActionRemoveField]: ActionRemoveField,

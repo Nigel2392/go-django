@@ -53,11 +53,30 @@ func (qs *CartQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Cart, *Cart
 }
 
 func (qs *CartQuery) CartForRequest(r *http.Request) *CartQuery {
-	var user = authentication.Retrieve(r)
-	var session = sessions.Retrieve(r)
-	var baseQ expr.ClauseExpression = expr.Q("Session", session.Token())
-	if user.IsAuthenticated() {
-		baseQ = baseQ.Or(expr.Q("User", user))
+	if r == nil {
+		return qs.
+			Clone().
+			Filter(expr.Q("Active", true).And(expr.Q("Active", false)))
+	}
+
+	var (
+		user    = authentication.Retrieve(r)
+		session = sessions.Retrieve(r)
+		hasUser = user != nil && user.IsAuthenticated()
+	)
+
+	var baseQ expr.ClauseExpression
+	switch {
+	case session != nil && hasUser:
+		baseQ = expr.Q("Session", session.Token()).Or(expr.Q("User", user))
+	case session != nil:
+		baseQ = expr.Q("Session", session.Token())
+	case hasUser:
+		baseQ = expr.Q("User", user)
+	default:
+		return qs.
+			Clone().
+			Filter(expr.Q("Active", true).And(expr.Q("Active", false)))
 	}
 
 	return qs.
@@ -67,7 +86,7 @@ func (qs *CartQuery) CartForRequest(r *http.Request) *CartQuery {
 }
 
 func (qs *CartQuery) PreloadProducts(productFields ...string) *CartQuery {
-	var flds = []any{"*"}
+	var flds = make([]any, 0, len(productFields)+1)
 	if len(productFields) == 0 {
 		flds = append(flds, "Product.*")
 	} else {
@@ -89,25 +108,22 @@ func (qs *CartQuery) PreloadProducts(productFields ...string) *CartQuery {
 	})
 }
 
-type cartRedemption struct {
-	l []*coupons.Redemption
-}
-
 func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
-	qs = qs.Clone()
-
-	tx, err := qs.StartTransaction(qs.Context())
+	ctx, tx, err := queries.StartTransaction(qs.Context())
 	if err != nil {
 		return 0, nil, errors.Wrap(err, "CartQuery.Calc[StartTransaction]")
 	}
 
-	defer tx.Rollback(qs.Context())
+	defer tx.Rollback(ctx)
+
+	qs = qs.Clone().WithContext(ctx)
 
 	redemptionsQs := queries.
 		GetQuerySet(&coupons.Redemption{}).
-		WithContext(qs.Context()).
+		WithContext(ctx).
+		Select("*", "Cart.ID", "Coupon.*").
+		Filter("Invalidated", false).
 		Filter("Cart__in", qs.Select("ID")).
-		Filter("Coupon.Products__in", qs.Select("CartItems.Product")).
 		Preload("Coupon.Products")
 
 	_, ri, err := redemptionsQs.IterAll()
@@ -149,8 +165,8 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 				"*",
 				"Product.ID",
 				"Product.Price",
-				"Product.ItemFee",
-				"Product.TaxPercentage",
+				"Product.AdditionalFee",
+				"Product.TaxRate",
 			).
 			OrderBy(
 				"Product.Price",
@@ -176,6 +192,13 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 				Coupons: make([]*coupons.Redemption, 0),
 			}
 
+			cartProductIDs := make(map[drivers.ULID]struct{}, len(items))
+			for _, item := range items {
+				if item.Product != nil {
+					cartProductIDs[item.Product.ID] = struct{}{}
+				}
+			}
+
 			var (
 				redemptions               = cartRedemptions[row.Object.ID]
 				cartCouponsFixed          = make([]*coupons.Redemption, 0)
@@ -186,15 +209,17 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 
 			// Group Redemptions
 			for _, redemption := range redemptions {
-				cartRow.Coupons = append(cartRow.Coupons, redemption)
+				if redemption.Coupon == nil {
+					continue
+				}
 
 				var productsList []queries.RelO2O[*products.Product, *coupons.CouponProductThrough]
-				var productsNil = redemption.Coupon.Products == nil
-				if !productsNil {
+				if redemption.Coupon.Products != nil {
 					productsList = redemption.Coupon.Products.AsList()
 				}
 
-				if productsNil || len(productsList) == 0 {
+				if len(productsList) == 0 {
+					cartRow.Coupons = append(cartRow.Coupons, redemption)
 					if redemption.Coupon.IsPercentage {
 						cartCouponsPercentage = append(cartCouponsPercentage, redemption)
 					} else {
@@ -203,7 +228,6 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 					continue
 				}
 
-				couponProducts := redemption.Coupon.Products.AsList()
 				var m map[drivers.ULID][]*coupons.Redemption
 				if redemption.Coupon.IsPercentage {
 					m = cartItemCouponsPercentage
@@ -211,12 +235,25 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 					m = cartItemCouponsFixed
 				}
 
-				for _, product := range couponProducts {
-					l, ok := m[product.Object.ID]
-					if !ok {
-						l = make([]*coupons.Redemption, 0)
+				matched := false
+				seenProducts := make(map[drivers.ULID]struct{}, len(productsList))
+				for _, product := range productsList {
+					if product.Object == nil {
+						continue
 					}
-					m[product.Object.ID] = append(l, redemption)
+					pid := product.Object.ID
+					if _, inCart := cartProductIDs[pid]; !inCart {
+						continue
+					}
+					if _, dup := seenProducts[pid]; dup {
+						continue
+					}
+					seenProducts[pid] = struct{}{}
+					matched = true
+					m[pid] = append(m[pid], redemption)
+				}
+				if matched {
+					cartRow.Coupons = append(cartRow.Coupons, redemption)
 				}
 			}
 
@@ -241,6 +278,10 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 
 			// Process Items
 			for _, item := range items {
+				if item.Product == nil {
+					continue
+				}
+
 				productID := item.Product.ID
 
 				// Build the base price structure
@@ -264,9 +305,6 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 				// Apply cart-wide fixed discounts if we still have pool left
 				if totalCartWideFixedPool.GreaterThan(decimal.Zero) {
 					itemFixedDiscountPool = itemFixedDiscountPool.Add(totalCartWideFixedPool)
-					// Note: Realistically, cart-wide pool logic requires updating the pool based on what was used,
-					// which gets complex with `price.Calculate`. The `price` package handles leftovers per-item,
-					// so we aggregate all fixed into the calculation.
 				}
 
 				// Apply fixed discounts FIRST
@@ -275,8 +313,7 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 					Discount:  price.AmountValue{Amount: itemFixedDiscountPool, IsPercentage: false},
 				})
 
-				// If the item isn't free yet, apply percentage discounts (Benefits business: applied AFTER fixed)
-				// Aggregate percentage discounts
+				// If the item isn't free yet, apply percentage discounts (applied AFTER fixed)
 				var totalPercentage decimal.Decimal = decimal.Zero
 				if itemPctCoupons, exists := cartItemCouponsPercentage[productID]; exists {
 					for _, cp := range itemPctCoupons {
@@ -287,17 +324,16 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 					totalPercentage = totalPercentage.Add(cp.Coupon.MaxDiscount)
 				}
 
-				if totalPercentage.GreaterThan(decimal.Zero) {
-					// To correctly apply percentage on the REMAINING price, we create a new Price struct
-					// representing the post-fixed-discount state.
+				if item.Amount > 0 && totalPercentage.GreaterThan(decimal.Zero) {
+					// Apply percentage over the post-fixed-discount line total with ItemCount: 1 to prevent division by 0 or rounding drift.
 					remainingPrice := price.Price{
-						ItemPrice:     calculatedPrice.TotalPrice.Div(decimal.NewFromInt(int64(item.Amount))), // Per item price
-						ItemFee:       price.AmountValue{Amount: calculatedPrice.TotalFee.Div(decimal.NewFromInt(int64(item.Amount))), IsPercentage: false},
+						ItemPrice:     calculatedPrice.TotalPrice,
+						ItemFee:       price.AmountValue{Amount: calculatedPrice.TotalFee, IsPercentage: false},
 						TaxPercentage: item.Product.TaxRate,
 					}
 
 					_, pctCalculated := remainingPrice.Calculate(price.PriceCalculation{
-						ItemCount: int(item.Amount),
+						ItemCount: 1,
 						Discount:  price.AmountValue{Amount: totalPercentage, IsPercentage: true},
 					})
 

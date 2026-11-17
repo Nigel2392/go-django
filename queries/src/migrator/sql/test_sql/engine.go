@@ -7,6 +7,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 )
 
@@ -16,10 +17,11 @@ type SQL struct {
 }
 
 type Action struct {
-	Type  migrator.ActionType
-	Table migrator.Table
-	Field migrator.Column
-	Index migrator.Index
+	Type       migrator.ActionType
+	Table      migrator.Table
+	Field      migrator.Column
+	Constraint constraints.Constraint
+	Index      migrator.Index
 }
 
 type TestMigrationEngine struct {
@@ -137,6 +139,17 @@ func (t *TestMigrationEngine) DropIndex(ctx context.Context, table migrator.Tabl
 func (t *TestMigrationEngine) RenameIndex(ctx context.Context, table migrator.Table, oldName string, newName string) error {
 	t.t.Logf("Renaming index: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionRenameIndex, Table: table})
+	return nil
+}
+
+func (t *TestMigrationEngine) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	t.t.Logf("Adding constraint: %s for object %T", table.TableName(), table.Model())
+	t.Actions = append(t.Actions, Action{Type: migrator.ActionAddIndex, Table: table, Constraint: constraint})
+	return nil
+}
+func (t *TestMigrationEngine) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	t.t.Logf("Dropping constraint: %s for object %T", table.TableName(), table.Model())
+	t.Actions = append(t.Actions, Action{Type: migrator.ActionDropIndex, Table: table, Constraint: constraint})
 	return nil
 }
 

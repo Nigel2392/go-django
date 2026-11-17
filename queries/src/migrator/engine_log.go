@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
@@ -13,7 +14,7 @@ type MigrationEngineConsoleLog struct {
 	Prefix string
 }
 
-func (e *MigrationEngineConsoleLog) Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index]) {
+func (e *MigrationEngineConsoleLog) Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index], constraint *Changed[constraints.Constraint]) {
 	var msg strings.Builder
 
 	fmt.Fprintf(&msg, "%s/%s: ", file.AppName, file.ModelName)
@@ -32,6 +33,10 @@ func (e *MigrationEngineConsoleLog) Log(action ActionType, file *MigrationFile, 
 		fmt.Fprintf(&msg, "Add index %s on %s for model %s", index.New.Name(), tableName, model)
 	case ActionDropIndex:
 		fmt.Fprintf(&msg, "Drop index %s on %s for model %s", index.Old.Name(), tableName, model)
+	case ActionAddConstraint:
+		fmt.Fprintf(&msg, "Add constraint %s on %s for model %s", constraint.New.ID(), tableName, model)
+	case ActionDropConstraint:
+		fmt.Fprintf(&msg, "Drop constraint %s on %s for model %s", constraint.Old.ID(), tableName, model)
 	case ActionRenameIndex:
 		fmt.Fprintf(&msg, "Rename index on %s for model %s: %s → %s", tableName, model, index.Old.Name(), index.New.Name())
 	case ActionAddField:

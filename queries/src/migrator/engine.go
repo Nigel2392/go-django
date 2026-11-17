@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -167,7 +168,7 @@ func (m *MigrationFile) FileName() string {
 }
 
 type MigrationLog interface {
-	Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index])
+	Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index], constraint *Changed[constraints.Constraint])
 }
 
 type MigrationEngine struct {
@@ -250,11 +251,11 @@ func NewMigrationEngine(path string, schemaEditor SchemaEditor, opts ...EngineOp
 	return engine
 }
 
-func (m *MigrationEngine) Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index]) {
+func (m *MigrationEngine) Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index], constraint *Changed[constraints.Constraint]) {
 	if m.MigrationLog == nil {
 		return
 	}
-	m.MigrationLog.Log(action, file, table, column, index)
+	m.MigrationLog.Log(action, file, table, column, index, constraint)
 }
 
 // GetLastMigration returns the last applied migration for the given app and model.
@@ -892,11 +893,11 @@ func (m *MigrationEngine) buildDependencyGraph(migrations []*migrationFileInfo) 
 func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *MigrationFile, table *ModelTable) (shouldMigrate bool) {
 	if last == nil || last.Table == nil {
 		migration.addAction(ActionCreateTable, nil, nil, nil)
-		m.Log(ActionCreateTable, migration, unchanged(table), nil, nil)
+		m.Log(ActionCreateTable, migration, unchanged(table), nil, nil, nil)
 
 		for _, idx := range table.Indexes() {
 			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &idx))
-			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&idx))
+			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&idx), nil)
 		}
 
 		return true
@@ -905,13 +906,13 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 	var lastAppliedTable = last.Table
 	if table == nil {
 		migration.addAction(ActionDropTable, changed(lastAppliedTable, nil), nil, nil)
-		m.Log(ActionDropTable, migration, unchanged(lastAppliedTable), nil, nil)
+		m.Log(ActionDropTable, migration, unchanged(lastAppliedTable), nil, nil, nil)
 		return true
 	}
 
 	if lastAppliedTable.TableName() != table.TableName() {
 		migration.addAction(ActionRenameTable, changed(lastAppliedTable, table), nil, nil)
-		m.Log(ActionRenameTable, migration, changed(lastAppliedTable, table), nil, nil)
+		m.Log(ActionRenameTable, migration, changed(lastAppliedTable, table), nil, nil, nil)
 		shouldMigrate = true
 	}
 
@@ -919,19 +920,19 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 
 	for _, col := range added {
 		migration.addAction(ActionAddField, nil, unchanged(&col), nil)
-		m.Log(ActionAddField, migration, unchanged(table), unchanged(&col), nil)
+		m.Log(ActionAddField, migration, unchanged(table), unchanged(&col), nil, nil)
 		shouldMigrate = true
 	}
 
 	for _, col := range removed {
 		migration.addAction(ActionRemoveField, nil, changed(&col, nil), nil)
-		m.Log(ActionRemoveField, migration, unchanged(table), changed(&col, nil), nil)
+		m.Log(ActionRemoveField, migration, unchanged(table), changed(&col, nil), nil, nil)
 		shouldMigrate = true
 	}
 
 	for _, col := range diffs {
 		migration.addAction(ActionAlterField, nil, changed(&col.Old, &col.New), nil)
-		m.Log(ActionAlterField, migration, unchanged(table), changed(&col.Old, &col.New), nil)
+		m.Log(ActionAlterField, migration, unchanged(table), changed(&col.Old, &col.New), nil, nil)
 		shouldMigrate = true
 	}
 
@@ -954,7 +955,7 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 		var newIdx, exists = newMap[name]
 		if !exists || !indexesEqual(oldIdx, newIdx) {
 			migration.addAction(ActionDropIndex, nil, nil, changed(&oldIdx, nil))
-			m.Log(ActionDropIndex, migration, unchanged(table), nil, changed(&oldIdx, nil))
+			m.Log(ActionDropIndex, migration, unchanged(table), nil, changed(&oldIdx, nil), nil)
 			shouldMigrate = true
 		}
 	}
@@ -964,7 +965,7 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 		var oldIdx, exists = oldMap[name]
 		if !exists || !indexesEqual(oldIdx, newIdx) {
 			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &newIdx))
-			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&newIdx))
+			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&newIdx), nil)
 			shouldMigrate = true
 		}
 	}
@@ -976,7 +977,7 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 				delete(oldMap, oldName)
 				delete(newMap, newName)
 				migration.addAction(ActionRenameIndex, nil, nil, changed(&oldIdx, &candidate))
-				m.Log(ActionRenameIndex, migration, unchanged(table), nil, changed(&oldIdx, &candidate))
+				m.Log(ActionRenameIndex, migration, unchanged(table), nil, changed(&oldIdx, &candidate), nil)
 				shouldMigrate = true
 				break
 			}

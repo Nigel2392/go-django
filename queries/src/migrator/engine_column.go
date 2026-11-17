@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	dr "github.com/Nigel2392/versatile"
@@ -79,8 +80,8 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	attrReverseAlias, _ := attrs.GetFromAttributes[string](atts, attrs.AttrReverseAliasKey)
 	attrPrecision, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrPrecisionKey)
 	attrScale, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrScaleKey)
-	attrOnDelete, _ := attrs.GetFromAttributes[Action](atts, AttrOnDeleteKey)
-	attrOnUpdate, _ := attrs.GetFromAttributes[Action](atts, AttrOnUpdateKey)
+	attrOnDelete, _ := attrs.GetFromAttributes[constraints.MutationAction](atts, AttrOnDeleteKey)
+	attrOnUpdate, _ := attrs.GetFromAttributes[constraints.MutationAction](atts, AttrOnUpdateKey)
 
 	var rel *MigrationRelation
 	var fRel = field.Rel()
@@ -90,7 +91,6 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	}
 
 	if fRel != nil && !isRev {
-
 		var model *MigrationModel
 		if typ, ok := fRel.(attrs.LazyRelation); ok {
 			var modelKey = typ.ModelKey()

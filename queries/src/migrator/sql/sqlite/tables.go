@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -253,6 +255,14 @@ func (m *SQLiteSchemaEditor) RenameIndex(ctx context.Context, table migrator.Tab
 	// Execute the query
 	_, err := m.Execute(ctx, w.String())
 	return err
+}
+
+func (m *SQLiteSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	return errors.NotImplemented.Wrap("AddConstraint is not implemented")
+}
+
+func (m *SQLiteSchemaEditor) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	return errors.NotImplemented.Wrap("DropConstraint is not implemented")
 }
 
 //	func (m *SQLiteSchemaEditor) AlterUniqueTogether(table migrator.Table, unique bool) error {
@@ -602,14 +612,14 @@ checkRels:
 		w.WriteString(relField.ColumnName())
 		w.WriteString("`)")
 
-		if col.Rel.OnDelete != 0 {
-			w.WriteString(" ON DELETE ")
-			w.WriteString(col.Rel.OnDelete.String())
-		}
+		// if col.Rel.OnDelete != 0 {
+		w.WriteString(" ON DELETE ")
+		w.WriteString(col.Rel.OnDelete.String())
+		// }
 
-		if col.Rel.OnUpdate != 0 {
-			w.WriteString(" ON UPDATE ")
-			w.WriteString(col.Rel.OnUpdate.String())
-		}
+		// if col.Rel.OnUpdate != 0 {
+		w.WriteString(" ON UPDATE ")
+		w.WriteString(col.Rel.OnUpdate.String())
+		// }
 	}
 }

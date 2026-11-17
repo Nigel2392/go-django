@@ -7,6 +7,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -51,6 +52,9 @@ type SchemaEditor interface {
 
 	//	AlterUniqueTogether(table Table, unique bool) error
 	//	AlterIndexTogether(table Table, unique bool) error
+
+	AddConstraint(ctx context.Context, table Table, constraint constraints.Constraint) error
+	DropConstraint(ctx context.Context, table Table, constraint constraints.Constraint) error
 
 	AddField(ctx context.Context, table Table, col Column) error
 	AlterField(ctx context.Context, table Table, old Column, newCol Column) error

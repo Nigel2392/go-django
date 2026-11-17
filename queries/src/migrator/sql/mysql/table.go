@@ -11,6 +11,8 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -257,6 +259,14 @@ func (m *MySQLSchemaEditor) AlterField(ctx context.Context, table migrator.Table
 	WriteColumn(&w, newCol)
 	_, err := m.Execute(ctx, w.String())
 	return err
+}
+
+func (m *MySQLSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	return errors.NotImplemented.Wrap("AddConstraint is not implemented")
+}
+
+func (m *MySQLSchemaEditor) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	return errors.NotImplemented.Wrap("DropConstraint is not implemented")
 }
 
 func WriteColumn(w *strings.Builder, col migrator.Column) {
