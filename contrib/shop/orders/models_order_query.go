@@ -8,7 +8,7 @@ type OrderQuery struct {
 	*queries.WrappedQuerySet[*Order, *OrderQuery, *queries.QuerySet[*Order]]
 }
 
-func Orders() *OrderQuery {
+func Query() *OrderQuery {
 	productQuerySet := &OrderQuery{}
 	productQuerySet.WrappedQuerySet = queries.WrapQuerySet[*Order](
 		queries.GetQuerySet(&Order{}),

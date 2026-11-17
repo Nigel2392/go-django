@@ -1619,10 +1619,10 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 				defs.TableName(), preloadPath,
 			))
 
-			// only add new preload if the preload is not already present in the mapping
-			if _, ok := qs.internals.Preload.mapping[preloadPath]; !ok {
-
-				var loadDef = &Preload{
+			loadDef, ok := qs.internals.Preload.mapping[preloadPath]
+			if !ok {
+				// only add new preload if the preload is not already present in the mapping
+				loadDef = &Preload{
 					FieldName:  relationChain.Chain[partIdx],
 					Path:       preloadPath,
 					ParentPath: parentPath,
@@ -1632,43 +1632,42 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 					Field:      curr.Prev.Field,
 				}
 
-				// Set the QuerySet for the preload
-				if partIdx == len(relationChain.Chain)-1 {
-					loadDef.QuerySet = preload.QuerySet
-				}
-
 				qs.internals.Preload.mapping[preloadPath] = loadDef
 				preloads = append(
 					preloads, loadDef,
 				)
+			}
 
-				var joins []JoinDef
-				if autoJoin {
-					var baseInfo, proxyInfo, err = qs.addRelationChainPart(
-						curr.Prev, curr, aliasList, WalkFlagNone,
-					)
-					if err != nil {
-						panic(fmt.Errorf(
-							"Preload: failed to add relation chain part for %q / %q: %w",
-							preloadPath, preload.Path, err,
-						))
-					}
+			// Set the QuerySet for the preload
+			if partIdx == len(relationChain.Chain)-1 && preload.QuerySet != nil {
+				loadDef.QuerySet = preload.QuerySet
+			}
 
-					// proxy joins must always get added to the QuerySet
-					joins = append(
-						baseInfo.joins,
-						proxyInfo.joins...,
-					)
+			var joins []JoinDef
+			if autoJoin {
+				var baseInfo, proxyInfo, err = qs.addRelationChainPart(
+					curr.Prev, curr, aliasList, WalkFlagNone,
+				)
+				if err != nil {
+					panic(fmt.Errorf(
+						"Preload: failed to add relation chain part for %q / %q: %w",
+						preloadPath, preload.Path, err,
+					))
 				}
 
-				for _, join := range joins {
-					var key = join.JoinDefCondition.String()
-					if _, ok := qs.internals.joinsMap[key]; !ok {
-						qs.internals.Joins = append(qs.internals.Joins, join)
-						qs.internals.joinsMap[key] = struct{}{}
-					}
-				}
+				// proxy joins must always get added to the QuerySet
+				joins = append(
+					baseInfo.joins,
+					proxyInfo.joins...,
+				)
+			}
 
+			for _, join := range joins {
+				var key = join.JoinDefCondition.String()
+				if _, ok := qs.internals.joinsMap[key]; !ok {
+					qs.internals.Joins = append(qs.internals.Joins, join)
+					qs.internals.joinsMap[key] = struct{}{}
+				}
 			}
 
 			curr = curr.Next

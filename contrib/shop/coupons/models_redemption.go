@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
-	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/relations/modelkeys"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
@@ -16,10 +15,10 @@ type Redemption struct {
 	ID             uint64
 	Coupon         *Coupon
 	Customer       *customers.Customer
-	Product        *products.Product
 	Cart           attrs.Definer
 	Order          attrs.Definer
 	DiscountAmount decimal.Decimal
+	Invalidated    bool
 	RedeemedAt     time.Time
 }
 
@@ -59,17 +58,6 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*Redemption, *products.Product] {
-			return fattrs.PtrFieldConfig[*Redemption, *products.Product]{
-				Config: attrs.FieldConfig{
-					Column:        "product_id",
-					ReadOnly:      true,
-					Null:          false,
-					Blank:         false,
-					RelForeignKey: attrs.Relate(&products.Product{}, "", nil),
-				},
-			}
-		}),
 		fattrs.Field(m, "Cart", &m.Cart, func() fattrs.PtrFieldConfig[*Redemption, attrs.Definer] {
 			return fattrs.PtrFieldConfig[*Redemption, attrs.Definer]{
 				Config: attrs.FieldConfig{
@@ -77,9 +65,12 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 					ReadOnly: true,
 					Null:     true,
 					Blank:    true,
+					Attributes: map[string]interface{}{
+						attrs.AttrReverseAliasKey: "Redemptions",
+					},
 					RelForeignKey: attrs.RelatedDeferred(
 						attrs.RelManyToOne,
-						modelkeys.OrderModelKey,
+						modelkeys.CartModelKey,
 						"", nil,
 					),
 				},
@@ -113,6 +104,14 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 					ReadOnly: true,
 					Null:     false,
 					Blank:    false,
+				},
+			}
+		}),
+		fattrs.Field(m, "Invalidated", &m.Invalidated, func() fattrs.PtrFieldConfig[*Redemption, bool] {
+			return fattrs.PtrFieldConfig[*Redemption, bool]{
+				Config: attrs.FieldConfig{
+					ReadOnly: true,
+					Blank:    true,
 				},
 			}
 		}),

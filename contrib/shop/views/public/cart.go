@@ -2,17 +2,17 @@ package public
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
@@ -36,7 +36,7 @@ type CartItemResponse struct {
 
 type CartAPI struct{}
 
-func (c CartAPI) cartQuery(ctx context.Context, r *http.Request, u authentication.User) *queries.QuerySet[*carts.Cart] {
+func cartQuery(ctx context.Context, r *http.Request, u authentication.User, preloads bool) *carts.CartQuery {
 	var session = sessions.Retrieve(r)
 	var q expr.ClauseExpression = expr.Q("Session", session.Token())
 	if u.IsAuthenticated() {
@@ -45,30 +45,27 @@ func (c CartAPI) cartQuery(ctx context.Context, r *http.Request, u authenticatio
 
 	q = q.And(expr.Q("Active", true))
 
-	return queries.
-		GetQuerySetWithContext(ctx, &carts.Cart{}).
-		Filter(q).
-		OrderBy("CreatedAt")
+	qs := carts.Query().
+		WithContext(ctx).
+		CartForRequest(r)
+
+	if preloads {
+		qs = qs.PreloadProducts(
+			"ID",
+			"Title",
+			"Image",
+			"Price",
+			"TaxRate",
+			"DiscountPrice",
+		)
+	}
+
+	return qs
 }
 
-func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
+func (c CartAPI) getOrCreateCart(r *http.Request) (*carts.Cart, error) {
 	u := authentication.UserFromContext(r.Context())
-	q := c.cartQuery(r.Context(), r, u).
-		Preload(queries.Preload{
-			Path:    "CartItems",
-			NoJoins: true,
-			QuerySet: queries.
-				GetQuerySet[attrs.Definer](&carts.CartItem{}).
-				Select(
-					"*",
-					"Product.ID",
-					"Product.Title",
-					"Product.Image",
-					"Product.Price",
-					"Product.TaxRate",
-					"Product.DiscountPrice",
-				),
-		})
+	q := cartQuery(r.Context(), r, u, true)
 
 	cart, created, err := q.GetOrCreate(&carts.Cart{
 		Active:  true,
@@ -76,11 +73,7 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 		Session: sessions.Retrieve(r).Token(),
 	})
 	if err != nil {
-		api.RespondError(w,
-			http.StatusInternalServerError,
-			"failed to get or create the cart: %v", err,
-		)
-		return
+		return nil, errors.Wrap(err, "getOrCreateCart")
 	}
 
 	if created {
@@ -90,22 +83,30 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 			User:    u,
 		})
 		if err != nil {
-			api.RespondError(w,
-				http.StatusInternalServerError,
-				"error processing cart created signal: %v", err,
-			)
-			return
+			return cart, errors.Wrap(err, "error processing cart created signal")
 		}
 	}
 
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	err = enc.Encode(CartResponse{
+	return cart, nil
+}
+
+func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
+
+	cart, err := c.getOrCreateCart(r)
+	if err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to encode the cart response: %v", err,
+		)
+		return
+	}
+
+	err = api.Respond(w, CartResponse{
 		Cart:  cart,
 		Items: cart.CartItems.AsList(),
 	})
 	if err != nil {
-		except.Fail(
+		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to encode the cart response: %v", err,
 		)
@@ -113,10 +114,8 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
 	request := CartItemRequest{}
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(&request)
+	err := api.Decode(r, &request)
 	if err != nil {
 		api.RespondError(w,
 			http.StatusBadRequest,
@@ -176,7 +175,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// retrieve or create the users' cart
 	u := authentication.UserFromContext(r.Context())
-	q := c.cartQuery(ctx, r, u)
+	q := cartQuery(ctx, r, u, false)
 	cart := &carts.Cart{
 		Active:  true,
 		Session: sessions.Retrieve(r).Token(),
@@ -310,8 +309,7 @@ returnCartResponse:
 	}
 
 	// encode the response
-	enc := json.NewEncoder(w)
-	err = enc.Encode(CartItemResponse{
+	err = api.Respond(w, CartItemResponse{
 		Cart:    cart,
 		Item:    item,
 		Product: productRow.Object,
@@ -327,8 +325,7 @@ returnCartResponse:
 func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	request := CartItemRequest{}
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(&request)
+	err := api.Decode(r, &request)
 	if err != nil {
 		api.RespondError(w,
 			http.StatusBadRequest,
@@ -388,7 +385,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// retrieve or create the users' cart
 	u := authentication.UserFromContext(r.Context())
-	q := c.cartQuery(ctx, r, u)
+	q := cartQuery(ctx, r, u, false)
 	cart, err := q.Get()
 	if err != nil {
 		if errors.Is(err, errors.NoRows) {
@@ -495,8 +492,7 @@ returnCartResponse:
 	}
 
 	// encode the response
-	enc := json.NewEncoder(w)
-	err = enc.Encode(CartItemResponse{
+	err = api.Respond(w, CartItemResponse{
 		Cart:    cart.Object,
 		Item:    item.Object,
 		Product: productRow.Object,
@@ -510,9 +506,10 @@ returnCartResponse:
 }
 
 func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
-	u := authentication.UserFromContext(r.Context())
-	q := c.cartQuery(r.Context(), r, u)
-	cartRow, err := q.Get()
+	var tx drivers.Transaction
+	var u = authentication.UserFromContext(r.Context())
+	var q = cartQuery(r.Context(), r, u, true)
+	var cartRow, err = q.Get()
 	switch {
 	case errors.Is(err, errors.NoRows):
 
@@ -524,7 +521,38 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 		return
 
 	default:
-		_, err := q.Select("Active").BulkUpdate(
+
+		// start a transaction to ensure everything is done atomically
+		var ctx context.Context
+		ctx, tx, err = queries.StartTransaction(r.Context())
+		if err != nil {
+			api.RespondError(w,
+				http.StatusInternalServerError,
+				"failed to start transaction: %v", err,
+			)
+			return
+		}
+
+		defer tx.Rollback(ctx)
+
+		r = r.WithContext(ctx)
+
+		// invalidate all redemptions that the user has tried to redeem
+		// ensures a log is kept of all users that TRIED to redeem
+		_, err = queries.GetQuerySet(&coupons.Redemption{}).
+			WithContext(ctx).
+			Filter("Cart", queries.Subquery(q.Limit(1).Select("ID"))).
+			BulkUpdate(expr.As("Invalidated", expr.Value(true)))
+		if err != nil {
+			api.RespondError(w,
+				http.StatusInternalServerError,
+				"failed to update the cart: %v", err,
+			)
+			return
+		}
+
+		// set the current users cart to inactive
+		_, err = q.WithContext(ctx).Select("Active").BulkUpdate(
 			expr.As("Active", expr.Value(false)),
 		)
 		if err != nil {
@@ -549,5 +577,35 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	c.GetOrCreateCart(w, r)
+	// create a new cart
+	cart, err := c.getOrCreateCart(r)
+	if err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to create new cart after clearing: %v", err,
+		)
+		return
+	}
+
+	if tx != nil {
+		err = tx.Commit(r.Context())
+		if err != nil {
+			api.RespondError(w,
+				http.StatusInternalServerError,
+				"failed to commit the transaction: %v", err,
+			)
+			return
+		}
+	}
+
+	err = api.Respond(w, CartResponse{
+		Cart:  cart,
+		Items: cart.CartItems.AsList(),
+	})
+	if err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to encode the cart response: %v", err,
+		)
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/auth/users"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -98,8 +99,15 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		//	fattrs.Field(m, "Orders", &m.Orders, func() fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]] {
-		//		return fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]]{}
-		//	}),
+		fattrs.Field(m, "Orders", &m.Orders, func() fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]] {
+			return fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]]{
+				Flags: fattrs.F_IS_REVERSE_FLD,
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						migrator.AttrUseInDBKey: false,
+					},
+				},
+			}
+		}),
 	)
 }

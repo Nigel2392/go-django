@@ -6,8 +6,10 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/auth/users"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -18,12 +20,13 @@ var (
 )
 
 type Cart struct {
-	ID        drivers.ULID                 `json:"id"`
-	User      users.User                   `json:"-"`
-	Session   string                       `json:"-"`
-	CartItems *queries.RelRevFK[*CartItem] `json:"-"`
-	CreatedAt time.Time                    `json:"created_at"`
-	Active    bool                         `json:"active"`
+	ID          drivers.ULID                           `json:"id"`
+	User        users.User                             `json:"-"`
+	Session     string                                 `json:"-"`
+	CreatedAt   time.Time                              `json:"created_at"`
+	Active      bool                                   `json:"active"`
+	CartItems   *queries.RelRevFK[*CartItem]           `json:"-"`
+	Redemptions *queries.RelRevFK[*coupons.Redemption] `json:"-"`
 }
 
 func (m *Cart) BeforeCreate(ctx context.Context) error {
@@ -104,6 +107,16 @@ func (m *Cart) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "CartItems", &m.CartItems, func() fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*CartItem]] {
 			return fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*CartItem]]{}
+		}),
+		fattrs.Field(m, "Redemptions", &m.Redemptions, func() fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*coupons.Redemption]] {
+			return fattrs.PtrFieldConfig[*Cart, *queries.RelRevFK[*coupons.Redemption]]{
+				Flags: fattrs.F_IS_REVERSE_FLD,
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						migrator.AttrUseInDBKey: false,
+					},
+				},
+			}
 		}),
 	)
 }

@@ -165,7 +165,7 @@ func (d *ObjectDefinitions) TableName() string {
 	app, ok := djangoapps.GetAppForModel(d.Object)
 	if ok {
 		sb.WriteString(app.Name())
-		sb.WriteRune('.')
+		sb.WriteRune('_')
 	}
 
 	sb.WriteString(ColumnName(d.ObjType.Name()))

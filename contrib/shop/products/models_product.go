@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/specific"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
@@ -26,7 +27,7 @@ type ProductQuery struct {
 	*queries.WrappedQuerySet[*Product, *ProductQuery, *specific.SpecificQuerySet[*Product, supplier.ProductModel, *queries.QuerySet[*Product]]]
 }
 
-func Products() *ProductQuery {
+func Query() *ProductQuery {
 	productQuerySet := &ProductQuery{}
 	productQuerySet.WrappedQuerySet = queries.WrapQuerySet[*Product](
 		specific.GetSpecificQuerySet(
@@ -84,6 +85,7 @@ type Product struct {
 	Supplier      supplier.SupplierValue         `json:"supplier,omitempty"`
 	Category      *models.Category               `json:"category,omitempty"`
 	Editor        *editor.EditorJSBlockData      `json:"editor,omitempty"`
+	Coupons       *queries.RelM2M[attrs.Definer, attrs.Definer]
 }
 
 func (m *Product) ActualPrice() decimal.Decimal {
@@ -312,5 +314,15 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				FormField: func(opts ...func(fields.Field)) fields.Field { return nil },
 			}}
 		}, key...),
+		fattrs.Field(m, "Coupons", &m.Coupons, func() fattrs.PtrFieldConfig[*Product, *queries.RelM2M[attrs.Definer, attrs.Definer]] {
+			return fattrs.PtrFieldConfig[*Product, *queries.RelM2M[attrs.Definer, attrs.Definer]]{
+				Flags: fattrs.F_IS_REVERSE_FLD,
+				Config: attrs.FieldConfig{
+					Attributes: map[string]interface{}{
+						migrator.AttrUseInDBKey: false,
+					},
+				},
+			}
+		}),
 	)
 }

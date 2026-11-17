@@ -1,6 +1,6 @@
 {
   "table": {
-    "table": "broad.broad",
+    "table": "broad_broad",
     "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Broad",
     "fields": [
       {

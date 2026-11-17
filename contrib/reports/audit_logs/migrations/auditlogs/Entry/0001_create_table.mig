@@ -3,7 +3,7 @@
     "users.User"
   ],
   "table": {
-    "table": "auditlogs.entry",
+    "table": "auditlogs_entry",
     "model": "github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry",
     "fields": [
       {

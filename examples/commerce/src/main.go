@@ -20,6 +20,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/settings"
 	"github.com/Nigel2392/go-django/contrib/shop"
+	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -143,6 +145,15 @@ func main() {
 	app.Log.SetLevel(
 		logger.DBG,
 	)
+
+	qs := queries.GetQuerySet(&carts.Cart{})
+	_, _, _ = queries.
+		GetQuerySet(&coupons.Redemption{}).
+		WithContext(qs.Context()).
+		Filter("Cart__in", qs.Select("ID")).
+		Filter("Coupon.Products__in", qs.Select("CartItems.Product")).
+		Preload("Coupon.Products").
+		IterAll()
 
 	var created bool
 	var user = &auth.User{}

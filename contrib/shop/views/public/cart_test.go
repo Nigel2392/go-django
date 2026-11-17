@@ -23,6 +23,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/shop"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
@@ -192,6 +193,8 @@ func TestCartsAPI(t *testing.T) {
 				&products.Product{},
 				&carts.Cart{},
 				&carts.CartItem{},
+				&coupons.Coupon{},
+				&coupons.Redemption{},
 			)
 			tables.IfNotExists = true
 			tables.Create()

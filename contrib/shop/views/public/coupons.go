@@ -1,0 +1,230 @@
+package public
+
+import (
+	"context"
+	"math/rand"
+	"net/http"
+	"time"
+
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/mux/middleware/authentication"
+)
+
+type RedemptionRequest struct {
+	CouponCode string `json:"coupon_code"`
+}
+
+type RedemptionAPI struct {
+	ErrInvalid            func(ctx context.Context) string
+	ErrNoMatchingProducts func(ctx context.Context) string
+	ErrRedeemed           func(ctx context.Context) string
+}
+
+var (
+	minLagMS = 5
+	maxLagMS = 100
+)
+
+// induce lag into the API so enumerating hits on the coupon code is harder
+func laggy() {
+	time.Sleep(
+		time.Millisecond * time.Duration(rand.Intn(maxLagMS-minLagMS)+minLagMS),
+	)
+}
+
+func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
+	var (
+		req = RedemptionRequest{}
+		err = api.Decode(r, &req)
+	)
+	if err != nil {
+		api.RespondError(w,
+			http.StatusBadRequest,
+			"failed to read or decode request body: %v", err,
+		)
+		return
+	}
+
+	// start transaction, all operations should be done atomically
+	ctx, tx, err := queries.StartTransaction(r.Context())
+	if err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to start transaction: %v", err,
+		)
+		return
+	}
+
+	defer tx.Rollback(ctx)
+
+	// check if there is an actual coupon in the databsae for the code provided
+	couponRow, err := queries.
+		GetQuerySet(&coupons.Coupon{}).
+		WithContext(ctx).
+		Filter("Code", req.CouponCode).
+		Preload(queries.NoJoins("Products")).
+		Get()
+	if err != nil {
+		// induce lag into the API so enumerating hits on the coupon code is harder
+		laggy()
+
+		if !errors.Is(err, errors.NoRows) {
+			logger.Warnf("error fetching coupon with code %q: %v", req.CouponCode, err)
+		}
+
+		api.RespondError(w,
+			http.StatusNotFound,
+			a.ErrInvalid(ctx),
+		)
+		return
+	}
+
+	// usage count is a hard limit that will only be increased upon order completion
+	// i.e. we will not increase the usage count in this redeem view.
+	var coupon = couponRow.Object
+	if coupon.UsageLimit > 0 && coupon.UsageCount >= coupon.UsageLimit {
+		api.RespondError(w,
+			http.StatusNotFound,
+			a.ErrRedeemed(ctx),
+		)
+		return
+	}
+
+	// filter all active redemptions
+	var redemptionsQs = queries.
+		GetQuerySet(&coupons.Redemption{}).
+		WithContext(ctx).
+		Filter(
+			expr.Q("Invalidated", false),
+			expr.Q("Coupon", coupon),
+		)
+
+	// check total redemptions count vs the usage limit
+	// if the coupon has defined a limit
+	if coupon.UsageLimit > 0 {
+		totalRedemptions, err := redemptionsQs.Count()
+		if err != nil {
+			// induce lag into the API so enumerating hits on the coupon code is harder
+			laggy()
+
+			if !errors.Is(err, errors.NoRows) {
+				logger.Warnf("error fetching cart with coupon request code %q: %v", req.CouponCode, err)
+			}
+
+			api.RespondError(w,
+				http.StatusNotFound,
+				a.ErrInvalid(ctx),
+			)
+			return
+		}
+
+		if uint64(totalRedemptions) >= coupon.UsageLimit {
+			api.RespondError(w,
+				http.StatusNotFound,
+				a.ErrRedeemed(ctx),
+			)
+			return
+		}
+
+		// coupon redemption can be created
+	}
+
+	var (
+		user  = authentication.Retrieve(r)
+		cartQ = cartQuery(r.Context(), r, user, true)
+	)
+
+	// check if redemption exists for cart or not, i.e.
+	// if the user has already redeemed this code
+	exists, err := redemptionsQs.
+		Filter(
+			"Cart", cartQ.
+				Select("ID").
+				Limit(1)).
+		Exists()
+
+	switch {
+	case !exists && err == nil:
+		// happy case, user has not already redeemed the code
+
+	case err != nil:
+		// unhappy case, error other than [errors.NoRows] during redemption query
+		laggy()
+
+		logger.Warnf("error fetching coupon redemption with code %q: %v", req.CouponCode, err)
+
+		api.RespondError(w,
+			http.StatusNotFound,
+			a.ErrInvalid(ctx),
+		)
+		return
+
+	case exists:
+		// unhappy case, coupon is already redeemed for the cart
+		api.RespondError(w,
+			http.StatusConflict,
+			a.ErrInvalid(ctx),
+		)
+		return
+	}
+
+	// retrieve the currently active shopping cart to redeem the code for
+	cartRow, err := cartQ.Get()
+	if err != nil {
+		if !errors.Is(err, errors.NoRows) {
+			logger.Warnf("error fetching cart with coupon request code %q: %v", req.CouponCode, err)
+		}
+
+		api.RespondError(w,
+			http.StatusNotFound,
+			a.ErrInvalid(ctx),
+		)
+		return
+	}
+
+	redemption := &coupons.Redemption{
+		Coupon: coupon,
+		Cart:   cartRow.Object,
+	}
+
+	// validate if there are products bound to the coupon
+	// if there are, check if the any of the
+	// cart items matches any of the products
+	couponProducts := coupon.Products.AsList()
+	if len(couponProducts) > 0 {
+		productsFromCoupon := make(map[string]*products.Product)
+		for _, product := range couponProducts {
+			productsFromCoupon[product.Object.ID.String()] = product.Object
+		}
+
+		// check if the cart has any products that matches a bound coupon product
+		for _, cartItem := range cartRow.Object.CartItems.AsList() {
+			_, ok := productsFromCoupon[cartItem.Product.ID.String()]
+			if ok {
+				goto createRedemption
+			}
+		}
+
+		// respond an error indicating that
+		// no product in the cart matched
+		api.RespondError(w,
+			http.StatusNotFound,
+			a.ErrNoMatchingProducts(ctx),
+		)
+		return
+	}
+
+createRedemption:
+	_, err = queries.
+		GetQuerySet(&coupons.Redemption{}).
+		WithContext(ctx).
+		Create(redemption)
+
+	// cart, items, err := cartQ
+}

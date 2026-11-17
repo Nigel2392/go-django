@@ -1,6 +1,6 @@
 {
   "table": {
-    "table": "settings.registered_setting",
+    "table": "settings_registered_setting",
     "model": "github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting",
     "fields": [
       {

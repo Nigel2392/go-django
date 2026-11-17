@@ -390,7 +390,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		// Verify persistence in DB via Orders() queryset including Preload("OrderItems")
-		dbOrderRow, err := orders.Orders().Preload("OrderItems").Filter("ID", order.ID).Get()
+		dbOrderRow, err := orders.Query().Preload("OrderItems").Filter("ID", order.ID).Get()
 		if err != nil {
 			t.Fatalf("failed to fetch Order from DB: %v", err)
 		}
@@ -731,7 +731,7 @@ func TestCreateOrder(t *testing.T) {
 			t.Fatal("expected Signals.Created NOT to fire when cart is empty")
 		}
 
-		orderCount, _ := orders.Orders().Count()
+		orderCount, _ := orders.Query().Count()
 		itemCount, _ := queries.GetQuerySet(&orders.OrderItem{}).Count()
 		if orderCount != 0 || itemCount != 0 {
 			t.Fatalf("expected 0 orders and 0 order items in DB, got orders=%d items=%d", orderCount, itemCount)
@@ -779,7 +779,7 @@ func TestCreateOrder(t *testing.T) {
 			t.Fatal("expected Signals.Created NOT to fire when CartItem.Product is nil")
 		}
 
-		orderCount, _ := orders.Orders().Count()
+		orderCount, _ := orders.Query().Count()
 		itemCount, _ := queries.GetQuerySet(&orders.OrderItem{}).Count()
 		if orderCount != 0 || itemCount != 0 {
 			t.Fatalf("expected 0 orders and 0 order items in DB, got orders=%d items=%d", orderCount, itemCount)
@@ -860,7 +860,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		// Verify transaction rollback: neither Order nor OrderItems should exist in DB
-		orderCount, err := orders.Orders().Count()
+		orderCount, err := orders.Query().Count()
 		if err != nil {
 			t.Fatalf("failed to count orders after rollback: %v", err)
 		}
@@ -926,7 +926,7 @@ func TestCreateOrder(t *testing.T) {
 
 	assertNothingPersisted := func(t *testing.T) {
 		t.Helper()
-		orderCount, err := orders.Orders().Count()
+		orderCount, err := orders.Query().Count()
 		if err != nil {
 			t.Fatalf("failed to count orders: %v", err)
 		}
@@ -1218,7 +1218,7 @@ func TestCreateOrder(t *testing.T) {
 		var seenInTxOrderID string
 		var seenInTxItemCount int
 		listenOrderCreated(t, func(ctx context.Context, s signals.Signal[orders.OrderCreatedSignal], sig orders.OrderCreatedSignal) error {
-			inTxOrder, err := orders.Orders().WithContext(sig.Request.Context()).Filter("ID", sig.Order.ID).Get()
+			inTxOrder, err := orders.Query().WithContext(sig.Request.Context()).Filter("ID", sig.Order.ID).Get()
 			if err != nil {
 				return err
 			}

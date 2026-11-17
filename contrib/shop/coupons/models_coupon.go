@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
@@ -39,6 +40,9 @@ type Coupon struct {
 
 	// The redemptions related to this coupon
 	RedemptionSet *queries.RelRevFK[*Redemption]
+
+	// The products this coupon can be used for
+	Products *queries.RelM2M[*products.Product, *CouponProductThrough]
 }
 
 func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -166,7 +170,26 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 			}
 		}),
 		fattrs.Field(c, "RedemptionSet", &c.RedemptionSet, func() fattrs.PtrFieldConfig[*Coupon, *queries.RelRevFK[*Redemption]] {
-			return fattrs.PtrFieldConfig[*Coupon, *queries.RelRevFK[*Redemption]]{}
+			return fattrs.PtrFieldConfig[*Coupon, *queries.RelRevFK[*Redemption]]{
+				Flags: fattrs.F_IS_REVERSE_FLD,
+			}
+		}),
+		fattrs.Field(c, "Products", &c.Products, func() fattrs.PtrFieldConfig[*Coupon, *queries.RelM2M[*products.Product, *CouponProductThrough]] {
+			return fattrs.PtrFieldConfig[*Coupon, *queries.RelM2M[*products.Product, *CouponProductThrough]]{
+				Config: attrs.FieldConfig{
+					RelManyToMany: attrs.Relate(
+						&products.Product{},
+						"", &attrs.ThroughModel{
+							This:   &CouponProductThrough{},
+							Source: "Coupon",
+							Target: "Product",
+						},
+					),
+					Attributes: map[string]interface{}{
+						attrs.AttrReverseAliasKey: "Coupons",
+					},
+				},
+			}
 		}),
 	)
 }
