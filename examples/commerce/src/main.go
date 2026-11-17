@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"net/mail"
 	"os"
@@ -28,6 +29,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	mediafs "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/secrets"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -58,6 +60,9 @@ func main() {
 		panic(err)
 	}
 
+	key := "super-secret-test-key"
+	hash := sha256.Sum256([]byte(key))
+
 	var app = django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_ALLOWED_HOSTS:  []string{"*"},
@@ -67,6 +72,7 @@ func main() {
 			django.APPVAR_DATABASE:       db,
 			django.APPVAR_RECOVERER:      false,
 			django.APPVAR_DISABLE_NOSURF: true,
+			secrets.APPVAR_SECRET_KEY:    string(hash[:]),
 
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/commerce/migrations",

@@ -14,13 +14,12 @@ import (
 var _ queries.ActsBeforeCreate = (*OrderItem)(nil)
 
 type OrderItem struct {
-	ID            drivers.ULID
-	Order         *Order
-	Product       drivers.JSON[products.Product]
-	ItemPrice     decimal.Decimal
-	TaxRate       decimal.Decimal
-	DiscountPrice decimal.Decimal
-	Amount        int
+	ID        drivers.ULID
+	Order     *Order
+	Product   drivers.JSON[products.Product]
+	ItemPrice decimal.Decimal
+	TaxRate   decimal.Decimal
+	Amount    int
 }
 
 func (m *OrderItem) BeforeCreate(ctx context.Context) error {
@@ -62,14 +61,6 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					Null:  false,
 					Blank: false,
-				},
-			}
-		}),
-		fattrs.Field(m, "DiscountPrice", &m.DiscountPrice, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {
-			return fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal]{
-				Config: attrs.FieldConfig{
-					Null:  true,
-					Blank: true,
 				},
 			}
 		}),

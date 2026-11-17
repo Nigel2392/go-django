@@ -13,12 +13,13 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/editor"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
-	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -167,12 +168,14 @@ func setupOrderTestEnv(t *testing.T) {
 		&carts.Cart{},
 		&carts.CartItem{},
 		&payments.Payment{},
+		&customers.Customer{},
 		&orders.OrderState{},
 		&orders.Order{},
 		&orders.OrderItem{},
 	)
 	tables.IfNotExists = true
 	tables.Create()
+
 }
 
 func seedTestCategory(t *testing.T, name, slug string) *models.Category {
@@ -285,6 +288,16 @@ func TestCreateOrder(t *testing.T) {
 	prodMouse := seedTestProduct(t, cat, "Wireless Mouse", "wireless-mouse", "SKU-MS-02", "59.50", "21.00", "0.00")
 	prodMat := seedTestProduct(t, cat, "Desk Mat XL", "desk-mat-xl", "SKU-DM-03", "24.95", "21.00", "19.95")
 
+	customer, err := queries.GetQuerySet(&customers.Customer{}).Create(&customers.Customer{
+		Email:     drivers.MustParseEmail("admin@localhost"),
+		FirstName: "John",
+		LastName:  "Doe",
+	})
+
+	if err != nil {
+		t.Fatalf("error creating customer: %v", err)
+	}
+
 	t.Run("Explicit variadic items creates Order and OrderItems without querying CartItems", func(t *testing.T) {
 		clearOrderAndCartTables(t)
 
@@ -306,7 +319,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, cart, explicitItem1, explicitItem2)
+		order, orderItems, err := orders.CreateOrder(req, customer, cart, explicitItem1, explicitItem2)
 		if err != nil {
 			t.Fatalf("CreateOrder with explicit items failed: %v", err)
 		}
@@ -446,7 +459,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, cart, overrideItem)
+		order, orderItems, err := orders.CreateOrder(req, customer, cart, overrideItem)
 		if err != nil {
 			t.Fatalf("CreateOrder failed: %v", err)
 		}
@@ -502,7 +515,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, preloadedCart)
+		order, orderItems, err := orders.CreateOrder(req, customer, preloadedCart)
 		if err != nil {
 			t.Fatalf("CreateOrder from preloaded cart failed: %v", err)
 		}
@@ -546,7 +559,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, unloadedCart)
+		order, orderItems, err := orders.CreateOrder(req, customer, unloadedCart)
 		if err != nil {
 			t.Fatalf("CreateOrder via DB IterAll fallback failed: %v", err)
 		}
@@ -598,7 +611,7 @@ func TestCreateOrder(t *testing.T) {
 		_ = seedTestCartItem(t, cart, tempProd, 1)
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, _, err := orders.CreateOrder(req, cart)
+		order, _, err := orders.CreateOrder(req, customer, cart)
 		if err != nil {
 			t.Fatalf("CreateOrder failed: %v", err)
 		}
@@ -658,7 +671,7 @@ func TestCreateOrder(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/checkout", nil)
 		req.Header.Set("X-Test-Checkout", "signal-check")
 
-		order, orderItems, err := orders.CreateOrder(req, cart)
+		order, orderItems, err := orders.CreateOrder(req, customer, cart)
 		if err != nil {
 			t.Fatalf("CreateOrder failed: %v", err)
 		}
@@ -701,7 +714,7 @@ func TestCreateOrder(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, emptyCart)
+		order, orderItems, err := orders.CreateOrder(req, customer, emptyCart)
 		if err == nil {
 			t.Fatal("expected error for empty cart, got nil")
 		}
@@ -749,7 +762,7 @@ func TestCreateOrder(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, cart, validItem, nilProdItem)
+		order, orderItems, err := orders.CreateOrder(req, customer, cart, validItem, nilProdItem)
 		if err == nil {
 			t.Fatal("expected error when CartItem.Product is nil, got nil")
 		}
@@ -793,7 +806,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, cartRow.Object)
+		order, orderItems, err := orders.CreateOrder(req, customer, cartRow.Object)
 		if err == nil {
 			t.Fatal("expected error when preloaded CartItem.Product is nil, got nil")
 		}
@@ -821,7 +834,7 @@ func TestCreateOrder(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, cart)
+		order, orderItems, err := orders.CreateOrder(req, customer, cart)
 		if err == nil {
 			t.Fatal("expected CreateOrder to fail when signal listener returns an error")
 		}
@@ -876,11 +889,11 @@ func TestCreateOrder(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
 
-		order1, items1, err := orders.CreateOrder(req, cart1)
+		order1, items1, err := orders.CreateOrder(req, customer, cart1)
 		if err != nil {
 			t.Fatalf("CreateOrder for cart1 failed: %v", err)
 		}
-		order2, items2, err := orders.CreateOrder(req, cart2)
+		order2, items2, err := orders.CreateOrder(req, customer, cart2)
 		if err != nil {
 			t.Fatalf("CreateOrder for cart2 failed: %v", err)
 		}
@@ -935,7 +948,7 @@ func TestCreateOrder(t *testing.T) {
 		_ = seedTestCartItem(t, cart, prodKeyboard, 10)
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, cart)
+		order, orderItems, err := orders.CreateOrder(req, customer, cart)
 		if err != nil {
 			t.Fatalf("CreateOrder failed on zero-price / zero-amount / discounted products: %v", err)
 		}
@@ -1003,7 +1016,7 @@ func TestCreateOrder(t *testing.T) {
 		_ = seedTestCartItem(t, cart, prodMouse, 4)
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, _, err := orders.CreateOrder(req, cart)
+		order, _, err := orders.CreateOrder(req, customer, cart)
 		if err != nil {
 			t.Fatalf("CreateOrder failed: %v", err)
 		}
@@ -1042,7 +1055,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, nil, explicitItem)
+		order, orderItems, err := orders.CreateOrder(req, customer, nil, explicitItem)
 		if err != nil {
 			t.Fatalf("expected CreateOrder(req, nil, explicitItem) to succeed, got: %v", err)
 		}
@@ -1069,7 +1082,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, dbInactiveCart.Object)
+		order, orderItems, err := orders.CreateOrder(req, customer, dbInactiveCart.Object)
 		if err != nil {
 			t.Fatalf("expected CreateOrder on inactive cart with DB items to succeed, got: %v", err)
 		}
@@ -1096,7 +1109,7 @@ func TestCreateOrder(t *testing.T) {
 		}
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, dbCart)
+		order, orderItems, err := orders.CreateOrder(req, customer, dbCart)
 		if err != nil {
 			t.Fatalf("CreateOrder failed with non-nil empty RelRevFK: %v", err)
 		}
@@ -1180,7 +1193,7 @@ func TestCreateOrder(t *testing.T) {
 				})
 
 				req, cart := tc.setup(t)
-				order, orderItems, err := orders.CreateOrder(req, cart)
+				order, orderItems, err := orders.CreateOrder(req, customer, cart)
 				if err == nil {
 					t.Fatal("expected non-nil error, got nil")
 				}
@@ -1220,7 +1233,7 @@ func TestCreateOrder(t *testing.T) {
 		})
 
 		req := httptest.NewRequest(http.MethodPost, "/checkout", nil)
-		order, orderItems, err := orders.CreateOrder(req, cart)
+		order, orderItems, err := orders.CreateOrder(req, customer, cart)
 		if err != nil {
 			t.Fatalf("CreateOrder failed: %v", err)
 		}

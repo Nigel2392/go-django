@@ -816,10 +816,10 @@ func (a *Application) Initialize() error {
 		var app = h.Value
 		var models = app.Models()
 		for _, model := range models {
+			djangoapps.RegisterModel(model, app)
 			contenttypes.Register(&contenttypes.ContentTypeDefinition{
 				ContentObject: model,
 			})
-			djangoapps.RegisterModel(model, app)
 			allModels = append(allModels, model)
 		}
 	}

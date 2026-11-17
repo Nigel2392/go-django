@@ -90,7 +90,7 @@ func (p *ContentTypeDefinition) ContentType() ContentType {
 
 func (c *ContentTypeDefinition) Name() string {
 	var rTyp = reflect.TypeOf(c.ContentObject)
-	if rTyp.Kind() == reflect.Ptr {
+	for rTyp.Kind() == reflect.Pointer {
 		return rTyp.Elem().Name()
 	}
 	return rTyp.Name()

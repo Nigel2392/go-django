@@ -2,7 +2,7 @@ package products
 
 import (
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
-	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 )
 
 type ProductCreatedSignal struct {

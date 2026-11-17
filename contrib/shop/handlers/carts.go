@@ -5,7 +5,7 @@ import (
 
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -19,6 +20,7 @@ var _ queries.ActsBeforeCreate = (*Order)(nil)
 type Order struct {
 	ID drivers.ULID
 	// State      *OrderState
+	Customer   *customers.Customer
 	State      InternalOrderState
 	Payment    *payments.Payment
 	OrderItems *queries.RelRevFK[*OrderItem]
@@ -153,6 +155,16 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.FieldConfig{
 					Blank:   true,
 					Default: false,
+				},
+			}
+		}),
+		fattrs.Field(m, "Customer", &m.Customer, func() fattrs.PtrFieldConfig[*Order, *customers.Customer] {
+			return fattrs.PtrFieldConfig[*Order, *customers.Customer]{
+				Config: attrs.FieldConfig{
+					Column:        "customer_id",
+					RelForeignKey: attrs.Relate(&customers.Customer{}, "", nil),
+					Null:          false,
+					Blank:         false,
 				},
 			}
 		}),

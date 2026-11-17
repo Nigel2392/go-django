@@ -3,7 +3,7 @@ package carts
 import (
 	"net/http"
 
-	"github.com/Nigel2392/go-django/contrib/shop/util/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -11,7 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
-func CreateOrder(r *http.Request, cart *carts.Cart, items ...*carts.CartItem) (*Order, []*OrderItem, error) {
+func CreateOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart, items ...*carts.CartItem) (*Order, []*OrderItem, error) {
 	if r == nil {
 		return nil, nil, errors.NilPointer.Wrap("request is nil")
 	}
@@ -24,7 +25,8 @@ func CreateOrder(r *http.Request, cart *carts.Cart, items ...*carts.CartItem) (*
 	defer tx.Rollback(ctx)
 
 	order := attrs.Setup[*Order](ctx, &Order{
-		State: orderStatePending,
+		State:    orderStatePending,
+		Customer: customer,
 	})
 
 	if len(items) == 0 {

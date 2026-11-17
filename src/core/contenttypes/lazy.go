@@ -34,6 +34,8 @@ func NewLazyRegistry(modelKey string, check func(*ContentTypeDefinition) bool) *
 		defaultModel = new(string)
 	)
 
+	// allows quick population of the typename cache to ensure
+	// that Load operations don't require extensive search operations.
 	var _, err = OnRegister(func(def *ContentTypeDefinition) {
 		if check(def) {
 			var typeName = def.ContentType().ShortTypeName()

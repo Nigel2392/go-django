@@ -13,6 +13,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/handlers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
@@ -143,6 +145,13 @@ func NewAppConfig() (django.AppConfig, error) {
 
 		// Suppliers
 		&supplier.SupplierModel{},
+
+		// Coupons
+		&coupons.Coupon{},
+		&coupons.Redemption{},
+
+		// Customers
+		&customers.Customer{},
 	}
 
 	//	migrator.RegisterMigrateFunc(&models.Product{}, "0003_exec_test.mig", func(ctx context.Context, me *migrator.MigrationEngine, mt *migrator.ModelTable) error {

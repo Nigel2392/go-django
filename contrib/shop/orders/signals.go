@@ -1,6 +1,6 @@
 package orders
 
-import "github.com/Nigel2392/go-django/contrib/shop/util/signals"
+import "github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 
 type OrderCreatedSignal struct {
 	signals.BaseSignal
