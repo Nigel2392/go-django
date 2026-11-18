@@ -102,8 +102,8 @@ func (m *Product) ActualPrice() decimal.Decimal {
 	//                   52.50  €
 	// 				    --------- +
 	// 			        [63.525] = €63.53
-	return m.Price.Add(m.Price.
-		Add(m.AdditionalFee).
+	price := m.Price.Add(m.AdditionalFee)
+	return price.Add(price.
 		Mul(m.TaxRate).
 		Div(decimal.NewFromInt(100)))
 }

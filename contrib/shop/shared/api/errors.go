@@ -14,6 +14,7 @@ type ErrorResponse struct {
 
 func RespondError(w http.ResponseWriter, statusCode int, message string, args ...any) {
 	w.WriteHeader(statusCode)
+	w.Header().Set("Content-Type", "application/json")
 
 	if len(args) > 0 {
 		message = fmt.Sprintf(message, args...)

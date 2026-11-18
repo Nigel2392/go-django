@@ -63,36 +63,36 @@ func cartQuery(ctx context.Context, r *http.Request, u authentication.User, prel
 	return qs
 }
 
-func (c CartAPI) getOrCreateCart(r *http.Request) (*carts.Cart, error) {
+func (c CartAPI) getOrCreateCart(r *http.Request, preloads bool) (*carts.CartRow, bool, error) {
 	u := authentication.UserFromContext(r.Context())
-	q := cartQuery(r.Context(), r, u, true)
+	q := cartQuery(r.Context(), r, u, preloads)
 
-	cart, created, err := q.GetOrCreate(&carts.Cart{
+	cart, created, err := q.CalcOneOrCreate(&carts.Cart{
 		Active:  true,
 		User:    u.(users.User),
 		Session: sessions.Retrieve(r).Token(),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "getOrCreateCart")
+		return nil, created, errors.Wrap(err, "getOrCreateCart")
 	}
 
 	if created {
 		err = carts.Signals.Created.Send(r.Context(), carts.CartAPISignal{
-			Cart:    cart,
+			Cart:    cart.Object,
 			Request: r,
 			User:    u,
 		})
 		if err != nil {
-			return cart, errors.Wrap(err, "error processing cart created signal")
+			return cart, created, errors.Wrap(err, "error processing cart created signal")
 		}
 	}
 
-	return cart, nil
+	return cart, created, nil
 }
 
 func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 
-	cart, err := c.getOrCreateCart(r)
+	cart, created, err := c.getOrCreateCart(r, true)
 	if err != nil {
 		api.RespondError(w,
 			http.StatusInternalServerError,
@@ -101,10 +101,11 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = api.Respond(w, CartResponse{
-		Cart:  cart,
-		Items: cart.CartItems.AsList(),
-	})
+	if !created {
+		// cartRow, err :=
+	}
+
+	err = api.Respond(w, cart)
 	if err != nil {
 		api.RespondError(w,
 			http.StatusInternalServerError,
@@ -578,7 +579,7 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create a new cart
-	cart, err := c.getOrCreateCart(r)
+	cart, _, err := c.getOrCreateCart(r, false)
 	if err != nil {
 		api.RespondError(w,
 			http.StatusInternalServerError,
@@ -598,10 +599,7 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = api.Respond(w, CartResponse{
-		Cart:  cart,
-		Items: cart.CartItems.AsList(),
-	})
+	err = api.Respond(w, cart)
 	if err != nil {
 		api.RespondError(w,
 			http.StatusInternalServerError,

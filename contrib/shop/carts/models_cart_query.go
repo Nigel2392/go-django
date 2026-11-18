@@ -4,6 +4,7 @@ import (
 	"iter"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
@@ -25,16 +26,16 @@ type CartQuery struct {
 }
 
 type CartItemRow struct {
-	CartItem        *CartItem
-	Redemptions     []*coupons.Redemption
-	CalculatedPrice price.Totals
+	CartItem        *CartItem             `json:"item"`
+	Redemptions     []*coupons.Redemption `json:"coupons"`
+	CalculatedPrice price.Totals          `json:"total_price"`
 }
 
 type CartRow struct {
-	*queries.Row[*Cart]
-	Items   []*CartItemRow
-	Coupons []*coupons.Redemption
-	Totals  price.Totals
+	Object  *Cart                 `json:"cart"`
+	Items   []*CartItemRow        `json:"items"`
+	Coupons []*coupons.Redemption `json:"coupons"`
+	Totals  price.Totals          `json:"total_price"`
 }
 
 func Query() *CartQuery {
@@ -108,6 +109,94 @@ func (qs *CartQuery) PreloadProducts(productFields ...string) *CartQuery {
 	})
 }
 
+// Equals to queryset.Get()
+func (qs *CartQuery) CalcOne() (row *CartRow, err error) {
+	qs = qs.Clone()
+
+	// limit to max_get_results
+	qs = qs.Limit(queries.MAX_GET_RESULTS)
+
+	guessSize, resIter, err := qs.Calc()
+	if err != nil {
+		return row, errors.Wrap(err, "CalcOne/Calc")
+	}
+
+	results := make([]*CartRow, 0, guessSize)
+	for row, err := range resIter {
+		if err != nil {
+			return row, errors.Wrap(err, "CalcOne/resIter")
+		}
+
+		results = append(results, row)
+	}
+
+	var resCnt = len(results)
+	if resCnt == 0 {
+		return row, errors.NoRows.Wrap(
+			"CalcOne: no rows found for cart",
+		)
+	}
+
+	if resCnt > 1 {
+		var errResCnt string
+		if queries.MAX_GET_RESULTS == 0 || resCnt < queries.MAX_GET_RESULTS {
+			errResCnt = strconv.Itoa(resCnt)
+		} else {
+			errResCnt = strconv.Itoa(queries.MAX_GET_RESULTS-1) + "+"
+		}
+
+		return row, errors.MultipleRows.Wrapf(
+			"CalcOne: multiple rows returned for cart: %s rows", errResCnt,
+		)
+	}
+
+	return results[0], nil
+}
+
+func (qs *CartQuery) CalcOneOrCreate(create *Cart) (row *CartRow, created bool, err error) {
+	// If the queryset is already in a transaction, that transaction will be used
+	// automatically.
+	tx, err := qs.GetOrCreateTransaction()
+	if err != nil {
+		return nil, false, errors.FailedStartTransaction.WithCause(err)
+	}
+	defer tx.Rollback(qs.Context())
+
+	// Check if the object already exists
+	row, err = qs.CalcOne()
+	if err != nil {
+		if errors.Is(err, errors.NoRows) {
+			goto create
+		} else {
+			return nil, false, errors.Wrap(
+				err, "failed to get cart",
+			)
+		}
+	}
+
+	// Object already exists, return it and commit the transaction
+	if row != nil {
+		return row, false, tx.Commit(qs.Context())
+	}
+
+	// Object does not exist, create it
+create:
+	obj, err := qs.Create(create)
+	// obj, err := qs.BulkCreate([]T{value})
+	if err != nil {
+		return nil, false, errors.Wrap(
+			err, "failed to create cart",
+		)
+	}
+
+	row = &CartRow{
+		Object: obj,
+	}
+
+	// Object was created successfully, commit the transaction
+	return row, true, tx.Commit(qs.Context())
+}
+
 func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 	ctx, tx, err := queries.StartTransaction(qs.Context())
 	if err != nil {
@@ -117,44 +206,6 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 	defer tx.Rollback(ctx)
 
 	qs = qs.Clone().WithContext(ctx)
-
-	redemptionsQs := queries.
-		GetQuerySet(&coupons.Redemption{}).
-		WithContext(ctx).
-		Select("*", "Cart.ID", "Coupon.*").
-		Filter("Invalidated", false).
-		Filter("Cart__in", qs.Select("ID")).
-		Preload("Coupon.Products")
-
-	_, ri, err := redemptionsQs.IterAll()
-	if err != nil {
-		return 0, nil, errors.Wrap(err, "CartQuery.Calc[coupons.Redemptions/IterAll]")
-	}
-
-	cartRedemptions := make(map[drivers.ULID][]*coupons.Redemption)
-	for row, err := range ri {
-		if err != nil {
-			return 0, nil, errors.Wrap(err, "CartQuery.Calc[coupons.Redemptions/IterAll/Rows]")
-		}
-
-		if row.Object.Cart == nil {
-			logger.Warnf("cart not found for redemption ID %v", row.Object.ID)
-			continue
-		}
-
-		cartObj, ok := row.Object.Cart.(*Cart)
-		if !ok {
-			logger.Warnf("object %T is not of type *Cart", row.Object.Cart)
-			continue
-		}
-
-		cr, ok := cartRedemptions[cartObj.ID]
-		if !ok {
-			cr = make([]*coupons.Redemption, 0, 1)
-		}
-
-		cartRedemptions[cartObj.ID] = append(cr, row.Object)
-	}
 
 	qs = qs.Preload(queries.Preload{
 		Path:    "CartItems",
@@ -178,6 +229,48 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 		return 0, nil, errors.Wrap(err, "CartQuery.Calc[IterAll]")
 	}
 
+	var cartRedemptions map[drivers.ULID][]*coupons.Redemption
+	var ri iter.Seq2[*queries.Row[*coupons.Redemption], error]
+	if n > 0 {
+		redemptionsQs := queries.
+			GetQuerySet(&coupons.Redemption{}).
+			WithContext(ctx).
+			Select("*", "Coupon.*").
+			Filter("Invalidated", false).
+			Filter("Cart__in", qs.Select("ID")).
+			Preload("Coupon.Products")
+
+		_, ri, err = redemptionsQs.IterAll()
+		if err != nil {
+			return 0, nil, errors.Wrap(err, "CartQuery.Calc[coupons.Redemptions/IterAll]")
+		}
+
+		cartRedemptions = make(map[drivers.ULID][]*coupons.Redemption)
+		for row, err := range ri {
+			if err != nil {
+				return 0, nil, errors.Wrap(err, "CartQuery.Calc[coupons.Redemptions/IterAll/Rows]")
+			}
+
+			if row.Object.Cart == nil {
+				logger.Warnf("cart not found for redemption ID %v", row.Object.ID)
+				continue
+			}
+
+			cartObj, ok := row.Object.Cart.(*Cart)
+			if !ok {
+				logger.Warnf("object %T is not of type *Cart", row.Object.Cart)
+				continue
+			}
+
+			cr, ok := cartRedemptions[cartObj.ID]
+			if !ok {
+				cr = make([]*coupons.Redemption, 0, 1)
+			}
+
+			cartRedemptions[cartObj.ID] = append(cr, row.Object)
+		}
+	}
+
 	seq := func(yield func(*CartRow, error) bool) {
 		for row, err := range cartRows {
 			if err != nil {
@@ -187,7 +280,7 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 
 			items := row.Object.CartItems.AsList()
 			cartRow := &CartRow{
-				Row:     row,
+				Object:  row.Object,
 				Items:   make([]*CartItemRow, 0, len(items)),
 				Coupons: make([]*coupons.Redemption, 0),
 			}

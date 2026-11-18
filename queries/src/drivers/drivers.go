@@ -107,6 +107,15 @@ func Register(name string, driver Driver) {
 
 	drivers.byName[name] = &driver
 	drivers.byType[reflect.TypeOf(driver.Driver)] = &driver
+
+	//	deconstruct.Constructors.Register(fmt.Sprintf("queries.drivers.%s.Driver", name), func(args []jsontext.Value, kwargs deconstruct.Kwargs, options ...jsontext.Options) (any, error) {
+	//		d, ok := Retrieve(name)
+	//		if !ok {
+	//			return nil, errors.UnknownDriver
+	//		}
+	//		return d, nil
+	//	})
+
 }
 
 // Retrieve retrieves the driver by name or type.

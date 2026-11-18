@@ -3940,13 +3940,11 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		var defs = attrs.Define(ctx, object)
 		var fields = defs.Fields()
 		var info = UpdateInfo{
-			FieldInfo: FieldInfo[attrs.Field]{
-				Model: object,
-				Table: Table{
-					Name: defs.TableName(),
-				},
-				Chain: make([]string, 0),
+			Model: object,
+			Table: Table{
+				Name: defs.TableName(),
 			},
+			Chain:  make([]string, 0),
 			Values: make([]any, 0, len(fields)),
 		}
 

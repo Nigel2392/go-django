@@ -2,13 +2,50 @@ package expr
 
 import (
 	"database/sql/driver"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 	"slices"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.String", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		return deconstruct.UnmarshalDefault[string](args[0])
+	})
+	deconstruct.Constructors.Register("queries.expr.Field", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		var f field
+		var err = json.Unmarshal(args[0], &f.field, opts...)
+		return &f, err
+	})
+	deconstruct.Constructors.Register("queries.expr.Values", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		var vals = make([]any, len(args))
+		for i, arg := range args {
+			err := json.Unmarshal(arg, &vals[i], opts...)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &values{values: vals}, nil
+	})
+	deconstruct.Constructors.Register("queries.expr.Value", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		return &value{v: kwargs.Get[any]("value"), unsafe: kwargs.Get[bool]("unsafe")}, nil
+	})
+	deconstruct.Constructors.Register("queries.expr.As", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		var f namedExpression
+		if err := json.Unmarshal(args[0], &f.fieldName, opts...); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(args[1], &f.Expression, opts...); err != nil {
+			return nil, err
+		}
+		return &f, nil
+	})
+}
 
 // StringExpr is a string type which implements the Expression interface.
 // It is used to represent a string value in SQL queries.
