@@ -256,6 +256,14 @@ func (f *BaseModelForm[T]) Load() {
 		excluded[n] = struct{}{}
 	}
 
+	var allowed = make(map[string]struct{}, len(f.ModelFields))
+	for _, name := range f.ModelFields {
+		if _, ok := excluded[name]; ok && f.wasSet(excludeWasSet) {
+			continue
+		}
+		allowed[name] = struct{}{}
+	}
+
 	for _, name := range f.ModelFields {
 
 		if _, ok := excluded[name]; ok && f.wasSet(excludeWasSet) {
@@ -286,7 +294,7 @@ func (f *BaseModelForm[T]) Load() {
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
-			if _, ok := excluded[n]; ok && f.wasSet(excludeWasSet) {
+			if _, ok := allowed[n]; !ok {
 				continue
 			}
 
@@ -298,7 +306,7 @@ func (f *BaseModelForm[T]) Load() {
 	} else {
 		for _, def := range f.Definition.Fields() {
 			var n = def.Name()
-			if _, ok := excluded[n]; ok && f.wasSet(excludeWasSet) {
+			if _, ok := allowed[n]; !ok {
 				continue
 			}
 

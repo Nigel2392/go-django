@@ -1008,6 +1008,9 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 				} else {
 					opts = modelDef.EditView
 				}
+				if len(targetFields) > 0 {
+					opts.Fields = targetFields
+				}
 
 				form = GetAdminForm(
 					target,
@@ -1028,7 +1031,9 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 			}
 		}
 
-		form.SetFields(targetFields...)
+		if len(targetFields) > 0 {
+			form.SetFields(targetFields...)
+		}
 
 		var initialData = make(map[string]any)
 		var relType = field.Rel().Type()
@@ -1238,14 +1243,15 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 	var targetFields = make([]string, 0, len(m.Panels))
 	for _, panel := range m.Panels {
 		var fields = panel.Fields()
-		if !relFnd && relFld != nil && !relFld.IsPrimary() {
-			for _, fld := range fields {
-				if fld == relFld.Name() {
-					relFnd = true
-				}
+		for _, fieldName := range fields {
+			if fieldName == formsets.DELETION_FIELD_NAME || fieldName == formsets.ORDERING_FIELD_NAME {
+				continue
 			}
+			if !relFnd && relFld != nil && !relFld.IsPrimary() && fieldName == relFld.Name() {
+				relFnd = true
+			}
+			targetFields = append(targetFields, fieldName)
 		}
-		targetFields = append(targetFields, panel.Fields()...)
 	}
 
 	if relFld != nil && !relFld.IsPrimary() && !relFnd {

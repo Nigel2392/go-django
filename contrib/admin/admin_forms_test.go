@@ -33,6 +33,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/elliotchance/orderedmap/v2"
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3383,11 +3384,255 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 			t.Errorf("expected DB product title preserved as 'Valid Name', got %q", inDB.Object.Title)
 		}
 	})
+
+	t.Run("RegisteredAdminTargetModelUsesTargetFieldsInGetAdminForm", func(t *testing.T) {
+		setupFormsTestDB(t)
+		registerTempAdminModelForTest(t, &FormTestProduct{}, "form_test_product", func(md *admin.ModelDefinition) {
+			md.AddView = admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Labels: map[string]func(context.Context) string{
+						"Title": trans.S("Custom Admin Product Title"),
+					},
+				},
+			}
+		})
+		if admin.FindDefinition(&FormTestProduct{}) == nil {
+			t.Fatalf("expected FindDefinition(&FormTestProduct{}) != nil after temp registration")
+		}
+
+		// Mirror shop's Coupons AddView ModelFormPanel configuring only a subset of target fields
+		// (omitting Slug, while still benefiting from GetAdminForm labels).
+		subsetPanel := &admin.ModelFormPanel[*FormTestProduct, modelforms.ModelForm[*FormTestProduct]]{
+			TargetType: &FormTestProduct{},
+			FieldName:  "Products",
+			MinNum:     0,
+			MaxNum:     5,
+			Extra:      1,
+			Panels: []admin.Panel{
+				admin.FieldPanel("ID"),
+				admin.FieldPanel("Title"),
+				admin.FieldPanel("Price"),
+			},
+		}
+		panels := []admin.Panel{
+			admin.FieldPanel("Title"),
+			admin.FieldPanel("Description"),
+			admin.FieldPanel("Code"),
+			admin.FieldPanel("MaxDiscount"),
+			admin.FieldPanel("IsPercentage"),
+			admin.FieldPanel("ValidFrom"),
+			admin.FieldPanel("ValidUntil"),
+			subsetPanel,
+		}
+
+		getReq := httptest.NewRequest(http.MethodGet, "/admin/test/add", nil)
+		getAF := newTestAdminForm(getReq, &FormTestCoupon{}, nil, panels...)
+		getForms, err := getAF.FormSet().Forms()
+		if err != nil {
+			t.Fatalf("getAF.FormSet().Forms() failed: %v", err)
+		}
+		if len(getForms) != 1 {
+			t.Fatalf("expected 1 inline form with Extra=1, got %d", len(getForms))
+		}
+		getKeys := unwrapClusterChildFieldKeys[*FormTestProduct](t, getForms[0])
+		if slices.Contains(getKeys, "Slug") {
+			t.Errorf("expected omitted field Slug to be absent from registered target form FieldMap, got keys=%v", getKeys)
+		}
+		for _, wantField := range []string{"ID", "Title", "Price"} {
+			if !slices.Contains(getKeys, wantField) {
+				t.Errorf("expected panel field %q in registered target form FieldMap, got keys=%v", wantField, getKeys)
+			}
+		}
+
+		getDoc := parseHTMLDoc(t, getAF.BoundForm().AsP())
+		if getDoc.Find(`input[name="Products-0-Slug"]`).Length() != 0 {
+			t.Errorf("expected no input rendered for omitted field Products-0-Slug")
+		}
+		if getDoc.Find(`input[name="Products-0-Title"]`).Length() != 1 {
+			t.Errorf("expected input rendered for Products-0-Title")
+		}
+		if !strings.Contains(getDoc.Text(), "Custom Admin Product Title") {
+			t.Errorf("expected custom label from ModelDefinition.AddView to be applied via GetAdminForm")
+		}
+
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Subset M2M Coupon", "SUBSET1"),
+			inlineMgmtValues("Products", 1, 0, 0, 5),
+			url.Values{
+				"Products-0-Title":                           {"Panel Only Product"},
+				"Products-0-Price":                           {"123"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		postAF := submitAndSaveAdminForm(t, coupon, data, panels...)
+		postForms, err := postAF.FormSet().Forms()
+		if err != nil {
+			t.Fatalf("postAF.FormSet().Forms() failed: %v", err)
+		}
+		if len(postForms) != 1 {
+			t.Fatalf("expected 1 submitted inline form, got %d", len(postForms))
+		}
+		if postKeys := unwrapClusterChildFieldKeys[*FormTestProduct](t, postForms[0]); slices.Contains(postKeys, "Slug") {
+			t.Errorf("expected submitted form FieldMap not to contain omitted Slug, got keys=%v", postKeys)
+		}
+
+		linked, err := coupon.Products.Objects().All()
+		if err != nil {
+			t.Fatalf("query coupon.Products: %v", err)
+		}
+		if len(linked) != 1 {
+			t.Fatalf("expected 1 linked product, got %d", len(linked))
+		}
+		if linked[0].Object.Title != "Panel Only Product" || linked[0].Object.Price != 123 {
+			t.Errorf("unexpected saved product %+v", linked[0].Object)
+		}
+	})
+
+	t.Run("RegisteredAdminTargetModelOmitsRequiredUnlistedFields", func(t *testing.T) {
+		setupFormsTestDB(t)
+		registerTempAdminModelForTest(t, &FormTestCouponItem{}, "form_test_coupon_item")
+		if admin.FindDefinition(&FormTestCouponItem{}) == nil {
+			t.Fatalf("expected FindDefinition(&FormTestCouponItem{}) != nil after temp registration")
+		}
+
+		// FormTestCouponItem.ProductName is required (Blank: false), so omitting it from
+		// ModelFormPanel.Panels must NOT cause GetAdminForm to add it and fail validation.
+		itemSubsetPanel := &admin.ModelFormPanel[*FormTestCouponItem, modelforms.ModelForm[*FormTestCouponItem]]{
+			TargetType: &FormTestCouponItem{},
+			FieldName:  "Items",
+			MinNum:     0,
+			MaxNum:     5,
+			Extra:      1,
+			Panels: []admin.Panel{
+				admin.FieldPanel("ID"),
+				admin.FieldPanel("Quantity"),
+			},
+		}
+		panels := []admin.Panel{
+			admin.FieldPanel("Title"),
+			admin.FieldPanel("Description"),
+			admin.FieldPanel("Code"),
+			admin.FieldPanel("MaxDiscount"),
+			admin.FieldPanel("IsPercentage"),
+			admin.FieldPanel("ValidFrom"),
+			admin.FieldPanel("ValidUntil"),
+			itemSubsetPanel,
+		}
+
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Omit Required Child Field", "OMITREQ"),
+			inlineMgmtValues("Items", 1, 0, 0, 5),
+			url.Values{
+				"Items-0-Quantity":                        {"4"},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		postAF := submitAndSaveAdminForm(t, coupon, data, panels...)
+		postForms, err := postAF.FormSet().Forms()
+		if err != nil {
+			t.Fatalf("postAF.FormSet().Forms() failed: %v", err)
+		}
+		if len(postForms) != 1 {
+			t.Fatalf("expected 1 submitted inline item form, got %d", len(postForms))
+		}
+		if postKeys := unwrapClusterChildFieldKeys[*FormTestCouponItem](t, postForms[0]); slices.Contains(postKeys, "ProductName") {
+			t.Errorf("expected unlisted required field ProductName absent from FieldMap, got keys=%v", postKeys)
+		}
+
+		doc := parseHTMLDoc(t, postAF.BoundForm().AsP())
+		if doc.Find(`input[name="Items-0-ProductName"]`).Length() != 0 {
+			t.Errorf("expected no input rendered for unlisted field Items-0-ProductName")
+		}
+		if doc.Find(`.panel__error`).Length() != 0 {
+			t.Errorf("expected no validation error elements rendered, got %d", doc.Find(`.panel__error`).Length())
+		}
+
+		items, err := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).All()
+		if err != nil {
+			t.Fatalf("query saved items: %v", err)
+		}
+		if len(items) != 1 || items[0].Object.Quantity != 4 {
+			t.Fatalf("expected 1 saved item with Quantity=4, got %+v", items)
+		}
+	})
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 15. Shared helpers for ModelFormPanel relationship CRUD tests
 // ─────────────────────────────────────────────────────────────────────────────
+
+func unwrapClusterChildFieldKeys[TARGET attrs.Definer](t *testing.T, f formsets.BaseFormSetForm) []string {
+	t.Helper()
+	wrapper, ok := any(f).(forms.FormWrapper[any])
+	if !ok {
+		t.Fatalf("expected forms.FormWrapper[any], got %T", f)
+	}
+	unwrapped := wrapper.Unwrap()
+	if len(unwrapped) == 0 {
+		t.Fatalf("expected non-empty Unwrap() from %T", f)
+	}
+	fs, ok := unwrapped[0].(interface {
+		Forms() ([]modelforms.ModelForm[TARGET], error)
+	})
+	if !ok {
+		t.Fatalf("expected inner formset with Forms() ([]modelforms.ModelForm[%T], error), got %T", *new(TARGET), unwrapped[0])
+	}
+	childForms, err := fs.Forms()
+	if err != nil {
+		t.Fatalf("inner formset Forms() failed: %v", err)
+	}
+	if len(childForms) == 0 {
+		t.Fatalf("expected at least 1 child form in inner formset")
+	}
+	return childForms[0].FieldMap().Keys()
+}
+
+func registerTempAdminModelForTest(t *testing.T, model attrs.Definer, name string, opts ...func(*admin.ModelDefinition)) *admin.ModelDefinition {
+	t.Helper()
+	cType := contenttypes.DefinitionForObject(model)
+	appLabel := cType.ContentType().AppLabel()
+	if appLabel == "" {
+		appLabel = "admin_forms_test_temp_app"
+	}
+	modelKey := cType.ContentType().Model()
+
+	appDef, existed := admin.AdminSite.Apps.Get(appLabel)
+	if !existed || appDef == nil {
+		appDef = &admin.AppDefinition{
+			Name:   appLabel,
+			Models: orderedmap.NewOrderedMap[string, *admin.ModelDefinition](),
+		}
+		admin.AdminSite.Apps.Set(appLabel, appDef)
+		t.Cleanup(func() {
+			admin.AdminSite.Apps.Delete(appLabel)
+		})
+	} else {
+		prev, hadPrev := appDef.Models.Get(modelKey)
+		t.Cleanup(func() {
+			if hadPrev {
+				appDef.Models.Set(modelKey, prev)
+			} else {
+				appDef.Models.Delete(modelKey)
+			}
+		})
+	}
+
+	modelDef := &admin.ModelDefinition{
+		ModelOptions: admin.ModelOptions{
+			Name:  name,
+			Model: model,
+		},
+	}
+	for _, fn := range opts {
+		fn(modelDef)
+	}
+	appDef.Models.Set(modelKey, modelDef)
+	return modelDef
+}
 
 func mergeFormValues(sets ...url.Values) url.Values {
 	out := make(url.Values)
