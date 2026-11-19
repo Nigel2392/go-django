@@ -132,12 +132,16 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(c, "ValidFrom", &c.ValidFrom, func() fattrs.PtrFieldConfig[*Coupon, time.Time] {
 			return fattrs.PtrFieldConfig[*Coupon, time.Time]{
-				Config: attrs.FieldConfig{},
+				Config: attrs.FieldConfig{
+					Blank: true,
+				},
 			}
 		}),
 		fattrs.Field(c, "ValidUntil", &c.ValidUntil, func() fattrs.PtrFieldConfig[*Coupon, time.Time] {
 			return fattrs.PtrFieldConfig[*Coupon, time.Time]{
-				Config: attrs.FieldConfig{},
+				Config: attrs.FieldConfig{
+					Blank: true,
+				},
 			}
 		}),
 		fattrs.Field(c, "CreatedAt", &c.CreatedAt, func() fattrs.PtrFieldConfig[*Coupon, time.Time] {

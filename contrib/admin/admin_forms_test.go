@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -86,7 +87,7 @@ func (c *FormTestCategory) String() string {
 func (c *FormTestCategory) FieldDefs(ctx context.Context) attrs.Definitions {
 	return c.Model.Define(ctx, c,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("Name"),
+		attrs.Unbound("Name", &attrs.FieldConfig{MinLength: 2}),
 	)
 }
 
@@ -212,6 +213,103 @@ func (i *FormTestCouponItem) FieldDefs(ctx context.Context) attrs.Definitions {
 	)
 }
 
+type FormTestAuthorBio struct {
+	qmodels.Model   `table:"admin_forms_test_author_bios"`
+	ID              int64
+	Headline        string
+	Website         string
+	ExperienceYears int
+}
+
+func (b *FormTestAuthorBio) String() string {
+	return b.Headline
+}
+
+func (b *FormTestAuthorBio) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
+		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Headline", &attrs.FieldConfig{MinLength: 3}),
+		attrs.Unbound("Website", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("ExperienceYears", &attrs.FieldConfig{Blank: true}),
+	)
+}
+
+type FormTestAuthorBadge struct {
+	qmodels.Model `table:"admin_forms_test_author_badges"`
+	ID            int64
+	BadgeName     string
+	Tier          string
+}
+
+func (b *FormTestAuthorBadge) String() string {
+	return b.BadgeName
+}
+
+func (b *FormTestAuthorBadge) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
+		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("BadgeName", &attrs.FieldConfig{MinLength: 2}),
+		attrs.Unbound("Tier", &attrs.FieldConfig{Blank: true}),
+	)
+}
+
+type FormTestAuthorBadgeThrough struct {
+	qmodels.Model `table:"admin_forms_test_author_badge_links"`
+	Author        *FormTestAuthor
+	Badge         *FormTestAuthorBadge
+}
+
+func (ab *FormTestAuthorBadgeThrough) FieldDefs(ctx context.Context) attrs.Definitions {
+	return ab.Model.Define(ctx, ab,
+		attrs.NewField(ab, "Author", &attrs.FieldConfig{
+			Column: "author_id",
+			Null:   false,
+		}),
+		attrs.NewField(ab, "Badge", &attrs.FieldConfig{
+			Column: "badge_id",
+			Null:   false,
+		}),
+	)
+}
+
+type FormTestAuthor struct {
+	qmodels.Model `table:"admin_forms_test_authors"`
+	ID            int64
+	Name          string
+	Email         string
+	Bio           *FormTestAuthorBio
+	Badge         *queries.RelO2O[*FormTestAuthorBadge, *FormTestAuthorBadgeThrough]
+}
+
+func (a *FormTestAuthor) String() string {
+	return a.Name
+}
+
+func (a *FormTestAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
+	return a.Model.Define(ctx, a,
+		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Name", &attrs.FieldConfig{MinLength: 2}),
+		attrs.Unbound("Email", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("Bio", &attrs.FieldConfig{
+			Blank:       true,
+			Null:        true,
+			Column:      "bio_id",
+			RelOneToOne: attrs.Relate(&FormTestAuthorBio{}, "", nil),
+		}),
+		qfields.OneToOne[*queries.RelO2O[*FormTestAuthorBadge, *FormTestAuthorBadgeThrough]]("Badge", &qfields.FieldConfig{
+			ReverseName: "AuthorBadgeReverse",
+			Rel: attrs.Relate(
+				&FormTestAuthorBadge{},
+				"", &attrs.ThroughModel{
+					This:   &FormTestAuthorBadgeThrough{},
+					Source: "Author",
+					Target: "Badge",
+				},
+			),
+		}),
+	)
+}
+
 type FormTestDefaultPanelModel struct {
 	qmodels.Model `table:"admin_forms_test_default_panel_models"`
 	ID            int64
@@ -302,6 +400,10 @@ func setupFormsTestDB(t *testing.T) drivers.Database {
 			&FormTestCouponProduct{},
 			&FormTestCouponItem{},
 			&FormTestDefaultPanelModel{},
+			&FormTestAuthorBio{},
+			&FormTestAuthorBadge{},
+			&FormTestAuthor{},
+			&FormTestAuthorBadgeThrough{},
 		}
 		for _, mdl := range testModels {
 			attrs.RegisterModel(mdl)
@@ -342,6 +444,26 @@ func setupFormsTestDB(t *testing.T) drivers.Database {
 			GetLabel:       trans.S("Form Test Default Panel Model"),
 			GetPluralLabel: trans.S("Form Test Default Panel Models"),
 		})
+		contenttypes.Register(&contenttypes.ContentTypeDefinition{
+			ContentObject:  &FormTestAuthorBio{},
+			GetLabel:       trans.S("Form Test Author Bio"),
+			GetPluralLabel: trans.S("Form Test Author Bios"),
+		})
+		contenttypes.Register(&contenttypes.ContentTypeDefinition{
+			ContentObject:  &FormTestAuthorBadge{},
+			GetLabel:       trans.S("Form Test Author Badge"),
+			GetPluralLabel: trans.S("Form Test Author Badges"),
+		})
+		contenttypes.Register(&contenttypes.ContentTypeDefinition{
+			ContentObject:  &FormTestAuthor{},
+			GetLabel:       trans.S("Form Test Author"),
+			GetPluralLabel: trans.S("Form Test Authors"),
+		})
+		contenttypes.Register(&contenttypes.ContentTypeDefinition{
+			ContentObject:  &FormTestAuthorBadgeThrough{},
+			GetLabel:       trans.S("Form Test Author Badge Through"),
+			GetPluralLabel: trans.S("Form Test Author Badge Throughs"),
+		})
 
 		if err := attrs.ResetDefinitions.Send(context.Background(), nil); err != nil {
 			panic(fmt.Errorf("failed to reset model definitions: %w", err))
@@ -372,6 +494,10 @@ func setupFormsTestDB(t *testing.T) drivers.Database {
 	_, _ = queries.GetQuerySet(&FormTestCategory{}).Delete()
 	_, _ = queries.GetQuerySet(&FormTestUser{}).Delete()
 	_, _ = queries.GetQuerySet(&FormTestDefaultPanelModel{}).Delete()
+	_, _ = queries.GetQuerySet(&FormTestAuthorBadgeThrough{}).Delete()
+	_, _ = queries.GetQuerySet(&FormTestAuthor{}).Delete()
+	_, _ = queries.GetQuerySet(&FormTestAuthorBadge{}).Delete()
+	_, _ = queries.GetQuerySet(&FormTestAuthorBio{}).Delete()
 
 	return formsTestDB
 }
@@ -1910,7 +2036,7 @@ func TestAdminForm_ShopCouponTabbedModelFormPanel(t *testing.T) {
 			}
 		})
 
-		// Unsaved parent -> FORM_ORDERING_POST
+		// Unsaved parent -> FORM_ORDERING_PRE (target FK column lives on parent)
 		newCoupon := &FormTestCoupon{Category: cat}
 		_, formsNew, err := mPanel.Forms(httptest.NewRequest(http.MethodGet, "/", nil), context.Background(), newCoupon)
 		if err != nil {
@@ -1919,8 +2045,8 @@ func TestAdminForm_ShopCouponTabbedModelFormPanel(t *testing.T) {
 		if len(formsNew) != 1 {
 			t.Fatalf("expected 1 form wrapper, got %d", len(formsNew))
 		}
-		if orderable, ok := formsNew[0].(admin.ClusterOrderableForm); !ok || orderable.FormOrder() != admin.FORM_ORDERING_POST {
-			t.Errorf("expected FORM_ORDERING_POST for unsaved parent, got %v", orderable.FormOrder())
+		if orderable, ok := formsNew[0].(admin.ClusterOrderableForm); !ok || orderable.FormOrder() != admin.FORM_ORDERING_PRE {
+			t.Errorf("expected FORM_ORDERING_PRE for unsaved parent, got %v", orderable.FormOrder())
 		}
 
 		// Saved parent -> FORM_ORDERING_PRE and Bind clamps MinNum=1, MaxNum=1, Extra=0
@@ -2408,6 +2534,7 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 	setupFormsTestDB(t)
 
 	t.Run("M2MRelationMetadataAndThroughQuerySetSanity", func(t *testing.T) {
+		setupFormsTestDB(t)
 		defs := attrs.Define(context.Background(), &FormTestCoupon{})
 		prodField, ok := defs.Field("Products")
 		if !ok {
@@ -2470,6 +2597,7 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 	})
 
 	t.Run("UnboundAddViewAndPopulatedEditViewRendering", func(t *testing.T) {
+		setupFormsTestDB(t)
 		// AddView with MinNum=1, MaxNum=5, Extra=0
 		newCoupon := &FormTestCoupon{}
 		reqAdd := httptest.NewRequest(http.MethodGet, "/admin/shop/coupons/add", nil)
@@ -2558,6 +2686,7 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 	})
 
 	t.Run("AddCouponWithM2MProductsInSinglePost", func(t *testing.T) {
+		setupFormsTestDB(t)
 		coupon := &FormTestCoupon{}
 		reqAdd := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/add", nil)
 		afAdd := newTestAdminForm(reqAdd, coupon, nil, buildShopCouponM2MPanels(0, 10, 0)...)
@@ -2623,6 +2752,7 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 	})
 
 	t.Run("EditCouponM2MProductsHasChangedUpdateAddAndDelete", func(t *testing.T) {
+		setupFormsTestDB(t)
 		coupon := &FormTestCoupon{
 			Title:        "Hardware Promo",
 			Description:  "M2M edit lifecycle",
@@ -2803,6 +2933,7 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 	})
 
 	t.Run("M2MModelFormPanelValidationErrors", func(t *testing.T) {
+		setupFormsTestDB(t)
 		coupon := &FormTestCoupon{}
 		req := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/add", nil)
 		af := newTestAdminForm(req, coupon, nil, buildShopCouponM2MPanels(1, 5, 0)...)
@@ -2831,6 +2962,1899 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 		doc := parseHTMLDoc(t, af.BoundForm().AsP())
 		if doc.Find(`.panel__error`).Length() == 0 {
 			t.Errorf("expected rendered panel HTML to display validation error element .panel__error")
+		}
+	})
+
+	t.Run("Add_CreateCouponWithZeroM2MProductsWhenMinNumZero", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Zero M2M Coupon", "ZEROM2M"),
+			inlineMgmtValues("Products", 0, 0, 0, 5),
+		)
+		af := submitAndSaveAdminForm(t, coupon, data, buildShopCouponM2MPanels(0, 5, 0)...)
+		if coupon.ID == 0 {
+			t.Fatalf("expected coupon.ID > 0 after save")
+		}
+		_ = af
+
+		prodCount, err := queries.GetQuerySet(&FormTestProduct{}).Count()
+		if err != nil {
+			t.Fatalf("count products: %v", err)
+		}
+		if prodCount != 0 {
+			t.Errorf("expected 0 products created, got %d", prodCount)
+		}
+		linked, err := coupon.Products.Objects().All()
+		if err != nil {
+			t.Fatalf("query coupon.Products: %v", err)
+		}
+		if len(linked) != 0 {
+			t.Errorf("expected 0 linked products, got %d", len(linked))
+		}
+	})
+
+	t.Run("Add_CreateCouponSkippingDeletedM2MProductSlot", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Skip Deleted M2M", "SKIPM2M"),
+			inlineMgmtValues("Products", 2, 0, 0, 5),
+			url.Values{
+				"Products-0-Title":                           {"Discarded Product"},
+				"Products-0-Slug":                            {"discarded"},
+				"Products-0-Price":                           {"999"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"on"},
+				"Products-1-Title":                           {"Kept Product"},
+				"Products-1-Slug":                            {"kept-product"},
+				"Products-1-Price":                           {"75"},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildShopCouponM2MPanels(0, 5, 0)...)
+
+		allProducts, err := queries.GetQuerySet(&FormTestProduct{}).OrderBy("ID").All()
+		if err != nil {
+			t.Fatalf("query products: %v", err)
+		}
+		if len(allProducts) != 1 || allProducts[0].Object.Title != "Kept Product" {
+			t.Fatalf("expected only 'Kept Product' in DB, got %+v", allProducts)
+		}
+		linked, err := coupon.Products.Objects().All()
+		if err != nil {
+			t.Fatalf("query linked products: %v", err)
+		}
+		if len(linked) != 1 || linked[0].Object.ID != allProducts[0].Object.ID {
+			t.Errorf("expected coupon linked only to 'Kept Product', got %+v", linked)
+		}
+	})
+
+	t.Run("Add_CreateCouponWithCustomFormAndSaveInstanceOnM2MPanel", func(t *testing.T) {
+		setupFormsTestDB(t)
+		var saveHookCalled bool
+		panels := []admin.Panel{
+			admin.FieldPanel("Title"),
+			admin.FieldPanel("Code"),
+			&admin.ModelFormPanel[*FormTestProduct, modelforms.ModelForm[*FormTestProduct]]{
+				TargetType: &FormTestProduct{},
+				FieldName:  "Products",
+				MinNum:     1,
+				MaxNum:     5,
+				Form: func() modelforms.ModelForm[*FormTestProduct] {
+					f := modelforms.NewBaseModelForm(context.Background(), &FormTestProduct{})
+					f.SetValidators(func(frm forms.Form, m map[string]any) []error {
+						if p, _ := m["Price"].(int); p < 10 {
+							return []error{errors.New("product price must be at least 10")}
+						}
+						return nil
+					})
+					return f
+				},
+				SaveInstance: func(ctx context.Context, form modelforms.ModelForm[*FormTestProduct], inst *FormTestProduct) error {
+					saveHookCalled = true
+					inst.Slug = strings.ToUpper(inst.Slug)
+					return inst.Save(ctx)
+				},
+				Panels: []admin.Panel{
+					admin.FieldPanel("Title"),
+					admin.FieldPanel("Slug"),
+					admin.FieldPanel("Price"),
+				},
+			},
+		}
+
+		// Custom Form validator rejects Price < 10
+		badCoupon := &FormTestCoupon{}
+		badData := mergeFormValues(
+			baseCouponPOST("Custom M2M Bad", "CUSTBAD"),
+			inlineMgmtValues("Products", 1, 0, 1, 5),
+			url.Values{
+				"Products-0-Title":                           {"Cheap Item"},
+				"Products-0-Slug":                            {"cheap-item"},
+				"Products-0-Price":                           {"5"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitExpectInvalidAdminForm(t, badCoupon, badData, panels...)
+		if saveHookCalled {
+			t.Fatalf("did not expect SaveInstance to run on invalid form")
+		}
+
+		// Valid Price >= 10 invokes SaveInstance and links via M2M through model
+		goodCoupon := &FormTestCoupon{}
+		goodData := mergeFormValues(
+			baseCouponPOST("Custom M2M Good", "CUSTGOOD"),
+			inlineMgmtValues("Products", 1, 0, 1, 5),
+			url.Values{
+				"Products-0-Title":                           {"Pro Desk"},
+				"Products-0-Slug":                            {"pro-desk"},
+				"Products-0-Price":                           {"350"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, goodCoupon, goodData, panels...)
+		if !saveHookCalled {
+			t.Fatalf("expected custom SaveInstance callback to be invoked")
+		}
+		linked, err := goodCoupon.Products.Objects().All()
+		if err != nil {
+			t.Fatalf("query linked products: %v", err)
+		}
+		if len(linked) != 1 || linked[0].Object.Slug != "PRO-DESK" {
+			t.Errorf("expected custom SaveInstance slug 'PRO-DESK', got %+v", linked)
+		}
+	})
+
+	t.Run("Add_CreateCouponFailsOnM2MManagementFormMinMaxBounds", func(t *testing.T) {
+		setupFormsTestDB(t)
+		panels := buildShopCouponM2MPanels(2, 3, 0)
+
+		// Below MinNum=2
+		belowCoupon := &FormTestCoupon{}
+		belowData := mergeFormValues(
+			baseCouponPOST("Below Min", "BELOW2"),
+			inlineMgmtValues("Products", 1, 0, 2, 3),
+			url.Values{
+				"Products-0-Title":                           {"Solo"},
+				"Products-0-Slug":                            {"solo"},
+				"Products-0-Price":                           {"20"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitExpectInvalidAdminForm(t, belowCoupon, belowData, panels...)
+
+		// Above MaxNum=3
+		aboveCoupon := &FormTestCoupon{}
+		aboveData := mergeFormValues(
+			baseCouponPOST("Above Max", "ABOVE3"),
+			inlineMgmtValues("Products", 4, 0, 2, 3),
+			url.Values{
+				"Products-0-Title":                           {"One"},
+				"Products-0-Slug":                            {"one"},
+				"Products-0-Price":                           {"10"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Title":                           {"Two"},
+				"Products-1-Slug":                            {"two"},
+				"Products-1-Price":                           {"20"},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-2-Title":                           {"Three"},
+				"Products-2-Slug":                            {"three"},
+				"Products-2-Price":                           {"30"},
+				"Products-2-" + formsets.ORDERING_FIELD_NAME: {"2"},
+				"Products-2-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-3-Title":                           {"Four"},
+				"Products-3-Slug":                            {"four"},
+				"Products-3-Price":                           {"40"},
+				"Products-3-" + formsets.ORDERING_FIELD_NAME: {"3"},
+				"Products-3-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitExpectInvalidAdminForm(t, aboveCoupon, aboveData, panels...)
+		if cnt, _ := queries.GetQuerySet(&FormTestCoupon{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 coupons persisted on invalid bounds, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditCouponWithUnchangedM2MProductsHasChangedFalse", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Fixed M2M", Code: "FIXED1", ValidFrom: "2026-01-01", ValidUntil: "2026-12-31"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(coupon); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		p1 := &FormTestProduct{Title: "Lamp", Slug: "lamp", Price: 40}
+		if _, err := queries.GetQuerySet(&FormTestProduct{}).Create(p1); err != nil {
+			t.Fatalf("create product: %v", err)
+		}
+		if _, err := coupon.Products.Objects().AddTargets(p1); err != nil {
+			t.Fatalf("link product: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/edit", nil)
+		af := newTestAdminForm(req, coupon, nil, buildShopCouponM2MPanels(0, 5, 0)...)
+		af.WithData(mergeFormValues(
+			url.Values{
+				"Title":       {"Fixed M2M"},
+				"Description": {""},
+				"Code":        {"FIXED1"},
+				"MaxDiscount": {"0"},
+				"ValidFrom":   {"2026-01-01"},
+				"ValidUntil":  {"2026-12-31"},
+			},
+			inlineMgmtValues("Products", 1, 1, 0, 5),
+			url.Values{
+				"Products-0-ID":                              {fmt.Sprint(p1.ID)},
+				"Products-0-Title":                           {"Lamp"},
+				"Products-0-Slug":                            {"lamp"},
+				"Products-0-Price":                           {"40"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected valid form, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if af.HasChanged() {
+			t.Errorf("expected HasChanged() == false on identical coupon and M2M product data")
+		}
+	})
+
+	t.Run("Update_EditCouponUpdatingExistingM2MProductFieldsInPlace", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Edit Place", Code: "INPLACE1"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(coupon); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		p1 := &FormTestProduct{Title: "Old Chair", Slug: "old-chair", Price: 100}
+		if _, err := queries.GetQuerySet(&FormTestProduct{}).Create(p1); err != nil {
+			t.Fatalf("create product: %v", err)
+		}
+		if _, err := coupon.Products.Objects().AddTargets(p1); err != nil {
+			t.Fatalf("link product: %v", err)
+		}
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Products", 1, 1, 0, 5),
+			url.Values{
+				"Products-0-Title":                           {"Ergonomic Chair"},
+				"Products-0-Slug":                            {"ergonomic-chair"},
+				"Products-0-Price":                           {"240"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildShopCouponM2MPanels(0, 5, 0)...)
+
+		got, err := queries.GetQuerySet(&FormTestProduct{}).Filter("ID", p1.ID).Get()
+		if err != nil {
+			t.Fatalf("fetch updated product: %v", err)
+		}
+		if got.Object.Title != "Ergonomic Chair" || got.Object.Slug != "ergonomic-chair" || got.Object.Price != 240 {
+			t.Errorf("expected in-place update on product %d, got %+v", p1.ID, got.Object)
+		}
+		totalProds, _ := queries.GetQuerySet(&FormTestProduct{}).Count()
+		if totalProds != 1 {
+			t.Errorf("expected 1 total product row, got %d", totalProds)
+		}
+	})
+
+	t.Run("Update_EditCouponAddingNewM2MProductsToExistingCoupon", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Expand M2M", Code: "EXPANDM2M"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(coupon); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		p1 := &FormTestProduct{Title: "Base Item", Slug: "base-item", Price: 50}
+		if _, err := queries.GetQuerySet(&FormTestProduct{}).Create(p1); err != nil {
+			t.Fatalf("create product: %v", err)
+		}
+		if _, err := coupon.Products.Objects().AddTargets(p1); err != nil {
+			t.Fatalf("link product: %v", err)
+		}
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Products", 3, 1, 0, 5),
+			url.Values{
+				"Products-0-ID":                              {fmt.Sprint(p1.ID)},
+				"Products-0-Title":                           {p1.Title},
+				"Products-0-Slug":                            {p1.Slug},
+				"Products-0-Price":                           {"50"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Title":                           {"Addon One"},
+				"Products-1-Slug":                            {"addon-one"},
+				"Products-1-Price":                           {"25"},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-2-Title":                           {"Addon Two"},
+				"Products-2-Slug":                            {"addon-two"},
+				"Products-2-Price":                           {"35"},
+				"Products-2-" + formsets.ORDERING_FIELD_NAME: {"2"},
+				"Products-2-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildShopCouponM2MPanels(0, 5, 0)...)
+
+		linked, err := coupon.Products.Objects().OrderBy("ID").All()
+		if err != nil {
+			t.Fatalf("query linked products: %v", err)
+		}
+		if len(linked) != 3 {
+			t.Fatalf("expected 3 linked products, got %d", len(linked))
+		}
+		if linked[1].Object.Title != "Addon One" || linked[2].Object.Title != "Addon Two" {
+			t.Errorf("unexpected added products: %+v, %+v", linked[1].Object, linked[2].Object)
+		}
+	})
+
+	t.Run("Update_EditCouponUnlinkingDeletedM2MProductViaThroughTable", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Unlink M2M", Code: "UNLINK1"}
+		otherCoupon := &FormTestCoupon{Title: "Other M2M", Code: "OTHERM2M"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(coupon); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(otherCoupon); err != nil {
+			t.Fatalf("create otherCoupon: %v", err)
+		}
+		shared := &FormTestProduct{Title: "Shared Cable", Slug: "shared-cable", Price: 15}
+		if _, err := queries.GetQuerySet(&FormTestProduct{}).Create(shared); err != nil {
+			t.Fatalf("create shared product: %v", err)
+		}
+		if _, err := coupon.Products.Objects().AddTargets(shared); err != nil {
+			t.Fatalf("link to coupon: %v", err)
+		}
+		if _, err := otherCoupon.Products.Objects().AddTargets(shared); err != nil {
+			t.Fatalf("link to otherCoupon: %v", err)
+		}
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Products", 1, 1, 0, 5),
+			url.Values{
+				"Products-0-ID":                              {fmt.Sprint(shared.ID)},
+				"Products-0-Title":                           {shared.Title},
+				"Products-0-Slug":                            {shared.Slug},
+				"Products-0-Price":                           {"15"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"on"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildShopCouponM2MPanels(0, 5, 0)...)
+
+		linkedCoupon, _ := coupon.Products.Objects().All()
+		if len(linkedCoupon) != 0 {
+			t.Errorf("expected 0 linked products on coupon after unlink, got %d", len(linkedCoupon))
+		}
+		linkedOther, _ := otherCoupon.Products.Objects().All()
+		if len(linkedOther) != 1 || linkedOther[0].Object.ID != shared.ID {
+			t.Errorf("expected shared product still linked to otherCoupon, got %+v", linkedOther)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestProduct{}).Filter("ID", shared.ID).Count(); cnt != 1 {
+			t.Errorf("expected shared FormTestProduct row to remain in DB after M2M unlink, count=%d", cnt)
+		}
+	})
+
+	t.Run("Update_EditCouponFailsOnInvalidM2MProductAndPreservesBoundInput", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Original Coupon", Code: "ORIGM2M"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(coupon); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		p1 := &FormTestProduct{Title: "Valid Name", Slug: "valid-name", Price: 60}
+		if _, err := queries.GetQuerySet(&FormTestProduct{}).Create(p1); err != nil {
+			t.Fatalf("create product: %v", err)
+		}
+		if _, err := coupon.Products.Objects().AddTargets(p1); err != nil {
+			t.Fatalf("link product: %v", err)
+		}
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Products", 1, 1, 0, 5),
+			url.Values{
+				"Products-0-ID":                              {fmt.Sprint(p1.ID)},
+				"Products-0-Title":                           {"X"}, // MinLength is 2
+				"Products-0-Slug":                            {"x-slug"},
+				"Products-0-Price":                           {"60"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af := submitExpectInvalidAdminForm(t, coupon, data, buildShopCouponM2MPanels(0, 5, 0)...)
+		doc := parseHTMLDoc(t, af.BoundForm().AsP())
+		if doc.Find(`input[name="Products-0-Title"][value="X"]`).Length() != 1 {
+			t.Errorf("expected invalid POST value 'X' preserved in re-rendered HTML")
+		}
+		if doc.Find(`.panel__error`).Length() == 0 {
+			t.Errorf("expected .panel__error rendered in HTML")
+		}
+
+		inDB, _ := queries.GetQuerySet(&FormTestProduct{}).Filter("ID", p1.ID).Get()
+		if inDB.Object.Title != "Valid Name" {
+			t.Errorf("expected DB product title preserved as 'Valid Name', got %q", inDB.Object.Title)
+		}
+	})
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 15. Shared helpers for ModelFormPanel relationship CRUD tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+func mergeFormValues(sets ...url.Values) url.Values {
+	out := make(url.Values)
+	for _, s := range sets {
+		for k, v := range s {
+			out[k] = slices.Clone(v)
+		}
+	}
+	return out
+}
+
+func baseCouponPOST(title, code string) url.Values {
+	return url.Values{
+		"Title":       {title},
+		"Description": {"Promo description"},
+		"Code":        {code},
+		"MaxDiscount": {"15"},
+		"ValidFrom":   {"2026-01-01"},
+		"ValidUntil":  {"2026-12-31"},
+	}
+}
+
+func baseAuthorPOST(name, email string) url.Values {
+	return url.Values{
+		"Name":  {name},
+		"Email": {email},
+	}
+}
+
+func inlineMgmtValues(prefix string, total, initial, minNum, maxNum int) url.Values {
+	return url.Values{
+		prefix + "-management-TOTAL_FORMS":   {fmt.Sprint(total)},
+		prefix + "-management-INITIAL_FORMS": {fmt.Sprint(initial)},
+		prefix + "-management-MIN_NUM_FORMS": {fmt.Sprint(minNum)},
+		prefix + "-management-MAX_NUM_FORMS": {fmt.Sprint(maxNum)},
+	}
+}
+
+func submitAndSaveAdminForm[T attrs.Definer](t *testing.T, instance T, data url.Values, panels ...admin.Panel) *admin.AdminForm[modelforms.ModelForm[T], T] {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/admin/test/submit", nil)
+	af := newTestAdminForm(req, instance, nil, panels...)
+	af.WithData(data, nil, req)
+	if !forms.IsValid(req.Context(), af) {
+		var fsErrs []error
+		if fs := af.FormSet(); fs != nil {
+			fsErrs = fs.ErrorList()
+		}
+		t.Fatalf("expected AdminForm[%T] valid, errs=%v bound=%v fsErrs=%v",
+			instance, af.ErrorList(), af.BoundErrors(), fsErrs)
+	}
+	if _, err := af.Save(); err != nil {
+		t.Fatalf("AdminForm[%T].Save() failed: %v", instance, err)
+	}
+	if len(af.ErrorList()) > 0 {
+		t.Fatalf("unexpected ErrorList() after AdminForm[%T].Save(): %v", instance, af.ErrorList())
+	}
+	return af
+}
+
+func submitExpectInvalidAdminForm[T attrs.Definer](t *testing.T, instance T, data url.Values, panels ...admin.Panel) *admin.AdminForm[modelforms.ModelForm[T], T] {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/admin/test/submit", nil)
+	af := newTestAdminForm(req, instance, nil, panels...)
+	af.WithData(data, nil, req)
+	if forms.IsValid(req.Context(), af) {
+		t.Fatalf("expected AdminForm[%T] validation to fail, but IsValid returned true", instance)
+	}
+	return af
+}
+
+func buildCouponOneToManyPanels(minNum, maxNum, extra int, opts ...func(*admin.ModelFormPanel[*FormTestCouponItem, modelforms.ModelForm[*FormTestCouponItem]])) []admin.Panel {
+	itemPanel := &admin.ModelFormPanel[*FormTestCouponItem, modelforms.ModelForm[*FormTestCouponItem]]{
+		TargetType: &FormTestCouponItem{},
+		FieldName:  "Items",
+		MinNum:     minNum,
+		MaxNum:     maxNum,
+		Extra:      extra,
+		Panels: []admin.Panel{
+			admin.FieldPanel("ID"),
+			admin.FieldPanel("ProductName"),
+			admin.FieldPanel("Quantity"),
+		},
+	}
+	for _, opt := range opts {
+		opt(itemPanel)
+	}
+	return []admin.Panel{
+		admin.FieldPanel("Title"),
+		admin.FieldPanel("Description"),
+		admin.FieldPanel("Code"),
+		admin.FieldPanel("MaxDiscount"),
+		admin.FieldPanel("IsPercentage"),
+		admin.FieldPanel("ValidFrom"),
+		admin.FieldPanel("ValidUntil"),
+		itemPanel,
+	}
+}
+
+func buildCouponManyToOnePanels(minNum, maxNum, extra int, opts ...func(*admin.ModelFormPanel[*FormTestCategory, modelforms.ModelForm[*FormTestCategory]])) []admin.Panel {
+	catPanel := &admin.ModelFormPanel[*FormTestCategory, modelforms.ModelForm[*FormTestCategory]]{
+		TargetType: &FormTestCategory{},
+		FieldName:  "Category",
+		MinNum:     minNum,
+		MaxNum:     maxNum,
+		Extra:      extra,
+		Panels: []admin.Panel{
+			admin.FieldPanel("Name"),
+		},
+	}
+	for _, opt := range opts {
+		opt(catPanel)
+	}
+	return []admin.Panel{
+		admin.FieldPanel("Title"),
+		admin.FieldPanel("Description"),
+		admin.FieldPanel("Code"),
+		admin.FieldPanel("MaxDiscount"),
+		admin.FieldPanel("IsPercentage"),
+		admin.FieldPanel("ValidFrom"),
+		admin.FieldPanel("ValidUntil"),
+		catPanel,
+	}
+}
+
+func buildAuthorOneToOnePanels(
+	includeBio bool, bioMin, bioMax, bioExtra int, bioOpts []func(*admin.ModelFormPanel[*FormTestAuthorBio, modelforms.ModelForm[*FormTestAuthorBio]]),
+	includeBadge bool, badgeMin, badgeMax, badgeExtra int, badgeOpts []func(*admin.ModelFormPanel[*FormTestAuthorBadge, modelforms.ModelForm[*FormTestAuthorBadge]]),
+) []admin.Panel {
+	panels := []admin.Panel{
+		admin.FieldPanel("Name"),
+		admin.FieldPanel("Email"),
+	}
+	if includeBio {
+		bioPanel := &admin.ModelFormPanel[*FormTestAuthorBio, modelforms.ModelForm[*FormTestAuthorBio]]{
+			TargetType: &FormTestAuthorBio{},
+			FieldName:  "Bio",
+			MinNum:     bioMin,
+			MaxNum:     bioMax,
+			Extra:      bioExtra,
+			Panels: []admin.Panel{
+				admin.FieldPanel("Headline"),
+				admin.FieldPanel("Website"),
+				admin.FieldPanel("ExperienceYears"),
+			},
+		}
+		for _, opt := range bioOpts {
+			opt(bioPanel)
+		}
+		panels = append(panels, bioPanel)
+	}
+	if includeBadge {
+		badgePanel := &admin.ModelFormPanel[*FormTestAuthorBadge, modelforms.ModelForm[*FormTestAuthorBadge]]{
+			TargetType: &FormTestAuthorBadge{},
+			FieldName:  "Badge",
+			MinNum:     badgeMin,
+			MaxNum:     badgeMax,
+			Extra:      badgeExtra,
+			Panels: []admin.Panel{
+				admin.FieldPanel("BadgeName"),
+				admin.FieldPanel("Tier"),
+			},
+		}
+		for _, opt := range badgeOpts {
+			opt(badgePanel)
+		}
+		panels = append(panels, badgePanel)
+	}
+	return panels
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 16. ModelFormPanel RelOneToMany Create & Update Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestAdminForm_ModelFormPanelOneToMany(t *testing.T) {
+	setupFormsTestDB(t)
+
+	t.Run("Add_CreateParentWithMultipleInlineChildren", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Triple Pack", "TRIPLE3"),
+			inlineMgmtValues("Items", 3, 0, 1, 5),
+			url.Values{
+				"Items-0-ProductName":                     {"Dock"},
+				"Items-0-Quantity":                        {"1"},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-1-ProductName":                     {"Cable"},
+				"Items-1-Quantity":                        {"3"},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-2-ProductName":                     {"Adapter"},
+				"Items-2-Quantity":                        {"2"},
+				"Items-2-" + formsets.ORDERING_FIELD_NAME: {"2"},
+				"Items-2-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponOneToManyPanels(1, 5, 0)...)
+		if coupon.ID == 0 {
+			t.Fatalf("expected coupon.ID > 0 after save")
+		}
+
+		items, err := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).OrderBy("ID").All()
+		if err != nil {
+			t.Fatalf("query coupon items: %v", err)
+		}
+		if len(items) != 3 {
+			t.Fatalf("expected 3 inline items, got %d", len(items))
+		}
+		if items[0].Object.ProductName != "Dock" || items[1].Object.ProductName != "Cable" || items[2].Object.Quantity != 2 {
+			t.Errorf("unexpected created items: %+v, %+v, %+v", items[0].Object, items[1].Object, items[2].Object)
+		}
+	})
+
+	t.Run("Add_CreateParentWithZeroInlineChildrenWhenMinNumZero", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("No Inline Items", "NOITEMS0"),
+			inlineMgmtValues("Items", 0, 0, 0, 5),
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponOneToManyPanels(0, 5, 0)...)
+		if coupon.ID == 0 {
+			t.Fatalf("expected coupon.ID > 0")
+		}
+		cnt, err := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).Count()
+		if err != nil {
+			t.Fatalf("count coupon items: %v", err)
+		}
+		if cnt != 0 {
+			t.Errorf("expected 0 items, got %d", cnt)
+		}
+	})
+
+	t.Run("Add_CreateParentSkippingDeletedInlineChildInSamePost", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Skip Item", "SKIPITEM1"),
+			inlineMgmtValues("Items", 2, 0, 0, 5),
+			url.Values{
+				"Items-0-ProductName":                     {""},
+				"Items-0-Quantity":                        {"1"},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"on"},
+				"Items-1-ProductName":                     {"Mechanical Keycaps"},
+				"Items-1-Quantity":                        {"3"},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponOneToManyPanels(0, 5, 0)...)
+
+		items, err := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).All()
+		if err != nil {
+			t.Fatalf("query items: %v", err)
+		}
+		if len(items) != 1 || items[0].Object.ProductName != "Mechanical Keycaps" || items[0].Object.Quantity != 3 {
+			t.Fatalf("expected single kept item Mechanical Keycaps x3, got %+v", items)
+		}
+	})
+
+	t.Run("Add_CreateParentWithOrderedInlineChildrenAndCustomSaveInstance", func(t *testing.T) {
+		setupFormsTestDB(t)
+		var savedOrder []string
+		panels := buildCouponOneToManyPanels(1, 5, 0, func(p *admin.ModelFormPanel[*FormTestCouponItem, modelforms.ModelForm[*FormTestCouponItem]]) {
+			p.Form = func() modelforms.ModelForm[*FormTestCouponItem] {
+				f := modelforms.NewBaseModelForm(context.Background(), &FormTestCouponItem{})
+				f.SetValidators(func(frm forms.Form, m map[string]any) []error {
+					if qty, _ := m["Quantity"].(int); qty <= 0 {
+						return []error{errors.New("quantity must be positive")}
+					}
+					return nil
+				})
+				return f
+			}
+			p.SaveInstance = func(ctx context.Context, form modelforms.ModelForm[*FormTestCouponItem], inst *FormTestCouponItem) error {
+				savedOrder = append(savedOrder, inst.ProductName)
+				inst.ProductName = strings.ToUpper(inst.ProductName)
+				return inst.Save(ctx)
+			}
+		})
+
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Ordered Custom", "ORDCUST1"),
+			inlineMgmtValues("Items", 2, 0, 1, 5),
+			url.Values{
+				"Items-0-ProductName":                     {"second-item"},
+				"Items-0-Quantity":                        {"2"},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-1-ProductName":                     {"first-item"},
+				"Items-1-Quantity":                        {"1"},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, panels...)
+
+		if !slices.Equal(savedOrder, []string{"first-item", "second-item"}) {
+			t.Errorf("expected SaveInstance order [first-item, second-item], got %v", savedOrder)
+		}
+		items, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).OrderBy("ID").All()
+		if len(items) != 2 || items[0].Object.ProductName != "FIRST-ITEM" || items[1].Object.ProductName != "SECOND-ITEM" {
+			t.Errorf("unexpected persisted items: %+v", items)
+		}
+	})
+
+	t.Run("Add_CreateParentFailsOnChildValidationError", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Child Invalid", "CHLDINV"),
+			inlineMgmtValues("Items", 1, 0, 1, 5),
+			url.Values{
+				"Items-0-ProductName":                     {""}, // Required
+				"Items-0-Quantity":                        {"2"},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af := submitExpectInvalidAdminForm(t, coupon, data, buildCouponOneToManyPanels(1, 5, 0)...)
+		doc := parseHTMLDoc(t, af.BoundForm().AsP())
+		if doc.Find(`.panel__error`).Length() == 0 {
+			t.Errorf("expected .panel__error rendered in HTML")
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCoupon{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 coupons in DB, got %d", cnt)
+		}
+	})
+
+	t.Run("Add_CreateParentFailsWhenTotalFormsBelowMinNumOrAboveMaxNum", func(t *testing.T) {
+		setupFormsTestDB(t)
+		panels := buildCouponOneToManyPanels(2, 3, 0)
+
+		below := &FormTestCoupon{}
+		submitExpectInvalidAdminForm(t, below, mergeFormValues(
+			baseCouponPOST("Below Min Items", "O2MBELOW"),
+			inlineMgmtValues("Items", 1, 0, 2, 3),
+			url.Values{
+				"Items-0-ProductName":                     {"Only One"},
+				"Items-0-Quantity":                        {"1"},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+
+		above := &FormTestCoupon{}
+		submitExpectInvalidAdminForm(t, above, mergeFormValues(
+			baseCouponPOST("Above Max Items", "O2MABOVE"),
+			inlineMgmtValues("Items", 4, 0, 2, 3),
+			url.Values{
+				"Items-0-ProductName":                     {"A"},
+				"Items-0-Quantity":                        {"1"},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-1-ProductName":                     {"B"},
+				"Items-1-Quantity":                        {"1"},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-2-ProductName":                     {"C"},
+				"Items-2-Quantity":                        {"1"},
+				"Items-2-" + formsets.ORDERING_FIELD_NAME: {"2"},
+				"Items-2-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-3-ProductName":                     {"D"},
+				"Items-3-Quantity":                        {"1"},
+				"Items-3-" + formsets.ORDERING_FIELD_NAME: {"3"},
+				"Items-3-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+
+		if cnt, _ := queries.GetQuerySet(&FormTestCoupon{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 coupons persisted on min/max error, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditUnchangedParentAndChildrenReportsNoChanges", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Unchanged O2M", Description: "Promo description", Code: "UNCHO2M", MaxDiscount: 15, ValidFrom: "2026-01-01", ValidUntil: "2026-12-31"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(coupon); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		item1 := &FormTestCouponItem{Coupon: coupon, ProductName: "Monitor", Quantity: 1}
+		item2 := &FormTestCouponItem{Coupon: coupon, ProductName: "Stand", Quantity: 2}
+		if _, err := queries.GetQuerySet(&FormTestCouponItem{}).Create(item1); err != nil {
+			t.Fatalf("create item1: %v", err)
+		}
+		if _, err := queries.GetQuerySet(&FormTestCouponItem{}).Create(item2); err != nil {
+			t.Fatalf("create item2: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/admin/test/edit", nil)
+		af := newTestAdminForm(req, coupon, nil, buildCouponOneToManyPanels(0, 5, 0)...)
+		af.WithData(mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Items", 2, 2, 0, 5),
+			url.Values{
+				"Items-0-ProductName":                     {"Monitor"},
+				"Items-0-Quantity":                        {"1"},
+				"Items-0-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-1-ProductName":                     {"Stand"},
+				"Items-1-Quantity":                        {"2"},
+				"Items-1-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected valid unchanged form, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if af.HasChanged() {
+			t.Errorf("expected HasChanged() == false")
+		}
+	})
+
+	t.Run("Update_EditExistingInlineChildrenInPlace", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Edit Children", Code: "EDCHLD"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(coupon); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		item1 := &FormTestCouponItem{Coupon: coupon, ProductName: "Desk Mat", Quantity: 1}
+		item2 := &FormTestCouponItem{Coupon: coupon, ProductName: "Wrist Rest", Quantity: 1}
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item1)
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item2)
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Items", 2, 2, 0, 5),
+			url.Values{
+				"Items-0-ProductName":                     {"Desk Mat"},
+				"Items-0-Quantity":                        {"5"},
+				"Items-0-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-1-ProductName":                     {"Leather Wrist Rest"},
+				"Items-1-Quantity":                        {"1"},
+				"Items-1-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponOneToManyPanels(0, 5, 0)...)
+
+		got1, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("ID", item1.ID).Get()
+		got2, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("ID", item2.ID).Get()
+		if got1.Object.Quantity != 5 {
+			t.Errorf("expected item1.Quantity == 5, got %d", got1.Object.Quantity)
+		}
+		if got2.Object.ProductName != "Leather Wrist Rest" {
+			t.Errorf("expected item2.ProductName == 'Leather Wrist Rest', got %q", got2.Object.ProductName)
+		}
+		cnt, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).Count()
+		if cnt != 2 {
+			t.Errorf("expected 2 items total, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditParentAddingNewInlineChildrenToExistingSet", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Add Children", Code: "ADDCHLD"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+		item1 := &FormTestCouponItem{Coupon: coupon, ProductName: "Router", Quantity: 1}
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item1)
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Items", 3, 1, 0, 5),
+			url.Values{
+				"Items-0-ProductName":                     {"Router"},
+				"Items-0-Quantity":                        {"1"},
+				"Items-0-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-1-ProductName":                     {"Switch"},
+				"Items-1-Quantity":                        {"2"},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-2-ProductName":                     {"Patch Cable"},
+				"Items-2-Quantity":                        {"6"},
+				"Items-2-" + formsets.ORDERING_FIELD_NAME: {"2"},
+				"Items-2-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponOneToManyPanels(0, 5, 0)...)
+
+		items, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).OrderBy("ID").All()
+		if len(items) != 3 {
+			t.Fatalf("expected 3 items, got %d", len(items))
+		}
+		if items[1].Object.ProductName != "Switch" || items[2].Object.ProductName != "Patch Cable" || items[2].Object.Quantity != 6 {
+			t.Errorf("unexpected added items: %+v, %+v", items[1].Object, items[2].Object)
+		}
+	})
+
+	t.Run("Update_EditParentDeletingSpecificInlineChild", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Delete Child", Code: "DELCHLD"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+		item1 := &FormTestCouponItem{Coupon: coupon, ProductName: "SSD", Quantity: 1}
+		item2 := &FormTestCouponItem{Coupon: coupon, ProductName: "HDD", Quantity: 2}
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item1)
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item2)
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Items", 2, 2, 0, 5),
+			url.Values{
+				"Items-0-ProductName":                     {"SSD"},
+				"Items-0-Quantity":                        {"1"},
+				"Items-0-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"on"},
+				"Items-1-ProductName":                     {"HDD"},
+				"Items-1-Quantity":                        {"2"},
+				"Items-1-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponOneToManyPanels(0, 5, 0)...)
+
+		remaining, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).All()
+		if len(remaining) != 1 || remaining[0].Object.ID != item2.ID {
+			t.Errorf("expected only HDD (ID=%d) remaining, got %+v", item2.ID, remaining)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("ID", item1.ID).Count(); cnt != 0 {
+			t.Errorf("expected SSD row deleted from DB, count=%d", cnt)
+		}
+	})
+
+	t.Run("Update_EditParentSimultaneouslyUpdateAddAndDeleteChildren", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Combined O2M", Code: "COMBO2M"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+		item1 := &FormTestCouponItem{Coupon: coupon, ProductName: "Old A", Quantity: 1}
+		item2 := &FormTestCouponItem{Coupon: coupon, ProductName: "Delete B", Quantity: 2}
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item1)
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item2)
+
+		data := mergeFormValues(
+			baseCouponPOST("Combined O2M Edited", coupon.Code),
+			inlineMgmtValues("Items", 3, 2, 0, 5),
+			url.Values{
+				"Items-0-ProductName":                     {"Updated A"},
+				"Items-0-Quantity":                        {"10"},
+				"Items-0-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Items-1-ProductName":                     {"Delete B"},
+				"Items-1-Quantity":                        {"2"},
+				"Items-1-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Items-1-" + formsets.DELETION_FIELD_NAME: {"on"},
+				"Items-2-ProductName":                     {"Added C"},
+				"Items-2-Quantity":                        {"7"},
+				"Items-2-" + formsets.ORDERING_FIELD_NAME: {"2"},
+				"Items-2-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponOneToManyPanels(0, 5, 0)...)
+
+		gotCoupon, _ := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		if gotCoupon.Object.Title != "Combined O2M Edited" {
+			t.Errorf("expected updated parent title 'Combined O2M Edited', got %q", gotCoupon.Object.Title)
+		}
+		items, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("Coupon", coupon.ID).OrderBy("ID").All()
+		if len(items) != 2 {
+			t.Fatalf("expected 2 items after update+delete+add, got %d", len(items))
+		}
+		if items[0].Object.ID != item1.ID || items[0].Object.ProductName != "Updated A" || items[0].Object.Quantity != 10 {
+			t.Errorf("unexpected items[0]: %+v", items[0].Object)
+		}
+		if items[1].Object.ProductName != "Added C" || items[1].Object.Quantity != 7 {
+			t.Errorf("unexpected items[1]: %+v", items[1].Object)
+		}
+	})
+
+	t.Run("Update_EditParentFailsOnInvalidChildPreservingExistingDBState", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Keep Coupon", Code: "KEEPC1"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+		item1 := &FormTestCouponItem{Coupon: coupon, ProductName: "Original Item", Quantity: 2}
+		_, _ = queries.GetQuerySet(&FormTestCouponItem{}).Create(item1)
+
+		data := mergeFormValues(
+			baseCouponPOST("Should Not Save", coupon.Code),
+			inlineMgmtValues("Items", 1, 1, 1, 5),
+			url.Values{
+				"Items-0-ProductName":                     {""}, // Required
+				"Items-0-Quantity":                        {"9"},
+				"Items-0-Coupon":                          {fmt.Sprint(coupon.ID)},
+				"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af := submitExpectInvalidAdminForm(t, coupon, data, buildCouponOneToManyPanels(1, 5, 0)...)
+		doc := parseHTMLDoc(t, af.BoundForm().AsP())
+		if doc.Find(`input[name="Title"][value="Should Not Save"]`).Length() != 1 {
+			t.Errorf("expected bound parent Title preserved in re-rendered HTML")
+		}
+		if doc.Find(`.panel__error`).Length() == 0 {
+			t.Errorf("expected .panel__error rendered in HTML")
+		}
+
+		dbCoupon, _ := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		dbItem, _ := queries.GetQuerySet(&FormTestCouponItem{}).Filter("ID", item1.ID).Get()
+		if dbCoupon.Object.Title != "Keep Coupon" || dbItem.Object.ProductName != "Original Item" || dbItem.Object.Quantity != 2 {
+			t.Errorf("expected DB state untouched, got coupon=%+v item=%+v", dbCoupon.Object, dbItem.Object)
+		}
+	})
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 17. ModelFormPanel RelManyToOne Create & Update Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
+	setupFormsTestDB(t)
+
+	t.Run("Add_CreateParentWithNewInlineManyToOneTargetInSinglePost", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Peripherals Promo", "PERIPH1"),
+			url.Values{
+				"Category-0-Name":                            {"Peripherals"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponManyToOnePanels(1, 1, 0)...)
+
+		if coupon.ID == 0 {
+			t.Fatalf("expected coupon.ID > 0 after save")
+		}
+		cats, err := queries.GetQuerySet(&FormTestCategory{}).All()
+		if err != nil {
+			t.Fatalf("query categories: %v", err)
+		}
+		if len(cats) != 1 || cats[0].Object.Name != "Peripherals" {
+			t.Fatalf("expected 1 created category 'Peripherals', got %+v", cats)
+		}
+		reloaded, err := queries.GetQuerySet(&FormTestCoupon{}).Select("*", "Category.*").Filter("ID", coupon.ID).Get()
+		if err != nil {
+			t.Fatalf("reload coupon: %v", err)
+		}
+		if reloaded.Object.Category == nil || reloaded.Object.Category.ID != cats[0].Object.ID || reloaded.Object.Category.Name != "Peripherals" {
+			t.Errorf("expected coupon.Category linked to 'Peripherals' (ID=%d), got %+v", cats[0].Object.ID, reloaded.Object.Category)
+		}
+	})
+
+	t.Run("Add_CreateParentWithNoManyToOneTargetWhenMinNumZero", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Uncategorized Coupon", "UNCAT1"),
+			inlineMgmtValues("Category", 0, 0, 0, 1),
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponManyToOnePanels(0, 1, 0)...)
+
+		if coupon.ID == 0 {
+			t.Fatalf("expected coupon.ID > 0")
+		}
+		reloaded, _ := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		if reloaded.Object.Category != nil {
+			t.Errorf("expected nil Category, got %+v", reloaded.Object.Category)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCategory{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 categories in DB, got %d", cnt)
+		}
+	})
+
+	t.Run("Add_CreateParentWithDeletedManyToOneSlotInSinglePost", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Deleted FK Slot", "DELFK1"),
+			inlineMgmtValues("Category", 1, 0, 0, 1),
+			url.Values{
+				"Category-0-Name":                            {"X"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"on"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponManyToOnePanels(0, 1, 0)...)
+
+		if coupon.ID == 0 {
+			t.Fatalf("expected coupon.ID > 0")
+		}
+		reloaded, _ := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		if reloaded.Object.Category != nil {
+			t.Errorf("expected nil Category when inline slot marked deleted, got %+v", reloaded.Object.Category)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCategory{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 categories created, got %d", cnt)
+		}
+	})
+
+	t.Run("Add_CreateParentWithCustomFormAndSaveInstanceOnManyToOnePanel", func(t *testing.T) {
+		setupFormsTestDB(t)
+		var hookCalled bool
+		panels := buildCouponManyToOnePanels(1, 1, 0, func(p *admin.ModelFormPanel[*FormTestCategory, modelforms.ModelForm[*FormTestCategory]]) {
+			p.Form = func() modelforms.ModelForm[*FormTestCategory] {
+				f := modelforms.NewBaseModelForm(context.Background(), &FormTestCategory{})
+				f.SetValidators(func(frm forms.Form, m map[string]any) []error {
+					if n, _ := m["Name"].(string); strings.Contains(n, "forbidden") {
+						return []error{errors.New("category name contains forbidden word")}
+					}
+					return nil
+				})
+				return f
+			}
+			p.SaveInstance = func(ctx context.Context, form modelforms.ModelForm[*FormTestCategory], inst *FormTestCategory) error {
+				hookCalled = true
+				inst.Name = strings.ToUpper(strings.TrimSpace(inst.Name))
+				return inst.Save(ctx)
+			}
+		})
+
+		badCoupon := &FormTestCoupon{}
+		submitExpectInvalidAdminForm(t, badCoupon, mergeFormValues(
+			baseCouponPOST("Bad Cat", "BADCAT1"),
+			url.Values{
+				"Category-0-Name":                            {"forbidden dept"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+		if hookCalled {
+			t.Fatalf("did not expect SaveInstance on invalid form")
+		}
+
+		goodCoupon := &FormTestCoupon{}
+		submitAndSaveAdminForm(t, goodCoupon, mergeFormValues(
+			baseCouponPOST("Good Cat", "GOODCAT1"),
+			url.Values{
+				"Category-0-Name":                            {"  audio gear  "},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+		if !hookCalled {
+			t.Fatalf("expected SaveInstance to be called")
+		}
+		reloaded, _ := queries.GetQuerySet(&FormTestCoupon{}).Select("*", "Category.*").Filter("ID", goodCoupon.ID).Get()
+		if reloaded.Object.Category == nil || reloaded.Object.Category.Name != "AUDIO GEAR" {
+			t.Errorf("expected normalized Category 'AUDIO GEAR', got %+v", reloaded.Object.Category)
+		}
+	})
+
+	t.Run("Add_CreateParentFailsOnManyToOneTargetValidationError", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Invalid Cat", "INVCAT1"),
+			url.Values{
+				"Category-0-Name":                            {"A"}, // MinLength is 2
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af := submitExpectInvalidAdminForm(t, coupon, data, buildCouponManyToOnePanels(1, 1, 0)...)
+		doc := parseHTMLDoc(t, af.BoundForm().AsP())
+		if doc.Find(`.panel__error`).Length() == 0 {
+			t.Errorf("expected .panel__error in HTML")
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCoupon{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 coupons created, got %d", cnt)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCategory{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 categories created, got %d", cnt)
+		}
+	})
+
+	t.Run("Add_CreateParentFailsWhenManyToOneExceedsClampedMaxNumOne", func(t *testing.T) {
+		setupFormsTestDB(t)
+		// MinNum=0, MaxNum=5, Extra=3 clamps to MinNum=0, MaxNum=1, Extra=0 with ManagementForm enforcing MaxNum=1
+		panels := buildCouponManyToOnePanels(0, 5, 3)
+		coupon := &FormTestCoupon{}
+		data := mergeFormValues(
+			baseCouponPOST("Two Cats Invalid", "TWOCAT1"),
+			inlineMgmtValues("Category", 2, 0, 0, 1),
+			url.Values{
+				"Category-0-Name":                            {"First"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Category-1-Name":                            {"Second"},
+				"Category-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Category-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitExpectInvalidAdminForm(t, coupon, data, panels...)
+		catPanel := panels[len(panels)-1].(*admin.ModelFormPanel[*FormTestCategory, modelforms.ModelForm[*FormTestCategory]])
+		if catPanel.MinNum != 0 || catPanel.MaxNum != 1 || catPanel.Extra != 0 {
+			t.Errorf("expected clamped bounds MinNum=0 MaxNum=1 Extra=0, got Min=%d Max=%d Extra=%d",
+				catPanel.MinNum, catPanel.MaxNum, catPanel.Extra)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCategory{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 categories created, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditParentWithUnchangedManyToOneTargetHasChangedFalse", func(t *testing.T) {
+		setupFormsTestDB(t)
+		cat := &FormTestCategory{Name: "Monitors"}
+		_, _ = queries.GetQuerySet(&FormTestCategory{}).Create(cat)
+		coupon := &FormTestCoupon{Title: "Mon Deal", Description: "Promo description", Code: "MONDEAL", MaxDiscount: 15, ValidFrom: "2026-01-01", ValidUntil: "2026-12-31", Category: cat}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+
+		req := httptest.NewRequest(http.MethodPost, "/admin/test/edit", nil)
+		af := newTestAdminForm(req, coupon, nil, buildCouponManyToOnePanels(1, 1, 0)...)
+		af.WithData(mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			url.Values{
+				"Category-0-Name":                            {"Monitors"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected valid unchanged form, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if af.HasChanged() {
+			t.Errorf("expected HasChanged() == false on identical coupon + category data")
+		}
+	})
+
+	t.Run("Update_EditExistingManyToOneTargetInPlace", func(t *testing.T) {
+		setupFormsTestDB(t)
+		cat := &FormTestCategory{Name: "Storage"}
+		_, _ = queries.GetQuerySet(&FormTestCategory{}).Create(cat)
+		coupon := &FormTestCoupon{Title: "Drive Sale", Code: "DRVSALE", Category: cat}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			url.Values{
+				"Category-0-Name":                            {"NVMe Storage"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponManyToOnePanels(1, 1, 0)...)
+
+		gotCat, _ := queries.GetQuerySet(&FormTestCategory{}).Filter("ID", cat.ID).Get()
+		if gotCat.Object.Name != "NVMe Storage" {
+			t.Errorf("expected in-place update to 'NVMe Storage', got %q", gotCat.Object.Name)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCategory{}).Count(); cnt != 1 {
+			t.Errorf("expected 1 category row in DB, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditParentWithNilManyToOneAddingNewTarget", func(t *testing.T) {
+		setupFormsTestDB(t)
+		coupon := &FormTestCoupon{Title: "Add Cat Later", Code: "ADDCATL"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Category", 1, 0, 0, 1),
+			url.Values{
+				"Category-0-Name":                            {"Audio"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponManyToOnePanels(0, 1, 0)...)
+
+		reloaded, err := queries.GetQuerySet(&FormTestCoupon{}).Select("*", "Category.*").Filter("ID", coupon.ID).Get()
+		if err != nil {
+			t.Fatalf("reload coupon: %v", err)
+		}
+		if reloaded.Object.Category == nil || reloaded.Object.Category.Name != "Audio" {
+			t.Errorf("expected coupon linked to new Category 'Audio', got %+v", reloaded.Object.Category)
+		}
+	})
+
+	t.Run("Update_EditParentDeletingLinkedManyToOneTarget", func(t *testing.T) {
+		setupFormsTestDB(t)
+		cat := &FormTestCategory{Name: "Legacy Cat"}
+		_, _ = queries.GetQuerySet(&FormTestCategory{}).Create(cat)
+		coupon := &FormTestCoupon{Title: "Drop Cat", Code: "DROPCAT1", Category: cat}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+
+		data := mergeFormValues(
+			baseCouponPOST(coupon.Title, coupon.Code),
+			inlineMgmtValues("Category", 1, 1, 0, 1),
+			url.Values{
+				"Category-0-Name":                            {"Legacy Cat"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"on"},
+			},
+		)
+		submitAndSaveAdminForm(t, coupon, data, buildCouponManyToOnePanels(0, 1, 0)...)
+
+		reloaded, _ := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		if reloaded.Object.Category != nil {
+			t.Errorf("expected reloaded coupon.Category == nil after delete, got %+v", reloaded.Object.Category)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestCategory{}).Filter("ID", cat.ID).Count(); cnt != 0 {
+			t.Errorf("expected deleted category row removed from DB, count=%d", cnt)
+		}
+	})
+
+	t.Run("Update_EditParentLoadedFromDBWithoutSelectRelatedAndUpdateBothParentAndTarget", func(t *testing.T) {
+		setupFormsTestDB(t)
+		cat := &FormTestCategory{Name: "Networking"}
+		_, _ = queries.GetQuerySet(&FormTestCategory{}).Create(cat)
+		coupon := &FormTestCoupon{Title: "Old Net Title", Code: "NETCODE", Category: cat}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+
+		// Fetch WITHOUT Select("Category.*")
+		row, err := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		if err != nil {
+			t.Fatalf("fetch coupon without SelectRelated: %v", err)
+		}
+		loaded := row.Object
+
+		// Verify GET form hydrates target fields from DB
+		getReq := httptest.NewRequest(http.MethodGet, "/admin/test/edit", nil)
+		afGet := newTestAdminForm(getReq, loaded, nil, buildCouponManyToOnePanels(1, 1, 0)...)
+		getDoc := parseHTMLDoc(t, afGet.BoundForm().AsP())
+		if getDoc.Find(`input[name="Category-0-Name"][value="Networking"]`).Length() != 1 {
+			t.Errorf("expected hydrated Category-0-Name input value 'Networking' without SelectRelated")
+		}
+
+		// POST update to both parent and target
+		row2, _ := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		submitAndSaveAdminForm(t, row2.Object, mergeFormValues(
+			baseCouponPOST("New Net Title", coupon.Code),
+			url.Values{
+				"Category-0-Name":                            {"Pro Networking"},
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), buildCouponManyToOnePanels(1, 1, 0)...)
+
+		gotCoupon, _ := queries.GetQuerySet(&FormTestCoupon{}).Select("*", "Category.*").Filter("ID", coupon.ID).Get()
+		if gotCoupon.Object.Title != "New Net Title" {
+			t.Errorf("expected Title 'New Net Title', got %q", gotCoupon.Object.Title)
+		}
+		if gotCoupon.Object.Category == nil || gotCoupon.Object.Category.Name != "Pro Networking" {
+			t.Errorf("expected Category 'Pro Networking', got %+v", gotCoupon.Object.Category)
+		}
+	})
+
+	t.Run("Update_EditParentFailsOnInvalidManyToOneTargetPreservingDBState", func(t *testing.T) {
+		setupFormsTestDB(t)
+		cat := &FormTestCategory{Name: "Accessories"}
+		_, _ = queries.GetQuerySet(&FormTestCategory{}).Create(cat)
+		coupon := &FormTestCoupon{Title: "Good Title", Code: "GOODM2O", Category: cat}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(coupon)
+
+		af := submitExpectInvalidAdminForm(t, coupon, mergeFormValues(
+			baseCouponPOST("Changed Title", coupon.Code),
+			url.Values{
+				"Category-0-Name":                            {"Z"}, // MinLength is 2
+				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), buildCouponManyToOnePanels(1, 1, 0)...)
+		doc := parseHTMLDoc(t, af.BoundForm().AsP())
+		if doc.Find(`input[name="Category-0-Name"][value="Z"]`).Length() != 1 {
+			t.Errorf("expected invalid value 'Z' preserved in HTML")
+		}
+		if doc.Find(`.panel__error`).Length() == 0 {
+			t.Errorf("expected .panel__error rendered in HTML")
+		}
+
+		dbCoupon, _ := queries.GetQuerySet(&FormTestCoupon{}).Filter("ID", coupon.ID).Get()
+		dbCat, _ := queries.GetQuerySet(&FormTestCategory{}).Filter("ID", cat.ID).Get()
+		if dbCoupon.Object.Title != "Good Title" || dbCat.Object.Name != "Accessories" {
+			t.Errorf("expected DB untouched, got coupon=%+v cat=%+v", dbCoupon.Object, dbCat.Object)
+		}
+	})
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 18. ModelFormPanel RelOneToOne (Direct FK & Through Model) Create & Update Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestAdminForm_ModelFormPanelOneToOne(t *testing.T) {
+	setupFormsTestDB(t)
+
+	t.Run("Add_CreateAuthorWithDirectOneToOneBioInSinglePost", func(t *testing.T) {
+		setupFormsTestDB(t)
+		author := &FormTestAuthor{}
+		panels := buildAuthorOneToOnePanels(true, 1, 1, 0, nil, false, 0, 0, 0, nil)
+		data := mergeFormValues(
+			baseAuthorPOST("Ada Lovelace", "ada@example.com"),
+			url.Values{
+				"Bio-0-Headline":                             {"Analytical Pioneer"},
+				"Bio-0-Website":                              {"https://ada.example"},
+				"Bio-0-ExperienceYears":                      {"12"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:      {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:      {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, author, data, panels...)
+
+		if author.ID == 0 {
+			t.Fatalf("expected author.ID > 0")
+		}
+		bios, _ := queries.GetQuerySet(&FormTestAuthorBio{}).All()
+		if len(bios) != 1 || bios[0].Object.Headline != "Analytical Pioneer" || bios[0].Object.ExperienceYears != 12 {
+			t.Fatalf("expected 1 created FormTestAuthorBio, got %+v", bios)
+		}
+		reloaded, _ := queries.GetQuerySet(&FormTestAuthor{}).Select("*", "Bio.*").Filter("ID", author.ID).Get()
+		if reloaded.Object.Bio == nil || reloaded.Object.Bio.ID != bios[0].Object.ID || reloaded.Object.Bio.Headline != "Analytical Pioneer" {
+			t.Errorf("expected author.Bio linked to bio %d, got %+v", bios[0].Object.ID, reloaded.Object.Bio)
+		}
+	})
+
+	t.Run("Add_CreateAuthorWithThroughOneToOneBadgeInSinglePost", func(t *testing.T) {
+		setupFormsTestDB(t)
+		author := &FormTestAuthor{}
+		panels := buildAuthorOneToOnePanels(false, 0, 0, 0, nil, true, 1, 1, 0, nil)
+		data := mergeFormValues(
+			baseAuthorPOST("Grace Hopper", "grace@example.com"),
+			url.Values{
+				"Badge-0-BadgeName":                          {"Compiler Architect"},
+				"Badge-0-Tier":                               {"Platinum"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME:    {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME:    {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, author, data, panels...)
+
+		if author.ID == 0 {
+			t.Fatalf("expected author.ID > 0")
+		}
+		row, err := author.Badge.Objects().Get()
+		if err != nil {
+			t.Fatalf("author.Badge.Objects().Get() failed: %v", err)
+		}
+		if row.Object.BadgeName != "Compiler Architect" || row.Object.Tier != "Platinum" {
+			t.Errorf("unexpected linked badge: %+v", row.Object)
+		}
+	})
+
+	t.Run("Add_CreateAuthorWithBothDirectBioAndThroughBadgeInSinglePost", func(t *testing.T) {
+		setupFormsTestDB(t)
+		author := &FormTestAuthor{}
+		panels := buildAuthorOneToOnePanels(true, 1, 1, 0, nil, true, 1, 1, 0, nil)
+		data := mergeFormValues(
+			baseAuthorPOST("Niklaus Wirth", "wirth@example.com"),
+			url.Values{
+				"Bio-0-Headline":                             {"Pascal Creator"},
+				"Bio-0-Website":                              {"https://pascal.example"},
+				"Bio-0-ExperienceYears":                      {"40"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:      {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:      {"false"},
+				"Badge-0-BadgeName":                          {"Turing Laureate"},
+				"Badge-0-Tier":                               {"Diamond"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME:    {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME:    {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, author, data, panels...)
+
+		reloaded, _ := queries.GetQuerySet(&FormTestAuthor{}).Select("*", "Bio.*").Filter("ID", author.ID).Get()
+		if reloaded.Object.Bio == nil || reloaded.Object.Bio.Headline != "Pascal Creator" {
+			t.Errorf("expected direct Bio 'Pascal Creator', got %+v", reloaded.Object.Bio)
+		}
+		badgeRow, err := author.Badge.Objects().Get()
+		if err != nil {
+			t.Fatalf("expected linked Badge via through table: %v", err)
+		}
+		if badgeRow.Object.BadgeName != "Turing Laureate" || badgeRow.Object.Tier != "Diamond" {
+			t.Errorf("unexpected through Badge: %+v", badgeRow.Object)
+		}
+	})
+
+	t.Run("Add_CreateAuthorWithZeroOneToOneTargetsWhenMinNumZero", func(t *testing.T) {
+		setupFormsTestDB(t)
+		author := &FormTestAuthor{}
+		panels := buildAuthorOneToOnePanels(true, 0, 1, 0, nil, true, 0, 1, 0, nil)
+		data := mergeFormValues(
+			baseAuthorPOST("Minimal Author", "min@example.com"),
+			inlineMgmtValues("Bio", 0, 0, 0, 1),
+			inlineMgmtValues("Badge", 0, 0, 0, 1),
+		)
+		submitAndSaveAdminForm(t, author, data, panels...)
+
+		if author.ID == 0 {
+			t.Fatalf("expected author.ID > 0")
+		}
+		reloaded, _ := queries.GetQuerySet(&FormTestAuthor{}).Filter("ID", author.ID).Get()
+		if reloaded.Object.Bio != nil {
+			t.Errorf("expected nil Bio, got %+v", reloaded.Object.Bio)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBio{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 bios, got %d", cnt)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBadge{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 badges, got %d", cnt)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBadgeThrough{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 badge links, got %d", cnt)
+		}
+	})
+
+	t.Run("Add_CreateAuthorWithCustomFormAndSaveInstanceOnOneToOnePanel", func(t *testing.T) {
+		setupFormsTestDB(t)
+		var bioHook, badgeHook bool
+		panels := buildAuthorOneToOnePanels(
+			true, 1, 1, 0,
+			[]func(*admin.ModelFormPanel[*FormTestAuthorBio, modelforms.ModelForm[*FormTestAuthorBio]]){
+				func(p *admin.ModelFormPanel[*FormTestAuthorBio, modelforms.ModelForm[*FormTestAuthorBio]]) {
+					p.Form = func() modelforms.ModelForm[*FormTestAuthorBio] {
+						return modelforms.NewBaseModelForm(context.Background(), &FormTestAuthorBio{})
+					}
+					p.SaveInstance = func(ctx context.Context, form modelforms.ModelForm[*FormTestAuthorBio], inst *FormTestAuthorBio) error {
+						bioHook = true
+						inst.Website = strings.TrimSpace(strings.ToLower(inst.Website))
+						return inst.Save(ctx)
+					}
+				},
+			},
+			true, 1, 1, 0,
+			[]func(*admin.ModelFormPanel[*FormTestAuthorBadge, modelforms.ModelForm[*FormTestAuthorBadge]]){
+				func(p *admin.ModelFormPanel[*FormTestAuthorBadge, modelforms.ModelForm[*FormTestAuthorBadge]]) {
+					p.Form = func() modelforms.ModelForm[*FormTestAuthorBadge] {
+						return modelforms.NewBaseModelForm(context.Background(), &FormTestAuthorBadge{})
+					}
+					p.SaveInstance = func(ctx context.Context, form modelforms.ModelForm[*FormTestAuthorBadge], inst *FormTestAuthorBadge) error {
+						badgeHook = true
+						inst.Tier = strings.ToUpper(inst.Tier)
+						return inst.Save(ctx)
+					}
+				},
+			},
+		)
+
+		author := &FormTestAuthor{}
+		data := mergeFormValues(
+			baseAuthorPOST("Custom Hooks", "hooks@example.com"),
+			url.Values{
+				"Bio-0-Headline":                          {"Systems Engineer"},
+				"Bio-0-Website":                           {"  HTTPS://SYS.EXAMPLE  "},
+				"Bio-0-ExperienceYears":                   {"8"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
+				"Badge-0-BadgeName":                       {"Contributor"},
+				"Badge-0-Tier":                            {"silver"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		submitAndSaveAdminForm(t, author, data, panels...)
+
+		if !bioHook || !badgeHook {
+			t.Fatalf("expected both bioHook (%v) and badgeHook (%v) called", bioHook, badgeHook)
+		}
+		reloaded, _ := queries.GetQuerySet(&FormTestAuthor{}).Select("*", "Bio.*").Filter("ID", author.ID).Get()
+		if reloaded.Object.Bio == nil || reloaded.Object.Bio.Website != "https://sys.example" {
+			t.Errorf("expected normalized Website 'https://sys.example', got %+v", reloaded.Object.Bio)
+		}
+		badgeRow, _ := author.Badge.Objects().Get()
+		if badgeRow.Object.Tier != "SILVER" {
+			t.Errorf("expected uppercased Tier 'SILVER', got %+v", badgeRow.Object)
+		}
+	})
+
+	t.Run("Add_CreateAuthorFailsOnOneToOneValidationAndClampedMaxNum", func(t *testing.T) {
+		setupFormsTestDB(t)
+		// Verify PRE/POST ClusterOrderableForm ordering for direct vs through O2O
+		panelsOrder := buildAuthorOneToOnePanels(true, 1, 1, 0, nil, true, 0, 5, 0, nil)
+		bioPanel := panelsOrder[2].(*admin.ModelFormPanel[*FormTestAuthorBio, modelforms.ModelForm[*FormTestAuthorBio]])
+		badgePanel := panelsOrder[3].(*admin.ModelFormPanel[*FormTestAuthorBadge, modelforms.ModelForm[*FormTestAuthorBadge]])
+
+		_, bioForms, err := bioPanel.Forms(httptest.NewRequest(http.MethodGet, "/", nil), context.Background(), &FormTestAuthor{})
+		if err != nil {
+			t.Fatalf("bioPanel.Forms failed: %v", err)
+		}
+		if bioForms[0].(admin.ClusterOrderableForm).FormOrder() != admin.FORM_ORDERING_PRE {
+			t.Errorf("expected direct O2O Bio FormOrder PRE, got %v", bioForms[0].(admin.ClusterOrderableForm).FormOrder())
+		}
+		_, badgeForms, err := badgePanel.Forms(httptest.NewRequest(http.MethodGet, "/", nil), context.Background(), &FormTestAuthor{})
+		if err != nil {
+			t.Fatalf("badgePanel.Forms failed: %v", err)
+		}
+		if badgeForms[0].(admin.ClusterOrderableForm).FormOrder() != admin.FORM_ORDERING_POST {
+			t.Errorf("expected through O2O Badge FormOrder POST, got %v", badgeForms[0].(admin.ClusterOrderableForm).FormOrder())
+		}
+		if badgePanel.MaxNum != 1 {
+			t.Errorf("expected through O2O Badge MaxNum clamped to 1, got %d", badgePanel.MaxNum)
+		}
+
+		// Case A: Field MinLength validation failure on Bio.Headline
+		badBioAuthor := &FormTestAuthor{}
+		afBioErr := submitExpectInvalidAdminForm(t, badBioAuthor, mergeFormValues(
+			baseAuthorPOST("Invalid Bio", "badbio@example.com"),
+			url.Values{
+				"Bio-0-Headline":                          {"Hi"}, // MinLength 3
+				"Bio-0-Website":                           {""},
+				"Bio-0-ExperienceYears":                   {"1"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
+				"Badge-management-TOTAL_FORMS":            {"0"},
+				"Badge-management-INITIAL_FORMS":          {"0"},
+				"Badge-management-MIN_NUM_FORMS":          {"0"},
+				"Badge-management-MAX_NUM_FORMS":          {"1"},
+			},
+		), panelsOrder...)
+		if doc := parseHTMLDoc(t, afBioErr.BoundForm().AsP()); doc.Find(`.panel__error`).Length() == 0 {
+			t.Errorf("expected .panel__error rendered for Bio validation failure")
+		}
+
+		// Case B: ManagementForm failure when submitting 2 badges against clamped MaxNum=1
+		badBadgeAuthor := &FormTestAuthor{}
+		submitExpectInvalidAdminForm(t, badBadgeAuthor, mergeFormValues(
+			baseAuthorPOST("Too Many Badges", "badges@example.com"),
+			inlineMgmtValues("Badge", 2, 0, 0, 1),
+			url.Values{
+				"Bio-0-Headline":                          {"Valid Headline"},
+				"Bio-0-Website":                           {""},
+				"Bio-0-ExperienceYears":                   {"3"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
+				"Badge-0-BadgeName":                       {"First Badge"},
+				"Badge-0-Tier":                            {"Gold"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Badge-1-BadgeName":                       {"Second Badge"},
+				"Badge-1-Tier":                            {"Silver"},
+				"Badge-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Badge-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panelsOrder...)
+
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthor{}).Count(); cnt != 0 {
+			t.Errorf("expected 0 authors created on failed validation, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditAuthorWithUnchangedDirectAndThroughOneToOneHasChangedFalse", func(t *testing.T) {
+		setupFormsTestDB(t)
+		bio := &FormTestAuthorBio{Headline: "Steady Bio", Website: "https://steady.example", ExperienceYears: 7}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBio{}).Create(bio)
+		author := &FormTestAuthor{Name: "Steady Author", Email: "steady@example.com", Bio: bio}
+		_, _ = queries.GetQuerySet(&FormTestAuthor{}).Create(author)
+		badge := &FormTestAuthorBadge{BadgeName: "Mentor", Tier: "Gold"}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBadge{}).Create(badge)
+		_, _, _ = author.Badge.Objects().SetTarget(badge)
+
+		req := httptest.NewRequest(http.MethodPost, "/admin/test/edit", nil)
+		panels := buildAuthorOneToOnePanels(true, 1, 1, 0, nil, true, 1, 1, 0, nil)
+		af := newTestAdminForm(req, author, nil, panels...)
+		af.WithData(mergeFormValues(
+			baseAuthorPOST(author.Name, author.Email),
+			url.Values{
+				"Bio-0-Headline":                          {bio.Headline},
+				"Bio-0-Website":                           {bio.Website},
+				"Bio-0-ExperienceYears":                   {"7"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
+				"Badge-0-BadgeName":                       {badge.BadgeName},
+				"Badge-0-Tier":                            {badge.Tier},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected valid unchanged O2O form, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if af.HasChanged() {
+			t.Errorf("expected HasChanged() == false on identical author, bio, and badge")
+		}
+	})
+
+	t.Run("Update_EditExistingDirectOneToOneBioInPlace", func(t *testing.T) {
+		setupFormsTestDB(t)
+		bio := &FormTestAuthorBio{Headline: "Draft Bio", Website: "https://old.example", ExperienceYears: 2}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBio{}).Create(bio)
+		author := &FormTestAuthor{Name: "Bio Editor", Email: "bio@example.com", Bio: bio}
+		_, _ = queries.GetQuerySet(&FormTestAuthor{}).Create(author)
+
+		panels := buildAuthorOneToOnePanels(true, 1, 1, 0, nil, false, 0, 0, 0, nil)
+		submitAndSaveAdminForm(t, author, mergeFormValues(
+			baseAuthorPOST(author.Name, author.Email),
+			url.Values{
+				"Bio-0-Headline":                        {"Principal Architect"},
+				"Bio-0-Website":                         {"https://new.example"},
+				"Bio-0-ExperienceYears":                 {"15"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+
+		gotBio, _ := queries.GetQuerySet(&FormTestAuthorBio{}).Filter("ID", bio.ID).Get()
+		if gotBio.Object.Headline != "Principal Architect" || gotBio.Object.Website != "https://new.example" || gotBio.Object.ExperienceYears != 15 {
+			t.Errorf("expected in-place bio update, got %+v", gotBio.Object)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBio{}).Count(); cnt != 1 {
+			t.Errorf("expected 1 bio row in DB, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditExistingThroughOneToOneBadgeInPlace", func(t *testing.T) {
+		setupFormsTestDB(t)
+		author := &FormTestAuthor{Name: "Badge Editor", Email: "badge@example.com"}
+		_, _ = queries.GetQuerySet(&FormTestAuthor{}).Create(author)
+		badge := &FormTestAuthorBadge{BadgeName: "Reviewer", Tier: "Bronze"}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBadge{}).Create(badge)
+		_, _, _ = author.Badge.Objects().SetTarget(badge)
+
+		// Fetch fresh author WITHOUT preloading Badge so ModelFormPanel queries through table
+		loaded, err := queries.GetQuerySet(&FormTestAuthor{}).Filter("ID", author.ID).Get()
+		if err != nil {
+			t.Fatalf("load author: %v", err)
+		}
+
+		panels := buildAuthorOneToOnePanels(false, 0, 0, 0, nil, true, 1, 1, 0, nil)
+		getReq := httptest.NewRequest(http.MethodGet, "/admin/test/edit", nil)
+		afGet := newTestAdminForm(getReq, loaded.Object, nil, panels...)
+		getDoc := parseHTMLDoc(t, afGet.BoundForm().AsP())
+		if getDoc.Find(`input[name="Badge-0-BadgeName"][value="Reviewer"]`).Length() != 1 {
+			t.Errorf("expected GET form to query through O2O and populate Badge-0-BadgeName='Reviewer'")
+		}
+
+		loaded2, _ := queries.GetQuerySet(&FormTestAuthor{}).Filter("ID", author.ID).Get()
+		submitAndSaveAdminForm(t, loaded2.Object, mergeFormValues(
+			baseAuthorPOST(author.Name, author.Email),
+			url.Values{
+				"Badge-0-BadgeName":                       {"Lead Reviewer"},
+				"Badge-0-Tier":                            {"Platinum"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+
+		gotBadge, _ := queries.GetQuerySet(&FormTestAuthorBadge{}).Filter("ID", badge.ID).Get()
+		if gotBadge.Object.BadgeName != "Lead Reviewer" || gotBadge.Object.Tier != "Platinum" {
+			t.Errorf("expected updated badge ID=%d, got %+v", badge.ID, gotBadge.Object)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBadge{}).Count(); cnt != 1 {
+			t.Errorf("expected 1 badge row in DB, got %d", cnt)
+		}
+	})
+
+	t.Run("Update_EditAuthorWithNilOneToOneTargetsAddingBioAndBadge", func(t *testing.T) {
+		setupFormsTestDB(t)
+		author := &FormTestAuthor{Name: "Fresh Author", Email: "fresh@example.com"}
+		_, _ = queries.GetQuerySet(&FormTestAuthor{}).Create(author)
+
+		panels := buildAuthorOneToOnePanels(true, 0, 1, 0, nil, true, 0, 1, 0, nil)
+		submitAndSaveAdminForm(t, author, mergeFormValues(
+			baseAuthorPOST("Fresh Author", "fresh@example.com"),
+			inlineMgmtValues("Bio", 1, 0, 0, 1),
+			inlineMgmtValues("Badge", 1, 0, 0, 1),
+			url.Values{
+				"Bio-0-Headline":                          {"Newly Added Bio"},
+				"Bio-0-Website":                           {"https://added.example"},
+				"Bio-0-ExperienceYears":                   {"4"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
+				"Badge-0-BadgeName":                       {"Rising Star"},
+				"Badge-0-Tier":                            {"Silver"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+
+		reloaded, _ := queries.GetQuerySet(&FormTestAuthor{}).Select("*", "Bio.*").Filter("ID", author.ID).Get()
+		if reloaded.Object.Bio == nil || reloaded.Object.Bio.Headline != "Newly Added Bio" {
+			t.Errorf("expected added Bio linked on author, got %+v", reloaded.Object.Bio)
+		}
+		badgeRow, err := author.Badge.Objects().Get()
+		if err != nil {
+			t.Fatalf("expected added Badge linked via through table: %v", err)
+		}
+		if badgeRow.Object.BadgeName != "Rising Star" {
+			t.Errorf("expected Badge 'Rising Star', got %+v", badgeRow.Object)
+		}
+	})
+
+	t.Run("Update_EditAuthorDeletingDirectBioAndThroughBadge", func(t *testing.T) {
+		setupFormsTestDB(t)
+		bio := &FormTestAuthorBio{Headline: "Removable Bio", ExperienceYears: 5}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBio{}).Create(bio)
+		author := &FormTestAuthor{Name: "Cleanup Author", Email: "cleanup@example.com", Bio: bio}
+		_, _ = queries.GetQuerySet(&FormTestAuthor{}).Create(author)
+		badge := &FormTestAuthorBadge{BadgeName: "Removable Badge", Tier: "Bronze"}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBadge{}).Create(badge)
+		_, _, _ = author.Badge.Objects().SetTarget(badge)
+
+		panels := buildAuthorOneToOnePanels(true, 0, 1, 0, nil, true, 0, 1, 0, nil)
+		submitAndSaveAdminForm(t, author, mergeFormValues(
+			baseAuthorPOST(author.Name, author.Email),
+			inlineMgmtValues("Bio", 1, 1, 0, 1),
+			inlineMgmtValues("Badge", 1, 1, 0, 1),
+			url.Values{
+				"Bio-0-Headline":                          {bio.Headline},
+				"Bio-0-Website":                           {""},
+				"Bio-0-ExperienceYears":                   {"5"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"on"},
+				"Badge-0-BadgeName":                       {badge.BadgeName},
+				"Badge-0-Tier":                            {badge.Tier},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"on"},
+			},
+		), panels...)
+
+		reloaded, _ := queries.GetQuerySet(&FormTestAuthor{}).Filter("ID", author.ID).Get()
+		if reloaded.Object.Bio != nil {
+			t.Errorf("expected reloaded author.Bio == nil after delete, got %+v", reloaded.Object.Bio)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBio{}).Filter("ID", bio.ID).Count(); cnt != 0 {
+			t.Errorf("expected bio deleted from DB, count=%d", cnt)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBadgeThrough{}).Count(); cnt != 0 {
+			t.Errorf("expected through link deleted from DB, count=%d", cnt)
+		}
+		if cnt, _ := queries.GetQuerySet(&FormTestAuthorBadge{}).Filter("ID", badge.ID).Count(); cnt != 0 {
+			t.Errorf("expected badge deleted from DB, count=%d", cnt)
+		}
+	})
+
+	t.Run("Update_EditAuthorFailsOnInvalidOneToOneTargetPreservingDBState", func(t *testing.T) {
+		setupFormsTestDB(t)
+		bio := &FormTestAuthorBio{Headline: "Go Developer", ExperienceYears: 6}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBio{}).Create(bio)
+		author := &FormTestAuthor{Name: "Alice", Email: "alice@example.com", Bio: bio}
+		_, _ = queries.GetQuerySet(&FormTestAuthor{}).Create(author)
+		badge := &FormTestAuthorBadge{BadgeName: "Core", Tier: "Gold"}
+		_, _ = queries.GetQuerySet(&FormTestAuthorBadge{}).Create(badge)
+		_, _, _ = author.Badge.Objects().SetTarget(badge)
+
+		panels := buildAuthorOneToOnePanels(true, 1, 1, 0, nil, true, 1, 1, 0, nil)
+		af := submitExpectInvalidAdminForm(t, author, mergeFormValues(
+			baseAuthorPOST("Should Not Persist", "alice@example.com"),
+			url.Values{
+				"Bio-0-Headline":                          {"No"}, // MinLength 3
+				"Bio-0-Website":                           {""},
+				"Bio-0-ExperienceYears":                   {"6"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
+				"Badge-0-BadgeName":                       {"New Badge"},
+				"Badge-0-Tier":                            {"Silver"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		), panels...)
+
+		doc := parseHTMLDoc(t, af.BoundForm().AsP())
+		if doc.Find(`input[name="Bio-0-Headline"][value="No"]`).Length() != 1 {
+			t.Errorf("expected invalid Bio-0-Headline value 'No' preserved in HTML")
+		}
+		if doc.Find(`.panel__error`).Length() == 0 {
+			t.Errorf("expected .panel__error rendered in HTML")
+		}
+
+		dbAuthor, _ := queries.GetQuerySet(&FormTestAuthor{}).Filter("ID", author.ID).Get()
+		dbBio, _ := queries.GetQuerySet(&FormTestAuthorBio{}).Filter("ID", bio.ID).Get()
+		dbBadge, _ := queries.GetQuerySet(&FormTestAuthorBadge{}).Filter("ID", badge.ID).Get()
+		if dbAuthor.Object.Name != "Alice" || dbBio.Object.Headline != "Go Developer" || dbBadge.Object.BadgeName != "Core" {
+			t.Errorf("expected DB state untouched, got author=%+v bio=%+v badge=%+v",
+				dbAuthor.Object, dbBio.Object, dbBadge.Object)
 		}
 	})
 }

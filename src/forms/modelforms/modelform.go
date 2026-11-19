@@ -117,13 +117,16 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 		"Instance has already been set",
 	)
 
-	if f.wasSet(fieldsWasSet) {
-		return
-	}
-
 	f.Model = model
 	f.Definition = attrs.Define(f.Context(), model)
 	f.InstanceFields = f.Definition.Fields()
+
+	if f.wasSet(fieldsWasSet) {
+		f.setFlag(instanceWasSet, true)
+		return
+	}
+
+	f.ModelFields = make([]string, 0, len(f.InstanceFields))
 
 	var excluded = make(map[string]struct{})
 	for _, n := range f.ModelExclude {

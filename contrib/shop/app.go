@@ -357,7 +357,7 @@ func NewAppConfig() (django.AppConfig, error) {
 							admin.PanelTab(
 								trans.S("Coupon"),
 								admin.FieldPanel("Title"),
-								admin.FieldPanel("Description"),
+								admin.FieldPanel("ShortDescription"),
 								admin.FieldPanel("Code"),
 								admin.RowPanel(
 									admin.FieldPanel("MaxDiscount"),
@@ -382,7 +382,8 @@ func NewAppConfig() (django.AppConfig, error) {
 									// DisallowRemove: true,
 									Panels: []admin.Panel{
 										admin.FieldPanel("ID"),
-										admin.FieldPanel("Product"),
+										admin.FieldPanel("Title"),
+										admin.FieldPanel("Price"),
 									},
 								},
 							),

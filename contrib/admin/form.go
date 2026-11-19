@@ -318,6 +318,30 @@ func (a *AdminForm[T1, T2]) SetOnLoad(fn func(model T2, initialData map[string]i
 	a.Form.SetOnLoad(fn)
 }
 
+func collectParentFormFields(panels []Panel) map[string]struct{} {
+	var fields = make(map[string]struct{})
+	var walk func(list []Panel)
+	walk = func(list []Panel) {
+		for _, p := range list {
+			if p == nil {
+				continue
+			}
+			if multi, ok := p.(MultiPanel); ok {
+				walk(multi.Children())
+				continue
+			}
+			if _, isFormPanel := p.(FormPanel); isFormPanel {
+				continue
+			}
+			for _, f := range p.Fields() {
+				fields[f] = struct{}{}
+			}
+		}
+	}
+	walk(panels)
+	return fields
+}
+
 func (a *AdminForm[T1, T2]) Load() {
 	a.Form.Load()
 
@@ -333,12 +357,7 @@ func (a *AdminForm[T1, T2]) Load() {
 		return
 	}
 
-	var panelFields = make(map[string]struct{})
-	for _, panel := range a.Panels {
-		for _, field := range panel.Fields() {
-			panelFields[field] = struct{}{}
-		}
-	}
+	var panelFields = collectParentFormFields(a.Panels)
 
 	for _, key := range fields.Keys() {
 		if _, ok := panelFields[key]; !ok {
@@ -510,40 +529,48 @@ outer:
 
 		if p, ok := clusterable.(postSaveForm); ok && p.ParentField() != "" && p.FormField() != "" {
 			v, ok := data[p.ParentField()]
+			if !ok || attrs.IsZero(v) {
+				if inst := a.Form.Instance(); !versatile.IsZero(inst) {
+					var defs = attrs.Define(a.Context(), inst)
+					if fld, fldOk := defs.Field(p.ParentField()); fldOk {
+						if fld.IsPrimary() {
+							v = inst
+						} else {
+							v = fld.GetValue()
+						}
+						ok = !attrs.IsZero(v)
+					}
+				}
+			}
 			if !ok {
-				// parent field not found in cleaned data
+				// parent field not found in cleaned data or instance
 				// try save and continue
 				a.saveFormSetForm(form)
 				continue outer
 			}
 
-			method, err := versatile.Method[func() ([]forms.Minimum, error)](form, "Forms",
-				versatile.WithContext(a.Context()),
-			)
-			if err != nil && !errors.Is(err, versatile.ErrMethodNotFound) {
-				return data, err
+			if cleaned := form.CleanedData(); cleaned != nil {
+				cleaned[p.FormField()] = v
+			} else if formsMethod := reflect.ValueOf(form).MethodByName("Forms"); formsMethod.IsValid() &&
+				formsMethod.Type().NumIn() == 0 &&
+				formsMethod.Type().NumOut() == 2 {
+				var out = formsMethod.Call(nil)
+				if !out[1].IsNil() {
+					return data, out[1].Interface().(error)
+				}
+				var sliceVal = out[0]
+				if sliceVal.Kind() == reflect.Slice {
+					for j := 0; j < sliceVal.Len(); j++ {
+						if child, ok := sliceVal.Index(j).Interface().(forms.Minimum); ok {
+							if childCleaned := child.CleanedData(); childCleaned != nil {
+								childCleaned[p.FormField()] = v
+							}
+						}
+					}
+				}
 			}
 
-			// set directly, is not formset
-			// save and continue
-			if method == nil {
-				form.CleanedData()[p.FormField()] = v
-				a.saveFormSetForm(form)
-				continue outer
-			}
-
-			forms, err := method()
-			if err != nil {
-				return data, err
-			}
-
-		inner:
-			for _, f := range forms {
-				f.CleanedData()[p.FormField()] = v
-				a.saveFormSetForm(f)
-				continue inner
-			}
-
+			a.saveFormSetForm(form)
 			continue outer
 		}
 

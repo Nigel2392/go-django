@@ -406,10 +406,12 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		}
 
 		var subForm FORM
-		if fs.opts.CanAdd && totalAdded >= len(formList) {
+		if i < len(formList) {
+			subForm = formList[i]
+		} else if fs.opts.CanAdd {
 			subForm = form.NewForm(ctx)
 		} else {
-			subForm = formList[totalAdded]
+			break
 		}
 
 		if !fs.opts.SkipPrefix {
@@ -424,7 +426,7 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		}
 
 		if fs.opts.CanOrder {
-			init[ORDERING_FIELD_NAME] = totalAdded
+			init[ORDERING_FIELD_NAME] = i
 		}
 		if fs.opts.CanDelete {
 			init[DELETION_FIELD_NAME] = false
@@ -469,11 +471,11 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		}
 
 		if s, ok := any(subForm).(initialSetter); ok {
-			if totalAdded < len(defaults) && defaults[totalAdded] != nil {
-				// logger.Warnf("FormSet: Setting initial data for form %d (%T): %v", totalAdded, subForm, defaults[totalAdded])
-				s.SetInitial(defaults[totalAdded])
+			if i < len(defaults) && defaults[i] != nil {
+				// logger.Warnf("FormSet: Setting initial data for form %d (%T): %v", i, subForm, defaults[i])
+				s.SetInitial(defaults[i])
 			} else if base != nil {
-				// logger.Warnf("FormSet: Setting base initial data for form %d (%T): %v", totalAdded, subForm, base)
+				// logger.Warnf("FormSet: Setting base initial data for form %d (%T): %v", i, subForm, base)
 				s.SetInitial(base)
 			}
 		}

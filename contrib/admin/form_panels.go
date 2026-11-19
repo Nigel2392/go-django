@@ -818,6 +818,154 @@ func (f *ModelFormPanel[TARGET, FORM]) getField(source attrs.Definer) (attrs.Fie
 	return defs.Primary(), field
 }
 
+var _ modelforms.ModelForm[attrs.Definer] = (*modelFormPanelForm[attrs.Definer, modelforms.ModelForm[attrs.Definer]])(nil)
+
+type modelFormPanelForm[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]] struct {
+	modelforms.ModelForm[TARGET]
+	panel       *ModelFormPanel[TARGET, FORM]
+	source      attrs.Definer
+	sourceField attrs.FieldDefinition
+	relation    attrs.Relation
+	isNew       bool
+}
+
+func (f *modelFormPanelForm[TARGET, FORM]) Clean(ctx context.Context, cleaned map[string]any) (map[string]any, []error) {
+	if cleaner, ok := f.ModelForm.(interface {
+		Clean(context.Context, map[string]any) (map[string]any, []error)
+	}); ok {
+		return cleaner.Clean(ctx, cleaned)
+	}
+	return cleaned, nil
+}
+
+func (f *modelFormPanelForm[TARGET, FORM]) IsValid(ctx context.Context) bool {
+	if v, ok := f.ModelForm.(forms.IsValidDefiner); ok {
+		return v.IsValid(ctx)
+	}
+	return true
+}
+
+func getM2MBackRef(ctx context.Context, source attrs.Definer, fieldName string) (queries.MultiThroughRelationValue, error) {
+	var defs = attrs.Define(ctx, source)
+	var srcField, ok = defs.Field(fieldName)
+	if !ok {
+		return nil, errors.FieldNotFound.Wrapf(
+			"Field %q not found in instance of type %T", fieldName, source,
+		)
+	}
+	var backRef, isBackRef = srcField.GetValue().(queries.MultiThroughRelationValue)
+	if !isBackRef || versatile.IsZero(backRef) {
+		return &queries.RelM2M[attrs.Definer, attrs.Definer]{
+			Parent: &queries.ParentInfo{
+				Object: source,
+				Field:  srcField,
+			},
+		}, nil
+	}
+	_ = backRef.BindToModel(source, srcField)
+	return backRef, nil
+}
+
+func getO2OThroughBackRef(ctx context.Context, source attrs.Definer, fieldName string) (queries.ThroughRelationValue, error) {
+	var defs = attrs.Define(ctx, source)
+	var srcField, ok = defs.Field(fieldName)
+	if !ok {
+		return nil, errors.FieldNotFound.Wrapf(
+			"Field %q not found in instance of type %T", fieldName, source,
+		)
+	}
+	var backRef, isBackRef = srcField.GetValue().(queries.ThroughRelationValue)
+	if !isBackRef || versatile.IsZero(backRef) {
+		return &queries.RelO2O[attrs.Definer, attrs.Definer]{
+			Parent: &queries.ParentInfo{
+				Object: source,
+				Field:  srcField,
+			},
+		}, nil
+	}
+	_ = backRef.BindToModel(source, srcField)
+	return backRef, nil
+}
+
+func initSourceState(source attrs.Definer) {
+	if versatile.IsZero(source) {
+		return
+	}
+	var stateMethod = reflect.ValueOf(source).MethodByName("State")
+	if stateMethod.IsValid() && stateMethod.Type().NumIn() == 0 {
+		stateMethod.Call(nil)
+	}
+}
+
+func (f *modelFormPanelForm[TARGET, FORM]) Save() (map[string]any, error) {
+	var (
+		ctx     = f.Context()
+		relType = f.relation.Type()
+		wasNew  = f.isNew || attrs.IsZero(attrs.PrimaryKey(ctx, f.ModelForm.Instance()))
+	)
+
+	if relType == attrs.RelOneToMany || (relType == attrs.RelOneToOne && f.relation.Through() == nil && f.relation.Field() != nil && !f.relation.Field().IsPrimary()) {
+		if revField := f.relation.Field(); revField != nil {
+			var srcVal any = f.source
+			if cleaned := f.ModelForm.CleanedData(); cleaned != nil {
+				if existing, ok := cleaned[revField.Name()]; ok && !attrs.IsZero(existing) {
+					srcVal = existing
+				} else {
+					cleaned[revField.Name()] = f.source
+				}
+			}
+			var targetDefs = attrs.Define(ctx, f.ModelForm.Instance())
+			if instRevField, ok := targetDefs.Field(revField.Name()); ok {
+				_ = instRevField.SetValue(srcVal, true)
+			}
+		}
+	}
+
+	var cleaned, err = f.ModelForm.Save()
+	if err != nil {
+		return cleaned, err
+	}
+
+	switch relType {
+	case attrs.RelManyToMany:
+		if wasNew {
+			var backRef, err = getM2MBackRef(ctx, f.source, f.panel.FieldName)
+			if err != nil {
+				return cleaned, err
+			}
+			var qs = queries.ManyToManyQuerySet[TARGET](backRef)
+			if _, err := qs.WithContext(ctx).AddTargets(f.ModelForm.Instance()); err != nil {
+				return cleaned, err
+			}
+		}
+	case attrs.RelManyToOne:
+		initSourceState(f.source)
+		var sourceDefs = attrs.Define(ctx, f.source)
+		if srcField, ok := sourceDefs.Field(f.panel.FieldName); ok {
+			_ = srcField.SetValue(f.ModelForm.Instance(), true)
+		}
+	case attrs.RelOneToOne:
+		if f.relation.Through() != nil {
+			var backRef, err = getO2OThroughBackRef(ctx, f.source, f.panel.FieldName)
+			if err != nil {
+				return cleaned, err
+			}
+			var qs = queries.OneToOneQuerySet[TARGET](backRef)
+			if _, _, err := qs.WithContext(ctx).SetTarget(f.ModelForm.Instance()); err != nil {
+				return cleaned, err
+			}
+		} else if f.relation.Field() == nil || f.relation.Field().IsPrimary() {
+			initSourceState(f.source)
+			var sourceDefs = attrs.Define(ctx, f.source)
+			if srcField, ok := sourceDefs.Field(f.panel.FieldName); ok {
+				_ = srcField.SetValue(f.ModelForm.Instance(), true)
+			}
+		}
+	}
+
+	return cleaned, nil
+}
+
 func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Request, source attrs.Definer, minNumForms int, targetFields []string, targetList []TARGET) []modelforms.ModelForm[TARGET] {
 	var formList = make([]modelforms.ModelForm[TARGET], 0, minNumForms)
 	var _, field = p.getField(source)
@@ -871,15 +1019,28 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 			}
 		}
 
+		if p.SaveInstance != nil {
+			if baseMF, ok := any(form).(*modelforms.BaseModelForm[TARGET]); ok {
+				var typedForm, _ = any(form).(FORM)
+				baseMF.SaveInstance = func(ctx context.Context, inst TARGET) error {
+					return p.SaveInstance(ctx, typedForm, inst)
+				}
+			}
+		}
+
 		form.SetFields(targetFields...)
 
 		var initialData = make(map[string]any)
-		switch field.Rel().Type() {
-		case attrs.RelOneToMany:
+		var relType = field.Rel().Type()
+		switch {
+		case relType == attrs.RelOneToMany,
+			relType == attrs.RelOneToOne && rel.Through() == nil && revField != nil && !revField.IsPrimary():
 			if revField != nil {
 				var fieldName = revField.Name()
 				var pk = attrs.PrimaryKey(ctx, source)
-				initialData[fieldName] = pk
+				if !attrs.IsZero(pk) {
+					initialData[fieldName] = pk
+				}
 
 				form.AddField(fieldName, &formfields.ForeignKeyFormField{
 					BaseField: fields.NewField(
@@ -907,7 +1068,7 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 					field.Name(),
 				)
 			}
-		case attrs.RelManyToOne:
+		case relType == attrs.RelManyToOne, relType == attrs.RelManyToMany, relType == attrs.RelOneToOne:
 		default:
 			// not implemented
 			assert.Fail(
@@ -923,7 +1084,14 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 		maps.Copy(init, initialData)
 		form.SetInitial(init)
 
-		formList = append(formList, form)
+		formList = append(formList, &modelFormPanelForm[TARGET, FORM]{
+			ModelForm:   form,
+			panel:       p,
+			source:      source,
+			sourceField: field,
+			relation:    rel,
+			isNew:       isNew,
+		})
 	}
 	return formList
 }
@@ -975,15 +1143,48 @@ func (c *adminClusterForm[F, T1]) Unwrap() []any {
 	return []any{c.BaseFormSetForm}
 }
 
+func (m *ModelFormPanel[TARGET, FORM]) clampLimits(rel attrs.Relation) {
+	if m.MaxNum == 0 {
+		m.MaxNum = 100
+	}
+
+	switch rel.Type() {
+	case attrs.RelManyToOne, attrs.RelOneToOne:
+		if m.MinNum > 1 || m.MinNum < 0 {
+			m.MinNum = 1
+			logger.Warnf("ModelFormPanel.Bind: m.MinNum > 1 || m.MinNum < 0 for ManyToOne or OneToOne relation; setting MinNum to 1")
+		}
+
+		if m.MaxNum > 1 || m.MaxNum < 0 {
+			m.MaxNum = 1
+			logger.Warnf("ModelFormPanel.Bind: m.MaxNum > 1 || m.MaxNum < 0 for ManyToOne or OneToOne relation; setting MaxNum to 1")
+		}
+
+		if m.Extra > 1 || (m.MinNum == 1 && m.Extra > 0) {
+			m.Extra = 0
+			logger.Warnf("ModelFormPanel.Bind: Extra > 0 for ManyToOne or OneToOne relation; setting Extra to 0")
+		}
+	}
+}
+
+func matchesDeletedPK[TARGET attrs.Definer](ctx context.Context, candidate attrs.Definer, deleted []TARGET) bool {
+	if versatile.IsZero(candidate) {
+		return false
+	}
+	var candPK = attrs.PrimaryKey(ctx, candidate)
+	if attrs.IsZero(candPK) {
+		return false
+	}
+	for _, inst := range deleted {
+		if reflect.DeepEqual(candPK, attrs.PrimaryKey(ctx, inst)) {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Context, instance attrs.Definer) (FormSetObject, []formsets.BaseFormSetForm, error) {
 	var f formsets.BaseFormSetForm = m.FormSet(r, ctx, instance)
-
-	var ordering FORM_ORDERING
-	if versatile.IsZero(attrs.PrimaryKey(ctx, instance)) {
-		ordering = FORM_ORDERING_POST
-	} else {
-		ordering = FORM_ORDERING_PRE
-	}
 
 	var prim, field = m.getField(instance)
 	var rel = field.Rel()
@@ -991,7 +1192,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Contex
 	case attrs.RelManyToOne:
 		f = &adminClusterForm[formsets.BaseFormSetForm, attrs.Definer]{
 			BaseFormSetForm: f,
-			FormOrdering:    ordering,
+			FormOrdering:    FORM_ORDERING_PRE,
 		}
 	case attrs.RelOneToMany:
 		f = &adminClusterForm[formsets.BaseFormSetForm, attrs.Definer]{
@@ -1001,7 +1202,28 @@ func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Contex
 			FormOrdering:    FORM_ORDERING_POST,
 		}
 	case attrs.RelManyToMany:
+		f = &adminClusterForm[formsets.BaseFormSetForm, attrs.Definer]{
+			BaseFormSetForm: f,
+			FieldFromParent: prim.Name(),
+			FormOrdering:    FORM_ORDERING_POST,
+		}
 	case attrs.RelOneToOne:
+		var (
+			o2oOrder      = FORM_ORDERING_PRE
+			fieldForChild string
+		)
+		if rel.Through() != nil {
+			o2oOrder = FORM_ORDERING_POST
+		} else if rel.Field() != nil && !rel.Field().IsPrimary() {
+			o2oOrder = FORM_ORDERING_POST
+			fieldForChild = rel.Field().Name()
+		}
+		f = &adminClusterForm[formsets.BaseFormSetForm, attrs.Definer]{
+			BaseFormSetForm: f,
+			FieldFromParent: prim.Name(),
+			FieldForChild:   fieldForChild,
+			FormOrdering:    o2oOrder,
+		}
 	}
 
 	return f, []formsets.BaseFormSetForm{f}, nil
@@ -1009,12 +1231,14 @@ func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Contex
 
 func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Context, instance attrs.Definer) formsets.ListFormSet[modelforms.ModelForm[TARGET]] {
 	var _, fld = m.getField(instance)
+	m.clampLimits(fld.Rel())
+
 	var relFld = fld.Rel().Field()
 	var relFnd bool
 	var targetFields = make([]string, 0, len(m.Panels))
 	for _, panel := range m.Panels {
 		var fields = panel.Fields()
-		if !relFnd && relFld != nil {
+		if !relFnd && relFld != nil && !relFld.IsPrimary() {
 			for _, fld := range fields {
 				if fld == relFld.Name() {
 					relFnd = true
@@ -1024,7 +1248,7 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 		targetFields = append(targetFields, panel.Fields()...)
 	}
 
-	if relFld != nil && !relFnd {
+	if relFld != nil && !relFld.IsPrimary() && !relFnd {
 		targetFields = append(targetFields, relFld.Name())
 	}
 
@@ -1046,13 +1270,82 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 				if err != nil {
 					return nil, err
 				}
+				if (fld.Rel().Type() == attrs.RelManyToOne || fld.Rel().Type() == attrs.RelOneToOne) && len(targetList) > 1 {
+					targetList = targetList[:1]
+				}
 
 				return m.GetForms(ctx, r, instance, min, targetFields, targetList), nil
 			},
 			DeleteForms: func(ctx context.Context, forms []modelforms.ModelForm[TARGET]) error {
 				var instances = make([]TARGET, 0, len(forms))
 				for _, form := range forms {
-					instances = append(instances, form.Instance())
+					var inst = form.Instance()
+					if attrs.IsZero(attrs.PrimaryKey(ctx, inst)) {
+						continue
+					}
+					instances = append(instances, inst)
+				}
+				if len(instances) == 0 {
+					return nil
+				}
+				var rel = fld.Rel()
+				var relType = rel.Type()
+				switch {
+				case relType == attrs.RelManyToMany:
+					var backRef, err = getM2MBackRef(ctx, instance, m.FieldName)
+					if err != nil {
+						return err
+					}
+					var anyTargets = make([]any, len(instances))
+					for i, inst := range instances {
+						anyTargets[i] = inst
+					}
+					_, err = queries.ManyToManyQuerySet[TARGET](backRef).
+						WithContext(ctx).
+						RemoveTargets(anyTargets...)
+					if err != nil && !errors.Is(err, errors.NoChanges) {
+						return err
+					}
+					return nil
+				case relType == attrs.RelOneToOne && rel.Through() != nil:
+					var backRef, err = getO2OThroughBackRef(ctx, instance, m.FieldName)
+					if err != nil {
+						return err
+					}
+					rows, err := queries.OneToOneQuerySet[TARGET](backRef).
+						WithContext(ctx).
+						All()
+					if err != nil {
+						return err
+					}
+					for _, row := range rows {
+						if matchesDeletedPK(ctx, row.Object, instances) {
+							if _, err := queries.OneToOneQuerySet[TARGET](backRef).WithContext(ctx).Clear(ctx); err != nil {
+								return err
+							}
+							break
+						}
+					}
+				case relType == attrs.RelManyToOne,
+					relType == attrs.RelOneToOne && rel.Through() == nil && (relFld == nil || relFld.IsPrimary()):
+					initSourceState(instance)
+					var defs = attrs.Define(ctx, instance)
+					if srcField, ok := defs.Field(m.FieldName); ok {
+						var curVal, _ = srcField.GetValue().(attrs.Definer)
+						if matchesDeletedPK(ctx, curVal, instances) {
+							_ = srcField.SetValue(nil, true)
+							if !attrs.IsZero(attrs.PrimaryKey(ctx, instance)) && srcField.AllowNull() {
+								_, err := queries.GetQuerySet(instance).
+									WithContext(ctx).
+									Select(m.FieldName).
+									ExplicitSave().
+									Update(instance)
+								if err != nil && !errors.Is(err, errors.NoChanges) {
+									return err
+								}
+							}
+						}
+					}
 				}
 				_, err := queries.GetQuerySet(m.TargetType).
 					WithContext(ctx).
@@ -1083,17 +1376,59 @@ func getRelatedList[TARGET attrs.Definer](ctx context.Context, source attrs.Defi
 	switch {
 	case relType == attrs.RelManyToOne,
 		relType == attrs.RelOneToOne &&
-			rel.Field().IsPrimary() &&
+			(rel.Field() == nil || rel.Field().IsPrimary()) &&
 			rel.Through() == nil:
 
 		var v = field.GetValue()
-		if v != nil {
-			var list = make([]TARGET, 1)
-			list[0] = v.(TARGET)
-			return field, list, nil
+		if !versatile.IsZero(v) {
+			if target, ok := v.(TARGET); ok && !versatile.IsZero(target) {
+				var targetPK = attrs.PrimaryKey(ctx, target)
+				if !attrs.IsZero(targetPK) {
+					var targetMeta = attrs.GetModelMeta(target)
+					var primField = targetMeta.Definitions().Primary()
+					if row, err := queries.GetQuerySet[TARGET](target).
+						WithContext(ctx).
+						Filter(primField.Name(), targetPK).
+						Get(); err == nil && row != nil && !versatile.IsZero(row.Object) {
+						target = row.Object
+						_ = field.SetValue(target, true)
+					}
+				}
+				var list = make([]TARGET, 1)
+				list[0] = target
+				return field, list, nil
+			}
 		}
 
-	case relType == attrs.RelOneToMany:
+	case relType == attrs.RelOneToOne && rel.Through() != nil:
+		var backRef, err = getO2OThroughBackRef(ctx, source, fieldName)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		rows, err := queries.OneToOneQuerySet[TARGET](backRef).
+			WithContext(ctx).
+			OrderBy().
+			All()
+		if err != nil {
+			return nil, nil, errors.Wrapf(
+				err, "Error fetching related objects for field %q", fieldName,
+			)
+		}
+
+		if len(rows) == 0 {
+			goto createDefaultList
+		}
+
+		var list = make([]TARGET, len(rows))
+		for i, row := range rows {
+			list[i] = row.Object
+		}
+
+		return field, list, nil
+
+	case relType == attrs.RelOneToMany,
+		relType == attrs.RelOneToOne && rel.Through() == nil && rel.Field() != nil && !rel.Field().IsPrimary():
 		var qs = queries.OneToManyQuerySet[TARGET](&queries.RelRevFK[attrs.Definer]{
 			Parent: &queries.ParentInfo{
 				Object: source,
@@ -1114,6 +1449,32 @@ func getRelatedList[TARGET attrs.Definer](ctx context.Context, source attrs.Defi
 		}
 
 		return field, list, nil
+
+	case relType == attrs.RelManyToMany:
+		var qs = queries.ManyToManyQuerySet[TARGET](&queries.RelM2M[attrs.Definer, attrs.Definer]{
+			Parent: &queries.ParentInfo{
+				Object: source,
+				Field:  field,
+			},
+		})
+
+		rows, err := qs.WithContext(ctx).OrderBy().All()
+		if err != nil {
+			return nil, nil, errors.Wrapf(
+				err, "Error fetching related objects for field %q", fieldName,
+			)
+		}
+
+		if len(rows) == 0 {
+			goto createDefaultList
+		}
+
+		var list = make([]TARGET, len(rows))
+		for i, row := range rows {
+			list[i] = row.Object
+		}
+
+		return field, list, nil
 	}
 
 createDefaultList:
@@ -1121,6 +1482,10 @@ createDefaultList:
 	var value = field.GetValue()
 	var targetList = make([]TARGET, 0)
 	switch v := value.(type) {
+	case TARGET:
+		if !versatile.IsZero(v) {
+			targetList = []TARGET{v}
+		}
 	case []TARGET:
 		targetList = v
 	case []attrs.Definer:
@@ -1135,59 +1500,57 @@ createDefaultList:
 			targetList = append(targetList, t)
 		}
 	case queries.RelationValue:
-		targetList = []TARGET{v.GetValue().(TARGET)}
-	case queries.ThroughRelationValue:
-		t, _ := v.GetValue()
-		targetList = []TARGET{t.(TARGET)}
-	case queries.MultiRelationValue:
-		for _, item := range v.GetValues() {
-			t, ok := item.(TARGET)
-			if !ok {
-				return nil, nil, errors.TypeMismatch.Wrapf(
-					"Item of type %T in field %q is not of expected type %T",
-					item, fieldName, _null,
-				)
+		if !versatile.IsZero(v) {
+			if obj := v.GetValue(); !versatile.IsZero(obj) {
+				targetList = []TARGET{obj.(TARGET)}
 			}
-			targetList = append(targetList, t)
+		}
+	case queries.ThroughRelationValue:
+		if !versatile.IsZero(v) {
+			if t, _ := v.GetValue(); !versatile.IsZero(t) {
+				targetList = []TARGET{t.(TARGET)}
+			}
+		}
+	case queries.MultiRelationValue:
+		if !versatile.IsZero(v) {
+			for _, item := range v.GetValues() {
+				t, ok := item.(TARGET)
+				if !ok {
+					return nil, nil, errors.TypeMismatch.Wrapf(
+						"Item of type %T in field %q is not of expected type %T",
+						item, fieldName, _null,
+					)
+				}
+				targetList = append(targetList, t)
+			}
 		}
 	case queries.MultiThroughRelationValue:
-		for _, item := range v.GetValues() {
-			t := item.Model()
-			targetList = append(targetList, t.(TARGET))
+		if !versatile.IsZero(v) {
+			for _, item := range v.GetValues() {
+				t := item.Model()
+				targetList = append(targetList, t.(TARGET))
+			}
 		}
 	}
 	return field, targetList, nil
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) validate(rel attrs.Relation, base int, list []TARGET) (total int, canAdd bool, targets []TARGET) {
+	m.clampLimits(rel)
+
+	switch rel.Type() {
+	case attrs.RelManyToOne, attrs.RelOneToOne:
+		if len(list) > 1 {
+			logger.Warnf("ModelFormPanel.Bind: more than one related object found for ManyToOne or OneToOne relation; only the first will be used")
+			list = list[:1]
+		}
+	}
+
 	var minNumForms = m.MinNum
 	var maxNumForms = m.MaxNum
 	var totalForms = min(base+m.Extra, maxNumForms)
 	if minNumForms > 0 && totalForms < minNumForms {
 		totalForms = minNumForms
-	}
-
-	switch rel.Type() {
-	case attrs.RelManyToOne, attrs.RelOneToOne:
-		if m.MinNum > 1 || m.MinNum < 0 {
-			m.MinNum = 1
-			logger.Warnf("ModelFormPanel.Bind: m.MinNum > 1 || m.MinNum < 0 for ManyToOne or OneToOne relation; setting MinNum to 1")
-		}
-
-		if m.MaxNum > 1 || m.MaxNum < 0 {
-			m.MaxNum = 1
-			logger.Warnf("ModelFormPanel.Bind: m.MaxNum > 1 || m.MaxNum < 0 for ManyToOne or OneToOne relation; setting MaxNum to 1")
-		}
-
-		if m.Extra > 1 {
-			m.Extra = 0
-			logger.Warnf("ModelFormPanel.Bind: Extra > 0 for ManyToOne or OneToOne relation; setting Extra to 0")
-		}
-
-		if len(list) > 1 {
-			logger.Warnf("ModelFormPanel.Bind: more than one related object found for ManyToOne or OneToOne relation; only the first will be used")
-			list = list[:1]
-		}
 	}
 
 	var canAddMore = maxNumForms == 0 || totalForms < maxNumForms
@@ -1226,7 +1589,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 
 	var _, fld = m.getField(instance)
 	var relFld = fld.Rel().Field()
-	if relFld != nil && !attrs.IsZero(attrs.PrimaryKey(ctx, instance)) {
+	if relFld != nil && !relFld.IsPrimary() && !attrs.IsZero(attrs.PrimaryKey(ctx, instance)) {
 		if _, ok := seen[relFld.Name()]; !ok {
 			panels = append(panels, FieldPanel(relFld.Name()))
 			seen[relFld.Name()] = struct{}{}
@@ -1241,6 +1604,10 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 	if _, ok := seen[formsets.ORDERING_FIELD_NAME]; !ok && !m.DisallowAdd {
 		panels = append(panels, FieldPanel(formsets.ORDERING_FIELD_NAME))
 		seen[formsets.ORDERING_FIELD_NAME] = struct{}{}
+	}
+
+	if cluster, ok := formSets.(ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
+		formSets = cluster.Form()
 	}
 
 	var formset formsets.ListFormSet[modelforms.ModelForm[TARGET]]
