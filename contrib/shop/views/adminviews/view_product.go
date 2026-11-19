@@ -280,7 +280,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 
 			context.Set("supplier", supplierVal)
 			context.Set("BackURL", backURL)
-			context.Set("PostURL", django.Reverse("admin:commerce:new_with_supplier", supplierVal))
+			context.Set("PostURL", django.Reverse("admin:commerce:new_with_supplier", supplierVal.InternalName()))
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Add new product"),
 			})

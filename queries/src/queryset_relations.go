@@ -115,11 +115,16 @@ func (t *relatedQuerySet[T, T2]) setup() {
 			Fields: ForSelectAllFields[attrs.FieldDefinition](throughObject.defs),
 		}
 
+		var targetField = t.rel.Field()
+		if targetField == nil || (targetField.Rel() != nil && targetField.Rel().Through() != nil) {
+			targetField = newTargetObjDefs.Primary()
+		}
+
 		condition = &JoinDefCondition{
 			Operator: expr.EQ,
 			ConditionA: expr.TableColumn{
 				TableOrAlias: targetFieldInfo.Table.Name,
-				FieldColumn:  t.source.Field,
+				FieldColumn:  targetField,
 			},
 			ConditionB: expr.TableColumn{
 				TableOrAlias: targetFieldInfo.Through.Table.Alias,

@@ -109,24 +109,20 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(c, "MaxDiscount", &c.MaxDiscount, func() fattrs.PtrFieldConfig[*Coupon, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Coupon, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: false,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}),
 		fattrs.Field(c, "MinOrderAmount", &c.MinOrderAmount, func() fattrs.PtrFieldConfig[*Coupon, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Coupon, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: true,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     true,
 				},
 			}
 		}),
@@ -147,10 +143,8 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(c, "CreatedAt", &c.CreatedAt, func() fattrs.PtrFieldConfig[*Coupon, time.Time] {
 			return fattrs.PtrFieldConfig[*Coupon, time.Time]{
 				Config: attrs.FieldConfig{
-					ReadOnly: true,
-					Attributes: map[string]interface{}{
-						attrs.AttrAutoNowAddKey: true,
-					},
+					ReadOnly:   true,
+					AutoNowAdd: true,
 				},
 			}
 		}),
@@ -158,9 +152,7 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*Coupon, time.Time]{
 				Config: attrs.FieldConfig{
 					ReadOnly: true,
-					Attributes: map[string]interface{}{
-						attrs.AttrAutoNowKey: true,
-					},
+					AutoNow:  true,
 				},
 			}
 		}),
@@ -186,6 +178,7 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(c, "Products", &c.Products, func() fattrs.PtrFieldConfig[*Coupon, *queries.RelM2M[*products.Product, *CouponProductThrough]] {
 			return fattrs.PtrFieldConfig[*Coupon, *queries.RelM2M[*products.Product, *CouponProductThrough]]{
 				Config: attrs.FieldConfig{
+					Blank: true,
 					RelManyToMany: attrs.Relate(
 						&products.Product{},
 						"", &attrs.ThroughModel{
@@ -194,9 +187,7 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 							Target: "Product",
 						},
 					),
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "Coupons",
-					},
+					ReverseAlias: "Coupons",
 				},
 			}
 		}),

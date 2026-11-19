@@ -218,56 +218,48 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Price", &m.Price, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					HelpText: trans.S("The price you are selling this product for."),
-					Embedded: embedded,
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: false,
+					HelpText:  trans.S("The price you are selling this product for."),
+					Embedded:  embedded,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "AdditionalFee", &m.AdditionalFee, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					HelpText: trans.S("The fee to add to the price per product."),
-					Embedded: embedded,
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: false,
+					HelpText:  trans.S("The fee to add to the price per product."),
+					Embedded:  embedded,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "TaxRate", &m.TaxRate, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					HelpText: trans.S("The additional tax fee to add to the purchase price."),
-					Embedded: embedded,
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: false,
+					HelpText:  trans.S("The additional tax fee to add to the purchase price."),
+					Embedded:  embedded,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "DiscountPrice", &m.DiscountPrice, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					HelpText: trans.S("The discount price you are selling this product for. (Precedence over price)"),
-					Embedded: embedded,
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: true,
+					HelpText:  trans.S("The discount price you are selling this product for. (Precedence over price)"),
+					Embedded:  embedded,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     true,
 				},
 			}
 		}, key...),

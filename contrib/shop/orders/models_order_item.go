@@ -47,12 +47,10 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "ItemPrice", &m.ItemPrice, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: false,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}),
@@ -75,10 +73,8 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Order", &m.Order, func() fattrs.PtrFieldConfig[*OrderItem, *Order] {
 			return fattrs.PtrFieldConfig[*OrderItem, *Order]{
 				Config: attrs.FieldConfig{
-					Column: "order_id",
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "OrderItems",
-					},
+					Column:        "order_id",
+					ReverseAlias:  "OrderItems",
 					RelForeignKey: attrs.Relate(&Order{}, "", nil),
 					Null:          false,
 					Blank:         false,

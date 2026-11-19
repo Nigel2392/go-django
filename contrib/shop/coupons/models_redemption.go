@@ -61,13 +61,11 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Cart", &m.Cart, func() fattrs.PtrFieldConfig[*Redemption, attrs.Definer] {
 			return fattrs.PtrFieldConfig[*Redemption, attrs.Definer]{
 				Config: attrs.FieldConfig{
-					Column:   "cart_id",
-					ReadOnly: true,
-					Null:     true,
-					Blank:    true,
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "Redemptions",
-					},
+					Column:       "cart_id",
+					ReadOnly:     true,
+					Null:         true,
+					Blank:        true,
+					ReverseAlias: "Redemptions",
 					RelForeignKey: attrs.RelatedDeferred(
 						attrs.RelManyToOne,
 						modelkeys.CartModelKey,
@@ -88,22 +86,18 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 						modelkeys.OrderModelKey,
 						"", nil,
 					),
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "Redemptions",
-					},
+					ReverseAlias: "Redemptions",
 				},
 			}
 		}),
 		fattrs.Field(m, "DiscountAmount", &m.DiscountAmount, func() fattrs.PtrFieldConfig[*Redemption, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Redemption, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					ReadOnly: true,
-					Null:     false,
-					Blank:    false,
+					Precision: 13,
+					Scale:     4,
+					ReadOnly:  true,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}),

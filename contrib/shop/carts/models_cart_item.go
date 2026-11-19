@@ -43,11 +43,9 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Cart", &m.Cart, func() fattrs.PtrFieldConfig[*CartItem, *Cart] {
 			return fattrs.PtrFieldConfig[*CartItem, *Cart]{
 				Config: attrs.FieldConfig{
-					Column:   "cart_id",
-					ReadOnly: true,
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "CartItems",
-					},
+					Column:        "cart_id",
+					ReadOnly:      true,
+					ReverseAlias:  "CartItems",
 					RelForeignKey: attrs.Relate(&Cart{}, "", nil),
 					Null:          false,
 					Blank:         false,
@@ -57,11 +55,9 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*CartItem, *products.Product] {
 			return fattrs.PtrFieldConfig[*CartItem, *products.Product]{
 				Config: attrs.FieldConfig{
-					Column:   "product_id",
-					ReadOnly: true,
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "CartItems",
-					},
+					Column:        "product_id",
+					ReadOnly:      true,
+					ReverseAlias:  "CartItems",
 					RelForeignKey: attrs.Relate(&products.Product{}, "", nil),
 					Null:          false,
 					Blank:         false,

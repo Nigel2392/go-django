@@ -90,12 +90,10 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "FirstSeen", &m.FirstSeen, func() fattrs.PtrFieldConfig[*Customer, time.Time] {
 			return fattrs.PtrFieldConfig[*Customer, time.Time]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]any{
-						attrs.AttrAutoNowAddKey: true,
-					},
-					ReadOnly: true,
-					Null:     false,
-					Blank:    false,
+					AutoNowAdd: true,
+					ReadOnly:   true,
+					Null:       false,
+					Blank:      false,
 				},
 			}
 		}),

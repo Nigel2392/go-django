@@ -125,6 +125,10 @@ type FieldConfig struct {
 	ReadOnly             bool                                                // Whether the field is read-only
 	Primary              bool                                                // Whether the field is a primary key
 	Embedded             bool                                                // Whether the field is an embedded field
+	AutoNowAdd           bool                                                // Wether a time value should be automatically populated with time.Now on model creation
+	AutoNow              bool                                                // Wether a time value should be automatically populated with time.Now on model update
+	Precision            int                                                 // Decimal precision
+	Scale                int                                                 // Decimal scale
 	NameOverride         string                                              // An optional override for the field name
 	Label                any                                                 // The label for the field
 	HelpText             any                                                 // The help text for the field
@@ -134,6 +138,7 @@ type FieldConfig struct {
 	MinValue             float64                                             // The minimum value of the field
 	MaxValue             float64                                             // The maximum value of the field
 	Attributes           map[string]interface{}                              // The attributes for the field
+	ReverseAlias         string                                              // The reverse alias for the field
 	RelForeignKey        Relation                                            // The related object for the field (foreign key)
 	RelManyToMany        Relation                                            // The related objects for the field (many to many, not implemented
 	RelOneToOne          Relation                                            // The related object for the field (one to one, not implemented)
@@ -504,16 +509,21 @@ func (f *FieldDef) Attrs() map[string]interface{} {
 createAttrs:
 
 	attrs = make(map[string]interface{})
-	maps.Copy(attrs, f.attrDef.Attributes)
 	attrs[AttrNameKey] = f.Name()
 	attrs[AttrMaxLengthKey] = f.attrDef.MaxLength
 	attrs[AttrMinLengthKey] = f.attrDef.MinLength
 	attrs[AttrMinValueKey] = f.attrDef.MinValue
 	attrs[AttrMaxValueKey] = f.attrDef.MaxValue
+	attrs[AttrAutoNowAddKey] = f.attrDef.AutoNowAdd
+	attrs[AttrAutoNowKey] = f.attrDef.AutoNow
+	attrs[AttrPrecisionKey] = f.attrDef.Precision
+	attrs[AttrScaleKey] = f.attrDef.Scale
+	attrs[AttrReverseAliasKey] = f.attrDef.ReverseAlias
 	attrs[AttrAllowNullKey] = f.AllowNull()
 	attrs[AttrAllowBlankKey] = f.AllowBlank()
 	attrs[AttrAllowEditKey] = f.AllowEdit()
 	attrs[AttrIsPrimaryKey] = f.IsPrimary()
+	maps.Copy(attrs, f.attrDef.Attributes)
 	return attrs
 }
 

@@ -59,34 +59,28 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Amount", &m.Amount, func() fattrs.PtrFieldConfig[*Payment, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Payment, decimal.Decimal]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]interface{}{
-						attrs.AttrPrecisionKey: 13,
-						attrs.AttrScaleKey:     4,
-					},
-					Null:  false,
-					Blank: false,
+					Precision: 13,
+					Scale:     4,
+					Null:      false,
+					Blank:     false,
 				},
 			}
 		}),
 		fattrs.Field(m, "CreatedAt", &m.CreatedAt, func() fattrs.PtrFieldConfig[*Payment, drivers.Timestamp] {
 			return fattrs.PtrFieldConfig[*Payment, drivers.Timestamp]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]any{
-						attrs.AttrAutoNowAddKey: true,
-					},
-					Null:  false,
-					Blank: false,
+					AutoNowAdd: true,
+					Null:       false,
+					Blank:      false,
 				},
 			}
 		}),
 		fattrs.Field(m, "UpdatedAt", &m.UpdatedAt, func() fattrs.PtrFieldConfig[*Payment, drivers.Timestamp] {
 			return fattrs.PtrFieldConfig[*Payment, drivers.Timestamp]{
 				Config: attrs.FieldConfig{
-					Attributes: map[string]any{
-						attrs.AttrAutoNowKey: true,
-					},
-					Null:  false,
-					Blank: false,
+					AutoNow: true,
+					Null:    false,
+					Blank:   false,
 				},
 			}
 		}),

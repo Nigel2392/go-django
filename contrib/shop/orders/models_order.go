@@ -165,9 +165,7 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 					RelForeignKey: attrs.Relate(&customers.Customer{}, "", nil),
 					Null:          false,
 					Blank:         false,
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "Orders",
-					},
+					ReverseAlias:  "Orders",
 				},
 			}
 		}),

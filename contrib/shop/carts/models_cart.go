@@ -96,12 +96,10 @@ func (m *Cart) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "CreatedAt", &m.CreatedAt, func() fattrs.PtrFieldConfig[*Cart, time.Time] {
 			return fattrs.PtrFieldConfig[*Cart, time.Time]{
 				Config: attrs.FieldConfig{
-					ReadOnly: true,
-					Attributes: map[string]any{
-						attrs.AttrAutoNowAddKey: true,
-					},
-					Null:  false,
-					Blank: false,
+					ReadOnly:   true,
+					AutoNowAdd: true,
+					Null:       false,
+					Blank:      false,
 				},
 			}
 		}),

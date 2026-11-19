@@ -149,6 +149,7 @@ func NewAppConfig() (django.AppConfig, error) {
 
 		// Coupons
 		&coupons.Coupon{},
+		&coupons.CouponProductThrough{},
 		&coupons.Redemption{},
 
 		// Customers
@@ -334,8 +335,8 @@ func NewAppConfig() (django.AppConfig, error) {
 					"ShortDescription": trans.S("Description"),
 					"UsageCount":       trans.S("Uses"),
 					"UsageLimit":       trans.S("Limit"),
-					"ValidFrom":        trans.S("Start"),
-					"ValidUntil":       trans.S("End"),
+					"ValidFrom":        trans.S("Valid From"),
+					"ValidUntil":       trans.S("Valid Until"),
 					"CreatedAt":        trans.S("Created"),
 				},
 				ListView: admin.ListViewOptions{
@@ -366,6 +367,8 @@ func NewAppConfig() (django.AppConfig, error) {
 							),
 							admin.PanelTab(
 								trans.S("Constraints"),
+								admin.FieldPanel("UsageLimit"),
+								admin.FieldPanel("MinOrderAmount"),
 								admin.FieldPanel("ValidFrom"),
 								admin.FieldPanel("ValidUntil"),
 								admin.FieldPanel("CreatedAt"),

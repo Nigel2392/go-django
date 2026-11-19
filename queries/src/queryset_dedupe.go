@@ -462,11 +462,16 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			Fields: ForSelectAllFields[attrs.FieldDefinition](throughObject.defs),
 		}
 
+		var targetField = preload.Rel.Field()
+		if targetField == nil || (targetField.Rel() != nil && targetField.Rel().Through() != nil) {
+			targetField = subQueryset.internals.Model.Primary
+		}
+
 		var condition = &JoinDefCondition{
 			Operator: expr.EQ,
 			ConditionA: expr.TableColumn{
 				TableOrAlias: targetFieldInfo.Table.Name,
-				FieldColumn:  r.qs.internals.Model.Primary,
+				FieldColumn:  targetField,
 			},
 			ConditionB: expr.TableColumn{
 				TableOrAlias: targetFieldInfo.Through.Table.Alias,
