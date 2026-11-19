@@ -72,7 +72,7 @@ func (p *Page) TargetPrimaryField() attrs.FieldDefinition {
 
 func (p *Page) FieldDefs(ctx context.Context) attrs.Definitions {
 	return p.Model.Define(ctx, p,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true}),
 		attrs.Unbound("Title"),
 		attrs.Unbound("Description"),
 		attrs.Unbound("PageID"),
@@ -105,7 +105,7 @@ func (b *BlogPage) TargetPrimaryField() attrs.FieldDefinition {
 func (b *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 	return b.Model.Define(ctx, b,
 		fields.Embed(ctx, "Proxy"),
-		attrs.Unbound("PageID", &attrs.FieldConfig{Primary: true}),
+		attrs.Unbound("PageID", &attrs.Config{Primary: true}),
 		attrs.Unbound("Author"),
 		attrs.Unbound("Tags"),
 		attrs.Unbound("Category"),
@@ -122,7 +122,7 @@ type BlogPageCategory struct {
 func (b *BlogPageCategory) FieldDefs(ctx context.Context) attrs.Definitions {
 	return b.Model.Define(ctx, b,
 		fields.Embed(context.Background(), "BlogPage"),
-		attrs.Unbound("Category", &attrs.FieldConfig{
+		attrs.Unbound("Category", &attrs.Config{
 			Primary: true,
 		}),
 	)

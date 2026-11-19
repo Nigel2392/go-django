@@ -40,7 +40,7 @@ type test interface {
 }
 
 type tableTypeTest[T any] struct {
-	fieldConfig attrs.FieldConfig
+	fieldConfig attrs.Config
 	driver      driver.Driver
 	Val         T
 	Expect      string
@@ -86,14 +86,14 @@ var sqliteTests = []test{
 		Expect: "REAL",
 	},
 	&tableTypeTest[string]{
-		fieldConfig: attrs.FieldConfig{
+		fieldConfig: attrs.Config{
 			MaxLength: 255,
 			MinLength: 0,
 		},
 		Expect: "TEXT",
 	},
 	&tableTypeTest[string]{
-		fieldConfig: attrs.FieldConfig{
+		fieldConfig: attrs.Config{
 			MaxLength: 5,
 			MinLength: 0,
 		},

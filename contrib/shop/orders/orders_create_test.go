@@ -92,7 +92,7 @@ func (p *testOrderSupplierProduct) FieldDefs(ctx context.Context) attrs.Definiti
 		}),
 		fattrs.Field(p, "SKU", &p.SKU, func() fattrs.PtrFieldConfig[*testOrderSupplierProduct, string] {
 			return fattrs.PtrFieldConfig[*testOrderSupplierProduct, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Blank: true,
 				},
 			}

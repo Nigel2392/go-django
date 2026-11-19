@@ -33,14 +33,14 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Payment, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*Payment, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary: true,
 				},
 			}
 		}),
 		fattrs.Field(m, "Provider", &m.Provider, func() fattrs.PtrFieldConfig[*Payment, prov.BaseProvider] {
 			return fattrs.PtrFieldConfig[*Payment, prov.BaseProvider]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					MinLength: 2,
 					Null:      false,
 					Blank:     false,
@@ -49,7 +49,7 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "State", &m.State, func() fattrs.PtrFieldConfig[*Payment, paystate.PayState] {
 			return fattrs.PtrFieldConfig[*Payment, paystate.PayState]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					MinLength: 2,
 					Null:      false,
 					Blank:     false,
@@ -58,7 +58,7 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Amount", &m.Amount, func() fattrs.PtrFieldConfig[*Payment, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Payment, decimal.Decimal]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Precision: 13,
 					Scale:     4,
 					Null:      false,
@@ -68,7 +68,7 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "CreatedAt", &m.CreatedAt, func() fattrs.PtrFieldConfig[*Payment, drivers.Timestamp] {
 			return fattrs.PtrFieldConfig[*Payment, drivers.Timestamp]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					AutoNowAdd: true,
 					Null:       false,
 					Blank:      false,
@@ -77,7 +77,7 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "UpdatedAt", &m.UpdatedAt, func() fattrs.PtrFieldConfig[*Payment, drivers.Timestamp] {
 			return fattrs.PtrFieldConfig[*Payment, drivers.Timestamp]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					AutoNow: true,
 					Null:    false,
 					Blank:   false,

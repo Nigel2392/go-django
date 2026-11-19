@@ -43,9 +43,9 @@ type MergeCountry struct {
 
 func (m *MergeCountry) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Code", &attrs.FieldConfig{}),
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "Code", &attrs.Config{}),
 	).WithTableName("merge_countries")
 }
 
@@ -60,11 +60,11 @@ type MergeAddress struct {
 
 func (m *MergeAddress) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "City", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Street", &attrs.FieldConfig{}),
-		attrs.NewField(m, "PostalCode", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Country", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "City", &attrs.Config{}),
+		attrs.NewField(m, "Street", &attrs.Config{}),
+		attrs.NewField(m, "PostalCode", &attrs.Config{}),
+		attrs.NewField(m, "Country", &attrs.Config{
 			Column:        "country_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeCountry{}, "", nil),
@@ -82,10 +82,10 @@ type MergeCategory struct {
 
 func (m *MergeCategory) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Slug", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Parent", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Title", &attrs.Config{}),
+		attrs.NewField(m, "Slug", &attrs.Config{}),
+		attrs.NewField(m, "Parent", &attrs.Config{
 			Column:        "parent_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeCategory{}, "", nil),
@@ -103,10 +103,10 @@ type MergeSupplier struct {
 
 func (m *MergeSupplier) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Code", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Address", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "Code", &attrs.Config{}),
+		attrs.NewField(m, "Address", &attrs.Config{
 			Column:        "address_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeAddress{}, "", nil),
@@ -127,17 +127,17 @@ type MergeProduct struct {
 
 func (m *MergeProduct) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Slug", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Price", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Stock", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Category", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Title", &attrs.Config{}),
+		attrs.NewField(m, "Slug", &attrs.Config{}),
+		attrs.NewField(m, "Price", &attrs.Config{}),
+		attrs.NewField(m, "Stock", &attrs.Config{}),
+		attrs.NewField(m, "Category", &attrs.Config{
 			Column:        "category_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeCategory{}, "", nil),
 		}),
-		attrs.NewField(m, "Supplier", &attrs.FieldConfig{
+		attrs.NewField(m, "Supplier", &attrs.Config{
 			Column:        "supplier_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeSupplier{}, "", nil),
@@ -154,9 +154,9 @@ type MergeTag struct {
 
 func (m *MergeTag) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Weight", &attrs.FieldConfig{}),
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "Weight", &attrs.Config{}),
 	).WithTableName("merge_tags")
 }
 
@@ -169,9 +169,9 @@ type MergeOrderTag struct {
 
 func (m *MergeOrderTag) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "Order", &attrs.FieldConfig{Column: "order_id", Null: false}),
-		attrs.NewField(m, "Tag", &attrs.FieldConfig{Column: "tag_id", Null: false}),
-		attrs.NewField(m, "SortOrder", &attrs.FieldConfig{}),
+		attrs.NewField(m, "Order", &attrs.Config{Column: "order_id", Null: false}),
+		attrs.NewField(m, "Tag", &attrs.Config{Column: "tag_id", Null: false}),
+		attrs.NewField(m, "SortOrder", &attrs.Config{}),
 	).WithTableName("merge_order_tags")
 }
 
@@ -189,11 +189,11 @@ type MergeOrder struct {
 
 func (m *MergeOrder) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "Reference", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Total", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Active", &attrs.FieldConfig{}),
-		attrs.NewField(m, "BillingAddress", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Reference", &attrs.Config{}),
+		attrs.NewField(m, "Total", &attrs.Config{}),
+		attrs.NewField(m, "Active", &attrs.Config{}),
+		attrs.NewField(m, "BillingAddress", &attrs.Config{
 			Column:        "billing_address_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeAddress{}, "", nil),
@@ -201,7 +201,7 @@ func (m *MergeOrder) FieldDefs(ctx context.Context) attrs.Definitions {
 				attrs.AttrReverseAliasKey: "BillingOrders",
 			},
 		}),
-		attrs.NewField(m, "ShippingAddress", &attrs.FieldConfig{
+		attrs.NewField(m, "ShippingAddress", &attrs.Config{
 			Column:        "shipping_address_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeAddress{}, "", nil),
@@ -238,8 +238,8 @@ type MergeOrderItem struct {
 
 func (m *MergeOrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-		attrs.NewField(m, "Order", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Order", &attrs.Config{
 			Column:        "order_id",
 			Null:          false,
 			RelForeignKey: attrs.Relate(&MergeOrder{}, "", nil),
@@ -247,7 +247,7 @@ func (m *MergeOrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				attrs.AttrReverseAliasKey: "Items",
 			},
 		}),
-		attrs.NewField(m, "Product", &attrs.FieldConfig{
+		attrs.NewField(m, "Product", &attrs.Config{
 			Column:        "product_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeProduct{}, "", nil),
@@ -255,7 +255,7 @@ func (m *MergeOrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				attrs.AttrReverseAliasKey: "PrimaryItems",
 			},
 		}),
-		attrs.NewField(m, "SecondaryProduct", &attrs.FieldConfig{
+		attrs.NewField(m, "SecondaryProduct", &attrs.Config{
 			Column:        "secondary_product_id",
 			Null:          true,
 			RelForeignKey: attrs.Relate(&MergeProduct{}, "", nil),
@@ -263,9 +263,9 @@ func (m *MergeOrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 				attrs.AttrReverseAliasKey: "SecondaryItems",
 			},
 		}),
-		attrs.NewField(m, "Quantity", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Note", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Discount", &attrs.FieldConfig{}),
+		attrs.NewField(m, "Quantity", &attrs.Config{}),
+		attrs.NewField(m, "Note", &attrs.Config{}),
+		attrs.NewField(m, "Discount", &attrs.Config{}),
 	).WithTableName("merge_order_items")
 }
 
@@ -432,7 +432,7 @@ func assertNoDuplicateSelectColumns(t *testing.T, preloadQS *queries.QuerySet[at
 	if selectIdx < 0 || fromIdx < 0 || fromIdx <= selectIdx {
 		t.Fatalf("unexpected SQL layout: %s", sqlStr)
 	}
-	colsPart := sqlStr[selectIdx+len("SELECT "):fromIdx]
+	colsPart := sqlStr[selectIdx+len("SELECT ") : fromIdx]
 	colsPart = strings.TrimPrefix(colsPart, "DISTINCT ")
 	cols := strings.Split(colsPart, ",")
 	seen := make(map[string]int, len(cols))

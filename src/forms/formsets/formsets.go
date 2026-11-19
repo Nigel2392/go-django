@@ -841,8 +841,12 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 
 	if b.opts.DeleteForms != nil && len(b.DeletedFormsList) > 0 {
 		if err := b.opts.DeleteForms(b.ctx, b.DeletedFormsList); err != nil {
-			return nil, err
+			errs = append(errs, err)
 		}
+	}
+
+	if len(errs) > 0 {
+		return results, errors.Join(errs...)
 	}
 
 	return results, nil

@@ -26,11 +26,11 @@ type customTestWidget struct {
 
 func (f *TestModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "ID", &attrs.FieldConfig{
+		attrs.NewField(f, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(f, "Name", nil),
-		attrs.NewField(f, "Objects", &attrs.FieldConfig{ReadOnly: true}),
+		attrs.NewField(f, "Objects", &attrs.Config{ReadOnly: true}),
 	)
 }
 
@@ -42,7 +42,7 @@ type TestEmbeddedModelFields struct {
 
 func (f *TestEmbeddedModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "ID", &attrs.FieldConfig{
+		attrs.NewField(f, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(f, "Name", nil),
@@ -133,7 +133,7 @@ func TestModelFieldFieldsSetReadOnly(t *testing.T) {
 	var (
 		defID      = attrs.NewField(m, "ID", nil)
 		defName    = attrs.NewField(m, "Name", nil)
-		defObjects = attrs.NewField(m, "Objects", &attrs.FieldConfig{ReadOnly: true})
+		defObjects = attrs.NewField(m, "Objects", &attrs.Config{ReadOnly: true})
 	)
 
 	defer func() {
@@ -169,7 +169,7 @@ func TestModelFieldFieldsForceSetReadOnly(t *testing.T) {
 	var (
 		defID      = attrs.NewField(m, "ID", nil)
 		defName    = attrs.NewField(m, "Name", nil)
-		defObjects = attrs.NewField(m, "Objects", &attrs.FieldConfig{ReadOnly: true})
+		defObjects = attrs.NewField(m, "Objects", &attrs.Config{ReadOnly: true})
 	)
 
 	defID.SetValue(2, true)
@@ -582,7 +582,7 @@ type TestBindableValue struct {
 
 func (f *TestBindableValue) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "ID", &attrs.FieldConfig{
+		attrs.NewField(f, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(f, "Name", nil),
@@ -624,7 +624,7 @@ type TestUnboundFields struct {
 
 func (f *TestUnboundFields) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.Unbound("Name"),
@@ -680,7 +680,7 @@ type TestBenchmarkWithCaching struct {
 
 func (f *TestBenchmarkWithCaching) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "ID", &attrs.FieldConfig{
+		attrs.NewField(f, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(f, "Age"),
@@ -701,7 +701,7 @@ type TestBenchmarkWithoutCaching struct {
 
 func (f *TestBenchmarkWithoutCaching) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "ID", &attrs.FieldConfig{
+		attrs.NewField(f, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(f, "Age"),

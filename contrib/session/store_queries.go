@@ -34,7 +34,7 @@ func (s *Session) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, s,
 		fattrs.Field(s, "Token", &s.Token, func() fattrs.PtrFieldConfig[*Session, drivers.Char] {
 			return fattrs.PtrFieldConfig[*Session, drivers.Char]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:   true,
 					Null:      false,
 					Column:    "token",
@@ -44,7 +44,7 @@ func (s *Session) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(s, "Data", &s.Data, func() fattrs.PtrFieldConfig[*Session, drivers.Bytes] {
 			return fattrs.PtrFieldConfig[*Session, drivers.Bytes]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Null:   false,
 					Column: "data",
 				},
@@ -52,7 +52,7 @@ func (s *Session) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(s, "Expiry", &s.Expiry, func() fattrs.PtrFieldConfig[*Session, int64] {
 			return fattrs.PtrFieldConfig[*Session, int64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Null:   false,
 					Column: "expiry",
 				},

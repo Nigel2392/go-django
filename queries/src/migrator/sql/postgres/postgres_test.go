@@ -23,7 +23,7 @@ type test interface {
 }
 
 type tableTypeTest[T any] struct {
-	fieldConfig attrs.FieldConfig
+	fieldConfig attrs.Config
 	driver      driver.Driver
 	Val         T
 	Expect      string
@@ -69,14 +69,14 @@ var postgresTests = []test{
 		Expect: "DOUBLE PRECISION",
 	},
 	&tableTypeTest[string]{
-		fieldConfig: attrs.FieldConfig{
+		fieldConfig: attrs.Config{
 			MaxLength: 255,
 			MinLength: 0,
 		},
 		Expect: "VARCHAR(255)",
 	},
 	&tableTypeTest[string]{
-		fieldConfig: attrs.FieldConfig{
+		fieldConfig: attrs.Config{
 			MaxLength: 5,
 			MinLength: 0,
 		},

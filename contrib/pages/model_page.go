@@ -225,7 +225,7 @@ func (n *PageNode) FieldDefs(ctx context.Context) attrs.Definitions {
 			attrs.NewField(n, "PageID"),
 			attrs.NewField(n, "ContentType"),
 			attrs.NewField(n, "PublishedAt"),
-			attrs.NewField(n, "LatestRevisionCreatedAt", &attrs.FieldConfig{
+			attrs.NewField(n, "LatestRevisionCreatedAt", &attrs.Config{
 				Null:   true,
 				Blank:  true,
 				Column: "latest_revision_created_at",

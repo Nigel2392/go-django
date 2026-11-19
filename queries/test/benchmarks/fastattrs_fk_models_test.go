@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	fast_fldCnfRelAuthorModel = attrs.FieldConfig{
+	fast_fldCnfRelAuthorModel = attrs.Config{
 		Column:        "author_id",
 		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkAuthorModel{}, "", nil),
 		Attributes: map[string]interface{}{
@@ -57,7 +57,7 @@ func (a *FastAttrsBenchmarkAuthorModel) FieldDefs(ctx context.Context) attrs.Def
 		}),
 		fattrs.NewField(a, "Name", func() fattrs.FieldConfig[*FastAttrsBenchmarkAuthorModel] {
 			return fattrs.FieldConfig[*FastAttrsBenchmarkAuthorModel]{
-				Config:   attrs.FieldConfig{},
+				Config:   attrs.Config{},
 				GetValue: func(obj *FastAttrsBenchmarkAuthorModel) interface{} { return obj.Name },
 				SetValue: func(obj *FastAttrsBenchmarkAuthorModel, value any) error {
 					switch v := value.(type) {
@@ -110,7 +110,7 @@ func (b *FastAttrsBenchmarkBookModel) FieldDefs(ctx context.Context) attrs.Defin
 		}),
 		fattrs.NewField(b, "Title", func() fattrs.FieldConfig[*FastAttrsBenchmarkBookModel] {
 			return fattrs.FieldConfig[*FastAttrsBenchmarkBookModel]{
-				Config:   attrs.FieldConfig{},
+				Config:   attrs.Config{},
 				GetValue: func(obj *FastAttrsBenchmarkBookModel) interface{} { return obj.Title },
 				SetValue: func(obj *FastAttrsBenchmarkBookModel, value any) error {
 					switch v := value.(type) {

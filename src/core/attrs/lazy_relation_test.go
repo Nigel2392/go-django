@@ -19,14 +19,14 @@ type LazyRelationTest struct {
 
 func (l *LazyRelationTest) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, l,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			Primary: true,
 			Column:  "id",
 		}),
-		attrs.Unbound("Title", &attrs.FieldConfig{
+		attrs.Unbound("Title", &attrs.Config{
 			Column: "title",
 		}),
-		attrs.Unbound("Targets", &attrs.FieldConfig{
+		attrs.Unbound("Targets", &attrs.Config{
 			Attributes: map[string]any{
 				attrs.AttrReverseAliasKey: "TargetsReversed",
 			},
@@ -46,11 +46,11 @@ type LazyRelationTestTarget struct {
 
 func (l *LazyRelationTestTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, l,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			Primary: true,
 			Column:  "id",
 		}),
-		attrs.Unbound("Name", &attrs.FieldConfig{
+		attrs.Unbound("Name", &attrs.Config{
 			Column: "name",
 		}),
 	)

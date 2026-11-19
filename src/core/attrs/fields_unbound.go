@@ -6,10 +6,10 @@ import (
 
 type unboundField struct {
 	name string
-	cnf  *FieldConfig
+	cnf  *Config
 }
 
-func Unbound(name string, cnf ...*FieldConfig) UnboundFieldConstructor {
+func Unbound(name string, cnf ...*Config) UnboundFieldConstructor {
 	if len(cnf) > 0 && cnf[0] != nil {
 		return &unboundField{name: name, cnf: cnf[0]}
 	}

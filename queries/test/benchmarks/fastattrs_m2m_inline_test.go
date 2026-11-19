@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	fast_inline_fldCnfPrimary = &attrs.FieldConfig{Primary: true}
+	fast_inline_fldCnfPrimary = &attrs.Config{Primary: true}
 
 	fast_inline_m2mRel = attrs.Relate(
 		&FastAttrsInlineBenchmarkM2MTarget{},
@@ -50,7 +50,7 @@ func (m *FastAttrsInlineBenchmarkM2MSource) FieldDefs(ctx context.Context) attrs
 		}),
 		fattrs.Field(m, "Target", &m.Target, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]] {
 			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					RelManyToMany: fast_inline_m2mRel,
 					Attributes: map[string]interface{}{
 						attrs.AttrReverseAliasKey: "TargetReverse",
@@ -96,14 +96,14 @@ func (m *FastAttrsInlineBenchmarkM2MThrough) FieldDefs(ctx context.Context) attr
 		}),
 		fattrs.Field(m, "SourceModel", &m.SourceModel, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
 			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column: "source_id",
 				},
 			}
 		}),
 		fattrs.Field(m, "TargetModel", &m.TargetModel, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
 			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column: "target_id",
 				},
 			}

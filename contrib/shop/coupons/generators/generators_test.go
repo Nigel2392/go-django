@@ -70,7 +70,7 @@ func (o *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, o,
 		fattrs.Field(o, "ID", &o.ID, func() fattrs.PtrFieldConfig[*Order, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*Order, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -114,7 +114,7 @@ func (p *generatorTestSupplierProduct) FieldDefs(ctx context.Context) attrs.Defi
 		}),
 		fattrs.Field(p, "SKU", &p.SKU, func() fattrs.PtrFieldConfig[*generatorTestSupplierProduct, string] {
 			return fattrs.PtrFieldConfig[*generatorTestSupplierProduct, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Blank: true,
 				},
 			}

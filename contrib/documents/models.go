@@ -88,7 +88,7 @@ func (o *Document) File() (mediafiles.StoredObject, error) {
 func (o *Document) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fields = make([]attrs.Field, 6)
 	fields[0] = attrs.NewField(
-		o, "ID", &attrs.FieldConfig{
+		o, "ID", &attrs.Config{
 			Blank:    true,
 			ReadOnly: true,
 			Primary:  true,
@@ -96,21 +96,21 @@ func (o *Document) FieldDefs(ctx context.Context) attrs.Definitions {
 		},
 	)
 	fields[1] = attrs.NewField(
-		o, "Title", &attrs.FieldConfig{
+		o, "Title", &attrs.Config{
 			Null:  true,
 			Blank: true,
 			Label: trans.S("Title"),
 		},
 	)
 	fields[2] = attrs.NewField(
-		o, "Path", &attrs.FieldConfig{
+		o, "Path", &attrs.Config{
 			Null:  true,
 			Blank: true,
 			Label: trans.S("Path"),
 		},
 	)
 	fields[3] = attrs.NewField(
-		o, "CreatedAt", &attrs.FieldConfig{
+		o, "CreatedAt", &attrs.Config{
 			Null:     true,
 			Blank:    true,
 			ReadOnly: true,
@@ -118,13 +118,13 @@ func (o *Document) FieldDefs(ctx context.Context) attrs.Definitions {
 		},
 	)
 	fields[4] = attrs.NewField(
-		o, "FileSize", &attrs.FieldConfig{
+		o, "FileSize", &attrs.Config{
 			Label:    trans.S("File Size"),
 			ReadOnly: true,
 		},
 	)
 	fields[5] = attrs.NewField(
-		o, "FileHash", &attrs.FieldConfig{
+		o, "FileHash", &attrs.Config{
 			Null:     true,
 			Blank:    true,
 			ReadOnly: true,

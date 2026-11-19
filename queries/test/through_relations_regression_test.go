@@ -50,7 +50,7 @@ func (c *ThroughRegCoupon) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, c,
 		fattrs.Field(c, "ID", &c.ID, func() fattrs.PtrFieldConfig[*ThroughRegCoupon, uint64] {
 			return fattrs.PtrFieldConfig[*ThroughRegCoupon, uint64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -61,7 +61,7 @@ func (c *ThroughRegCoupon) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(c, "Products", &c.Products, func() fattrs.PtrFieldConfig[*ThroughRegCoupon, *queries.RelM2M[*ThroughRegProduct, *ThroughRegCouponProduct]] {
 			return fattrs.PtrFieldConfig[*ThroughRegCoupon, *queries.RelM2M[*ThroughRegProduct, *ThroughRegCouponProduct]]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					RelManyToMany: attrs.Relate(
 						&ThroughRegProduct{},
 						"",
@@ -94,7 +94,7 @@ func (p *ThroughRegProduct) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, p,
 		fattrs.Field(p, "ID", &p.ID, func() fattrs.PtrFieldConfig[*ThroughRegProduct, uint64] {
 			return fattrs.PtrFieldConfig[*ThroughRegProduct, uint64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -106,7 +106,7 @@ func (p *ThroughRegProduct) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(p, "Coupons", &p.Coupons, func() fattrs.PtrFieldConfig[*ThroughRegProduct, *queries.RelM2M[attrs.Definer, attrs.Definer]] {
 			return fattrs.PtrFieldConfig[*ThroughRegProduct, *queries.RelM2M[attrs.Definer, attrs.Definer]]{
 				Flags: fattrs.F_IS_REVERSE_FLD,
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Attributes: map[string]any{
 						migrator.AttrUseInDBKey: false,
 					},
@@ -125,14 +125,14 @@ func (m *ThroughRegCouponProduct) FieldDefs(ctx context.Context) attrs.Definitio
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "Coupon", &m.Coupon, func() fattrs.PtrFieldConfig[*ThroughRegCouponProduct, *ThroughRegCoupon] {
 			return fattrs.PtrFieldConfig[*ThroughRegCouponProduct, *ThroughRegCoupon]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column: "coupon_id",
 				},
 			}
 		}),
 		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*ThroughRegCouponProduct, *ThroughRegProduct] {
 			return fattrs.PtrFieldConfig[*ThroughRegCouponProduct, *ThroughRegProduct]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column: "product_id",
 				},
 			}
@@ -151,11 +151,11 @@ type ThroughRegDiffPKSource struct {
 
 func (m *ThroughRegDiffPKSource) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Column:  "source_pk",
 			Primary: true,
 		}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{
+		attrs.NewField(m, "Title", &attrs.Config{
 			Column: "title",
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*ThroughRegDiffPKTarget, *ThroughRegDiffPKLink]](m, "Items", &fields.FieldConfig{
@@ -182,11 +182,11 @@ type ThroughRegDiffPKTarget struct {
 
 func (m *ThroughRegDiffPKTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Column:  "target_pk",
 			Primary: true,
 		}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{
+		attrs.NewField(m, "Title", &attrs.Config{
 			Column: "title",
 		}),
 	).WithTableName("through_reg_diffpk_target")
@@ -200,10 +200,10 @@ type ThroughRegDiffPKLink struct {
 
 func (m *ThroughRegDiffPKLink) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "Source", &attrs.FieldConfig{
+		attrs.NewField(m, "Source", &attrs.Config{
 			Column: "source_id",
 		}),
-		attrs.NewField(m, "Target", &attrs.FieldConfig{
+		attrs.NewField(m, "Target", &attrs.Config{
 			Column: "target_id",
 		}),
 	).WithTableName("through_reg_diffpk_link")
@@ -220,11 +220,11 @@ type ThroughRegO2OSource struct {
 
 func (m *ThroughRegO2OSource) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Column:  "source_pk",
 			Primary: true,
 		}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{
+		attrs.NewField(m, "Title", &attrs.Config{
 			Column: "title",
 		}),
 		fields.NewOneToOneField[*queries.RelO2O[*ThroughRegO2OTarget, *ThroughRegO2OLink]](m, "Target", &fields.FieldConfig{
@@ -251,11 +251,11 @@ type ThroughRegO2OTarget struct {
 
 func (m *ThroughRegO2OTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Column:  "target_pk",
 			Primary: true,
 		}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{
+		attrs.NewField(m, "Title", &attrs.Config{
 			Column: "title",
 		}),
 	).WithTableName("through_reg_o2o_target")
@@ -269,10 +269,10 @@ type ThroughRegO2OLink struct {
 
 func (m *ThroughRegO2OLink) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "Source", &attrs.FieldConfig{
+		attrs.NewField(m, "Source", &attrs.Config{
 			Column: "source_id",
 		}),
-		attrs.NewField(m, "Target", &attrs.FieldConfig{
+		attrs.NewField(m, "Target", &attrs.Config{
 			Column: "target_id",
 		}),
 	).WithTableName("through_reg_o2o_link")
@@ -312,7 +312,7 @@ func mustCreateThroughReg[T attrs.Definer](t *testing.T, v T) T {
 func TestThroughRelatedQuerySet_JoinCondition_TargetColumn(t *testing.T) {
 	t.Run("AttrsFieldDef_M2M", func(t *testing.T) {
 		coupon := &ThroughRegCoupon{ID: 7, Title: "C7"}
-		attrsField := attrs.NewField(coupon, "Products", &attrs.FieldConfig{
+		attrsField := attrs.NewField(coupon, "Products", &attrs.Config{
 			RelManyToMany: attrs.Relate(
 				&ThroughRegProduct{},
 				"",
@@ -423,7 +423,7 @@ func TestThroughRelatedQuerySet_SQL_Execution(t *testing.T) {
 		_ = mustCreateThroughReg(t, &ThroughRegProduct{Title: "P2"})
 		_ = mustCreateThroughReg(t, &ThroughRegCouponProduct{Coupon: coupon, Product: p1})
 
-		attrsField := attrs.NewField(coupon, "Products", &attrs.FieldConfig{
+		attrsField := attrs.NewField(coupon, "Products", &attrs.Config{
 			RelManyToMany: attrs.Relate(
 				&ThroughRegProduct{},
 				"",

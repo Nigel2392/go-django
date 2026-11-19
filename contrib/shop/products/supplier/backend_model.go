@@ -33,7 +33,7 @@ func (s *SupplierModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, s,
 		fattrs.Field(s, "InternalName", &s.InternalName, func() fattrs.PtrFieldConfig[*SupplierModel, string] {
 			return fattrs.PtrFieldConfig[*SupplierModel, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:   true,
 					MinLength: 2,
 					MaxLength: 75,
@@ -48,7 +48,7 @@ func (s *SupplierModel) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(s, "Enabled", &s.Enabled, func() fattrs.PtrFieldConfig[*SupplierModel, bool] {
 			return fattrs.PtrFieldConfig[*SupplierModel, bool]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Blank:   true,
 					Default: true,
 				},

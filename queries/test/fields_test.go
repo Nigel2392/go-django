@@ -53,14 +53,14 @@ type TestStruct struct {
 
 func (t *TestStruct) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
-		attrs.NewField(t, "Text", &attrs.FieldConfig{
+		attrs.NewField(t, "Text", &attrs.Config{
 			Column: "text",
 		}),
 		fields.NewVirtualField[string](t, t, "TestNameText", expr.CONCAT(
@@ -83,14 +83,14 @@ type TestStructNoObject struct {
 
 func (t *TestStructNoObject) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*TestStructNoObject, any](ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
-		attrs.NewField(t, "Text", &attrs.FieldConfig{
+		attrs.NewField(t, "Text", &attrs.Config{
 			Column: "text",
 		}),
 		fields.NewVirtualField[string](t, &t.TestNameText, "TestNameText", expr.CONCAT(
@@ -114,17 +114,17 @@ type OtherTestStruct struct {
 
 func (t *OtherTestStruct) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*OtherTestStruct, any](ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
-		attrs.NewField(t, "Text", &attrs.FieldConfig{
+		attrs.NewField(t, "Text", &attrs.Config{
 			Column: "text",
 		}),
-		attrs.NewField(t, "TestStruct", &attrs.FieldConfig{
+		attrs.NewField(t, "TestStruct", &attrs.Config{
 			Column:        "test_struct_no_obj_id",
 			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
 		}),
@@ -145,17 +145,17 @@ type TestStructNoVF struct {
 
 func (t *TestStructNoVF) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*TestStructNoVF, any](ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Title", &attrs.FieldConfig{
+		attrs.NewField(t, "Title", &attrs.Config{
 			Column: "title",
 		}),
-		attrs.NewField(t, "Text", &attrs.FieldConfig{
+		attrs.NewField(t, "Text", &attrs.Config{
 			Column: "text",
 		}),
-		attrs.NewField(t, "TestStruct", &attrs.FieldConfig{
+		attrs.NewField(t, "TestStruct", &attrs.Config{
 			Column:        "test_struct_id",
 			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
 		}),
@@ -172,17 +172,17 @@ type TestStructSubqueryVF struct {
 
 func (t *TestStructSubqueryVF) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*TestStructSubqueryVF, any](ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Title", &attrs.FieldConfig{
+		attrs.NewField(t, "Title", &attrs.Config{
 			Column: "title",
 		}),
-		attrs.NewField(t, "Text", &attrs.FieldConfig{
+		attrs.NewField(t, "Text", &attrs.Config{
 			Column: "text",
 		}),
-		attrs.NewField(t, "TestStruct", &attrs.FieldConfig{
+		attrs.NewField(t, "TestStruct", &attrs.Config{
 			Column:        "test_struct_id",
 			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
 		}),
@@ -206,17 +206,17 @@ type TestStructSubueryVFRelatedRoot struct {
 
 func (t *TestStructSubueryVFRelatedRoot) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*TestStructSubueryVFRelatedRoot, any](ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
-		attrs.NewField(t, "Text", &attrs.FieldConfig{
+		attrs.NewField(t, "Text", &attrs.Config{
 			Column: "text",
 		}),
-		attrs.NewField(t, "Related", &attrs.FieldConfig{
+		attrs.NewField(t, "Related", &attrs.Config{
 			Column:        "rel_id",
 			RelForeignKey: attrs.Relate(&TestStructSubueryVFRelated{}, "", nil),
 		}),
@@ -233,17 +233,17 @@ type TestStructSubueryVFRelated struct {
 
 func (t *TestStructSubueryVFRelated) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*TestStructSubueryVFRelated, any](ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
-		attrs.NewField(t, "Text", &attrs.FieldConfig{
+		attrs.NewField(t, "Text", &attrs.Config{
 			Column: "text",
 		}),
-		attrs.NewField(t, "TargetTestStruct", &attrs.FieldConfig{
+		attrs.NewField(t, "TargetTestStruct", &attrs.Config{
 			Column:        "target_id",
 			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
 		}),
@@ -1169,7 +1169,7 @@ type Author struct {
 
 func (a *Author) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, a,
-		attrs.NewField(a, "ID", &attrs.FieldConfig{
+		attrs.NewField(a, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(a, "Name", nil),
@@ -1184,11 +1184,11 @@ type Book struct {
 
 func (b *Book) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, b,
-		attrs.NewField(b, "ID", &attrs.FieldConfig{
+		attrs.NewField(b, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(b, "Title", nil),
-		attrs.NewField(b, "Author", &attrs.FieldConfig{
+		attrs.NewField(b, "Author", &attrs.Config{
 			Column:        "author_id",
 			RelForeignKey: attrs.Relate(&Author{}, "", nil),
 		}),

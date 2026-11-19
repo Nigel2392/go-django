@@ -48,11 +48,11 @@ func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	var fields = fieldDefs.Fields()
 	if ExtendedDefinitions {
-		fields = append(fields, attrs.NewField(m, "FirstName", &attrs.FieldConfig{}))
-		fields = append(fields, attrs.NewField(m, "LastName", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "FirstName", &attrs.Config{}))
+		fields = append(fields, attrs.NewField(m, "LastName", &attrs.Config{}))
 	}
 	if ExtendedDefinitionsUser {
-		fields = append(fields, attrs.NewField(m, "IsActive", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "IsActive", &attrs.Config{}))
 	}
 	if ExtendedDefinitions || ExtendedDefinitionsUser {
 		fieldDefs = attrs.Make(ctx, m, fields...)
@@ -72,11 +72,11 @@ func (m *Profile) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	var fields = fieldDefs.Fields()
 	if ExtendedDefinitions {
-		fields = append(fields, attrs.NewField(m, "Biography", &attrs.FieldConfig{}))
-		fields = append(fields, attrs.NewField(m, "Website", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "Biography", &attrs.Config{}))
+		fields = append(fields, attrs.NewField(m, "Website", &attrs.Config{}))
 	}
 	if ExtendedDefinitionsProfile {
-		fields = append(fields, attrs.NewField(m, "Image", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "Image", &attrs.Config{}))
 	}
 	if ExtendedDefinitions || ExtendedDefinitionsProfile {
 		fieldDefs = attrs.Make(ctx, m, fields...)
@@ -98,11 +98,11 @@ func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	var fields = fieldDefs.Fields()
 	if ExtendedDefinitions {
-		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.FieldConfig{}))
-		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.Config{}))
+		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.Config{}))
 	}
 	if ExtendedDefinitionsTodo {
-		fields = append(fields, attrs.NewField(m, "Description", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "Description", &attrs.Config{}))
 	}
 	if ExtendedDefinitions || ExtendedDefinitionsTodo {
 		fieldDefs = attrs.Make(ctx, m, fields...)
@@ -124,9 +124,9 @@ func (m *BlogPost) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	if ExtendedDefinitions {
 		var fields = fieldDefs.Fields()
-		fields = append(fields, attrs.NewField(m, "Published", &attrs.FieldConfig{}))
-		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.FieldConfig{}))
-		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "Published", &attrs.Config{}))
+		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.Config{}))
+		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.Config{}))
 		fieldDefs = attrs.Make(ctx, m, fields...)
 	}
 	return fieldDefs
@@ -145,8 +145,8 @@ func (m *BlogComment) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	if ExtendedDefinitions {
 		var fields = fieldDefs.Fields()
-		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.FieldConfig{}))
-		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.FieldConfig{}))
+		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.Config{}))
+		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.Config{}))
 		fieldDefs = attrs.Make(ctx, m, fields...)
 	}
 	return fieldDefs
@@ -429,220 +429,220 @@ func BroadDefaultValues() map[string]any {
 func (b *Broad) FieldDefs(ctx context.Context) attrs.Definitions {
 	vals := BroadDefaultValues()
 	return attrs.Make(ctx, b,
-		attrs.Unbound("Field_Drivers_Text", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Text", &attrs.Config{
 			Default: vals["Field_Drivers_Text"],
 		}),
-		attrs.Unbound("Field_Drivers_String", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_String", &attrs.Config{
 			Default: vals["Field_Drivers_String"],
 		}),
-		attrs.Unbound("Field_Drivers_Char", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Char", &attrs.Config{
 			Default: vals["Field_Drivers_Char"],
 		}),
-		attrs.Unbound("Field_Drivers_Int", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Int", &attrs.Config{
 			Default: vals["Field_Drivers_Int"],
 		}),
-		attrs.Unbound("Field_Drivers_Uint", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Uint", &attrs.Config{
 			Default: vals["Field_Drivers_Uint"],
 		}),
-		attrs.Unbound("Field_Drivers_Float", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Float", &attrs.Config{
 			Default: vals["Field_Drivers_Float"],
 		}),
-		attrs.Unbound("Field_Drivers_Bool", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Bool", &attrs.Config{
 			Default: vals["Field_Drivers_Bool"],
 		}),
-		attrs.Unbound("Field_Drivers_Bytes", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Bytes", &attrs.Config{
 			Default: vals["Field_Drivers_Bytes"],
 		}),
-		attrs.Unbound("Field_Drivers_BLOB", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_BLOB", &attrs.Config{
 			Default: vals["Field_Drivers_BLOB"],
 		}),
-		attrs.Unbound("Field_Drivers_UUID", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_UUID", &attrs.Config{
 			Default: vals["Field_Drivers_UUID"],
 		}),
-		attrs.Unbound("Field_Drivers_Timestamp", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Timestamp", &attrs.Config{
 			Default: vals["Field_Drivers_Timestamp"],
 		}),
-		attrs.Unbound("Field_Drivers_LocalTime", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_LocalTime", &attrs.Config{
 			Default: vals["Field_Drivers_LocalTime"],
 		}),
-		attrs.Unbound("Field_Drivers_DateTime", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_DateTime", &attrs.Config{
 			Default: vals["Field_Drivers_DateTime"],
 		}),
-		attrs.Unbound("Field_Drivers_Email", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Email", &attrs.Config{
 			Default: vals["Field_Drivers_Email"],
 		}),
-		attrs.Unbound("Field_Drivers_Decimal", &attrs.FieldConfig{
+		attrs.Unbound("Field_Drivers_Decimal", &attrs.Config{
 			Default: vals["Field_Drivers_Decimal"],
 		}),
-		attrs.Unbound("Field_any", &attrs.FieldConfig{
+		attrs.Unbound("Field_any", &attrs.Config{
 			Default: vals["Field_any"],
 		}),
-		attrs.Unbound("Field_string", &attrs.FieldConfig{
+		attrs.Unbound("Field_string", &attrs.Config{
 			Default: vals["Field_string"],
 		}),
-		attrs.Unbound("Field_byte", &attrs.FieldConfig{
+		attrs.Unbound("Field_byte", &attrs.Config{
 			Default: vals["Field_byte"],
 		}),
-		attrs.Unbound("Field_int", &attrs.FieldConfig{
+		attrs.Unbound("Field_int", &attrs.Config{
 			Default: vals["Field_int"],
 		}),
-		attrs.Unbound("Field_int8", &attrs.FieldConfig{
+		attrs.Unbound("Field_int8", &attrs.Config{
 			Default: vals["Field_int8"],
 		}),
-		attrs.Unbound("Field_int16", &attrs.FieldConfig{
+		attrs.Unbound("Field_int16", &attrs.Config{
 			Default: vals["Field_int16"],
 		}),
-		attrs.Unbound("Field_int32", &attrs.FieldConfig{
+		attrs.Unbound("Field_int32", &attrs.Config{
 			Default: vals["Field_int32"],
 		}),
-		attrs.Unbound("Field_int64", &attrs.FieldConfig{
+		attrs.Unbound("Field_int64", &attrs.Config{
 			Default: vals["Field_int64"],
 		}),
-		attrs.Unbound("Field_uint", &attrs.FieldConfig{
+		attrs.Unbound("Field_uint", &attrs.Config{
 			Default: vals["Field_uint"],
 		}),
-		attrs.Unbound("Field_uint8", &attrs.FieldConfig{
+		attrs.Unbound("Field_uint8", &attrs.Config{
 			Default: vals["Field_uint8"],
 		}),
-		attrs.Unbound("Field_uint16", &attrs.FieldConfig{
+		attrs.Unbound("Field_uint16", &attrs.Config{
 			Default: vals["Field_uint16"],
 		}),
-		attrs.Unbound("Field_uint32", &attrs.FieldConfig{
+		attrs.Unbound("Field_uint32", &attrs.Config{
 			Default: vals["Field_uint32"],
 		}),
-		attrs.Unbound("Field_uint64", &attrs.FieldConfig{
+		attrs.Unbound("Field_uint64", &attrs.Config{
 			Default: vals["Field_uint64"],
 		}),
-		attrs.Unbound("Field_float32", &attrs.FieldConfig{
+		attrs.Unbound("Field_float32", &attrs.Config{
 			Default: vals["Field_float32"],
 		}),
-		attrs.Unbound("Field_float64", &attrs.FieldConfig{
+		attrs.Unbound("Field_float64", &attrs.Config{
 			Default: vals["Field_float64"],
 		}),
-		attrs.Unbound("Field_bool", &attrs.FieldConfig{
+		attrs.Unbound("Field_bool", &attrs.Config{
 			Default: vals["Field_bool"],
 		}),
-		attrs.Unbound("Field_UUID", &attrs.FieldConfig{
+		attrs.Unbound("Field_UUID", &attrs.Config{
 			Default: vals["Field_UUID"],
 		}),
-		attrs.Unbound("Field_Time", &attrs.FieldConfig{
+		attrs.Unbound("Field_Time", &attrs.Config{
 			Default: vals["Field_Time"],
 		}),
-		attrs.Unbound("Field_NullString", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullString", &attrs.Config{
 			Default: vals["Field_NullString"],
 		}),
-		attrs.Unbound("Field_NullFloat64", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullFloat64", &attrs.Config{
 			Default: vals["Field_NullFloat64"],
 		}),
-		attrs.Unbound("Field_NullInt64", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullInt64", &attrs.Config{
 			Default: vals["Field_NullInt64"],
 		}),
-		attrs.Unbound("Field_NullInt32", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullInt32", &attrs.Config{
 			Default: vals["Field_NullInt32"],
 		}),
-		attrs.Unbound("Field_NullInt16", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullInt16", &attrs.Config{
 			Default: vals["Field_NullInt16"],
 		}),
-		attrs.Unbound("Field_NullBool", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullBool", &attrs.Config{
 			Default: vals["Field_NullBool"],
 		}),
-		attrs.Unbound("Field_NullTime", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullTime", &attrs.Config{
 			Default: vals["Field_NullTime"],
 		}),
-		attrs.Unbound("Field_NullDecimal", &attrs.FieldConfig{
+		attrs.Unbound("Field_NullDecimal", &attrs.Config{
 			Default: vals["Field_NullDecimal"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_Text", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_Text", &attrs.Config{
 			Default: vals["Field_Null_Drivers_Text"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_String", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_String", &attrs.Config{
 			Default: vals["Field_Null_Drivers_String"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_Char", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_Char", &attrs.Config{
 			Default: vals["Field_Null_Drivers_Char"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_Int", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_Int", &attrs.Config{
 			Default: vals["Field_Null_Drivers_Int"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_Uint", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_Uint", &attrs.Config{
 			Default: vals["Field_Null_Drivers_Uint"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_Float", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_Float", &attrs.Config{
 			Default: vals["Field_Null_Drivers_Float"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_Bool", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_Bool", &attrs.Config{
 			Default: vals["Field_Null_Drivers_Bool"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_Bytes", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_Bytes", &attrs.Config{
 			Default: vals["Field_Null_Drivers_Bytes"],
 		}),
-		attrs.Unbound("Field_Null_Drivers_UUID", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Drivers_UUID", &attrs.Config{
 			Default: vals["Field_Null_Drivers_UUID"],
 		}),
-		attrs.Unbound("Field_Null_Timestamp", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Timestamp", &attrs.Config{
 			Default: vals["Field_Null_Timestamp"],
 		}),
-		attrs.Unbound("Field_Null_LocalTime", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_LocalTime", &attrs.Config{
 			Default: vals["Field_Null_LocalTime"],
 		}),
-		attrs.Unbound("Field_Null_DateTime", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_DateTime", &attrs.Config{
 			Default: vals["Field_Null_DateTime"],
 		}),
-		attrs.Unbound("Field_Null_Email", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Email", &attrs.Config{
 			Default: vals["Field_Null_Email"],
 		}),
-		attrs.Unbound("Field_Null_any", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_any", &attrs.Config{
 			Default: vals["Field_Null_any"],
 		}),
-		attrs.Unbound("Field_Null_string", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_string", &attrs.Config{
 			Default: vals["Field_Null_string"],
 		}),
-		attrs.Unbound("Field_Null_int", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_int", &attrs.Config{
 			Default: vals["Field_Null_int"],
 		}),
-		attrs.Unbound("Field_Null_int8", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_int8", &attrs.Config{
 			Default: vals["Field_Null_int8"],
 		}),
-		attrs.Unbound("Field_Null_int16", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_int16", &attrs.Config{
 			Default: vals["Field_Null_int16"],
 		}),
-		attrs.Unbound("Field_Null_int32", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_int32", &attrs.Config{
 			Default: vals["Field_Null_int32"],
 		}),
-		attrs.Unbound("Field_Null_int64", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_int64", &attrs.Config{
 			Default: vals["Field_Null_int64"],
 		}),
-		attrs.Unbound("Field_Null_uint", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_uint", &attrs.Config{
 			Default: vals["Field_Null_uint"],
 		}),
-		attrs.Unbound("Field_Null_uint8", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_uint8", &attrs.Config{
 			Default: vals["Field_Null_uint8"],
 		}),
-		attrs.Unbound("Field_Null_uint16", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_uint16", &attrs.Config{
 			Default: vals["Field_Null_uint16"],
 		}),
-		attrs.Unbound("Field_Null_uint32", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_uint32", &attrs.Config{
 			Default: vals["Field_Null_uint32"],
 		}),
-		attrs.Unbound("Field_Null_uint64", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_uint64", &attrs.Config{
 			Default: vals["Field_Null_uint64"],
 		}),
-		attrs.Unbound("Field_Null_float32", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_float32", &attrs.Config{
 			Default: vals["Field_Null_float32"],
 		}),
-		attrs.Unbound("Field_Null_float64", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_float64", &attrs.Config{
 			Default: vals["Field_Null_float64"],
 		}),
-		attrs.Unbound("Field_Null_bool", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_bool", &attrs.Config{
 			Default: vals["Field_Null_bool"],
 		}),
-		attrs.Unbound("Field_Null_UUID", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_UUID", &attrs.Config{
 			Default: vals["Field_Null_UUID"],
 		}),
-		attrs.Unbound("Field_Null_Time", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Time", &attrs.Config{
 			Default: vals["Field_Null_Time"],
 		}),
-		attrs.Unbound("Field_Null_Decimal", &attrs.FieldConfig{
+		attrs.Unbound("Field_Null_Decimal", &attrs.Config{
 			Default: vals["Field_Null_Decimal"],
 		}),
 	)

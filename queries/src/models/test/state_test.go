@@ -23,7 +23,7 @@ type ImageModel struct {
 
 func (m *ImageModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true}),
 		attrs.Unbound("ImageTitle"),
 		attrs.Unbound("ImageURL"),
 	)
@@ -67,7 +67,7 @@ type StatefulModel struct {
 
 func (m *StatefulModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true}),
 		attrs.Unbound("FirstName"),
 		attrs.Unbound("LastName"),
 		attrs.Unbound("Age"),

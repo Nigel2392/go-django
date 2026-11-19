@@ -26,14 +26,14 @@ type Letter struct {
 
 func (l *Letter) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, l,
-		attrs.NewField(l, "ID", &attrs.FieldConfig{
+		attrs.NewField(l, "ID", &attrs.Config{
 			Primary: true,
 		}),
-		attrs.NewField(l, "Text", &attrs.FieldConfig{
+		attrs.NewField(l, "Text", &attrs.Config{
 			Blank:     true,
 			MaxLength: 1024,
 		}),
-		attrs.NewField(l, "Author", &attrs.FieldConfig{
+		attrs.NewField(l, "Author", &attrs.Config{
 			RelOneToOne: attrs.RelatedDeferred(
 				attrs.RelOneToOne,
 				lazyUserModel.LoadString(),

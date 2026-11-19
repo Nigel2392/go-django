@@ -45,7 +45,7 @@ func (p *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(p, "SupplierID", &p.SupplierID, func() fattrs.PtrFieldConfig[*Product, string] {
 			return fattrs.PtrFieldConfig[*Product, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Blank: false,
 				},
 			}

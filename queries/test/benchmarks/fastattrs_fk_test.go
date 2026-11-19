@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	fast_fldCnfRelAuthor = attrs.FieldConfig{
+	fast_fldCnfRelAuthor = attrs.Config{
 		Column:        "author_id",
 		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkAuthor{}, "", nil),
 		Attributes: map[string]interface{}{
@@ -35,7 +35,7 @@ func (a *FastAttrsBenchmarkAuthor) FieldDefs(ctx context.Context) attrs.Definiti
 		}),
 		fattrs.Field(a, "Name", &a.Name, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string] {
 			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, string]{
-				Config: attrs.FieldConfig{},
+				Config: attrs.Config{},
 			}
 		}),
 		fattrs.Field(a, "Books", &a.Books, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkAuthor, *queries.RelRevFK[attrs.Definer]] {
@@ -71,7 +71,7 @@ func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definition
 		}),
 		fattrs.Field(b, "Title", &b.Title, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string] {
 			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, string]{
-				Config: attrs.FieldConfig{},
+				Config: attrs.Config{},
 			}
 		}),
 		fattrs.Field(b, "Author", &b.Author, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor] {

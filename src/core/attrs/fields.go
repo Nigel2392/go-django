@@ -6,8 +6,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"maps"
-	"net/mail"
 	"reflect"
 	"slices"
 	"strconv"
@@ -21,10 +19,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/versatile/scan"
-	"github.com/shopspring/decimal"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -35,10 +31,10 @@ var (
 
 	_ Field = (*FieldDef)(nil) // Ensure FieldDef implements the Field interface
 
-	_modelFields = make(map[reflect.Type]map[string][]func(*FieldConfig))
+	_modelFields = make(map[reflect.Type]map[string][]func(*Config))
 )
 
-func relFromConfig(f FieldDefinition, cnf *FieldConfig) Relation {
+func relFromConfig(f FieldDefinition, cnf *Config) Relation {
 	var (
 		rel Relation
 		typ RelationType
@@ -73,17 +69,17 @@ func relFromConfig(f FieldDefinition, cnf *FieldConfig) Relation {
 	return nil
 }
 
-func RegisterConfigChange(model Definer, field string, change func(*FieldConfig)) {
+func RegisterConfigChange(model Definer, field string, change func(*Config)) {
 	rt := reflect.TypeOf(model)
 	fm, ok := _modelFields[rt]
 	if !ok {
-		fm = make(map[string][]func(*FieldConfig))
+		fm = make(map[string][]func(*Config))
 		_modelFields[rt] = fm
 	}
 
 	fs, ok := fm[field]
 	if !ok {
-		fs = make([]func(*FieldConfig), 0)
+		fs = make([]func(*Config), 0)
 	}
 
 	fs = append(fs, change)
@@ -115,45 +111,9 @@ func GetFromAttributes[T any](attrMap map[string]any, key string) (T, bool) {
 	return n, false
 }
 
-// FieldConfig is a configuration for a field.
-//
-// This defines how a field should behave and how it should be displayed in a form.
-type FieldConfig struct {
-	AutoInit             bool                                                // Whether the parent struct should be initialized automatically if the field is an embedded field
-	Null                 bool                                                // Whether the field allows null values
-	Blank                bool                                                // Whether the field allows blank values
-	ReadOnly             bool                                                // Whether the field is read-only
-	Primary              bool                                                // Whether the field is a primary key
-	Embedded             bool                                                // Whether the field is an embedded field
-	AutoNowAdd           bool                                                // Wether a time value should be automatically populated with time.Now on model creation
-	AutoNow              bool                                                // Wether a time value should be automatically populated with time.Now on model update
-	Precision            int                                                 // Decimal precision
-	Scale                int                                                 // Decimal scale
-	NameOverride         string                                              // An optional override for the field name
-	Label                any                                                 // The label for the field
-	HelpText             any                                                 // The help text for the field
-	Column               string                                              // The name of the column in the database
-	MinLength            int64                                               // The minimum length of the field
-	MaxLength            int64                                               // The maximum length of the field
-	MinValue             float64                                             // The minimum value of the field
-	MaxValue             float64                                             // The maximum value of the field
-	Attributes           map[string]interface{}                              // The attributes for the field
-	ReverseAlias         string                                              // The reverse alias for the field
-	RelForeignKey        Relation                                            // The related object for the field (foreign key)
-	RelManyToMany        Relation                                            // The related objects for the field (many to many, not implemented
-	RelOneToOne          Relation                                            // The related object for the field (one to one, not implemented)
-	RelForeignKeyReverse Relation                                            // The reverse foreign key for the field (not implemented)
-	Default              any                                                 // The default value for the field (or a function that takes in the object type and returns the default value)
-	Validators           []func(interface{}) error                           // Validators for the field
-	FormField            func(opts ...func(fields.Field)) fields.Field       // The form field for the field
-	WidgetAttrs          map[string]string                                   // The attributes for the widget
-	FormWidget           func(FieldConfig) widgets.Widget                    // The form widget for the field
-	OnInit               func(Definer, *FieldDef, *FieldConfig) *FieldConfig // A function that is called when the field is initialized
-}
-
 type FieldDef struct {
-	defs           Definitions
-	attrDef        *FieldConfig
+	defs Definitions
+	*Config
 	instance_v_ptr reflect.Value
 	field_t        *reflect.StructField
 	field_v        reflect.Value
@@ -165,12 +125,12 @@ type FieldDef struct {
 
 var _ERROR = reflect.TypeOf((*error)(nil)).Elem()
 var _DEFINER = reflect.TypeOf((*Definer)(nil)).Elem()
-var _globalConf = &FieldConfig{}
+var _globalConf = &Config{}
 
 // NewField creates a new field definition for the given instance.
 //
 // This can then be used for managing the field in a more abstract way.
-func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
+func NewField(instance any, name string, conf ...*Config) *FieldDef {
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
 		instance_v_ptr = reflect.ValueOf(instance)
@@ -181,9 +141,9 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		panic(fmt.Sprintf("field %q not found in %T", name, instance))
 	}
 
-	var cnf *FieldConfig
+	var cnf *Config
 	if len(conf) == 0 && field_t.Tag != "" {
-		cnf = autoDefinitionStructTag(&FieldConfig{}, field_t)
+		cnf = autoDefinitionStructTag(&Config{}, field_t)
 	}
 
 	if len(conf) > 0 && conf[0] != nil {
@@ -195,7 +155,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		fs, _ := fm[name]
 
 		if len(fs) > 0 && cnf == nil {
-			cnf = &FieldConfig{}
+			cnf = &Config{}
 		}
 
 		for _, fn := range fs {
@@ -267,7 +227,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	}
 
 	var f = &FieldDef{
-		attrDef:        cnf,
+		Config:         cnf,
 		instance_v_ptr: instance_v_ptr,
 		field_t:        field_t,
 		field_v:        field_v,
@@ -286,7 +246,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 			instance.(Definer), f, cnf,
 		)
 		if cnf != nil {
-			f.attrDef = cnf
+			f.Config = cnf
 		}
 	}
 
@@ -310,10 +270,10 @@ func (f *FieldDef) StructField() *reflect.StructField {
 func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 	var messages []checks.Message
 
-	if f.attrDef.MaxLength < 0 || f.attrDef.MaxLength < f.attrDef.MinLength && f.attrDef.MaxLength > 0 {
+	if f.Config.MaxLength < 0 || f.Config.MaxLength < f.Config.MinLength && f.Config.MaxLength > 0 {
 		var messageText = fmt.Sprintf(
 			"Field \"%s\" in model \"%T\" has an invalid max_length (%d)",
-			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MaxLength,
+			f.Name(), f.instance_v_ptr.Interface(), f.Config.MaxLength,
 		)
 		messages = append(messages, checks.Error(
 			"field.invalid_max_length",
@@ -322,10 +282,10 @@ func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 		))
 	}
 
-	if f.attrDef.MinLength < 0 {
+	if f.Config.MinLength < 0 {
 		var messageText = fmt.Sprintf(
 			"Field \"%s\" in model \"%T\" has an invalid min_length (%d).",
-			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MinLength,
+			f.Name(), f.instance_v_ptr.Interface(), f.Config.MinLength,
 		)
 		messages = append(messages, checks.Error(
 			"field.invalid_min_length",
@@ -334,10 +294,10 @@ func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 		))
 	}
 
-	if f.attrDef.MaxLength > 0 && f.attrDef.MinLength > 0 && f.attrDef.MaxLength < f.attrDef.MinLength {
+	if f.Config.MaxLength > 0 && f.Config.MinLength > 0 && f.Config.MaxLength < f.Config.MinLength {
 		var messageText = fmt.Sprintf(
 			"Field \"%s\" in model \"%T\" has an invalid max_length (%d) less than min_length (%d).",
-			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MaxLength, f.attrDef.MinLength,
+			f.Name(), f.instance_v_ptr.Interface(), f.Config.MaxLength, f.Config.MinLength,
 		)
 		messages = append(messages, checks.Error(
 			"field.invalid_length",
@@ -346,10 +306,10 @@ func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 		))
 	}
 
-	if f.attrDef.MaxValue < f.attrDef.MinValue && f.attrDef.MaxValue > 0 {
+	if f.Config.MaxValue < f.Config.MinValue && f.Config.MaxValue > 0 {
 		var messageText = fmt.Sprintf(
 			"Field \"%s\" in model \"%T\" has an invalid max_value (%f) less than min_value (%f).",
-			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MaxValue, f.attrDef.MinValue,
+			f.Name(), f.instance_v_ptr.Interface(), f.Config.MaxValue, f.Config.MinValue,
 		)
 		messages = append(messages, checks.Error(
 			"field.invalid_value",
@@ -417,8 +377,8 @@ func (f *FieldDef) Type() reflect.Type {
 }
 
 func (f *FieldDef) Label(ctx context.Context) string {
-	if f.attrDef.Label != nil {
-		var text, ok = trans.GetText(ctx, f.attrDef.Label)
+	if f.Config.Label != nil {
+		var text, ok = trans.GetText(ctx, f.Config.Label)
 		if ok {
 			return text
 		}
@@ -449,8 +409,8 @@ func (f *FieldDef) HelpText(ctx context.Context) string {
 		return helpTexter.HelpText(ctx)
 	}
 
-	if f.attrDef.HelpText != nil {
-		switch helpText := f.attrDef.HelpText.(type) {
+	if f.Config.HelpText != nil {
+		switch helpText := f.Config.HelpText.(type) {
 		case string:
 			return trans.T(ctx, helpText)
 		case func(ctx context.Context) string:
@@ -467,8 +427,8 @@ func (f *FieldDef) HelpText(ctx context.Context) string {
 }
 
 func (f *FieldDef) Name() string {
-	if f.attrDef.NameOverride != "" {
-		return f.attrDef.NameOverride
+	if f.Config.NameOverride != "" {
+		return f.Config.NameOverride
 	}
 	return f.fieldName
 }
@@ -508,28 +468,14 @@ func (f *FieldDef) Attrs() map[string]interface{} {
 
 createAttrs:
 
-	attrs = make(map[string]interface{})
+	attrs = f.Config.Attrs()
 	attrs[AttrNameKey] = f.Name()
-	attrs[AttrMaxLengthKey] = f.attrDef.MaxLength
-	attrs[AttrMinLengthKey] = f.attrDef.MinLength
-	attrs[AttrMinValueKey] = f.attrDef.MinValue
-	attrs[AttrMaxValueKey] = f.attrDef.MaxValue
-	attrs[AttrAutoNowAddKey] = f.attrDef.AutoNowAdd
-	attrs[AttrAutoNowKey] = f.attrDef.AutoNow
-	attrs[AttrPrecisionKey] = f.attrDef.Precision
-	attrs[AttrScaleKey] = f.attrDef.Scale
-	attrs[AttrReverseAliasKey] = f.attrDef.ReverseAlias
-	attrs[AttrAllowNullKey] = f.AllowNull()
-	attrs[AttrAllowBlankKey] = f.AllowBlank()
-	attrs[AttrAllowEditKey] = f.AllowEdit()
-	attrs[AttrIsPrimaryKey] = f.IsPrimary()
-	maps.Copy(attrs, f.attrDef.Attributes)
 	return attrs
 }
 
 func (f *FieldDef) ColumnName() string {
-	if f.attrDef.Column != "" {
-		return f.attrDef.Column
+	if f.Config.Column != "" {
+		return f.Config.Column
 	}
 
 	return ColumnName(f.fieldName)
@@ -537,20 +483,20 @@ func (f *FieldDef) ColumnName() string {
 
 func (f *FieldDef) Rel() Relation {
 
-	if f.attrDef.RelForeignKey == nil &&
-		f.attrDef.RelManyToMany == nil &&
-		f.attrDef.RelOneToOne == nil &&
-		f.attrDef.RelForeignKeyReverse == nil {
+	if f.Config.RelForeignKey == nil &&
+		f.Config.RelManyToMany == nil &&
+		f.Config.RelOneToOne == nil &&
+		f.Config.RelForeignKeyReverse == nil {
 		return nil
 	}
 
 	if f.defs == nil || ContextHasFlag(f.defs.Context(), CtxFlagRegistering) {
-		return relFromConfig(f, f.attrDef)
+		return relFromConfig(f, f.Config)
 	}
 
 	mdl, ok := modelReg[f.instance_v_ptr.Type()]
 	if !ok {
-		return relFromConfig(f, f.attrDef)
+		return relFromConfig(f, f.Config)
 	}
 
 	rel, ok := mdl.forward.Get(f.Name())
@@ -560,56 +506,36 @@ func (f *FieldDef) Rel() Relation {
 
 	rel, ok = mdl.reverse.Get(f.Name())
 	if !ok {
-		return relFromConfig(f, f.attrDef)
+		return relFromConfig(f, f.Config)
 	}
 
 	return rel
-}
-
-func (f *FieldDef) IsPrimary() bool {
-	return f.attrDef.Primary
-}
-
-func (f *FieldDef) AllowNull() bool {
-	return f.attrDef.Null
-}
-
-func (f *FieldDef) AllowBlank() bool {
-	return f.attrDef.Blank
-}
-
-func (f *FieldDef) AllowEdit() bool {
-	return !f.attrDef.ReadOnly
-}
-
-func (f *FieldDef) Embedded() bool {
-	return f.attrDef.Embedded
 }
 
 func (f *FieldDef) Validate() error {
 	var v = f.GetValue()
 
 	var rV = reflect.ValueOf(v)
-	if f.attrDef.MinLength > 0 || f.attrDef.MaxLength > 0 {
+	if f.Config.MinLength > 0 || f.Config.MaxLength > 0 {
 		if slices.Contains([]reflect.Kind{reflect.String, reflect.Slice, reflect.Array, reflect.Map}, rV.Kind()) {
 
-			if f.attrDef.MinLength > 0 && rV.Len() < int(f.attrDef.MinLength) {
+			if f.Config.MinLength > 0 && rV.Len() < int(f.Config.MinLength) {
 				return fmt.Errorf(
 					"field %q must be at least %d characters long, got %d",
-					f.field_t.Name, f.attrDef.MinLength, rV.Len(),
+					f.field_t.Name, f.Config.MinLength, rV.Len(),
 				)
 			}
 
-			if f.attrDef.MaxLength > 0 && rV.Len() > int(f.attrDef.MaxLength) {
+			if f.Config.MaxLength > 0 && rV.Len() > int(f.Config.MaxLength) {
 				return fmt.Errorf(
 					"field %q must be at most %d characters long, got %d",
-					f.field_t.Name, f.attrDef.MaxLength, rV.Len(),
+					f.field_t.Name, f.Config.MaxLength, rV.Len(),
 				)
 			}
 		}
 	}
 
-	if f.attrDef.MinValue > 0 || f.attrDef.MinValue < 0 || f.attrDef.MaxValue > 0 || f.attrDef.MaxValue < 0 {
+	if f.Config.MinValue > 0 || f.Config.MinValue < 0 || f.Config.MaxValue > 0 || f.Config.MaxValue < 0 {
 		if slices.Contains([]reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64}, rV.Kind()) {
 			var num, err = attrutils.CastToNumber[float64](v)
@@ -619,37 +545,37 @@ func (f *FieldDef) Validate() error {
 					f.field_t.Name, err,
 				)
 			}
-			if f.attrDef.MinValue > 0 && num < f.attrDef.MinValue {
+			if f.Config.MinValue > 0 && num < f.Config.MinValue {
 				return fmt.Errorf(
 					"field %q must be at least %f",
-					f.field_t.Name, f.attrDef.MinValue,
+					f.field_t.Name, f.Config.MinValue,
 				)
 			}
 
-			if f.attrDef.MaxValue > 0 && num > f.attrDef.MaxValue {
+			if f.Config.MaxValue > 0 && num > f.Config.MaxValue {
 				return fmt.Errorf(
 					"field %q must be at most %f",
-					f.field_t.Name, f.attrDef.MaxValue,
+					f.field_t.Name, f.Config.MaxValue,
 				)
 			}
 
-			if f.attrDef.MinValue < 0 && num > f.attrDef.MinValue {
+			if f.Config.MinValue < 0 && num > f.Config.MinValue {
 				return fmt.Errorf(
 					"field %q must be at least %f",
-					f.field_t.Name, f.attrDef.MinValue,
+					f.field_t.Name, f.Config.MinValue,
 				)
 			}
 
-			if f.attrDef.MaxValue < 0 && num < f.attrDef.MaxValue {
+			if f.Config.MaxValue < 0 && num < f.Config.MaxValue {
 				return fmt.Errorf(
 					"field %q must be at most %f",
-					f.field_t.Name, f.attrDef.MaxValue,
+					f.field_t.Name, f.Config.MaxValue,
 				)
 			}
 		}
 	}
 
-	for _, validator := range f.attrDef.Validators {
+	for _, validator := range f.Config.Validators {
 		if err := validator(v); err != nil {
 			return err
 		}
@@ -682,8 +608,8 @@ func (f *FieldDef) ToString() string {
 
 func (f *FieldDef) GetDefault() interface{} {
 
-	if f.attrDef.Default != nil {
-		var v = reflect.ValueOf(f.attrDef.Default)
+	if f.Config.Default != nil {
+		var v = reflect.ValueOf(f.Config.Default)
 		if v.IsValid() && v.Kind() == reflect.Func {
 
 			var typ = v.Type()
@@ -694,14 +620,14 @@ func (f *FieldDef) GetDefault() interface{} {
 			case 0:
 				out = v.Call([]reflect.Value{})
 			default:
-				assert.Fail("Invalid function type %T for GetDefault function", f.attrDef.Default)
+				assert.Fail("Invalid function type %T for GetDefault function", f.Config.Default)
 			}
 
 			var outVal reflect.Value
 			var numOut = typ.NumOut()
 			switch {
 			case numOut == 0:
-				assert.Fail("No return value for GetDefault function: %T", f.attrDef.Default)
+				assert.Fail("No return value for GetDefault function: %T", f.Config.Default)
 			case numOut == 1:
 				outVal = out[0]
 			case numOut == 2 && out[1].Type().Implements(_ERROR):
@@ -711,7 +637,7 @@ func (f *FieldDef) GetDefault() interface{} {
 					assert.Fail("Error retrieving default value: %v", err)
 				}
 			default:
-				assert.Fail("Invalid function type %T for GetDefault function", f.attrDef.Default)
+				assert.Fail("Invalid function type %T for GetDefault function", f.Config.Default)
 			}
 
 			var val = outVal.Interface()
@@ -721,7 +647,7 @@ func (f *FieldDef) GetDefault() interface{} {
 			return outVal
 		}
 
-		var outVal = f.attrDef.Default
+		var outVal = f.Config.Default
 		assert.Err(BindValueToModel(
 			f.Instance(), f, outVal,
 		))
@@ -749,13 +675,13 @@ func (f *FieldDef) GetDefault() interface{} {
 		}
 	}
 
-	if f.attrDef.Default == nil {
+	if f.Config.Default == nil {
 		return nil
 	}
 
 	//	// required to make sure through models dont get a
 	//	// default zero value for their source or target fields
-	//	if f.attrDef.Default == nil {
+	//	if f.FieldConfig.Default == nil {
 	//		var meta = ThroughModelMeta(f.Instance())
 	//		switch f.Name() {
 	//		case meta.SourceField, meta.TargetField:
@@ -803,148 +729,9 @@ func (f *FieldDef) FormField() fields.Field {
 		return f.formField
 	}
 
-	var opts = make([]func(fields.Field), 0)
-	var rel = f.Rel()
-	if rel != nil {
-		var cTypeDef = contenttypes.DefinitionForObject(rel)
-		if cTypeDef != nil {
-			opts = append(opts, fields.Label(
-				cTypeDef.Label,
-			))
-		}
-	} else {
-		opts = append(opts, fields.Label(f.Label))
-	}
-
-	opts = append(opts, fields.HelpText(f.HelpText))
-
-	if f.attrDef.ReadOnly {
-		opts = append(opts, fields.ReadOnly(true))
-	}
-
-	if !f.AllowBlank() {
-		opts = append(opts, fields.Required(true))
-	}
-
-	if f.attrDef.MinLength > 0 {
-		opts = append(opts, fields.MinLength(int(f.attrDef.MinLength)))
-	}
-
-	if f.attrDef.MaxLength > 0 {
-		opts = append(opts, fields.MaxLength(int(f.attrDef.MaxLength)))
-	}
-
-	if f.attrDef.MinValue > 0 || f.attrDef.MinValue < 0 {
-		opts = append(opts, fields.MinValue(int(f.attrDef.MinValue)))
-	}
-
-	if f.attrDef.MaxValue > 0 || f.attrDef.MaxValue < 0 {
-		opts = append(opts, fields.MaxValue(int(f.attrDef.MaxValue)))
-	}
-
-	var formField fields.Field
-	var typForNew reflect.Type = f.field_t.Type
-	if f.field_t.Type.Kind() == reflect.Ptr {
-		typForNew = f.field_t.Type.Elem()
-	}
-
-	var hooks []FormFieldGetter
-	if f.attrDef.FormField != nil {
-		formField = f.attrDef.FormField(opts...)
-		goto returnField
-	}
-
-	hooks = goldcrest.Get[FormFieldGetter](HookFormFieldForType)
-	for _, hook := range hooks {
-		if field, ok := hook(f, typForNew, f.field_v, opts...); ok {
-			formField = field
-			goto returnField
-		}
-	}
-
-	switch reflect.New(typForNew).Elem().Interface().(type) {
-	case time.Time:
-		formField = fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
-	case json.RawMessage:
-		formField = fields.JSONField[map[string]interface{}](opts...)
-	case mail.Address:
-		formField = fields.EmailField(opts...)
-	case decimal.Decimal:
-		formField = fields.DecimalField(opts...)
-	case sql.NullBool:
-		formField = fields.SQLNullField[bool](opts...)
-	case sql.NullByte:
-		formField = fields.SQLNullField[byte](opts...)
-	case sql.NullInt16:
-		formField = fields.SQLNullField[int16](opts...)
-	case sql.NullInt32:
-		formField = fields.SQLNullField[int32](opts...)
-	case sql.NullInt64:
-		formField = fields.SQLNullField[int64](opts...)
-	case sql.NullString:
-		formField = fields.SQLNullField[string](opts...)
-	case sql.NullFloat64:
-		formField = fields.SQLNullField[float64](opts...)
-	case sql.NullTime:
-		formField = fields.SQLNullField[time.Time](opts...)
-	case Definer:
-		formField = newDefinerField(f, opts...)
-	}
-
-	if formField != nil {
-		goto returnField
-	}
-
-	switch reflect.New(typForNew).Interface().(type) {
-	case *time.Time:
-		formField = fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
-	case *mail.Address:
-		formField = fields.EmailField(opts...)
-	case Definer:
-		formField = newDefinerField(f, opts...)
-	}
-
-	if formField != nil {
-		goto returnField
-	}
-
-	switch f.field_t.Type.Kind() {
-	case reflect.String:
-		formField = fields.CharField(opts...)
-	case reflect.Bool:
-		formField = fields.BooleanField(opts...)
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		formField = fields.NumberField[int](opts...)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		formField = fields.NumberField[uint](opts...)
-	case reflect.Float32, reflect.Float64:
-		formField = fields.NumberField[float64](opts...)
-	default:
-		formField = fields.CharField(opts...)
-	}
-
-returnField:
-	if formField == nil {
-		return nil
-	}
-
-	formField.SetName(f.Name())
-
-	if f.attrDef.WidgetAttrs != nil {
-		formField.SetAttrs(
-			f.attrDef.WidgetAttrs,
-		)
-	}
-
-	switch {
-	case f.attrDef.FormWidget != nil:
-		formField.SetWidget(
-			f.attrDef.FormWidget(*f.attrDef),
-		)
-	}
-
-	f.formField = formField
-	return formField
+	opts := f.Config.FormOptions(f)
+	f.formField = f.Config.GetFormField(f, f.field_v, opts...)
+	return f.formField
 }
 
 func (f *FieldDef) GetValue() interface{} {
@@ -1347,7 +1134,7 @@ func (f *FieldDef) driverValue() (driver.Value, error) {
 		v = v.Elem()
 	}
 
-	if IsZero(v) && f.attrDef.Default != nil {
+	if IsZero(v) && f.Config.Default != nil {
 		return f._driverValue(f.GetDefault())
 	}
 

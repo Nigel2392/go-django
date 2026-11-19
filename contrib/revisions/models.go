@@ -95,23 +95,23 @@ func (r *Revision) SetObject(obj attrs.Definer) error {
 
 func (r *Revision) FieldDefs(ctx context.Context) attrs.Definitions {
 	return r.Model.Define(ctx, r,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			Primary:  true,
 			Column:   "id",
 			Label:    trans.S("ID"),
 			HelpText: trans.S("The unique identifier for the revision."),
 		}),
-		attrs.Unbound("ObjectID", &attrs.FieldConfig{
+		attrs.Unbound("ObjectID", &attrs.Config{
 			Column:   "object_id",
 			Label:    trans.S("Object ID"),
 			HelpText: trans.S("The unique identifier for the object this revision belongs to."),
 		}),
-		attrs.Unbound("ContentType", &attrs.FieldConfig{
+		attrs.Unbound("ContentType", &attrs.Config{
 			Column:   "content_type",
 			Label:    trans.S("Content Type"),
 			HelpText: trans.S("The content type of the object this revision belongs to."),
 		}),
-		attrs.Unbound("Data", &attrs.FieldConfig{
+		attrs.Unbound("Data", &attrs.Config{
 			Column:   "data",
 			Label:    trans.S("Data"),
 			HelpText: trans.S("The data of the revision, this is a snapshot of the object at the time of the revision."),
@@ -131,7 +131,7 @@ func (r *Revision) FieldDefs(ctx context.Context) attrs.Definitions {
 				HelpText: trans.S("The user who created the revision."),
 			},
 		}),
-		attrs.Unbound("CreatedAt", &attrs.FieldConfig{
+		attrs.Unbound("CreatedAt", &attrs.Config{
 			Column:   "created_at",
 			Label:    trans.S("Created At"),
 			HelpText: trans.S("The date and time when the revision was created."),

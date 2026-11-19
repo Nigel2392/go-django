@@ -116,7 +116,7 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Order, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*Order, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -132,8 +132,8 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 		//	}),
 		fattrs.Field(m, "State", &m.State, func() fattrs.PtrFieldConfig[*Order, InternalOrderState] {
 			return fattrs.PtrFieldConfig[*Order, InternalOrderState]{
-				Config: attrs.FieldConfig{
-					FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+				Config: attrs.Config{
+					FormWidget: func(fc attrs.Config) widgets.Widget {
 						return options.NewSelectInput(
 							fc.WidgetAttrs,
 							stateActionOptions,
@@ -144,7 +144,7 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Completed", &m.Completed, func() fattrs.PtrFieldConfig[*Order, bool] {
 			return fattrs.PtrFieldConfig[*Order, bool]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Blank:   true,
 					Default: false,
 				},
@@ -152,7 +152,7 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Processed", &m.Processed, func() fattrs.PtrFieldConfig[*Order, bool] {
 			return fattrs.PtrFieldConfig[*Order, bool]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Blank:   true,
 					Default: false,
 				},
@@ -160,7 +160,7 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Customer", &m.Customer, func() fattrs.PtrFieldConfig[*Order, *customers.Customer] {
 			return fattrs.PtrFieldConfig[*Order, *customers.Customer]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "customer_id",
 					RelForeignKey: attrs.Relate(&customers.Customer{}, "", nil),
 					Null:          false,
@@ -171,7 +171,7 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Payment", &m.Payment, func() fattrs.PtrFieldConfig[*Order, *payments.Payment] {
 			return fattrs.PtrFieldConfig[*Order, *payments.Payment]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "payment_id",
 					RelForeignKey: attrs.Relate(&payments.Payment{}, "", nil),
 					Null:          true,

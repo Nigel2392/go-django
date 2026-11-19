@@ -134,13 +134,13 @@ func (n *Site) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
 
 func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 	return []attrs.Field{
-		attrs.NewField(n, "ID", &attrs.FieldConfig{
+		attrs.NewField(n, "ID", &attrs.Config{
 			HelpText: trans.S("The unique identifier for the site."),
 			Primary:  true,
 			Column:   "id",
 			ReadOnly: true,
 		}),
-		attrs.NewField(n, "Name", &attrs.FieldConfig{
+		attrs.NewField(n, "Name", &attrs.Config{
 			HelpText:  trans.S("The name of the site."),
 			Column:    "site_name",
 			Null:      false,
@@ -148,7 +148,7 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 			MinLength: 2,
 			MaxLength: 64,
 		}),
-		attrs.NewField(n, "Domain", &attrs.FieldConfig{
+		attrs.NewField(n, "Domain", &attrs.Config{
 			HelpText:  trans.S("The domain of the site, e.g. example.com."),
 			Column:    "domain",
 			Null:      false,
@@ -159,7 +159,7 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 				validators.ValidateSettingsURL,
 			},
 		}),
-		attrs.NewField(n, "Port", &attrs.FieldConfig{
+		attrs.NewField(n, "Port", &attrs.Config{
 			HelpText: trans.S("The port of the site, e.g. 80 for HTTP or 443 for HTTPS."),
 			Column:   "port",
 			Null:     false,
@@ -168,21 +168,21 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 			MinValue: 1,
 			MaxValue: 65535,
 		}),
-		attrs.NewField(n, "Default", &attrs.FieldConfig{
+		attrs.NewField(n, "Default", &attrs.Config{
 			HelpText: trans.S("Whether this site is the default site. Only one site can be the default site."),
 			Column:   "is_default_site",
 			Null:     false,
 			Blank:    true,
 			Default:  false,
 		}),
-		attrs.NewField(n, "Root", &attrs.FieldConfig{
+		attrs.NewField(n, "Root", &attrs.Config{
 			HelpText: trans.S("The root page of the site. This is the page that will be displayed when the site is accessed."),
 			Column:   "root_page_id",
 			Null:     true,
 			RelForeignKey: attrs.Relate(
 				&PageNode{}, "", nil,
 			),
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(fc attrs.Config) widgets.Widget {
 				return chooser.NewChooserWidget(
 					fc.RelForeignKey.Model(), fc.WidgetAttrs, "pages.nodes.root",
 				)

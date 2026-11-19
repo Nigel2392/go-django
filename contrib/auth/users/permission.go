@@ -88,16 +88,16 @@ func (p *Permission) String() string {
 
 func (p *Permission) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fields = []attrs.Field{
-		attrs.NewField(p, "ID", &attrs.FieldConfig{
+		attrs.NewField(p, "ID", &attrs.Config{
 			ReadOnly: true,
 			Primary:  true,
 		}),
-		attrs.NewField(p, "Name", &attrs.FieldConfig{
+		attrs.NewField(p, "Name", &attrs.Config{
 			Label:     "Permission Name",
 			HelpText:  trans.S("Name of the permission. This is the name that will be displayed in the UI."),
 			MaxLength: 255,
 		}),
-		attrs.NewField(p, "Description", &attrs.FieldConfig{
+		attrs.NewField(p, "Description", &attrs.Config{
 			Blank:     true,
 			Label:     "Description",
 			HelpText:  trans.S("Description of the permission. This is the description that will be displayed in the UI."),

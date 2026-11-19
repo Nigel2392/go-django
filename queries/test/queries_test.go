@@ -40,11 +40,11 @@ type Image struct {
 
 func (m *Image) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Path", &attrs.FieldConfig{}),
+		attrs.NewField(m, "Path", &attrs.Config{}),
 	).WithTableName("queries-images")
 }
 
@@ -58,13 +58,13 @@ type Profile struct {
 
 func (m *Profile) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Email", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Image", &attrs.FieldConfig{
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "Email", &attrs.Config{}),
+		attrs.NewField(m, "Image", &attrs.Config{
 			Null:          true,
 			RelForeignKey: attrs.Relate(&Image{}, "", nil),
 			Column:        "image_id",
@@ -82,12 +82,12 @@ type User struct {
 
 func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Profile", &attrs.FieldConfig{
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "Profile", &attrs.Config{
 			Null:        true,
 			RelOneToOne: attrs.Relate(&Profile{}, "", nil),
 			Column:      "profile_id",
@@ -122,22 +122,22 @@ type Todo struct {
 
 func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Column:   "id", // can be inferred, but explicitly set for clarity
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{
+		attrs.NewField(m, "Title", &attrs.Config{
 			Column: "title", // can be inferred, but explicitly set for clarity
 		}),
-		attrs.NewField(m, "Description", &attrs.FieldConfig{
+		attrs.NewField(m, "Description", &attrs.Config{
 			Column: "description", // can be inferred, but explicitly set for clarity
-			FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(cfg attrs.Config) widgets.Widget {
 				return widgets.NewTextarea(nil)
 			},
 		}),
-		attrs.NewField(m, "Done", &attrs.FieldConfig{}),
-		attrs.NewField(m, "User", &attrs.FieldConfig{
+		attrs.NewField(m, "Done", &attrs.Config{}),
+		attrs.NewField(m, "User", &attrs.Config{
 			Null:        true,
 			Column:      "user_id",
 			RelOneToOne: attrs.Relate(&User{}, "", nil),
@@ -153,11 +153,11 @@ type ObjectWithMultipleRelations struct {
 
 func (m *ObjectWithMultipleRelations) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Obj1", &attrs.FieldConfig{
+		attrs.NewField(m, "Obj1", &attrs.Config{
 			Null:          true,
 			RelForeignKey: attrs.Relate(&User{}, "", nil),
 			Column:        "obj1_id",
@@ -165,7 +165,7 @@ func (m *ObjectWithMultipleRelations) FieldDefs(ctx context.Context) attrs.Defin
 				attrs.AttrReverseAliasKey: "MultiRelationObj1",
 			},
 		}),
-		attrs.NewField(m, "Obj2", &attrs.FieldConfig{
+		attrs.NewField(m, "Obj2", &attrs.Config{
 			Null:          true,
 			RelForeignKey: attrs.Relate(&User{}, "", nil),
 			Column:        "obj2_id",
@@ -185,12 +185,12 @@ type Category struct {
 
 func (m *Category) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Parent", &attrs.FieldConfig{
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "Parent", &attrs.Config{
 			Null:          true,
 			Column:        "parent_id",
 			RelForeignKey: attrs.Relate(&Category{}, "", nil),
@@ -208,11 +208,11 @@ type OneToOneWithThrough struct {
 
 func (t *OneToOneWithThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Title", &attrs.FieldConfig{
+		attrs.NewField(t, "Title", &attrs.Config{
 			Column: "title",
 		}),
 		//  fields.NewOneToOneField[*queries.RelO2O[*OneToOneWithThrough_Target, *OneToOneWithThrough_Through]](t, &t.Through, "Target", "TargetReverse", "id", attrs.Relate(
@@ -236,7 +236,7 @@ func (t *OneToOneWithThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 			),
 		}),
 
-		attrs.NewField(t, "User", &attrs.FieldConfig{
+		attrs.NewField(t, "User", &attrs.Config{
 			Null:          true,
 			Column:        "user_id",
 			RelForeignKey: attrs.Relate(&User{}, "", nil),
@@ -252,11 +252,11 @@ type OneToOneWithThrough_Through struct {
 
 func (t *OneToOneWithThrough_Through) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "SourceModel", &attrs.FieldConfig{
+		attrs.NewField(t, "SourceModel", &attrs.Config{
 			Column: "source_id",
 			Null:   false,
 		}),
-		attrs.NewField(t, "TargetModel", &attrs.FieldConfig{
+		attrs.NewField(t, "TargetModel", &attrs.Config{
 			Column: "target_id",
 			Null:   false,
 		}),
@@ -272,14 +272,14 @@ type OneToOneWithThrough_Target struct {
 
 func (t *OneToOneWithThrough_Target) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
-		attrs.NewField(t, "Age", &attrs.FieldConfig{
+		attrs.NewField(t, "Age", &attrs.Config{
 			Column: "age",
 		}),
 	).WithTableName("queries-onetoonewiththrough_target")
@@ -313,11 +313,11 @@ type ModelManyToMany struct {
 
 func (t *ModelManyToMany) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Title", &attrs.FieldConfig{
+		attrs.NewField(t, "Title", &attrs.Config{
 			Column: "title",
 			Attributes: map[string]any{
 				attrs.AttrUniqueKey: true,
@@ -357,7 +357,7 @@ func (t *ModelManyToMany) FieldDefs(ctx context.Context) attrs.Definitions {
 		// fields.ForeignKey[*User]("User", "user_id", &fields.FieldConfig{
 		// ReverseName: "ModelManyToManySet",
 		// }),
-		attrs.NewField(t, "User", &attrs.FieldConfig{
+		attrs.NewField(t, "User", &attrs.Config{
 			Null:          true,
 			Column:        "user_id",
 			RelForeignKey: attrs.Relate(&User{}, "", nil),
@@ -388,11 +388,11 @@ type ModelManyToMany_Through struct {
 
 func (t *ModelManyToMany_Through) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "SourceModel", &attrs.FieldConfig{
+		attrs.NewField(t, "SourceModel", &attrs.Config{
 			Column: "source_id",
 			Null:   false,
 		}),
-		attrs.NewField(t, "TargetModel", &attrs.FieldConfig{
+		attrs.NewField(t, "TargetModel", &attrs.Config{
 			Column: "target_id",
 			Null:   false,
 		}),
@@ -422,14 +422,14 @@ func (t *ModelManyToMany_Target) UniqueTogether() [][]string {
 
 func (t *ModelManyToMany_Target) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
-		attrs.NewField(t, "Age", &attrs.FieldConfig{
+		attrs.NewField(t, "Age", &attrs.Config{
 			Column: "age",
 		}),
 	).WithTableName("queries-model_manytomany_target")
@@ -443,11 +443,11 @@ type TestTransaction struct {
 
 func (t *TestTransaction) FieldDefs(ctx context.Context) attrs.Definitions {
 	return t.Model.Define(ctx, t,
-		attrs.NewField(t, "ID", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(t, "Name", &attrs.FieldConfig{
+		attrs.NewField(t, "Name", &attrs.Config{
 			Column: "name",
 		}),
 	).WithTableName("queries-test_transaction")
@@ -466,18 +466,18 @@ func (u *UniqueSource) UniqueTogether() [][]string {
 
 func (u *UniqueSource) FieldDefs(ctx context.Context) attrs.Definitions {
 	return u.Model.Define(ctx, u,
-		attrs.NewField(u, "ID", &attrs.FieldConfig{
+		attrs.NewField(u, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(u, "Name", &attrs.FieldConfig{
+		attrs.NewField(u, "Name", &attrs.Config{
 			Column:    "name",
 			MaxLength: 100,
 			Attributes: map[string]any{
 				attrs.AttrUniqueKey: true,
 			},
 		}),
-		attrs.NewField(u, "Target", &attrs.FieldConfig{
+		attrs.NewField(u, "Target", &attrs.Config{
 			Null:          true,
 			Column:        "target_id",
 			RelForeignKey: attrs.Relate(&UniqueTarget{}, "", nil),
@@ -497,11 +497,11 @@ func (u *UniqueTarget) UniqueTogether() [][]string {
 
 func (u *UniqueTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return u.Model.Define(ctx, u,
-		attrs.NewField(u, "ID", &attrs.FieldConfig{
+		attrs.NewField(u, "ID", &attrs.Config{
 			Column:  "id",
 			Primary: true,
 		}),
-		attrs.NewField(u, "Name", &attrs.FieldConfig{
+		attrs.NewField(u, "Name", &attrs.Config{
 			Column:    "name",
 			MaxLength: 100,
 			Attributes: map[string]any{
@@ -3267,7 +3267,7 @@ type TestRowsAffected struct {
 
 func (t *TestRowsAffected) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, t,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.Unbound("Name"),

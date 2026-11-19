@@ -20,7 +20,7 @@ func (m *ffTestTarget) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*ffTestTarget, uint64] {
 			return fattrs.PtrFieldConfig[*ffTestTarget, uint64]{
-				Config: attrs.FieldConfig{Primary: true, ReadOnly: true},
+				Config: attrs.Config{Primary: true, ReadOnly: true},
 			}
 		}),
 		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*ffTestTarget, string] {
@@ -38,12 +38,12 @@ func (m *ffTestPtrThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "Source", &m.Source, func() fattrs.PtrFieldConfig[*ffTestPtrThrough, *ffTestPtrSource] {
 			return fattrs.PtrFieldConfig[*ffTestPtrThrough, *ffTestPtrSource]{
-				Config: attrs.FieldConfig{Column: "source_id"},
+				Config: attrs.Config{Column: "source_id"},
 			}
 		}),
 		fattrs.Field(m, "Target", &m.Target, func() fattrs.PtrFieldConfig[*ffTestPtrThrough, *ffTestTarget] {
 			return fattrs.PtrFieldConfig[*ffTestPtrThrough, *ffTestTarget]{
-				Config: attrs.FieldConfig{Column: "target_id"},
+				Config: attrs.Config{Column: "target_id"},
 			}
 		}),
 	)
@@ -59,7 +59,7 @@ func (m *ffTestPtrSource) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*ffTestPtrSource, uint64] {
 			return fattrs.PtrFieldConfig[*ffTestPtrSource, uint64]{
-				Config: attrs.FieldConfig{Primary: true, ReadOnly: true},
+				Config: attrs.Config{Primary: true, ReadOnly: true},
 			}
 		}),
 		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*ffTestPtrSource, string] {
@@ -67,7 +67,7 @@ func (m *ffTestPtrSource) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Products", &m.Products, func() fattrs.PtrFieldConfig[*ffTestPtrSource, any] {
 			return fattrs.PtrFieldConfig[*ffTestPtrSource, any]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					RelManyToMany: attrs.Relate(
 						&ffTestTarget{},
 						"",
@@ -92,12 +92,12 @@ func (m *ffTestReflectlessThrough) FieldDefs(ctx context.Context) attrs.Definiti
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "Source", &m.Source, func() fattrs.PtrFieldConfig[*ffTestReflectlessThrough, *ffTestReflectlessSource] {
 			return fattrs.PtrFieldConfig[*ffTestReflectlessThrough, *ffTestReflectlessSource]{
-				Config: attrs.FieldConfig{Column: "source_id"},
+				Config: attrs.Config{Column: "source_id"},
 			}
 		}),
 		fattrs.Field(m, "Target", &m.Target, func() fattrs.PtrFieldConfig[*ffTestReflectlessThrough, *ffTestTarget] {
 			return fattrs.PtrFieldConfig[*ffTestReflectlessThrough, *ffTestTarget]{
-				Config: attrs.FieldConfig{Column: "target_id"},
+				Config: attrs.Config{Column: "target_id"},
 			}
 		}),
 	)
@@ -113,7 +113,7 @@ func (m *ffTestReflectlessSource) FieldDefs(ctx context.Context) attrs.Definitio
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*ffTestReflectlessSource, uint64] {
 			return fattrs.PtrFieldConfig[*ffTestReflectlessSource, uint64]{
-				Config: attrs.FieldConfig{Primary: true, ReadOnly: true},
+				Config: attrs.Config{Primary: true, ReadOnly: true},
 			}
 		}),
 		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*ffTestReflectlessSource, string] {
@@ -121,7 +121,7 @@ func (m *ffTestReflectlessSource) FieldDefs(ctx context.Context) attrs.Definitio
 		}),
 		fattrs.NewField(m, "Products", func() fattrs.FieldConfig[*ffTestReflectlessSource] {
 			return fattrs.FieldConfig[*ffTestReflectlessSource]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					RelManyToMany: attrs.Relate(
 						&ffTestTarget{},
 						"",

@@ -26,7 +26,7 @@ type BenchmarkO2OMain struct {
 
 func (t *BenchmarkO2OMain) Fields() []attrs.Field {
 	return []attrs.Field{
-		attrs.NewField(t, "ID", &attrs.FieldConfig{Primary: true}),
+		attrs.NewField(t, "ID", &attrs.Config{Primary: true}),
 		attrs.NewField(t, "Title", nil),
 		fields.NewOneToOneField[*queries.RelO2O[*BenchmarkO2OTarget, *BenchmarkO2OThrough]](t, "Through", &fields.FieldConfig{
 			ScanTo:      &t.Through,
@@ -56,12 +56,12 @@ type BenchmarkO2OThrough struct {
 
 func (t *BenchmarkO2OThrough) Fields() []attrs.Field {
 	return []attrs.Field{
-		attrs.NewField(t, "ID", &attrs.FieldConfig{Primary: true}),
-		attrs.NewField(t, "SourceModel", &attrs.FieldConfig{
+		attrs.NewField(t, "ID", &attrs.Config{Primary: true}),
+		attrs.NewField(t, "SourceModel", &attrs.Config{
 			Column:     "source_id",
 			Attributes: map[string]interface{}{attrs.AttrUniqueKey: true},
 		}),
-		attrs.NewField(t, "TargetModel", &attrs.FieldConfig{
+		attrs.NewField(t, "TargetModel", &attrs.Config{
 			Column:     "target_id",
 			Attributes: map[string]interface{}{attrs.AttrUniqueKey: true},
 		}),
@@ -81,7 +81,7 @@ type BenchmarkO2OTarget struct {
 
 func (t *BenchmarkO2OTarget) Fields() []attrs.Field {
 	return []attrs.Field{
-		attrs.NewField(t, "ID", &attrs.FieldConfig{Primary: true}),
+		attrs.NewField(t, "ID", &attrs.Config{Primary: true}),
 		attrs.NewField(t, "Name", nil),
 	}
 }

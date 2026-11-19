@@ -34,7 +34,7 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*CartItem, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*CartItem, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -42,7 +42,7 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Cart", &m.Cart, func() fattrs.PtrFieldConfig[*CartItem, *Cart] {
 			return fattrs.PtrFieldConfig[*CartItem, *Cart]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "cart_id",
 					ReadOnly:      true,
 					ReverseAlias:  "CartItems",
@@ -54,7 +54,7 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*CartItem, *products.Product] {
 			return fattrs.PtrFieldConfig[*CartItem, *products.Product]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "product_id",
 					ReadOnly:      true,
 					ReverseAlias:  "CartItems",
@@ -66,7 +66,7 @@ func (m *CartItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Amount", &m.Amount, func() fattrs.PtrFieldConfig[*CartItem, uint64] {
 			return fattrs.PtrFieldConfig[*CartItem, uint64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					MinValue: 0,
 				},
 			}

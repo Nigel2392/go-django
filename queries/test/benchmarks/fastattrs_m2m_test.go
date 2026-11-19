@@ -16,12 +16,12 @@ import (
 )
 
 var (
-	fast_fldCnfPrimary = &attrs.FieldConfig{Primary: true}
+	fast_fldCnfPrimary = &attrs.Config{Primary: true}
 
-	fast_fldCnfSrcId = &attrs.FieldConfig{
+	fast_fldCnfSrcId = &attrs.Config{
 		Column: "source_id",
 	}
-	fast_fldCnfTargetId = &attrs.FieldConfig{
+	fast_fldCnfTargetId = &attrs.Config{
 		Column: "target_id",
 	}
 

@@ -28,7 +28,7 @@ type Author struct {
 
 func (a *Author) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, a,
-		attrs.NewField(a, "ID", &attrs.FieldConfig{
+		attrs.NewField(a, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(a, "Name", nil),
@@ -51,7 +51,7 @@ func (b *GenericComment[T]) BeforeSave(ctx context.Context) error {
 
 func (b *GenericComment[T]) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*GenericComment[T], any](ctx, b,
-		attrs.NewField(b, "ID", &attrs.FieldConfig{
+		attrs.NewField(b, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(b, "Text", nil),
@@ -70,10 +70,10 @@ func (b *CommentWithAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
 	}
 
 	return attrs.Make(ctx, b,
-		attrs.NewField(b, "ID", &attrs.FieldConfig{
+		attrs.NewField(b, "ID", &attrs.Config{
 			Primary: true,
 		}),
-		attrs.NewField(b, "Author", &attrs.FieldConfig{
+		attrs.NewField(b, "Author", &attrs.Config{
 			Column:        "author_id",
 			RelForeignKey: attrs.Relate(&Author{}, "", nil),
 		}),
@@ -342,7 +342,7 @@ func (m *CommentReaction) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*CommentReaction, int64] {
 			return fattrs.PtrFieldConfig[*CommentReaction, int64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -350,7 +350,7 @@ func (m *CommentReaction) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Comment", &m.Comment, func() fattrs.PtrFieldConfig[*CommentReaction, *GenericComment[CommentWithAuthor]] {
 			return fattrs.PtrFieldConfig[*CommentReaction, *GenericComment[CommentWithAuthor]]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "comment_id",
 					RelForeignKey: attrs.Relate(&GenericComment[CommentWithAuthor]{}, "", nil),
 				},

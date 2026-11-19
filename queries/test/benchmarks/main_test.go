@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	fldCnfPrimary = &attrs.FieldConfig{
+	fldCnfPrimary = &attrs.Config{
 		Primary: true,
 	}
 )

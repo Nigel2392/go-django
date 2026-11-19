@@ -142,29 +142,29 @@ func (l *Entry) Data() map[string]interface{} {
 
 func (l *Entry) Fields(attrs.Definer) []attrs.Field {
 	return []attrs.Field{
-		attrs.NewField(l, "Id", &attrs.FieldConfig{
+		attrs.NewField(l, "Id", &attrs.Config{
 			NameOverride: "ID",
 			Primary:      true,
 			Column:       "id",
 			Null:         false,
 		}),
-		attrs.NewField(l, "Typ", &attrs.FieldConfig{
+		attrs.NewField(l, "Typ", &attrs.Config{
 			NameOverride: "Type",
 			Column:       "type",
 			MaxLength:    255,
 			Null:         false,
 		}),
-		attrs.NewField(l, "Lvl", &attrs.FieldConfig{
+		attrs.NewField(l, "Lvl", &attrs.Config{
 			NameOverride: "Level",
 			Column:       "level",
 			Null:         false,
 		}),
-		attrs.NewField(l, "Time", &attrs.FieldConfig{
+		attrs.NewField(l, "Time", &attrs.Config{
 			NameOverride: "Timestamp",
 			Column:       "timestamp",
 			Null:         false,
 		}),
-		attrs.NewField(l, "Usr", &attrs.FieldConfig{
+		attrs.NewField(l, "Usr", &attrs.Config{
 			NameOverride: "User",
 			Column:       "user_id",
 			Null:         true,
@@ -174,22 +174,22 @@ func (l *Entry) Fields(attrs.Definer) []attrs.Field {
 				"", nil,
 			),
 		}),
-		attrs.NewField(l, "Obj", &attrs.FieldConfig{
+		attrs.NewField(l, "Obj", &attrs.Config{
 			NameOverride: "Object",
 			Column:       "object",
 			Null:         true,
 		}),
-		attrs.NewField(l, "ObjID", &attrs.FieldConfig{
+		attrs.NewField(l, "ObjID", &attrs.Config{
 			NameOverride: "ObjectID",
 			Column:       "object_id",
 			Null:         true,
 		}),
-		attrs.NewField(l, "CType", &attrs.FieldConfig{
+		attrs.NewField(l, "CType", &attrs.Config{
 			NameOverride: "ContentType",
 			Column:       "content_type",
 			Null:         true,
 		}),
-		attrs.NewField(l, "Src", &attrs.FieldConfig{
+		attrs.NewField(l, "Src", &attrs.Config{
 			NameOverride: "Data",
 			Column:       "data",
 			Null:         true,

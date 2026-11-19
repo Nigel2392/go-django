@@ -30,7 +30,7 @@ func (f *TestModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
 		fattrs.NewField(f, "ID", func() fattrs.FieldConfig[*TestModelFields] {
 			return fattrs.FieldConfig[*TestModelFields]{
-				Config:   attrs.FieldConfig{Primary: true},
+				Config:   attrs.Config{Primary: true},
 				GetValue: func(obj *TestModelFields) interface{} { return obj.ID },
 				SetValue: func(obj *TestModelFields, value any) error {
 					switch v := value.(type) {
@@ -69,7 +69,7 @@ func (f *TestModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.NewField(f, "Objects", func() fattrs.FieldConfig[*TestModelFields] {
 			return fattrs.FieldConfig[*TestModelFields]{
-				Config:   attrs.FieldConfig{ReadOnly: true},
+				Config:   attrs.Config{ReadOnly: true},
 				GetValue: func(obj *TestModelFields) interface{} { return obj.Objects },
 				SetValue: func(obj *TestModelFields, value any) error {
 					if v, ok := value.([]int64); ok {
@@ -94,7 +94,7 @@ func (f *TestEmbeddedModelFields) FieldDefs(ctx context.Context) attrs.Definitio
 	return attrs.Make(ctx, f,
 		fattrs.NewField(f, "ID", func() fattrs.FieldConfig[*TestEmbeddedModelFields] {
 			return fattrs.FieldConfig[*TestEmbeddedModelFields]{
-				Config:   attrs.FieldConfig{Primary: true},
+				Config:   attrs.Config{Primary: true},
 				GetValue: func(obj *TestEmbeddedModelFields) interface{} { return obj.ID },
 				SetValue: func(obj *TestEmbeddedModelFields, value any) error {
 					switch v := value.(type) {
@@ -560,7 +560,7 @@ func (f *TestBindableValue) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
 		fattrs.NewField(f, "ID", func() fattrs.FieldConfig[*TestBindableValue] {
 			return fattrs.FieldConfig[*TestBindableValue]{
-				Config:   attrs.FieldConfig{Primary: true},
+				Config:   attrs.Config{Primary: true},
 				GetValue: func(obj *TestBindableValue) interface{} { return obj.ID },
 				SetValue: func(obj *TestBindableValue, value any) error {
 					obj.ID = value.(int)

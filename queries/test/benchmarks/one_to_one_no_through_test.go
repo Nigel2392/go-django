@@ -24,7 +24,7 @@ type BenchmarkO2ONoThroughTarget struct {
 
 func (t *BenchmarkO2ONoThroughTarget) Fields() []attrs.Field {
 	return []attrs.Field{
-		attrs.NewField(t, "ID", &attrs.FieldConfig{Primary: true}),
+		attrs.NewField(t, "ID", &attrs.Config{Primary: true}),
 		attrs.NewField(t, "Name", nil),
 	}
 }
@@ -42,9 +42,9 @@ type BenchmarkO2ONoThroughMain struct {
 
 func (t *BenchmarkO2ONoThroughMain) Fields() []attrs.Field {
 	return []attrs.Field{
-		attrs.NewField(t, "ID", &attrs.FieldConfig{Primary: true}),
+		attrs.NewField(t, "ID", &attrs.Config{Primary: true}),
 		attrs.NewField(t, "Title", nil),
-		attrs.NewField(t, "Target", &attrs.FieldConfig{
+		attrs.NewField(t, "Target", &attrs.Config{
 			Column:      "target_id",
 			RelOneToOne: attrs.Relate(&BenchmarkO2ONoThroughTarget{}, "", nil),
 			Attributes: map[string]interface{}{

@@ -156,7 +156,7 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[*Product, any](ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Product, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*Product, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -164,31 +164,31 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Image", &m.Image, func() fattrs.PtrFieldConfig[*Product, *mediafiles.SimpleStoredObject] {
 			return fattrs.PtrFieldConfig[*Product, *mediafiles.SimpleStoredObject]{
-				Config: attrs.FieldConfig{
-					Embedded: embedded,
-					HelpText: trans.S("This image should depict the product you are selling."),
+				Config: attrs.Config{
+					IsEmbedded: embedded,
+					HelpText:   trans.S("This image should depict the product you are selling."),
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*Product, string] {
 			return fattrs.PtrFieldConfig[*Product, string]{
-				Config: attrs.FieldConfig{
-					HelpText:  trans.S("The name of your product as visible to users."),
-					Embedded:  embedded,
-					MinLength: 2,
-					MaxLength: 75,
-					Blank:     false,
+				Config: attrs.Config{
+					HelpText:   trans.S("The name of your product as visible to users."),
+					IsEmbedded: embedded,
+					MinLength:  2,
+					MaxLength:  75,
+					Blank:      false,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "Slug", &m.Slug, func() fattrs.PtrFieldConfig[*Product, string] {
 			return fattrs.PtrFieldConfig[*Product, string]{
-				Config: attrs.FieldConfig{
-					HelpText:  trans.S("The path part of this product in the browsers' search bar."),
-					Embedded:  embedded,
-					MinLength: 2,
-					MaxLength: 75,
-					FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+				Config: attrs.Config{
+					HelpText:   trans.S("The path part of this product in the browsers' search bar."),
+					IsEmbedded: embedded,
+					MinLength:  2,
+					MaxLength:  75,
+					FormWidget: func(fc attrs.Config) widgets.Widget {
 						return widgets.NewTextInput(map[string]string{"readonly": ""})
 					},
 				},
@@ -196,9 +196,9 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		}, key...),
 		fattrs.Field(m, "Category", &m.Category, func() fattrs.PtrFieldConfig[*Product, *models.Category] {
 			return fattrs.PtrFieldConfig[*Product, *models.Category]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					HelpText:      trans.S("The category this product falls under."),
-					Embedded:      embedded,
+					IsEmbedded:    embedded,
 					RelForeignKey: attrs.Relate(&models.Category{}, "", nil),
 					Column:        "category_id",
 				},
@@ -217,67 +217,67 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Price", &m.Price, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
-				Config: attrs.FieldConfig{
-					HelpText:  trans.S("The price you are selling this product for."),
-					Embedded:  embedded,
-					Precision: 13,
-					Scale:     4,
-					Null:      false,
-					Blank:     false,
+				Config: attrs.Config{
+					HelpText:   trans.S("The price you are selling this product for."),
+					IsEmbedded: embedded,
+					Precision:  13,
+					Scale:      4,
+					Null:       false,
+					Blank:      false,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "AdditionalFee", &m.AdditionalFee, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
-				Config: attrs.FieldConfig{
-					HelpText:  trans.S("The fee to add to the price per product."),
-					Embedded:  embedded,
-					Precision: 13,
-					Scale:     4,
-					Null:      false,
-					Blank:     false,
+				Config: attrs.Config{
+					HelpText:   trans.S("The fee to add to the price per product."),
+					IsEmbedded: embedded,
+					Precision:  13,
+					Scale:      4,
+					Null:       false,
+					Blank:      false,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "TaxRate", &m.TaxRate, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
-				Config: attrs.FieldConfig{
-					HelpText:  trans.S("The additional tax fee to add to the purchase price."),
-					Embedded:  embedded,
-					Precision: 13,
-					Scale:     4,
-					Null:      false,
-					Blank:     false,
+				Config: attrs.Config{
+					HelpText:   trans.S("The additional tax fee to add to the purchase price."),
+					IsEmbedded: embedded,
+					Precision:  13,
+					Scale:      4,
+					Null:       false,
+					Blank:      false,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "DiscountPrice", &m.DiscountPrice, func() fattrs.PtrFieldConfig[*Product, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Product, decimal.Decimal]{
-				Config: attrs.FieldConfig{
-					HelpText:  trans.S("The discount price you are selling this product for. (Precedence over price)"),
-					Embedded:  embedded,
-					Precision: 13,
-					Scale:     4,
-					Null:      false,
-					Blank:     true,
+				Config: attrs.Config{
+					HelpText:   trans.S("The discount price you are selling this product for. (Precedence over price)"),
+					IsEmbedded: embedded,
+					Precision:  13,
+					Scale:      4,
+					Null:       false,
+					Blank:      true,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "Ranking", &m.Ranking, func() fattrs.PtrFieldConfig[*Product, uint64] {
 			return fattrs.PtrFieldConfig[*Product, uint64]{
-				Config: attrs.FieldConfig{
-					HelpText: trans.S("How well this product ranks generally measured across all products. (1-10)"),
-					Embedded: embedded,
-					ReadOnly: true,
+				Config: attrs.Config{
+					HelpText:   trans.S("How well this product ranks generally measured across all products. (1-10)"),
+					IsEmbedded: embedded,
+					ReadOnly:   true,
 				},
 			}
 		}, key...),
 		fattrs.Field(m, "Supplier", &m.Supplier, func() fattrs.PtrFieldConfig[*Product, supplier.SupplierValue] {
 			return fattrs.PtrFieldConfig[*Product, supplier.SupplierValue]{
-				Config: attrs.FieldConfig{
-					HelpText: trans.S("The supplier that handles delivery of this product."),
-					Embedded: embedded,
-					ReadOnly: true,
+				Config: attrs.Config{
+					HelpText:   trans.S("The supplier that handles delivery of this product."),
+					IsEmbedded: embedded,
+					ReadOnly:   true,
 					FormField: func(opts ...func(fields.Field)) fields.Field {
 						var widget = options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
 							var wo = make([]widgets.Option, 0)
@@ -293,23 +293,23 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 			}
 		}, key...),
 		fattrs.Field(m, "SpecificID", &m.SpecificID, func() fattrs.PtrFieldConfig[*Product, string] {
-			return fattrs.PtrFieldConfig[*Product, string]{Config: attrs.FieldConfig{
-				Embedded:  embedded,
-				ReadOnly:  true,
-				FormField: func(opts ...func(fields.Field)) fields.Field { return nil },
+			return fattrs.PtrFieldConfig[*Product, string]{Config: attrs.Config{
+				IsEmbedded: embedded,
+				ReadOnly:   true,
+				FormField:  func(opts ...func(fields.Field)) fields.Field { return nil },
 			}}
 		}, key...),
 		fattrs.Field(m, "SpecificContentType", &m.SpecificContentType, func() fattrs.PtrFieldConfig[*Product, *contenttypes.BaseContentType[attrs.Definer]] {
-			return fattrs.PtrFieldConfig[*Product, *contenttypes.BaseContentType[attrs.Definer]]{Config: attrs.FieldConfig{
-				Embedded:  embedded,
-				ReadOnly:  true,
-				FormField: func(opts ...func(fields.Field)) fields.Field { return nil },
+			return fattrs.PtrFieldConfig[*Product, *contenttypes.BaseContentType[attrs.Definer]]{Config: attrs.Config{
+				IsEmbedded: embedded,
+				ReadOnly:   true,
+				FormField:  func(opts ...func(fields.Field)) fields.Field { return nil },
 			}}
 		}, key...),
 		fattrs.Field(m, "Coupons", &m.Coupons, func() fattrs.PtrFieldConfig[*Product, *queries.RelM2M[attrs.Definer, attrs.Definer]] {
 			return fattrs.PtrFieldConfig[*Product, *queries.RelM2M[attrs.Definer, attrs.Definer]]{
 				Flags: fattrs.F_IS_REVERSE_FLD,
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Attributes: map[string]interface{}{
 						migrator.AttrUseInDBKey: false,
 					},

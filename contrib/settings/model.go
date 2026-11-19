@@ -18,14 +18,14 @@ func (m *RegisteredSetting) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*RegisteredSetting, uint64] {
 			return fattrs.PtrFieldConfig[*RegisteredSetting, uint64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary: true,
 				},
 			}
 		}),
 		fattrs.Field(m, "InternalName", &m.InternalName, func() fattrs.PtrFieldConfig[*RegisteredSetting, string] {
 			return fattrs.PtrFieldConfig[*RegisteredSetting, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Null:      false,
 					Blank:     false,
 					MinLength: 2,
@@ -35,7 +35,7 @@ func (m *RegisteredSetting) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Data", &m.Data, func() fattrs.PtrFieldConfig[*RegisteredSetting, json.RawMessage] {
 			return fattrs.PtrFieldConfig[*RegisteredSetting, json.RawMessage]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Null:  true,
 					Blank: true,
 				},

@@ -44,7 +44,7 @@ func (t *FastAttrsBenchmarkO2ONoThroughTarget) FieldDefs(ctx context.Context) at
 		}),
 		fattrs.NewField(t, "Name", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget] {
 			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughTarget]{
-				Config:   attrs.FieldConfig{},
+				Config:   attrs.Config{},
 				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget) interface{} { return obj.Name },
 				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughTarget, value any) error {
 					switch v := value.(type) {
@@ -94,7 +94,7 @@ func (t *FastAttrsBenchmarkO2ONoThroughMain) FieldDefs(ctx context.Context) attr
 		}),
 		fattrs.NewField(t, "Title", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
 			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
-				Config:   attrs.FieldConfig{},
+				Config:   attrs.Config{},
 				GetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain) interface{} { return obj.Title },
 				SetValue: func(obj *FastAttrsBenchmarkO2ONoThroughMain, value any) error {
 					switch v := value.(type) {
@@ -112,7 +112,7 @@ func (t *FastAttrsBenchmarkO2ONoThroughMain) FieldDefs(ctx context.Context) attr
 		}),
 		fattrs.NewField(t, "Target", func() fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain] {
 			return fattrs.FieldConfig[*FastAttrsBenchmarkO2ONoThroughMain]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:      "target_id",
 					RelOneToOne: attrs.Relate(&FastAttrsBenchmarkO2ONoThroughTarget{}, "", nil),
 					Attributes: map[string]interface{}{

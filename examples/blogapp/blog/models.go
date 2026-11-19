@@ -59,7 +59,7 @@ func (m *OrderableMixin[T]) FieldDefs(ctx context.Context) attrs.Definitions {
 func (m *OrderableMixin[T]) ObjectFields(object attrs.Definer, base_fields *attrs.FieldsMap) error {
 	var orderingField, ok = base_fields.Get("Ordering")
 	if !ok {
-		orderingField = attrs.NewField(m, "Ordering", &attrs.FieldConfig{
+		orderingField = attrs.NewField(m, "Ordering", &attrs.Config{
 			Default: 0,
 			Column:  "ordering",
 		})
@@ -153,12 +153,12 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 
 func (b *BlogImage) FieldDefs(ctx context.Context) attrs.Definitions {
 	return b.Model.Define(ctx, b,
-		attrs.NewField(b, "ID", &attrs.FieldConfig{
+		attrs.NewField(b, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 			Column:   "id",
 		}),
-		attrs.NewField(b, "BlogPage", &attrs.FieldConfig{
+		attrs.NewField(b, "BlogPage", &attrs.Config{
 			RelForeignKey: attrs.Relate(
 				&BlogPage{}, "", nil,
 			),
@@ -169,11 +169,11 @@ func (b *BlogImage) FieldDefs(ctx context.Context) attrs.Definitions {
 				)
 			},
 		}),
-		attrs.NewField(b, "Image", &attrs.FieldConfig{
+		attrs.NewField(b, "Image", &attrs.Config{
 			RelForeignKey: attrs.Relate(
 				&images.Image{}, "", nil,
 			),
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(fc attrs.Config) widgets.Widget {
 				return chooser.NewChooserWidget(
 					fc.RelForeignKey.Model(), fc.WidgetAttrs,
 				)
@@ -181,7 +181,7 @@ func (b *BlogImage) FieldDefs(ctx context.Context) attrs.Definitions {
 			Label:    trans.S("Image"),
 			HelpText: trans.S("The image for this blog post."),
 		}),
-		attrs.NewField(b, "Content", &attrs.FieldConfig{
+		attrs.NewField(b, "Content", &attrs.Config{
 			Null:     true,
 			Blank:    true,
 			Label:    trans.S("List Content"),
@@ -294,27 +294,27 @@ func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 		n.Page = &pages.PageNode{}
 	}
 	return n.Model.Define(ctx, n,
-		attrs.NewField(n.Page, "PageID", &attrs.FieldConfig{
+		attrs.NewField(n.Page, "PageID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 			Column:   "id",
 		}),
-		attrs.NewField(n.Page, "Title", &attrs.FieldConfig{
-			Embedded: true,
-			Label:    "Title",
-			HelpText: trans.S("How do you want your post to be remembered?"),
+		attrs.NewField(n.Page, "Title", &attrs.Config{
+			IsEmbedded: true,
+			Label:      "Title",
+			HelpText:   trans.S("How do you want your post to be remembered?"),
 		}),
-		attrs.NewField(n.Page, "UrlPath", &attrs.FieldConfig{
-			Embedded: true,
-			ReadOnly: true,
-			Label:    "URL Path",
-			HelpText: trans.S("The URL path for this blog post."),
+		attrs.NewField(n.Page, "UrlPath", &attrs.Config{
+			IsEmbedded: true,
+			ReadOnly:   true,
+			Label:      "URL Path",
+			HelpText:   trans.S("The URL path for this blog post."),
 		}),
-		attrs.NewField(n.Page, "Slug", &attrs.FieldConfig{
-			Embedded: true,
-			Label:    "Slug",
-			HelpText: trans.S("The slug for this blog post."),
-			Blank:    true,
+		attrs.NewField(n.Page, "Slug", &attrs.Config{
+			IsEmbedded: true,
+			Label:      "Slug",
+			HelpText:   trans.S("The slug for this blog post."),
+			Blank:      true,
 			//	FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
 			//		return &fieldform.FormWidget[forms.Form]{
 			//			GetForm: func(ctx context.Context, parentForm forms.FullCleanMixin) forms.Form {
@@ -323,7 +323,7 @@ func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 			//		}
 			//	},
 		}),
-		attrs.NewField(n, "Image", &attrs.FieldConfig{
+		attrs.NewField(n, "Image", &attrs.Config{
 			Label:    "Image",
 			HelpText: trans.S("The image for this blog post."),
 			Null:     true,
@@ -332,27 +332,27 @@ func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 				return filefield.ImageFileField("", opts...)
 			},
 		}),
-		attrs.NewField(n, "Thumbnail", &attrs.FieldConfig{
+		attrs.NewField(n, "Thumbnail", &attrs.Config{
 			Null:     true,
 			Label:    trans.S("Thumbnail"),
 			HelpText: trans.S("The thumbnail for this blog post."),
 			RelForeignKey: attrs.Relate(
 				&images.Image{}, "", nil,
 			),
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(fc attrs.Config) widgets.Widget {
 				return chooser.NewChooserWidget(
 					fc.RelForeignKey.Model(), fc.WidgetAttrs,
 				)
 			},
 		}),
-		attrs.NewField(n, "Document", &attrs.FieldConfig{
+		attrs.NewField(n, "Document", &attrs.Config{
 			Null:     true,
 			Label:    trans.S("Document"),
 			HelpText: trans.S("The document for this blog post."),
 			RelForeignKey: attrs.Relate(
 				&documents.Document{}, "", nil,
 			),
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(fc attrs.Config) widgets.Widget {
 				return chooser.NewChooserWidget(
 					fc.RelForeignKey.Model(), fc.WidgetAttrs,
 				)
@@ -367,13 +367,13 @@ func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 			//	"list",
 			//},
 		}),
-		attrs.NewField(n, "Content", &attrs.FieldConfig{
+		attrs.NewField(n, "Content", &attrs.Config{
 			Null:     true,
 			Blank:    true,
 			Label:    trans.S("Content"),
 			HelpText: trans.S("The main content for this blog post."),
 		}),
-		attrs.NewField(n, "User", &attrs.FieldConfig{
+		attrs.NewField(n, "User", &attrs.Config{
 			Label:    trans.S("User"),
 			HelpText: trans.S("The user who created this blog post."),
 			Null:     true,
@@ -382,23 +382,23 @@ func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 				users.MODEL_KEY,
 				"", nil,
 			),
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(fc attrs.Config) widgets.Widget {
 				return chooser.NewChooserWidget(
 					fc.RelForeignKey.Model(), fc.WidgetAttrs,
 				)
 			},
 		}),
-		attrs.NewField(n.Page, "CreatedAt", &attrs.FieldConfig{
-			Embedded: true,
-			ReadOnly: true,
-			Label:    "Created At",
-			HelpText: trans.S("The date and time this blog post was created."),
+		attrs.NewField(n.Page, "CreatedAt", &attrs.Config{
+			IsEmbedded: true,
+			ReadOnly:   true,
+			Label:      "Created At",
+			HelpText:   trans.S("The date and time this blog post was created."),
 		}),
-		attrs.NewField(n.Page, "UpdatedAt", &attrs.FieldConfig{
-			Embedded: true,
-			ReadOnly: true,
-			Label:    "Updated At",
-			HelpText: trans.S("The date and time this blog post was last updated."),
+		attrs.NewField(n.Page, "UpdatedAt", &attrs.Config{
+			IsEmbedded: true,
+			ReadOnly:   true,
+			Label:      "Updated At",
+			HelpText:   trans.S("The date and time this blog post was last updated."),
 		}),
 	)
 }

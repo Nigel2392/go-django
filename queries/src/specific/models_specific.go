@@ -70,13 +70,13 @@ func (n *Specific[E]) Embedder() E {
 func (n *Specific[E]) Fields(_ context.Context) []attrs.Field {
 	return []attrs.Field{
 		fattrs.Field(n.embedder.(E), "SpecificID", &n.SpecificID, func() fattrs.PtrFieldConfig[E, string] {
-			return fattrs.PtrFieldConfig[E, string]{Config: attrs.FieldConfig{
+			return fattrs.PtrFieldConfig[E, string]{Config: attrs.Config{
 				ReadOnly:  true,
 				FormField: func(opts ...func(fields.Field)) fields.Field { return nil },
 			}}
 		}),
 		fattrs.Field(n.embedder.(E), "SpecificContentType", &n.SpecificContentType, func() fattrs.PtrFieldConfig[E, *contenttypes.BaseContentType[attrs.Definer]] {
-			return fattrs.PtrFieldConfig[E, *contenttypes.BaseContentType[attrs.Definer]]{Config: attrs.FieldConfig{
+			return fattrs.PtrFieldConfig[E, *contenttypes.BaseContentType[attrs.Definer]]{Config: attrs.Config{
 				ReadOnly:  true,
 				FormField: func(opts ...func(fields.Field)) fields.Field { return nil },
 			}}

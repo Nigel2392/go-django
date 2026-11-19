@@ -30,7 +30,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Redemption, uint64] {
 			return fattrs.PtrFieldConfig[*Redemption, uint64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -38,7 +38,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Coupon", &m.Coupon, func() fattrs.PtrFieldConfig[*Redemption, *Coupon] {
 			return fattrs.PtrFieldConfig[*Redemption, *Coupon]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "coupon_id",
 					ReadOnly:      true,
 					Null:          false,
@@ -49,7 +49,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Customer", &m.Customer, func() fattrs.PtrFieldConfig[*Redemption, *customers.Customer] {
 			return fattrs.PtrFieldConfig[*Redemption, *customers.Customer]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "customer_id",
 					ReadOnly:      true,
 					Null:          false,
@@ -60,7 +60,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Cart", &m.Cart, func() fattrs.PtrFieldConfig[*Redemption, attrs.Definer] {
 			return fattrs.PtrFieldConfig[*Redemption, attrs.Definer]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:       "cart_id",
 					ReadOnly:     true,
 					Null:         true,
@@ -76,7 +76,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Order", &m.Order, func() fattrs.PtrFieldConfig[*Redemption, attrs.Definer] {
 			return fattrs.PtrFieldConfig[*Redemption, attrs.Definer]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:   "order_id",
 					ReadOnly: true,
 					Null:     true,
@@ -92,7 +92,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "DiscountAmount", &m.DiscountAmount, func() fattrs.PtrFieldConfig[*Redemption, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Redemption, decimal.Decimal]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Precision: 13,
 					Scale:     4,
 					ReadOnly:  true,
@@ -103,7 +103,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Invalidated", &m.Invalidated, func() fattrs.PtrFieldConfig[*Redemption, bool] {
 			return fattrs.PtrFieldConfig[*Redemption, bool]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					ReadOnly: true,
 					Blank:    true,
 				},
@@ -111,7 +111,7 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "RedeemedAt", &m.RedeemedAt, func() fattrs.PtrFieldConfig[*Redemption, time.Time] {
 			return fattrs.PtrFieldConfig[*Redemption, time.Time]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					ReadOnly: true,
 				},
 			}

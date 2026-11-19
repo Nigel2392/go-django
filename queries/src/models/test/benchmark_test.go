@@ -68,7 +68,7 @@ func (m *BasicModel) FieldDefs(ctx context.Context) attrs.Definitions {
 		attrs.NewField(m, "ID"),
 		attrs.NewField(m, "Title"),
 		attrs.NewField(m, "Description"),
-		attrs.NewField(m, "Joined", &attrs.FieldConfig{
+		attrs.NewField(m, "Joined", &attrs.Config{
 			Null:          true,
 			Column:        "joined_id",
 			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
@@ -86,10 +86,10 @@ type BasicConstructedModel struct {
 
 func (m *BasicConstructedModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make[attrs.Definer, any](ctx, m,
-		attrs.Unbound("ID", &attrs.FieldConfig{}),
-		attrs.Unbound("Title", &attrs.FieldConfig{}),
-		attrs.Unbound("Description", &attrs.FieldConfig{}),
-		attrs.Unbound("Joined", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{}),
+		attrs.Unbound("Title", &attrs.Config{}),
+		attrs.Unbound("Description", &attrs.Config{}),
+		attrs.Unbound("Joined", &attrs.Config{
 			Null:          true,
 			Column:        "joined_id",
 			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
@@ -111,7 +111,7 @@ func (m *ComplexModel) fields(ctx context.Context, def attrs.Definer) []any {
 		attrs.NewField(m, "ID"),
 		attrs.NewField(m, "Title"),
 		attrs.NewField(m, "Description"),
-		attrs.NewField(m, "Joined", &attrs.FieldConfig{
+		attrs.NewField(m, "Joined", &attrs.Config{
 			Null:          true,
 			Column:        "joined_id",
 			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),

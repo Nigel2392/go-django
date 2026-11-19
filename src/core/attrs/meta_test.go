@@ -44,23 +44,23 @@ func (f *sourceModel) FieldDefs(ctx context.Context) attrs.Definitions {
 		fk  = attrs.Relate(&targetModel{}, "", nil)
 	)
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "ID", &attrs.FieldConfig{
+		attrs.NewField(f, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(f, "Name", nil),
-		attrs.NewField(f, "O2OWithThrough", &attrs.FieldConfig{
+		attrs.NewField(f, "O2OWithThrough", &attrs.Config{
 			RelOneToOne: o2o_through,
 			Attributes: map[string]interface{}{
 				attrs.AttrReverseAliasKey: "SourceRev1",
 			},
 		}),
-		attrs.NewField(f, "O2OWithoutThrough", &attrs.FieldConfig{
+		attrs.NewField(f, "O2OWithoutThrough", &attrs.Config{
 			RelOneToOne: o2o,
 			Attributes: map[string]interface{}{
 				attrs.AttrReverseAliasKey: "SourceRev2",
 			},
 		}),
-		attrs.NewField(f, "FK", &attrs.FieldConfig{
+		attrs.NewField(f, "FK", &attrs.Config{
 			RelForeignKey: fk,
 		}),
 	)
@@ -96,7 +96,7 @@ func (f *targetModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	//)
 
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "ID", &attrs.FieldConfig{
+		attrs.NewField(f, "ID", &attrs.Config{
 			Primary: true,
 		}),
 		attrs.NewField(f, "Name", nil),

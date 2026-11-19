@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nigel2392/versatile"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/versatile"
 )
 
 type ModelTest struct {
@@ -376,7 +376,7 @@ type ModelTestReadOnly struct {
 
 func (f *ModelTestReadOnly) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
-		attrs.NewField(f, "Name", &attrs.FieldConfig{ReadOnly: true}),
+		attrs.NewField(f, "Name", &attrs.Config{ReadOnly: true}),
 	)
 }
 

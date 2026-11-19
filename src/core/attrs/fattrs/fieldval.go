@@ -37,8 +37,8 @@ const (
 )
 
 type PtrFieldConfig[MODEL attrs.Definer, VALUE any] struct {
+	attrs.Config
 	Flags    fieldFlag
-	Config   attrs.FieldConfig
 	Default  interface{} // func() VALUE | VALUE
 	Validate func(obj MODEL, value VALUE) error
 	New      func() VALUE
@@ -46,7 +46,7 @@ type PtrFieldConfig[MODEL attrs.Definer, VALUE any] struct {
 }
 
 type ptrFieldOpts[MODEL attrs.Definer, VALUE any] struct {
-	attrs.FieldDefinition
+	*attrs.FieldDef
 	typ           reflect.Type
 	flags         fieldFlag
 	validateValue func(obj MODEL, value VALUE) error
@@ -99,6 +99,7 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 		rT    = rTPtr.Elem()
 	)
 
+	// setup flags
 	if rTPtr.Implements(_SCANNER) {
 		opts.flags = bitcheck.Set(opts.flags, flagIsPtrScanner, true)
 	}
@@ -182,6 +183,7 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 		opts.flags = bitcheck.Set(opts.flags, flagSetupNilVal, true)
 	}
 
+	// set up default value func
 	switch _default := conf.Default.(type) {
 	case func(MODEL) *VALUE:
 		opts.getDefault = _default
@@ -228,6 +230,7 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 
 	}
 
+	// setup nil check function
 	switch rT.Kind() {
 	case reflect.Pointer,
 		reflect.Interface,
@@ -277,7 +280,7 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 		panic(fmt.Sprintf("opts.newValue should not be nil for %q", fld.fieldName))
 	}
 
-	opts.FieldDefinition = attrs.NewField(
+	opts.FieldDef = attrs.NewField(
 		attrs.NewObject[MODEL](context.Background(), reflect.TypeFor[MODEL]()),
 		fld.fieldName, &conf.Config,
 	)
@@ -294,6 +297,7 @@ type ptrField[MODEL attrs.Definer, VALUE any] struct {
 	opts      *ptrFieldOpts[MODEL, VALUE]
 	optsKey   []string
 	confFunc  func() PtrFieldConfig[MODEL, VALUE]
+	formField fields.Field
 }
 
 func Field[MODEL attrs.Definer, VALUE any](obj MODEL, name string, ptr *VALUE, cnf func() PtrFieldConfig[MODEL, VALUE], optionsKey ...string) attrs.Field {
@@ -331,11 +335,7 @@ func (r *ptrField[M, V]) useOpts() *ptrFieldOpts[M, V] {
 }
 
 func (f *ptrField[M, V]) Check(ctx context.Context) []checks.Message {
-	field := f.useOpts().FieldDefinition
-	if checker, ok := field.(checks.Checker); ok {
-		return checker.Check(ctx)
-	}
-	return []checks.Message{}
+	return f.useOpts().FieldDef.Check(ctx)
 }
 
 func (r *ptrField[M, V]) OnModelRegister(model attrs.Definer, outer attrs.FieldDefinition) error {
@@ -351,12 +351,7 @@ func (r *ptrField[M, V]) OnModelRegister(model attrs.Definer, outer attrs.FieldD
 }
 
 func (r *ptrField[M, V]) Embedded() bool {
-	var f, ok = r.useOpts().FieldDefinition.(attrs.Embedder)
-	if ok {
-		return f.Embedded()
-	}
-
-	return false
+	return r.useOpts().FieldDef.Embedded()
 }
 
 func (r *ptrField[M, V]) ForSelectAll() bool {
@@ -456,22 +451,22 @@ func (r *ptrField[M, V]) ColumnName() string {
 
 	return attrs.ColumnName(r.Name())
 }
-func (r *ptrField[M, V]) Type() reflect.Type      { return r.useOpts().Type() }
-func (r *ptrField[M, V]) Attrs() map[string]any   { return r.useOpts().Attrs() }
-func (r *ptrField[M, V]) IsPrimary() bool         { return r.useOpts().IsPrimary() }
-func (r *ptrField[M, V]) AllowNull() bool         { return r.useOpts().AllowNull() }
-func (r *ptrField[M, V]) AllowBlank() bool        { return r.useOpts().AllowBlank() }
-func (r *ptrField[M, V]) AllowEdit() bool         { return r.useOpts().AllowEdit() }
-func (r *ptrField[M, V]) FormField() fields.Field { return r.useOpts().FormField() }
+func (r *ptrField[M, V]) Type() reflect.Type    { return r.useOpts().Type() }
+func (r *ptrField[M, V]) Attrs() map[string]any { return r.useOpts().Attrs() }
+func (r *ptrField[M, V]) IsPrimary() bool       { return r.useOpts().IsPrimary() }
+func (r *ptrField[M, V]) AllowNull() bool       { return r.useOpts().AllowNull() }
+func (r *ptrField[M, V]) AllowBlank() bool      { return r.useOpts().AllowBlank() }
+func (r *ptrField[M, V]) AllowEdit() bool       { return r.useOpts().AllowEdit() }
 
-//	// impact of this is negligible, but utility is great for spaghetti code, allowing
-//	// for deep dependencies on instance values to determine which formfield to use
-//	func (r *ptrField[M, V]) FormField() fields.Field {
-//		attrsFld := attrs.NewField(
-//			r.obj, r.fieldName, &r.useOpts().config,
-//		)
-//		return attrsFld.FormField()
-//	}
+// func (r *ptrField[M, V]) FormField() fields.Field { return r.useOpts().FormField() }
+
+// impact of this is negligible, but utility is great for spaghetti code, allowing
+// for deep dependencies on instance values to determine which formfield to use
+func (r *ptrField[M, V]) FormField() fields.Field {
+	conf := r.useOpts().FieldDef.Config
+	opts := conf.FormOptions(r)
+	return conf.GetFormField(r, r.dst, opts...)
+}
 
 func (r *ptrField[M, V]) ToString() string { return attrs.ToString(r.GetValue()) }
 

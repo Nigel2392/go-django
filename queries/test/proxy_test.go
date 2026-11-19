@@ -33,7 +33,7 @@ type ProxyModel struct {
 
 func (b *ProxyModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return b.Model.Define(ctx, b,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true}),
 		attrs.Unbound("TargetID"),
 		attrs.Unbound("TargetCType"),
 		attrs.Unbound("Title"),
@@ -56,7 +56,7 @@ type ProxiedModel struct {
 
 func (p *ProxiedModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return p.Model.Define(ctx, p,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true}),
 		// 	fields.OneToOne[*ProxyModel]("ProxyModel", &fields.FieldConfig{
 		// 		IsProxy:  true,
 		// 		Nullable: false,
@@ -74,7 +74,7 @@ type LinkedToProxiedModel struct {
 
 func (l *LinkedToProxiedModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return l.Model.Define(ctx, l,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true}),
 		fields.ForeignKey[*ProxiedModel]("ProxiedModel", "proxied_model_id"),
 	)
 }

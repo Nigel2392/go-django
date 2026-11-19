@@ -14,11 +14,11 @@ type UserGroup struct {
 
 func (up *UserGroup) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, up,
-		attrs.Unbound("UserID", &attrs.FieldConfig{
+		attrs.Unbound("UserID", &attrs.Config{
 			ReadOnly: true,
 			Column:   "user_id",
 		}),
-		attrs.Unbound("GroupID", &attrs.FieldConfig{
+		attrs.Unbound("GroupID", &attrs.Config{
 			ReadOnly: true,
 			Column:   "group_id",
 		}),
@@ -38,11 +38,11 @@ type UserPermission struct {
 
 func (up *UserPermission) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, up,
-		attrs.Unbound("UserID", &attrs.FieldConfig{
+		attrs.Unbound("UserID", &attrs.Config{
 			ReadOnly: true,
 			Column:   "user_id",
 		}),
-		attrs.Unbound("PermissionID", &attrs.FieldConfig{
+		attrs.Unbound("PermissionID", &attrs.Config{
 			ReadOnly: true,
 			Column:   "permission_id",
 		}),
@@ -62,11 +62,11 @@ type GroupPermission struct {
 
 func (gp *GroupPermission) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, gp,
-		attrs.Unbound("GroupID", &attrs.FieldConfig{
+		attrs.Unbound("GroupID", &attrs.Config{
 			ReadOnly: true,
 			Column:   "group_id",
 		}),
-		attrs.Unbound("PermissionID", &attrs.FieldConfig{
+		attrs.Unbound("PermissionID", &attrs.Config{
 			ReadOnly: true,
 			Column:   "permission_id",
 		}),

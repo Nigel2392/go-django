@@ -58,14 +58,14 @@ func (m *OrderState) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*OrderState, int64] {
 			return fattrs.PtrFieldConfig[*OrderState, int64]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary: true,
 				},
 			}
 		}),
 		fattrs.Field(m, "Label", &m.Label, func() fattrs.PtrFieldConfig[*OrderState, string] {
 			return fattrs.PtrFieldConfig[*OrderState, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					MinLength: 1,
 					MaxLength: 30,
 					Blank:     false,
@@ -75,8 +75,8 @@ func (m *OrderState) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Action", &m.Action, func() fattrs.PtrFieldConfig[*OrderState, InternalOrderState] {
 			return fattrs.PtrFieldConfig[*OrderState, InternalOrderState]{
-				Config: attrs.FieldConfig{
-					FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+				Config: attrs.Config{
+					FormWidget: func(fc attrs.Config) widgets.Widget {
 						return options.NewSelectInput(
 							fc.WidgetAttrs,
 							stateActionOptions,
@@ -87,7 +87,7 @@ func (m *OrderState) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "WorkflowID", &m.WorkflowID, func() fattrs.PtrFieldConfig[*OrderState, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*OrderState, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					MinLength: 1,
 					MaxLength: 30,
 					Blank:     false,

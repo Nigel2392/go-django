@@ -2,6 +2,7 @@ package formsets_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"testing"
@@ -1401,6 +1402,236 @@ func TestFormSet_DeleteThenOrder(t *testing.T) {
 		}
 		if list[1]["title"] != "Beta" {
 			t.Errorf("form[1] title = %q, want Beta", list[1]["title"])
+		}
+	})
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Save error propagation
+// ─────────────────────────────────────────────────────────────────────────────
+
+type saveSingleErrForm struct {
+	forms.Form
+	saveFn func() error
+}
+
+func (f *saveSingleErrForm) Save() error {
+	return f.saveFn()
+}
+
+type saveTwoRetForm struct {
+	forms.Form
+	saveFn func() (any, error)
+}
+
+func (f *saveTwoRetForm) Save() (any, error) {
+	return f.saveFn()
+}
+
+func newSaveableTitleFormSingle(ctx context.Context, saveFn func() error) forms.Form {
+	return &saveSingleErrForm{
+		Form:   newTitleForm(ctx, false),
+		saveFn: saveFn,
+	}
+}
+
+func newSaveableTitleFormTwo(ctx context.Context, saveFn func() (any, error)) forms.Form {
+	return &saveTwoRetForm{
+		Form:   newTitleForm(ctx, false),
+		saveFn: saveFn,
+	}
+}
+
+func TestFormSet_Save_ErrorPropagation(t *testing.T) {
+	t.Run("SingleReturnSaveErrorReturned", func(t *testing.T) {
+		ctx := context.Background()
+		sentinelErr := errors.New("child save failed (1-return)")
+		fs := formsets.NewBaseFormSet[forms.Form](ctx, formsets.FormsetOptions[forms.Form]{
+			NewForm: func(c context.Context) forms.Form {
+				return newSaveableTitleFormSingle(c, func() error { return sentinelErr })
+			},
+			DefaultForms: func(c context.Context, _, _ int) ([]forms.Form, error) {
+				return []forms.Form{
+					newSaveableTitleFormSingle(c, func() error { return sentinelErr }),
+				}, nil
+			},
+			MinNum: 1,
+			MaxNum: 1,
+			Extra:  0,
+			CanAdd: false,
+		})
+
+		fs.WithData(url.Values{
+			"0-title": {"A"},
+		}, nil, nil)
+		if !forms.IsValid(ctx, fs) {
+			t.Fatalf("expected formset valid, errors: %v", fs.ErrorList())
+		}
+
+		if _, err := fs.Save(); !errors.Is(err, sentinelErr) {
+			t.Fatalf("expected Save() to return %v, got %v", sentinelErr, err)
+		}
+	})
+
+	t.Run("TwoReturnSaveErrorReturned", func(t *testing.T) {
+		ctx := context.Background()
+		sentinelErr := errors.New("child save failed (2-return)")
+		fs := formsets.NewBaseFormSet[forms.Form](ctx, formsets.FormsetOptions[forms.Form]{
+			NewForm: func(c context.Context) forms.Form {
+				return newSaveableTitleFormTwo(c, func() (any, error) { return nil, sentinelErr })
+			},
+			DefaultForms: func(c context.Context, _, _ int) ([]forms.Form, error) {
+				return []forms.Form{
+					newSaveableTitleFormTwo(c, func() (any, error) { return nil, sentinelErr }),
+				}, nil
+			},
+			MinNum: 1,
+			MaxNum: 1,
+			Extra:  0,
+			CanAdd: false,
+		})
+
+		fs.WithData(url.Values{
+			"0-title": {"A"},
+		}, nil, nil)
+		if !forms.IsValid(ctx, fs) {
+			t.Fatalf("expected formset valid, errors: %v", fs.ErrorList())
+		}
+
+		if _, err := fs.Save(); !errors.Is(err, sentinelErr) {
+			t.Fatalf("expected Save() to return %v, got %v", sentinelErr, err)
+		}
+	})
+
+	t.Run("PartialFailureAcrossMultipleFormsReturnsAllErrors", func(t *testing.T) {
+		ctx := context.Background()
+		err1 := errors.New("form 1 save error")
+		err2 := errors.New("form 2 save error")
+		makeForms := func(c context.Context) []forms.Form {
+			return []forms.Form{
+				newSaveableTitleFormTwo(c, func() (any, error) { return "ok-0", nil }),
+				newSaveableTitleFormTwo(c, func() (any, error) { return nil, err1 }),
+				newSaveableTitleFormTwo(c, func() (any, error) { return nil, err2 }),
+			}
+		}
+		fs := formsets.NewBaseFormSet[forms.Form](ctx, formsets.FormsetOptions[forms.Form]{
+			NewForm: func(c context.Context) forms.Form {
+				return newSaveableTitleFormTwo(c, func() (any, error) { return nil, nil })
+			},
+			DefaultForms: func(c context.Context, _, _ int) ([]forms.Form, error) {
+				return makeForms(c), nil
+			},
+			GetDefaults: func(_ context.Context, _ int) []map[string]interface{} {
+				return []map[string]interface{}{
+					{"title": "Alpha"},
+					{"title": "Beta"},
+					{"title": "Gamma"},
+				}
+			},
+			MinNum: 3,
+			MaxNum: 3,
+			Extra:  0,
+			CanAdd: false,
+		})
+
+		fs.WithData(threeFormAllChangedData, nil, nil)
+		if !forms.IsValid(ctx, fs) {
+			t.Fatalf("expected formset valid, errors: %v", fs.ErrorList())
+		}
+
+		results, err := fs.Save()
+		if !errors.Is(err, err1) || !errors.Is(err, err2) {
+			t.Fatalf("expected Save() error containing err1 and err2, got %v", err)
+		}
+		if len(results) != 1 || results[0] != "ok-0" {
+			t.Errorf("expected results [ok-0], got %v", results)
+		}
+	})
+
+	t.Run("SaveErrorCombinedWithSuccessfulDeleteFormsStillReturnsError", func(t *testing.T) {
+		ctx := context.Background()
+		errSave := errors.New("form 0 save error")
+		var capturedDeleted []forms.Form
+		fs := formsets.NewBaseFormSet[forms.Form](ctx, formsets.FormsetOptions[forms.Form]{
+			NewForm: func(c context.Context) forms.Form {
+				return newSaveableTitleFormTwo(c, func() (any, error) { return nil, nil })
+			},
+			DefaultForms: func(c context.Context, _, _ int) ([]forms.Form, error) {
+				return []forms.Form{
+					newSaveableTitleFormTwo(c, func() (any, error) { return nil, errSave }),
+					newSaveableTitleFormTwo(c, func() (any, error) { return "should-not-run", nil }),
+				}, nil
+			},
+			MinNum:    0,
+			MaxNum:    2,
+			Extra:     0,
+			CanAdd:    false,
+			CanDelete: true,
+			DeleteForms: func(_ context.Context, deleted []forms.Form) error {
+				capturedDeleted = deleted
+				return nil
+			},
+		})
+
+		fs.WithData(url.Values{
+			formsets.TOTAL_FORM_COUNT:           {"2"},
+			formsets.INITIAL_FORM_COUNT:         {"2"},
+			formsets.MIN_NUM_FORM_COUNT:         {"0"},
+			formsets.MAX_NUM_FORM_COUNT:         {"2"},
+			"0-title":                           {"Updated"},
+			"0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			"1-title":                           {"Deleted"},
+			"1-" + formsets.DELETION_FIELD_NAME: {"true"},
+		}, nil, nil)
+		if !forms.IsValid(ctx, fs) {
+			t.Fatalf("expected formset valid, errors: %v", fs.ErrorList())
+		}
+
+		_, err := fs.Save()
+		if len(capturedDeleted) != 1 {
+			t.Errorf("expected 1 deleted form passed to DeleteForms, got %d", len(capturedDeleted))
+		}
+		if !errors.Is(err, errSave) {
+			t.Fatalf("expected Save() to return %v even when DeleteForms succeeded, got %v", errSave, err)
+		}
+	})
+
+	t.Run("DeleteFormsErrorReturned", func(t *testing.T) {
+		ctx := context.Background()
+		errDel := errors.New("delete callback failed")
+		fs := formsets.NewBaseFormSet[forms.Form](ctx, formsets.FormsetOptions[forms.Form]{
+			NewForm: func(c context.Context) forms.Form {
+				return newSaveableTitleFormTwo(c, func() (any, error) { return nil, nil })
+			},
+			DefaultForms: func(c context.Context, _, _ int) ([]forms.Form, error) {
+				return []forms.Form{
+					newSaveableTitleFormTwo(c, func() (any, error) { return nil, nil }),
+				}, nil
+			},
+			MinNum:    0,
+			MaxNum:    1,
+			Extra:     0,
+			CanAdd:    false,
+			CanDelete: true,
+			DeleteForms: func(_ context.Context, _ []forms.Form) error {
+				return errDel
+			},
+		})
+
+		fs.WithData(url.Values{
+			formsets.TOTAL_FORM_COUNT:           {"1"},
+			formsets.INITIAL_FORM_COUNT:         {"1"},
+			formsets.MIN_NUM_FORM_COUNT:         {"0"},
+			formsets.MAX_NUM_FORM_COUNT:         {"1"},
+			"0-title":                           {"Remove"},
+			"0-" + formsets.DELETION_FIELD_NAME: {"true"},
+		}, nil, nil)
+		if !forms.IsValid(ctx, fs) {
+			t.Fatalf("expected formset valid, errors: %v", fs.ErrorList())
+		}
+
+		if _, err := fs.Save(); !errors.Is(err, errDel) {
+			t.Fatalf("expected Save() to return %v, got %v", errDel, err)
 		}
 	})
 }

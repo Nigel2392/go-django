@@ -27,9 +27,9 @@ func (m *TestModel) Save(ctx context.Context) error {
 func (m *TestModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx,
 		m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),
-		attrs.NewField(m, "Age", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false, Validators: []func(interface{}) error{
+		attrs.NewField(m, "ID", &attrs.Config{Null: true, Blank: true, ReadOnly: false}),
+		attrs.NewField(m, "Name", &attrs.Config{Null: true, Blank: true, ReadOnly: false}),
+		attrs.NewField(m, "Age", &attrs.Config{Null: true, Blank: true, ReadOnly: false, Validators: []func(interface{}) error{
 			func(v interface{}) error {
 				if age, ok := v.(int); ok {
 					if age <= 0 {

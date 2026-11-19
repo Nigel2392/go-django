@@ -83,17 +83,17 @@ func (m *Mailbox) String() string {
 
 func (m *Mailbox) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Address", &attrs.FieldConfig{
+		attrs.NewField(m, "Address", &attrs.Config{
 			Label: trans.S("Email Address"),
 		}),
-		attrs.NewField(m, "Domain", &attrs.FieldConfig{
+		attrs.NewField(m, "Domain", &attrs.Config{
 			RelForeignKey: attrs.Relate(&MailDomain{}, "", nil),
 			Column:        "domain_id",
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(fc attrs.Config) widgets.Widget {
 				return chooser.NewChooserWidget(
 					fc.RelForeignKey.Model(),
 					fc.WidgetAttrs,

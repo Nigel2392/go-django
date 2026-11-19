@@ -15,7 +15,7 @@ import (
 
 const ATTR_TAG_NAME = "attrs"
 
-func autoDefinitionStructTag(data *FieldConfig, t *reflect.StructField) *FieldConfig {
+func autoDefinitionStructTag(data *Config, t *reflect.StructField) *Config {
 	if t.Tag == "" {
 		return data
 	}
@@ -209,7 +209,7 @@ func AutoFieldList[T1 Definer](ctx context.Context, instance T1, include ...any)
 			var (
 				field_t = instance_t.Field(i)
 				field_v = instance_v.Field(i)
-				attrs   = autoDefinitionStructTag(&FieldConfig{}, &field_t)
+				attrs   = autoDefinitionStructTag(&Config{}, &field_t)
 			)
 
 			var skip = (field_t.Anonymous ||
@@ -221,7 +221,7 @@ func AutoFieldList[T1 Definer](ctx context.Context, instance T1, include ...any)
 			}
 
 			m = append(m, &FieldDef{
-				attrDef:        attrs,
+				Config:         attrs,
 				instance_v_ptr: instance_v_ptr,
 				field_t:        &field_t,
 				field_v:        field_v,
@@ -245,7 +245,7 @@ func AutoFieldList[T1 Definer](ctx context.Context, instance T1, include ...any)
 			assert.True(ok, "field %q not found in %T", name, instance)
 
 			var (
-				attrs   = autoDefinitionStructTag(&FieldConfig{}, field_t)
+				attrs   = autoDefinitionStructTag(&Config{}, field_t)
 				field_v = instance_v.FieldByIndex(field_t.Index)
 			)
 
@@ -258,7 +258,7 @@ func AutoFieldList[T1 Definer](ctx context.Context, instance T1, include ...any)
 			}
 
 			m = append(m, &FieldDef{
-				attrDef:        attrs,
+				Config:         attrs,
 				instance_v_ptr: instance_v_ptr,
 				field_t:        field_t,
 				field_v:        field_v,

@@ -35,21 +35,21 @@ type ProxyFieldConfig struct {
 	AllowEdit        bool
 }
 
-func NewProxyField(definer attrs.Definer, name string, cnf *ProxyFieldConfig, fieldFunc func(attrs.Definer, string, *ProxyFieldConfig, attrs.FieldConfig) attrs.Field) *proxyField {
+func NewProxyField(definer attrs.Definer, name string, cnf *ProxyFieldConfig, fieldFunc func(attrs.Definer, string, *ProxyFieldConfig, attrs.Config) attrs.Field) *proxyField {
 	return newProxyField(definer, name, cnf, fieldFunc)
 }
 
-func attrsFieldFunc(def attrs.Definer, name string, _ *ProxyFieldConfig, cnf attrs.FieldConfig) attrs.Field {
+func attrsFieldFunc(def attrs.Definer, name string, _ *ProxyFieldConfig, cnf attrs.Config) attrs.Field {
 	return attrs.NewField(def, name, &cnf)
 }
 
-func newProxyField(definer attrs.Definer, name string, cnf *ProxyFieldConfig, fieldFunc func(attrs.Definer, string, *ProxyFieldConfig, attrs.FieldConfig) attrs.Field) *proxyField {
+func newProxyField(definer attrs.Definer, name string, cnf *ProxyFieldConfig, fieldFunc func(attrs.Definer, string, *ProxyFieldConfig, attrs.Config) attrs.Field) *proxyField {
 	if cnf == nil || cnf.Proxy == nil {
 		panic("ProxyFieldConfig.Proxy must not be nil")
 	}
 
 	return &proxyField{
-		Field: fieldFunc(definer, name, cnf, attrs.FieldConfig{
+		Field: fieldFunc(definer, name, cnf, attrs.Config{
 			ReadOnly:     true,
 			NameOverride: name,
 			RelOneToOne: attrs.Relate(

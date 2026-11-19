@@ -82,7 +82,7 @@ func (t *TestPage) ID() int64 {
 
 func (t *TestPage) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, t,
-		attrs.Unbound("Identifier", &attrs.FieldConfig{
+		attrs.Unbound("Identifier", &attrs.Config{
 			Primary: true,
 			Column:  "id",
 		}),

@@ -31,14 +31,14 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*OrderItem, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*OrderItem, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary: true,
 				},
 			}
 		}),
 		fattrs.Field(m, "Product", &m.Product, func() fattrs.PtrFieldConfig[*OrderItem, drivers.JSON[products.Product]] {
 			return fattrs.PtrFieldConfig[*OrderItem, drivers.JSON[products.Product]]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Null:  false,
 					Blank: false,
 				},
@@ -46,7 +46,7 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "ItemPrice", &m.ItemPrice, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Precision: 13,
 					Scale:     4,
 					Null:      false,
@@ -56,7 +56,7 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "TaxRate", &m.TaxRate, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Null:  false,
 					Blank: false,
 				},
@@ -64,7 +64,7 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Amount", &m.Amount, func() fattrs.PtrFieldConfig[*OrderItem, int] {
 			return fattrs.PtrFieldConfig[*OrderItem, int]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Null:  false,
 					Blank: false,
 				},
@@ -72,7 +72,7 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Order", &m.Order, func() fattrs.PtrFieldConfig[*OrderItem, *Order] {
 			return fattrs.PtrFieldConfig[*OrderItem, *Order]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:        "order_id",
 					ReverseAlias:  "OrderItems",
 					RelForeignKey: attrs.Relate(&Order{}, "", nil),

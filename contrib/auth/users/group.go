@@ -25,16 +25,16 @@ func (g *Group) String() string {
 
 func (g *Group) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fields = []attrs.Field{
-		attrs.NewField(g, "ID", &attrs.FieldConfig{
+		attrs.NewField(g, "ID", &attrs.Config{
 			ReadOnly: true,
 			Primary:  true,
 		}),
-		attrs.NewField(g, "Name", &attrs.FieldConfig{
+		attrs.NewField(g, "Name", &attrs.Config{
 			Label:     "Group Name",
 			HelpText:  trans.S("Name of the group. This is the name that will be displayed in the UI."),
 			MaxLength: 255,
 		}),
-		attrs.NewField(g, "Description", &attrs.FieldConfig{
+		attrs.NewField(g, "Description", &attrs.Config{
 			Blank:     true,
 			Label:     "Description",
 			HelpText:  trans.S("Description of the group. This is the description that will be displayed in the UI."),

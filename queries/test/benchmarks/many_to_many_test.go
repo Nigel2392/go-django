@@ -52,10 +52,10 @@ type BenchmarkM2MTarget struct {
 }
 
 var (
-	fldCnfSrcId = &attrs.FieldConfig{
+	fldCnfSrcId = &attrs.Config{
 		Column: "source_id",
 	}
-	fldCnfTargetId = &attrs.FieldConfig{
+	fldCnfTargetId = &attrs.Config{
 		Column: "target_id",
 	}
 

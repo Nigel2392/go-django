@@ -17,7 +17,7 @@ var (
 )
 
 type FieldConfig[T attrs.Definer] struct {
-	Config         attrs.FieldConfig
+	attrs.Config
 	GetValue       func(obj T) interface{}
 	GetDriverValue func(obj T) (interface{}, error)
 	SetValue       func(obj T, value any) error
@@ -94,7 +94,7 @@ func fieldConfigToOptions[T attrs.Definer](name string, conf FieldConfig[T]) *re
 		}
 	}
 
-	opts.FieldDefinition = attrs.NewField(
+	opts.FieldDef = attrs.NewField(
 		attrs.NewObject[T](context.Background(), reflect.TypeFor[T]()),
 		name, &conf.Config,
 	)
@@ -103,7 +103,7 @@ func fieldConfigToOptions[T attrs.Definer](name string, conf FieldConfig[T]) *re
 }
 
 type reflectlessFieldOpts[T attrs.Definer] struct {
-	attrs.FieldDefinition
+	*attrs.FieldDef
 	getValue       func(obj T) interface{}
 	getDriverValue func(obj T) (interface{}, error)
 	setValue       func(obj T, value any) error
@@ -159,7 +159,7 @@ func (r *ReflectlessField[T]) useOpts() *reflectlessFieldOpts[T] {
 	return r.opts
 }
 
-func (r *ReflectlessField[T]) OnModelRegister(model attrs.Definer, outer attrs.FieldDefinition) error {
+func (r *ReflectlessField[T]) OnModelRegister(model attrs.Definer, outer attrs.FieldDef) error {
 	if r.opts == nil && r.confFunc != nil {
 		AddOptions(
 			reflect.TypeOf(r.obj),
@@ -198,8 +198,12 @@ func (r *ReflectlessField[T]) IsPrimary() bool                                 {
 func (r *ReflectlessField[T]) AllowNull() bool                                 { return r.useOpts().AllowNull() }
 func (r *ReflectlessField[T]) AllowBlank() bool                                { return r.useOpts().AllowBlank() }
 func (r *ReflectlessField[T]) AllowEdit() bool                                 { return r.useOpts().AllowEdit() }
-func (r *ReflectlessField[T]) FormField() fields.Field                         { return r.useOpts().FormField() }
-func (r *ReflectlessField[T]) ToString() string                                { return attrs.ToString(r.GetValue()) }
+func (r *ReflectlessField[T]) FormField() fields.Field {
+	fopts := r.useOpts()
+	opts := fopts.FormOptions(r)
+	return fopts.GetFormField(r, reflect.ValueOf(r.GetValue()), opts...)
+}
+func (r *ReflectlessField[T]) ToString() string { return attrs.ToString(r.GetValue()) }
 
 func (r *ReflectlessField[T]) Scan(v any) error {
 	return r.useOpts().setDriverValue(r.obj, v)

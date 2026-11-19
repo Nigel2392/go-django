@@ -25,7 +25,7 @@ func (f *PtrTestModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, f,
 		fattrs.Field(f, "ID", &f.ID, func() fattrs.PtrFieldConfig[*PtrTestModelFields, int] {
 			return fattrs.PtrFieldConfig[*PtrTestModelFields, int]{
-				Config: attrs.FieldConfig{Primary: true},
+				Config: attrs.Config{Primary: true},
 			}
 		}),
 		fattrs.Field(f, "Name", &f.Name, func() fattrs.PtrFieldConfig[*PtrTestModelFields, string] {
@@ -33,7 +33,7 @@ func (f *PtrTestModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(f, "Objects", &f.Objects, func() fattrs.PtrFieldConfig[*PtrTestModelFields, []int64] {
 			return fattrs.PtrFieldConfig[*PtrTestModelFields, []int64]{
-				Config: attrs.FieldConfig{ReadOnly: true},
+				Config: attrs.Config{ReadOnly: true},
 			}
 		}),
 	)
@@ -49,7 +49,7 @@ func (f *PtrTestEmbeddedModelFields) FieldDefs(ctx context.Context) attrs.Defini
 	return attrs.Make(ctx, f,
 		fattrs.Field(f, "ID", &f.ID, func() fattrs.PtrFieldConfig[*PtrTestEmbeddedModelFields, int] {
 			return fattrs.PtrFieldConfig[*PtrTestEmbeddedModelFields, int]{
-				Config: attrs.FieldConfig{Primary: true},
+				Config: attrs.Config{Primary: true},
 			}
 		}),
 		fattrs.Field(f, "Name", &f.Name, func() fattrs.PtrFieldConfig[*PtrTestEmbeddedModelFields, string] {
@@ -485,7 +485,7 @@ func (f *PtrTestBindableValue) FieldDefs(ctx context.Context) attrs.Definitions 
 	return attrs.Make(ctx, f,
 		fattrs.NewField(f, "ID", func() fattrs.FieldConfig[*PtrTestBindableValue] {
 			return fattrs.FieldConfig[*PtrTestBindableValue]{
-				Config:   attrs.FieldConfig{Primary: true},
+				Config:   attrs.Config{Primary: true},
 				GetValue: func(obj *PtrTestBindableValue) interface{} { return obj.ID },
 				SetValue: func(obj *PtrTestBindableValue, value any) error {
 					obj.ID = value.(int)

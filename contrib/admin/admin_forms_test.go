@@ -61,17 +61,17 @@ func (u *FormTestUser) String() string {
 
 func (u *FormTestUser) FieldDefs(ctx context.Context) attrs.Definitions {
 	return u.Model.Define(ctx, u,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("Email", &attrs.FieldConfig{MinLength: 3, HelpText: "Primary user email"}),
-		attrs.Unbound("Username", &attrs.FieldConfig{MinLength: 3}),
-		attrs.Unbound("FirstName", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("LastName", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Email", &attrs.Config{MinLength: 3, HelpText: "Primary user email"}),
+		attrs.Unbound("Username", &attrs.Config{MinLength: 3}),
+		attrs.Unbound("FirstName", &attrs.Config{Blank: true}),
+		attrs.Unbound("LastName", &attrs.Config{Blank: true}),
 		attrs.Unbound("Password"),
-		attrs.Unbound("IsAdministrator", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("IsActive", &attrs.FieldConfig{Blank: true, Default: true}),
-		attrs.Unbound("Data", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("CreatedAt", &attrs.FieldConfig{ReadOnly: true}),
-		attrs.Unbound("UpdatedAt", &attrs.FieldConfig{ReadOnly: true}),
+		attrs.Unbound("IsAdministrator", &attrs.Config{Blank: true}),
+		attrs.Unbound("IsActive", &attrs.Config{Blank: true, Default: true}),
+		attrs.Unbound("Data", &attrs.Config{Blank: true}),
+		attrs.Unbound("CreatedAt", &attrs.Config{ReadOnly: true}),
+		attrs.Unbound("UpdatedAt", &attrs.Config{ReadOnly: true}),
 	)
 }
 
@@ -87,8 +87,8 @@ func (c *FormTestCategory) String() string {
 
 func (c *FormTestCategory) FieldDefs(ctx context.Context) attrs.Definitions {
 	return c.Model.Define(ctx, c,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("Name", &attrs.FieldConfig{MinLength: 2}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Name", &attrs.Config{MinLength: 2}),
 	)
 }
 
@@ -107,10 +107,10 @@ func (p *FormTestProduct) String() string {
 
 func (p *FormTestProduct) FieldDefs(ctx context.Context) attrs.Definitions {
 	return p.Model.Define(ctx, p,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("Title", &attrs.FieldConfig{MinLength: 2}),
-		attrs.Unbound("Slug", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("Price", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Title", &attrs.Config{MinLength: 2}),
+		attrs.Unbound("Slug", &attrs.Config{Blank: true}),
+		attrs.Unbound("Price", &attrs.Config{Blank: true}),
 	)
 }
 
@@ -122,11 +122,11 @@ type FormTestCouponProduct struct {
 
 func (cp *FormTestCouponProduct) FieldDefs(ctx context.Context) attrs.Definitions {
 	return cp.Model.Define(ctx, cp,
-		attrs.NewField(cp, "Coupon", &attrs.FieldConfig{
+		attrs.NewField(cp, "Coupon", &attrs.Config{
 			Column: "coupon_id",
 			Null:   false,
 		}),
-		attrs.NewField(cp, "Product", &attrs.FieldConfig{
+		attrs.NewField(cp, "Product", &attrs.Config{
 			Column: "product_id",
 			Null:   false,
 		}),
@@ -154,16 +154,16 @@ func (c *FormTestCoupon) String() string {
 
 func (c *FormTestCoupon) FieldDefs(ctx context.Context) attrs.Definitions {
 	return c.Model.Define(ctx, c,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
 		attrs.Unbound("Title"),
-		attrs.Unbound("Description", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("Code", &attrs.FieldConfig{MinLength: 4}),
-		attrs.Unbound("MaxDiscount", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("IsPercentage", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("ValidFrom", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("ValidUntil", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("CreatedAt", &attrs.FieldConfig{ReadOnly: true}),
-		attrs.Unbound("Category", &attrs.FieldConfig{
+		attrs.Unbound("Description", &attrs.Config{Blank: true}),
+		attrs.Unbound("Code", &attrs.Config{MinLength: 4}),
+		attrs.Unbound("MaxDiscount", &attrs.Config{Blank: true}),
+		attrs.Unbound("IsPercentage", &attrs.Config{Blank: true}),
+		attrs.Unbound("ValidFrom", &attrs.Config{Blank: true}),
+		attrs.Unbound("ValidUntil", &attrs.Config{Blank: true}),
+		attrs.Unbound("CreatedAt", &attrs.Config{ReadOnly: true}),
+		attrs.Unbound("Category", &attrs.Config{
 			Blank:         true,
 			Null:          true,
 			RelForeignKey: attrs.Relate(&FormTestCategory{}, "", nil),
@@ -197,8 +197,8 @@ func (i *FormTestCouponItem) String() string {
 
 func (i *FormTestCouponItem) FieldDefs(ctx context.Context) attrs.Definitions {
 	return i.Model.Define(ctx, i,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("Coupon", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Coupon", &attrs.Config{
 			RelForeignKey: attrs.Relate(&FormTestCoupon{}, "", nil),
 			Blank:         true,
 			Null:          true,
@@ -210,7 +210,7 @@ func (i *FormTestCouponItem) FieldDefs(ctx context.Context) attrs.Definitions {
 			},
 		}),
 		attrs.Unbound("ProductName"),
-		attrs.Unbound("Quantity", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("Quantity", &attrs.Config{Blank: true}),
 	)
 }
 
@@ -228,10 +228,10 @@ func (b *FormTestAuthorBio) String() string {
 
 func (b *FormTestAuthorBio) FieldDefs(ctx context.Context) attrs.Definitions {
 	return b.Model.Define(ctx, b,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("Headline", &attrs.FieldConfig{MinLength: 3}),
-		attrs.Unbound("Website", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("ExperienceYears", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Headline", &attrs.Config{MinLength: 3}),
+		attrs.Unbound("Website", &attrs.Config{Blank: true}),
+		attrs.Unbound("ExperienceYears", &attrs.Config{Blank: true}),
 	)
 }
 
@@ -248,9 +248,9 @@ func (b *FormTestAuthorBadge) String() string {
 
 func (b *FormTestAuthorBadge) FieldDefs(ctx context.Context) attrs.Definitions {
 	return b.Model.Define(ctx, b,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("BadgeName", &attrs.FieldConfig{MinLength: 2}),
-		attrs.Unbound("Tier", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("BadgeName", &attrs.Config{MinLength: 2}),
+		attrs.Unbound("Tier", &attrs.Config{Blank: true}),
 	)
 }
 
@@ -262,11 +262,11 @@ type FormTestAuthorBadgeThrough struct {
 
 func (ab *FormTestAuthorBadgeThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 	return ab.Model.Define(ctx, ab,
-		attrs.NewField(ab, "Author", &attrs.FieldConfig{
+		attrs.NewField(ab, "Author", &attrs.Config{
 			Column: "author_id",
 			Null:   false,
 		}),
-		attrs.NewField(ab, "Badge", &attrs.FieldConfig{
+		attrs.NewField(ab, "Badge", &attrs.Config{
 			Column: "badge_id",
 			Null:   false,
 		}),
@@ -288,10 +288,10 @@ func (a *FormTestAuthor) String() string {
 
 func (a *FormTestAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
 	return a.Model.Define(ctx, a,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("Name", &attrs.FieldConfig{MinLength: 2}),
-		attrs.Unbound("Email", &attrs.FieldConfig{Blank: true}),
-		attrs.Unbound("Bio", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("Name", &attrs.Config{MinLength: 2}),
+		attrs.Unbound("Email", &attrs.Config{Blank: true}),
+		attrs.Unbound("Bio", &attrs.Config{
 			Blank:       true,
 			Null:        true,
 			Column:      "bio_id",
@@ -320,9 +320,9 @@ type FormTestDefaultPanelModel struct {
 
 func (m *FormTestDefaultPanelModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
 		attrs.Unbound("Title"),
-		attrs.Unbound("Summary", &attrs.FieldConfig{Blank: true}),
+		attrs.Unbound("Summary", &attrs.Config{Blank: true}),
 	)
 }
 
@@ -1795,19 +1795,19 @@ func TestAdminForm_ShopCouponTabbedModelFormPanel(t *testing.T) {
 		reqAdd := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/add", nil)
 		afAdd := newTestAdminForm(reqAdd, coupon, nil, buildShopCouponPanels(0, 10, 0)...)
 		afAdd.WithData(url.Values{
-			"Title":                                   {"Single Post Coupon"},
-			"Description":                             {"Parent and inline items together"},
-			"Code":                                    {"SINGLE10"},
-			"MaxDiscount":                             {"10"},
-			"IsPercentage":                            {"on"},
-			"ValidFrom":                               {"2026-07-01"},
-			"ValidUntil":                              {"2026-08-01"},
-			"Items-management-TOTAL_FORMS":            {"2"},
-			"Items-management-INITIAL_FORMS":          {"0"},
-			"Items-management-MIN_NUM_FORMS":          {"0"},
-			"Items-management-MAX_NUM_FORMS":          {"10"},
-			"Items-0-ProductName":                     {"Headphones"},
-			"Items-0-Quantity":                        {"1"},
+			"Title":                          {"Single Post Coupon"},
+			"Description":                    {"Parent and inline items together"},
+			"Code":                           {"SINGLE10"},
+			"MaxDiscount":                    {"10"},
+			"IsPercentage":                   {"on"},
+			"ValidFrom":                      {"2026-07-01"},
+			"ValidUntil":                     {"2026-08-01"},
+			"Items-management-TOTAL_FORMS":   {"2"},
+			"Items-management-INITIAL_FORMS": {"0"},
+			"Items-management-MIN_NUM_FORMS": {"0"},
+			"Items-management-MAX_NUM_FORMS": {"10"},
+			"Items-0-ProductName":            {"Headphones"},
+			"Items-0-Quantity":               {"1"},
 			"Items-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 			"Items-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			"Items-1-ProductName":                     {"USB-C Hub"},
@@ -2521,7 +2521,9 @@ func unwrapProductFormSet(t *testing.T, af *admin.AdminForm[modelforms.ModelForm
 	if len(subForms) != 1 {
 		t.Fatalf("expected 1 panel formset in AdminForm.FormSet(), got %d", len(subForms))
 	}
-	if wrapper, ok := subForms[0].(interface{ Form() formsets.BaseFormSetForm }); ok {
+	if wrapper, ok := subForms[0].(interface {
+		Form() formsets.BaseFormSetForm
+	}); ok {
 		subForms[0] = wrapper.Form()
 	}
 	prodFS, ok := subForms[0].(formsets.ListFormSet[modelforms.ModelForm[*FormTestProduct]])
@@ -2692,20 +2694,20 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 		reqAdd := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/add", nil)
 		afAdd := newTestAdminForm(reqAdd, coupon, nil, buildShopCouponM2MPanels(0, 10, 0)...)
 		afAdd.WithData(url.Values{
-			"Title":                                      {"Bundle Coupon"},
-			"Description":                                {"Created with M2M products"},
-			"Code":                                       {"BUNDLE20"},
-			"MaxDiscount":                                {"20"},
-			"IsPercentage":                               {"on"},
-			"ValidFrom":                                  {"2026-07-01"},
-			"ValidUntil":                                 {"2026-08-01"},
-			"Products-management-TOTAL_FORMS":            {"2"},
-			"Products-management-INITIAL_FORMS":          {"0"},
-			"Products-management-MIN_NUM_FORMS":          {"0"},
-			"Products-management-MAX_NUM_FORMS":          {"10"},
-			"Products-0-Title":                           {"Mechanical Keyboard"},
-			"Products-0-Slug":                            {"mech-kb"},
-			"Products-0-Price":                           {"120"},
+			"Title":                             {"Bundle Coupon"},
+			"Description":                       {"Created with M2M products"},
+			"Code":                              {"BUNDLE20"},
+			"MaxDiscount":                       {"20"},
+			"IsPercentage":                      {"on"},
+			"ValidFrom":                         {"2026-07-01"},
+			"ValidUntil":                        {"2026-08-01"},
+			"Products-management-TOTAL_FORMS":   {"2"},
+			"Products-management-INITIAL_FORMS": {"0"},
+			"Products-management-MIN_NUM_FORMS": {"0"},
+			"Products-management-MAX_NUM_FORMS": {"10"},
+			"Products-0-Title":                  {"Mechanical Keyboard"},
+			"Products-0-Slug":                   {"mech-kb"},
+			"Products-0-Price":                  {"120"},
 			"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 			"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			"Products-1-Title":                           {"Gaming Mouse"},
@@ -2782,26 +2784,26 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 		reqUnchanged := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/edit", nil)
 		afUnchanged := newTestAdminForm(reqUnchanged, coupon, nil, buildShopCouponM2MPanels(0, 10, 0)...)
 		afUnchanged.WithData(url.Values{
-			"Title":                                      {coupon.Title},
-			"Description":                                {coupon.Description},
-			"Code":                                       {coupon.Code},
-			"MaxDiscount":                                {"50"},
-			"ValidFrom":                                  {coupon.ValidFrom},
-			"ValidUntil":                                 {coupon.ValidUntil},
-			"Products-management-TOTAL_FORMS":            {"2"},
-			"Products-management-INITIAL_FORMS":          {"2"},
-			"Products-management-MIN_NUM_FORMS":          {"0"},
-			"Products-management-MAX_NUM_FORMS":          {"10"},
-			"Products-0-ID":                              {fmt.Sprint(p1.ID)},
-			"Products-0-Title":                           {p1.Title},
-			"Products-0-Slug":                            {p1.Slug},
-			"Products-0-Price":                           {"90"},
+			"Title":                             {coupon.Title},
+			"Description":                       {coupon.Description},
+			"Code":                              {coupon.Code},
+			"MaxDiscount":                       {"50"},
+			"ValidFrom":                         {coupon.ValidFrom},
+			"ValidUntil":                        {coupon.ValidUntil},
+			"Products-management-TOTAL_FORMS":   {"2"},
+			"Products-management-INITIAL_FORMS": {"2"},
+			"Products-management-MIN_NUM_FORMS": {"0"},
+			"Products-management-MAX_NUM_FORMS": {"10"},
+			"Products-0-ID":                     {fmt.Sprint(p1.ID)},
+			"Products-0-Title":                  {p1.Title},
+			"Products-0-Slug":                   {p1.Slug},
+			"Products-0-Price":                  {"90"},
 			"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 			"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
-			"Products-1-ID":                              {fmt.Sprint(p2.ID)},
-			"Products-1-Title":                           {p2.Title},
-			"Products-1-Slug":                            {p2.Slug},
-			"Products-1-Price":                           {"45"},
+			"Products-1-ID":    {fmt.Sprint(p2.ID)},
+			"Products-1-Title": {p2.Title},
+			"Products-1-Slug":  {p2.Slug},
+			"Products-1-Price": {"45"},
 			"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
 			"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
 		}, nil, reqUnchanged)
@@ -2817,26 +2819,26 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 		reqUpdate := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/edit", nil)
 		afUpdate := newTestAdminForm(reqUpdate, coupon, nil, buildShopCouponM2MPanels(0, 10, 0)...)
 		afUpdate.WithData(url.Values{
-			"Title":                                      {coupon.Title},
-			"Description":                                {coupon.Description},
-			"Code":                                       {coupon.Code},
-			"MaxDiscount":                                {"50"},
-			"ValidFrom":                                  {coupon.ValidFrom},
-			"ValidUntil":                                 {coupon.ValidUntil},
-			"Products-management-TOTAL_FORMS":            {"3"},
-			"Products-management-INITIAL_FORMS":          {"2"},
-			"Products-management-MIN_NUM_FORMS":          {"0"},
-			"Products-management-MAX_NUM_FORMS":          {"10"},
-			"Products-0-ID":                              {fmt.Sprint(p1.ID)},
-			"Products-0-Title":                           {"Studio USB Mic"},
-			"Products-0-Slug":                            {p1.Slug},
-			"Products-0-Price":                           {"115"},
+			"Title":                             {coupon.Title},
+			"Description":                       {coupon.Description},
+			"Code":                              {coupon.Code},
+			"MaxDiscount":                       {"50"},
+			"ValidFrom":                         {coupon.ValidFrom},
+			"ValidUntil":                        {coupon.ValidUntil},
+			"Products-management-TOTAL_FORMS":   {"3"},
+			"Products-management-INITIAL_FORMS": {"2"},
+			"Products-management-MIN_NUM_FORMS": {"0"},
+			"Products-management-MAX_NUM_FORMS": {"10"},
+			"Products-0-ID":                     {fmt.Sprint(p1.ID)},
+			"Products-0-Title":                  {"Studio USB Mic"},
+			"Products-0-Slug":                   {p1.Slug},
+			"Products-0-Price":                  {"115"},
 			"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 			"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
-			"Products-1-ID":                              {fmt.Sprint(p2.ID)},
-			"Products-1-Title":                           {p2.Title},
-			"Products-1-Slug":                            {p2.Slug},
-			"Products-1-Price":                           {"45"},
+			"Products-1-ID":    {fmt.Sprint(p2.ID)},
+			"Products-1-Title": {p2.Title},
+			"Products-1-Slug":  {p2.Slug},
+			"Products-1-Price": {"45"},
 			"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
 			"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
 			"Products-2-Title":                           {"Shock Mount"},
@@ -2880,32 +2882,32 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 		reqDelete := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/edit", nil)
 		afDelete := newTestAdminForm(reqDelete, coupon, nil, buildShopCouponM2MPanels(0, 10, 0)...)
 		afDelete.WithData(url.Values{
-			"Title":                                      {coupon.Title},
-			"Description":                                {coupon.Description},
-			"Code":                                       {coupon.Code},
-			"MaxDiscount":                                {"50"},
-			"ValidFrom":                                  {coupon.ValidFrom},
-			"ValidUntil":                                 {coupon.ValidUntil},
-			"Products-management-TOTAL_FORMS":            {"3"},
-			"Products-management-INITIAL_FORMS":          {"3"},
-			"Products-management-MIN_NUM_FORMS":          {"0"},
-			"Products-management-MAX_NUM_FORMS":          {"10"},
-			"Products-0-ID":                              {fmt.Sprint(p1.ID)},
-			"Products-0-Title":                           {"Studio USB Mic"},
-			"Products-0-Slug":                            {p1.Slug},
-			"Products-0-Price":                           {"115"},
+			"Title":                             {coupon.Title},
+			"Description":                       {coupon.Description},
+			"Code":                              {coupon.Code},
+			"MaxDiscount":                       {"50"},
+			"ValidFrom":                         {coupon.ValidFrom},
+			"ValidUntil":                        {coupon.ValidUntil},
+			"Products-management-TOTAL_FORMS":   {"3"},
+			"Products-management-INITIAL_FORMS": {"3"},
+			"Products-management-MIN_NUM_FORMS": {"0"},
+			"Products-management-MAX_NUM_FORMS": {"10"},
+			"Products-0-ID":                     {fmt.Sprint(p1.ID)},
+			"Products-0-Title":                  {"Studio USB Mic"},
+			"Products-0-Slug":                   {p1.Slug},
+			"Products-0-Price":                  {"115"},
 			"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 			"Products-0-" + formsets.DELETION_FIELD_NAME: {"on"},
-			"Products-1-ID":                              {fmt.Sprint(p2.ID)},
-			"Products-1-Title":                           {p2.Title},
-			"Products-1-Slug":                            {p2.Slug},
-			"Products-1-Price":                           {"45"},
+			"Products-1-ID":    {fmt.Sprint(p2.ID)},
+			"Products-1-Title": {p2.Title},
+			"Products-1-Slug":  {p2.Slug},
+			"Products-1-Price": {"45"},
 			"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
 			"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
-			"Products-2-ID":                              {fmt.Sprint(p3.ID)},
-			"Products-2-Title":                           {p3.Title},
-			"Products-2-Slug":                            {p3.Slug},
-			"Products-2-Price":                           {"30"},
+			"Products-2-ID":    {fmt.Sprint(p3.ID)},
+			"Products-2-Title": {p3.Title},
+			"Products-2-Slug":  {p3.Slug},
+			"Products-2-Price": {"30"},
 			"Products-2-" + formsets.ORDERING_FIELD_NAME: {"2"},
 			"Products-2-" + formsets.DELETION_FIELD_NAME: {"false"},
 		}, nil, reqDelete)
@@ -2939,19 +2941,19 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/shop/coupons/add", nil)
 		af := newTestAdminForm(req, coupon, nil, buildShopCouponM2MPanels(1, 5, 0)...)
 		af.WithData(url.Values{
-			"Title":                                      {"Valid Coupon Title"},
-			"Description":                                {"Invalid product title test"},
-			"Code":                                       {"VALERR1"},
-			"MaxDiscount":                                {"10"},
-			"ValidFrom":                                  {"2026-07-01"},
-			"ValidUntil":                                 {"2026-08-01"},
-			"Products-management-TOTAL_FORMS":            {"1"},
-			"Products-management-INITIAL_FORMS":          {"0"},
-			"Products-management-MIN_NUM_FORMS":          {"1"},
-			"Products-management-MAX_NUM_FORMS":          {"5"},
-			"Products-0-Title":                           {"A"}, // MinLength is 2
-			"Products-0-Slug":                            {"a"},
-			"Products-0-Price":                           {"10"},
+			"Title":                             {"Valid Coupon Title"},
+			"Description":                       {"Invalid product title test"},
+			"Code":                              {"VALERR1"},
+			"MaxDiscount":                       {"10"},
+			"ValidFrom":                         {"2026-07-01"},
+			"ValidUntil":                        {"2026-08-01"},
+			"Products-management-TOTAL_FORMS":   {"1"},
+			"Products-management-INITIAL_FORMS": {"0"},
+			"Products-management-MIN_NUM_FORMS": {"1"},
+			"Products-management-MAX_NUM_FORMS": {"5"},
+			"Products-0-Title":                  {"A"}, // MinLength is 2
+			"Products-0-Slug":                   {"a"},
+			"Products-0-Price":                  {"10"},
 			"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 			"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 		}, nil, req)
@@ -3190,10 +3192,10 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 			},
 			inlineMgmtValues("Products", 1, 1, 0, 5),
 			url.Values{
-				"Products-0-ID":                              {fmt.Sprint(p1.ID)},
-				"Products-0-Title":                           {"Lamp"},
-				"Products-0-Slug":                            {"lamp"},
-				"Products-0-Price":                           {"40"},
+				"Products-0-ID":    {fmt.Sprint(p1.ID)},
+				"Products-0-Title": {"Lamp"},
+				"Products-0-Slug":  {"lamp"},
+				"Products-0-Price": {"40"},
 				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -3264,10 +3266,10 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 			baseCouponPOST(coupon.Title, coupon.Code),
 			inlineMgmtValues("Products", 3, 1, 0, 5),
 			url.Values{
-				"Products-0-ID":                              {fmt.Sprint(p1.ID)},
-				"Products-0-Title":                           {p1.Title},
-				"Products-0-Slug":                            {p1.Slug},
-				"Products-0-Price":                           {"50"},
+				"Products-0-ID":    {fmt.Sprint(p1.ID)},
+				"Products-0-Title": {p1.Title},
+				"Products-0-Slug":  {p1.Slug},
+				"Products-0-Price": {"50"},
 				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 				"Products-1-Title":                           {"Addon One"},
@@ -3321,10 +3323,10 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 			baseCouponPOST(coupon.Title, coupon.Code),
 			inlineMgmtValues("Products", 1, 1, 0, 5),
 			url.Values{
-				"Products-0-ID":                              {fmt.Sprint(shared.ID)},
-				"Products-0-Title":                           {shared.Title},
-				"Products-0-Slug":                            {shared.Slug},
-				"Products-0-Price":                           {"15"},
+				"Products-0-ID":    {fmt.Sprint(shared.ID)},
+				"Products-0-Title": {shared.Title},
+				"Products-0-Slug":  {shared.Slug},
+				"Products-0-Price": {"15"},
 				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Products-0-" + formsets.DELETION_FIELD_NAME: {"on"},
 			},
@@ -3362,10 +3364,10 @@ func TestAdminForm_ModelFormPanelManyToMany(t *testing.T) {
 			baseCouponPOST(coupon.Title, coupon.Code),
 			inlineMgmtValues("Products", 1, 1, 0, 5),
 			url.Values{
-				"Products-0-ID":                              {fmt.Sprint(p1.ID)},
-				"Products-0-Title":                           {"X"}, // MinLength is 2
-				"Products-0-Slug":                            {"x-slug"},
-				"Products-0-Price":                           {"60"},
+				"Products-0-ID":    {fmt.Sprint(p1.ID)},
+				"Products-0-Title": {"X"}, // MinLength is 2
+				"Products-0-Slug":  {"x-slug"},
+				"Products-0-Price": {"60"},
 				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4264,7 +4266,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		data := mergeFormValues(
 			baseCouponPOST("Peripherals Promo", "PERIPH1"),
 			url.Values{
-				"Category-0-Name":                            {"Peripherals"},
+				"Category-0-Name": {"Peripherals"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4318,7 +4320,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 			baseCouponPOST("Deleted FK Slot", "DELFK1"),
 			inlineMgmtValues("Category", 1, 0, 0, 1),
 			url.Values{
-				"Category-0-Name":                            {"X"},
+				"Category-0-Name": {"X"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"on"},
 			},
@@ -4362,7 +4364,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		submitExpectInvalidAdminForm(t, badCoupon, mergeFormValues(
 			baseCouponPOST("Bad Cat", "BADCAT1"),
 			url.Values{
-				"Category-0-Name":                            {"forbidden dept"},
+				"Category-0-Name": {"forbidden dept"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4375,7 +4377,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		submitAndSaveAdminForm(t, goodCoupon, mergeFormValues(
 			baseCouponPOST("Good Cat", "GOODCAT1"),
 			url.Values{
-				"Category-0-Name":                            {"  audio gear  "},
+				"Category-0-Name": {"  audio gear  "},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4395,7 +4397,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		data := mergeFormValues(
 			baseCouponPOST("Invalid Cat", "INVCAT1"),
 			url.Values{
-				"Category-0-Name":                            {"A"}, // MinLength is 2
+				"Category-0-Name": {"A"}, // MinLength is 2
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4422,10 +4424,10 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 			baseCouponPOST("Two Cats Invalid", "TWOCAT1"),
 			inlineMgmtValues("Category", 2, 0, 0, 1),
 			url.Values{
-				"Category-0-Name":                            {"First"},
+				"Category-0-Name": {"First"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
-				"Category-1-Name":                            {"Second"},
+				"Category-1-Name": {"Second"},
 				"Category-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
 				"Category-1-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4453,7 +4455,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		af.WithData(mergeFormValues(
 			baseCouponPOST(coupon.Title, coupon.Code),
 			url.Values{
-				"Category-0-Name":                            {"Monitors"},
+				"Category-0-Name": {"Monitors"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4476,7 +4478,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		data := mergeFormValues(
 			baseCouponPOST(coupon.Title, coupon.Code),
 			url.Values{
-				"Category-0-Name":                            {"NVMe Storage"},
+				"Category-0-Name": {"NVMe Storage"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4501,7 +4503,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 			baseCouponPOST(coupon.Title, coupon.Code),
 			inlineMgmtValues("Category", 1, 0, 0, 1),
 			url.Values{
-				"Category-0-Name":                            {"Audio"},
+				"Category-0-Name": {"Audio"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4528,7 +4530,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 			baseCouponPOST(coupon.Title, coupon.Code),
 			inlineMgmtValues("Category", 1, 1, 0, 1),
 			url.Values{
-				"Category-0-Name":                            {"Legacy Cat"},
+				"Category-0-Name": {"Legacy Cat"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"on"},
 			},
@@ -4571,7 +4573,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		submitAndSaveAdminForm(t, row2.Object, mergeFormValues(
 			baseCouponPOST("New Net Title", coupon.Code),
 			url.Values{
-				"Category-0-Name":                            {"Pro Networking"},
+				"Category-0-Name": {"Pro Networking"},
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4596,7 +4598,7 @@ func TestAdminForm_ModelFormPanelManyToOne(t *testing.T) {
 		af := submitExpectInvalidAdminForm(t, coupon, mergeFormValues(
 			baseCouponPOST("Changed Title", coupon.Code),
 			url.Values{
-				"Category-0-Name":                            {"Z"}, // MinLength is 2
+				"Category-0-Name": {"Z"}, // MinLength is 2
 				"Category-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Category-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
@@ -4631,11 +4633,11 @@ func TestAdminForm_ModelFormPanelOneToOne(t *testing.T) {
 		data := mergeFormValues(
 			baseAuthorPOST("Ada Lovelace", "ada@example.com"),
 			url.Values{
-				"Bio-0-Headline":                             {"Analytical Pioneer"},
-				"Bio-0-Website":                              {"https://ada.example"},
-				"Bio-0-ExperienceYears":                      {"12"},
-				"Bio-0-" + formsets.ORDERING_FIELD_NAME:      {"0"},
-				"Bio-0-" + formsets.DELETION_FIELD_NAME:      {"false"},
+				"Bio-0-Headline":                        {"Analytical Pioneer"},
+				"Bio-0-Website":                         {"https://ada.example"},
+				"Bio-0-ExperienceYears":                 {"12"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
 		)
 		submitAndSaveAdminForm(t, author, data, panels...)
@@ -4660,10 +4662,10 @@ func TestAdminForm_ModelFormPanelOneToOne(t *testing.T) {
 		data := mergeFormValues(
 			baseAuthorPOST("Grace Hopper", "grace@example.com"),
 			url.Values{
-				"Badge-0-BadgeName":                          {"Compiler Architect"},
-				"Badge-0-Tier":                               {"Platinum"},
-				"Badge-0-" + formsets.ORDERING_FIELD_NAME:    {"0"},
-				"Badge-0-" + formsets.DELETION_FIELD_NAME:    {"false"},
+				"Badge-0-BadgeName": {"Compiler Architect"},
+				"Badge-0-Tier":      {"Platinum"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
 		)
 		submitAndSaveAdminForm(t, author, data, panels...)
@@ -4687,15 +4689,15 @@ func TestAdminForm_ModelFormPanelOneToOne(t *testing.T) {
 		data := mergeFormValues(
 			baseAuthorPOST("Niklaus Wirth", "wirth@example.com"),
 			url.Values{
-				"Bio-0-Headline":                             {"Pascal Creator"},
-				"Bio-0-Website":                              {"https://pascal.example"},
-				"Bio-0-ExperienceYears":                      {"40"},
-				"Bio-0-" + formsets.ORDERING_FIELD_NAME:      {"0"},
-				"Bio-0-" + formsets.DELETION_FIELD_NAME:      {"false"},
-				"Badge-0-BadgeName":                          {"Turing Laureate"},
-				"Badge-0-Tier":                               {"Diamond"},
-				"Badge-0-" + formsets.ORDERING_FIELD_NAME:    {"0"},
-				"Badge-0-" + formsets.DELETION_FIELD_NAME:    {"false"},
+				"Bio-0-Headline":                          {"Pascal Creator"},
+				"Bio-0-Website":                           {"https://pascal.example"},
+				"Bio-0-ExperienceYears":                   {"40"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
+				"Badge-0-BadgeName":                       {"Turing Laureate"},
+				"Badge-0-Tier":                            {"Diamond"},
+				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},
 		)
 		submitAndSaveAdminForm(t, author, data, panels...)
@@ -4834,15 +4836,15 @@ func TestAdminForm_ModelFormPanelOneToOne(t *testing.T) {
 		afBioErr := submitExpectInvalidAdminForm(t, badBioAuthor, mergeFormValues(
 			baseAuthorPOST("Invalid Bio", "badbio@example.com"),
 			url.Values{
-				"Bio-0-Headline":                          {"Hi"}, // MinLength 3
-				"Bio-0-Website":                           {""},
-				"Bio-0-ExperienceYears":                   {"1"},
-				"Bio-0-" + formsets.ORDERING_FIELD_NAME:   {"0"},
-				"Bio-0-" + formsets.DELETION_FIELD_NAME:   {"false"},
-				"Badge-management-TOTAL_FORMS":            {"0"},
-				"Badge-management-INITIAL_FORMS":          {"0"},
-				"Badge-management-MIN_NUM_FORMS":          {"0"},
-				"Badge-management-MAX_NUM_FORMS":          {"1"},
+				"Bio-0-Headline":                        {"Hi"}, // MinLength 3
+				"Bio-0-Website":                         {""},
+				"Bio-0-ExperienceYears":                 {"1"},
+				"Bio-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Bio-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Badge-management-TOTAL_FORMS":          {"0"},
+				"Badge-management-INITIAL_FORMS":        {"0"},
+				"Badge-management-MIN_NUM_FORMS":        {"0"},
+				"Badge-management-MAX_NUM_FORMS":        {"1"},
 			},
 		), panelsOrder...)
 		if doc := parseHTMLDoc(t, afBioErr.BoundForm().AsP()); doc.Find(`.panel__error`).Length() == 0 {
@@ -4965,8 +4967,8 @@ func TestAdminForm_ModelFormPanelOneToOne(t *testing.T) {
 		submitAndSaveAdminForm(t, loaded2.Object, mergeFormValues(
 			baseAuthorPOST(author.Name, author.Email),
 			url.Values{
-				"Badge-0-BadgeName":                       {"Lead Reviewer"},
-				"Badge-0-Tier":                            {"Platinum"},
+				"Badge-0-BadgeName": {"Lead Reviewer"},
+				"Badge-0-Tier":      {"Platinum"},
 				"Badge-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
 				"Badge-0-" + formsets.DELETION_FIELD_NAME: {"false"},
 			},

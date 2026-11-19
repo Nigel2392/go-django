@@ -113,14 +113,14 @@ func (u *User) BeforeSave(ctx context.Context) error {
 
 func (u *User) Fields() []any {
 	return []any{
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 			Column:   "id",
 			Label:    trans.S("ID"),
 			HelpText: trans.S("The unique identifier for this user."),
 		}),
-		attrs.Unbound("Email", &attrs.FieldConfig{
+		attrs.Unbound("Email", &attrs.Config{
 			Column:    "email",
 			MaxLength: 255,
 			MinLength: 3,
@@ -128,37 +128,37 @@ func (u *User) Fields() []any {
 			Label:     trans.S("Email"),
 			HelpText:  trans.S("The email address of the user."),
 		}),
-		attrs.Unbound("Username", &attrs.FieldConfig{
+		attrs.Unbound("Username", &attrs.Config{
 			Column:    "username",
 			MaxLength: 16,
 			MinLength: 3,
 			Label:     trans.S("Username"),
 			HelpText:  trans.S("The username of the user."),
 		}),
-		attrs.Unbound("FirstName", &attrs.FieldConfig{
+		attrs.Unbound("FirstName", &attrs.Config{
 			Column:    "first_name",
 			MaxLength: 75,
 			Label:     trans.S("First Name"),
 			HelpText:  trans.S("The first name of the user."),
 		}),
-		attrs.Unbound("LastName", &attrs.FieldConfig{
+		attrs.Unbound("LastName", &attrs.Config{
 			Column:    "last_name",
 			MaxLength: 75,
 			Label:     trans.S("Last Name"),
 			HelpText:  trans.S("The last name of the user."),
 		}),
-		attrs.Unbound("Password", &attrs.FieldConfig{
+		attrs.Unbound("Password", &attrs.Config{
 			Column:    "password",
 			MaxLength: 255,
 			Label:     trans.S("Password"),
 			HelpText:  trans.S("The user's password. It is stored as a hash."),
 		}),
-		attrs.Unbound("CreatedAt", &attrs.FieldConfig{
+		attrs.Unbound("CreatedAt", &attrs.Config{
 			Label:    trans.S("Created At"),
 			HelpText: trans.S("The date and time when the user was created."),
 			Column:   "created_at",
 		}),
-		attrs.Unbound("UpdatedAt", &attrs.FieldConfig{
+		attrs.Unbound("UpdatedAt", &attrs.Config{
 			Label:    trans.S("Updated At"),
 			HelpText: trans.S("The date and time when the user was last updated."),
 			Column:   "updated_at",

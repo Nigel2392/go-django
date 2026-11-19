@@ -26,12 +26,12 @@ type PreloadBook struct {
 
 func (pb *PreloadBook) FieldDefs(ctx context.Context) attrs.Definitions {
 	return pb.Model.Define(ctx, pb,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			ReadOnly: true,
 			Primary:  true,
 			Column:   "id",
 		}),
-		attrs.Unbound("Title", &attrs.FieldConfig{
+		attrs.Unbound("Title", &attrs.Config{
 			Label:     "Book Title",
 			HelpText:  trans.S("Title of the book. This is the title that will be displayed in the UI."),
 			MaxLength: 100,
@@ -65,11 +65,11 @@ func (pab *PreloadAuthorBook) TargetField() string {
 
 func (pab *PreloadAuthorBook) FieldDefs(ctx context.Context) attrs.Definitions {
 	return pab.Model.Define(ctx, pab,
-		attrs.Unbound("Author", &attrs.FieldConfig{
+		attrs.Unbound("Author", &attrs.Config{
 			ReadOnly: true,
 			Column:   "author_id",
 		}),
-		attrs.Unbound("Book", &attrs.FieldConfig{
+		attrs.Unbound("Book", &attrs.Config{
 			ReadOnly: true,
 			Column:   "book_id",
 		}),
@@ -139,21 +139,21 @@ func (pa *PreloadAuthor) BeforeSave(ctx context.Context) error {
 
 func (pa *PreloadAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
 	return pa.Model.Define(ctx, pa,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			ReadOnly: true,
 			Primary:  true,
 			Column:   "id",
 		}),
-		attrs.Unbound("Name", &attrs.FieldConfig{
+		attrs.Unbound("Name", &attrs.Config{
 			Label:     "Author Name",
 			HelpText:  trans.S("Name of the author. This is the name that will be displayed in the UI."),
 			MaxLength: 100,
 		}),
-		attrs.Unbound("CreatedAt", &attrs.FieldConfig{
+		attrs.Unbound("CreatedAt", &attrs.Config{
 			ReadOnly: true,
 			Column:   "created_at",
 		}),
-		attrs.Unbound("UpdatedAt", &attrs.FieldConfig{
+		attrs.Unbound("UpdatedAt", &attrs.Config{
 			ReadOnly: true,
 			Column:   "updated_at",
 		}),

@@ -71,7 +71,7 @@ func (o *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, o,
 		fattrs.Field(o, "ID", &o.ID, func() fattrs.PtrFieldConfig[*Order, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*Order, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -115,7 +115,7 @@ func (p *testCartSupplierProduct) FieldDefs(ctx context.Context) attrs.Definitio
 		}),
 		fattrs.Field(p, "SKU", &p.SKU, func() fattrs.PtrFieldConfig[*testCartSupplierProduct, string] {
 			return fattrs.PtrFieldConfig[*testCartSupplierProduct, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Blank: true,
 				},
 			}
@@ -545,8 +545,8 @@ func TestCartQuery(t *testing.T) {
 			t0 := time.Now().Add(-2 * time.Hour)
 			userCartOldSession := seedCart(t, "stale-token", user1, true, t0)
 			currentSessionCart := seedCart(t, token2, nil, true, t0.Add(time.Hour))
-			_ = seedCart(t, token1, user2, true, t0)               // different user & session
-			_ = seedCart(t, "stale-token", user1, false, t0)       // inactive user cart
+			_ = seedCart(t, token1, user2, true, t0)         // different user & session
+			_ = seedCart(t, "stale-token", user1, false, t0) // inactive user cart
 
 			req := buildRequestWithMiddleware(t, sm, cookie2, user1)
 			rows, err := carts.Query().CartForRequest(req).All()

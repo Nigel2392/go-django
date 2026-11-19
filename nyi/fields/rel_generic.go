@@ -51,7 +51,7 @@ func GenericForeignKey[T attrs.Definer](definer T, name string, cnf *GenericFore
 		Field: attrs.NewField(
 			definer,
 			name,
-			&attrs.FieldConfig{
+			&attrs.Config{
 				Null:     cnf.Nullable,
 				ReadOnly: true,
 				RelOneToOne: attrs.Relate(

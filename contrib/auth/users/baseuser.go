@@ -61,13 +61,13 @@ func (u *Base) Fields(user attrs.Definer) []any {
 	u.backref = user
 
 	return []any{
-		attrs.NewField(user, "IsAdministrator", &attrs.FieldConfig{
+		attrs.NewField(user, "IsAdministrator", &attrs.Config{
 			Column:   "is_administrator",
 			Label:    trans.S("Is Administrator"),
 			HelpText: trans.S("Whether the user is an administrator"),
 			Blank:    true,
 		}),
-		attrs.NewField(user, "IsActive", &attrs.FieldConfig{
+		attrs.NewField(user, "IsActive", &attrs.Config{
 			Column:   "is_active",
 			Label:    trans.S("Is Active"),
 			HelpText: trans.S("Whether the user is active and can log in."),
@@ -78,7 +78,7 @@ func (u *Base) Fields(user attrs.Definer) []any {
 			//		true, // Default to true if not set
 			//	),
 		}),
-		attrs.NewField(user, "LastLogin", &attrs.FieldConfig{
+		attrs.NewField(user, "LastLogin", &attrs.Config{
 			Column:   "last_login",
 			Label:    trans.S("Last Login"),
 			HelpText: trans.S("The last time the user logged in."),

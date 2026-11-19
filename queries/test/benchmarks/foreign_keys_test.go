@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	fldCnfRelAuthor = &attrs.FieldConfig{
+	fldCnfRelAuthor = &attrs.Config{
 		Column:        "author_id",
 		Null:          true,
 		RelForeignKey: attrs.Relate(&BenchmarkAuthor{}, "", nil),
@@ -19,7 +19,7 @@ var (
 			attrs.AttrReverseAliasKey: "Books",
 		},
 	}
-	fldCnfRelAuthorModel = &attrs.FieldConfig{
+	fldCnfRelAuthorModel = &attrs.Config{
 		Column:        "author_id",
 		Null:          true,
 		RelForeignKey: attrs.Relate(&BenchmarkAuthorModel{}, "", nil),

@@ -200,7 +200,7 @@ func (o *User) FieldDefs(ctx context.Context) attrs.Definitions {
 func (o *User) Fields(this attrs.Definer) []any {
 	return []any{
 		attrs.NewField(
-			o, "ID", &attrs.FieldConfig{
+			o, "ID", &attrs.Config{
 				Null:     false,
 				Blank:    false,
 				ReadOnly: true,
@@ -210,7 +210,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "UniqueIdentifier", &attrs.FieldConfig{
+			o, "UniqueIdentifier", &attrs.Config{
 				Null:      false,
 				Blank:     false,
 				ReadOnly:  true,
@@ -220,7 +220,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "ProviderName", &attrs.FieldConfig{
+			o, "ProviderName", &attrs.Config{
 				Null:      false,
 				Blank:     false,
 				ReadOnly:  true,
@@ -230,7 +230,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "Data", &attrs.FieldConfig{
+			o, "Data", &attrs.Config{
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
@@ -239,7 +239,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "AccessToken", &attrs.FieldConfig{
+			o, "AccessToken", &attrs.Config{
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
@@ -248,7 +248,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "RefreshToken", &attrs.FieldConfig{
+			o, "RefreshToken", &attrs.Config{
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
@@ -257,7 +257,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "TokenType", &attrs.FieldConfig{
+			o, "TokenType", &attrs.Config{
 				Null:      false,
 				Blank:     true,
 				ReadOnly:  true,
@@ -267,7 +267,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "ExpiresAt", &attrs.FieldConfig{
+			o, "ExpiresAt", &attrs.Config{
 				Null:      false,
 				Blank:     true,
 				ReadOnly:  true,
@@ -277,7 +277,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "CreatedAt", &attrs.FieldConfig{
+			o, "CreatedAt", &attrs.Config{
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
@@ -286,7 +286,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 			},
 		),
 		attrs.NewField(
-			o, "UpdatedAt", &attrs.FieldConfig{
+			o, "UpdatedAt", &attrs.Config{
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,

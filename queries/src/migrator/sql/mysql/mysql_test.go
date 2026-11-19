@@ -24,11 +24,11 @@ type User struct {
 
 func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
+		attrs.NewField(m, "Name", &attrs.Config{}),
 	).WithTableName("users")
 }
 
@@ -43,19 +43,19 @@ type Todo struct {
 
 func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{
 			Column:   "id", // can be inferred, but explicitly set for clarity
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(m, "Title", &attrs.FieldConfig{
+		attrs.NewField(m, "Title", &attrs.Config{
 			Column: "title", // can be inferred, but explicitly set for clarity
 		}),
-		attrs.NewField(m, "Description", &attrs.FieldConfig{
+		attrs.NewField(m, "Description", &attrs.Config{
 			Column: "description", // can be inferred, but explicitly set for clarity
 		}),
-		attrs.NewField(m, "Done", &attrs.FieldConfig{}),
-		attrs.NewField(m, "User", &attrs.FieldConfig{
+		attrs.NewField(m, "Done", &attrs.Config{}),
+		attrs.NewField(m, "User", &attrs.Config{
 			Column:      "user_id",
 			RelOneToOne: attrs.Relate(&User{}, "", nil),
 		}),
@@ -70,7 +70,7 @@ type test interface {
 }
 
 type tableTypeTest[T any] struct {
-	fieldConfig attrs.FieldConfig
+	fieldConfig attrs.Config
 	driver      driver.Driver
 	Val         T
 	Expect      string
@@ -120,14 +120,14 @@ var mySQLTests = []test{
 		Expect: "DOUBLE",
 	},
 	&tableTypeTest[string]{
-		fieldConfig: attrs.FieldConfig{
+		fieldConfig: attrs.Config{
 			MaxLength: 255,
 			MinLength: 0,
 		},
 		Expect: "VARCHAR(255)",
 	},
 	&tableTypeTest[string]{
-		fieldConfig: attrs.FieldConfig{
+		fieldConfig: attrs.Config{
 			MaxLength: 5,
 			MinLength: 0,
 		},

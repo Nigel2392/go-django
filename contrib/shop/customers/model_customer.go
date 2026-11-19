@@ -35,7 +35,7 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Customer, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*Customer, drivers.ULID]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Primary:  true,
 					ReadOnly: true,
 				},
@@ -43,7 +43,7 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Email", &m.Email, func() fattrs.PtrFieldConfig[*Customer, *drivers.Email] {
 			return fattrs.PtrFieldConfig[*Customer, *drivers.Email]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:    "email",
 					MaxLength: 255,
 					MinLength: 3,
@@ -55,7 +55,7 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "FirstName", &m.FirstName, func() fattrs.PtrFieldConfig[*Customer, string] {
 			return fattrs.PtrFieldConfig[*Customer, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:    "first_name",
 					MaxLength: 75,
 					Label:     trans.S("First Name"),
@@ -65,7 +65,7 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "LastName", &m.LastName, func() fattrs.PtrFieldConfig[*Customer, string] {
 			return fattrs.PtrFieldConfig[*Customer, string]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:    "last_name",
 					MaxLength: 75,
 					Label:     trans.S("Last Name"),
@@ -75,7 +75,7 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "User", &m.User, func() fattrs.PtrFieldConfig[*Customer, users.User] {
 			return fattrs.PtrFieldConfig[*Customer, users.User]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Column:   "user_id",
 					ReadOnly: true,
 					Null:     true,
@@ -89,7 +89,7 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "FirstSeen", &m.FirstSeen, func() fattrs.PtrFieldConfig[*Customer, time.Time] {
 			return fattrs.PtrFieldConfig[*Customer, time.Time]{
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					AutoNowAdd: true,
 					ReadOnly:   true,
 					Null:       false,
@@ -100,7 +100,7 @@ func (m *Customer) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Orders", &m.Orders, func() fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]] {
 			return fattrs.PtrFieldConfig[*Customer, *queries.RelRevFK[attrs.Definer]]{
 				Flags: fattrs.F_IS_REVERSE_FLD,
-				Config: attrs.FieldConfig{
+				Config: attrs.Config{
 					Attributes: map[string]interface{}{
 						migrator.AttrUseInDBKey: false,
 					},

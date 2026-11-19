@@ -118,11 +118,11 @@ func (b *TestBlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 		b.Page = &pages.PageNode{}
 	}
 	return b.Model.Define(ctx, b,
-		attrs.NewField(b.Page, "PageID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.NewField(b.Page, "Title", &attrs.FieldConfig{Embedded: true}),
-		attrs.NewField(b.Page, "Slug", &attrs.FieldConfig{Embedded: true, Blank: true}),
-		attrs.NewField(b.Page, "UrlPath", &attrs.FieldConfig{Embedded: true, ReadOnly: true}),
-		attrs.NewField(b, "Summary", &attrs.FieldConfig{Blank: true}),
+		attrs.NewField(b.Page, "PageID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.NewField(b.Page, "Title", &attrs.Config{IsEmbedded: true}),
+		attrs.NewField(b.Page, "Slug", &attrs.Config{IsEmbedded: true, Blank: true}),
+		attrs.NewField(b.Page, "UrlPath", &attrs.Config{IsEmbedded: true, ReadOnly: true}),
+		attrs.NewField(b, "Summary", &attrs.Config{Blank: true}),
 	)
 }
 
@@ -135,8 +135,8 @@ type TestBlogImage struct {
 
 func (b *TestBlogImage) FieldDefs(ctx context.Context) attrs.Definitions {
 	return b.Model.Define(ctx, b,
-		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
-		attrs.Unbound("BlogPage", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{Primary: true, ReadOnly: true, Column: "id"}),
+		attrs.Unbound("BlogPage", &attrs.Config{
 			RelForeignKey: attrs.Relate(&TestBlogPage{}, "", nil),
 			Blank:         true,
 			FormField: func(opts ...func(fields.Field)) fields.Field {

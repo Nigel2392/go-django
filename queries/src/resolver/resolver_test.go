@@ -25,9 +25,9 @@ type OtherTestModel struct {
 
 func (m *OtherTestModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "TestModel", &attrs.FieldConfig{
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true}),
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "TestModel", &attrs.Config{
 			RelForeignKey: attrs.Relate(&TestModel{}, "", nil),
 		}),
 	)
@@ -47,14 +47,14 @@ type TestModel struct {
 
 func (m *TestModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return m.Model.Define(ctx, m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Age", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Score", &attrs.FieldConfig{}),
-		attrs.NewField(m, "CreatedAt", &attrs.FieldConfig{}),
-		attrs.NewField(m, "FirstName", &attrs.FieldConfig{}),
-		attrs.NewField(m, "LastName", &attrs.FieldConfig{}),
-		attrs.NewField(m, "Nickname", &attrs.FieldConfig{}),
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true}),
+		attrs.NewField(m, "Name", &attrs.Config{}),
+		attrs.NewField(m, "Age", &attrs.Config{}),
+		attrs.NewField(m, "Score", &attrs.Config{}),
+		attrs.NewField(m, "CreatedAt", &attrs.Config{}),
+		attrs.NewField(m, "FirstName", &attrs.Config{}),
+		attrs.NewField(m, "LastName", &attrs.Config{}),
+		attrs.NewField(m, "Nickname", &attrs.Config{}),
 	)
 }
 

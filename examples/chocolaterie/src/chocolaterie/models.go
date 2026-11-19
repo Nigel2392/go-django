@@ -37,27 +37,27 @@ type Chocolate struct {
 
 func (c *Chocolate) FieldDefs(ctx context.Context) attrs.Definitions {
 	return c.Model.Define(ctx, c,
-		attrs.Unbound("ID", &attrs.FieldConfig{
+		attrs.Unbound("ID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.Unbound("Name", &attrs.FieldConfig{
+		attrs.Unbound("Name", &attrs.Config{
 			MinLength: 2,
 			MaxLength: 255,
 		}),
-		attrs.Unbound("Description", &attrs.FieldConfig{
+		attrs.Unbound("Description", &attrs.Config{
 			MinLength: 10,
 			MaxLength: 5000,
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+			FormWidget: func(fc attrs.Config) widgets.Widget {
 				return widgets.NewTextarea(fc.WidgetAttrs)
 			},
 		}),
-		attrs.Unbound("Price", &attrs.FieldConfig{}),
-		attrs.Unbound("Weight", &attrs.FieldConfig{
+		attrs.Unbound("Price", &attrs.Config{}),
+		attrs.Unbound("Weight", &attrs.Config{
 			MinValue: 1,
 			MaxValue: 10000, // 10kg max
 		}),
-		attrs.Unbound("Ingredients", &attrs.FieldConfig{}),
+		attrs.Unbound("Ingredients", &attrs.Config{}),
 	)
 }
 
@@ -80,27 +80,27 @@ func (n *ChocolateListPage) FieldDefs(ctx context.Context) attrs.Definitions {
 		n.Page = &pages.PageNode{}
 	}
 	return n.Model.Define(ctx, n,
-		attrs.NewField(n.Page, "PageID", &attrs.FieldConfig{
+		attrs.NewField(n.Page, "PageID", &attrs.Config{
 			Primary:  true,
 			ReadOnly: true,
 			Column:   "id",
 		}),
-		attrs.NewField(n.Page, "Title", &attrs.FieldConfig{
-			Embedded: true,
-			Label:    "Title",
-			HelpText: trans.S("How do you want your page to be remembered?"),
+		attrs.NewField(n.Page, "Title", &attrs.Config{
+			IsEmbedded: true,
+			Label:      "Title",
+			HelpText:   trans.S("How do you want your page to be remembered?"),
 		}),
-		attrs.NewField(n.Page, "UrlPath", &attrs.FieldConfig{
-			Embedded: true,
-			ReadOnly: true,
-			Label:    "URL Path",
-			HelpText: trans.S("The URL path for this chocolate list page."),
+		attrs.NewField(n.Page, "UrlPath", &attrs.Config{
+			IsEmbedded: true,
+			ReadOnly:   true,
+			Label:      "URL Path",
+			HelpText:   trans.S("The URL path for this chocolate list page."),
 		}),
-		attrs.NewField(n.Page, "Slug", &attrs.FieldConfig{
-			Embedded: true,
-			Label:    "Slug",
-			HelpText: trans.S("The slug for this chocolate list page."),
-			Blank:    true,
+		attrs.NewField(n.Page, "Slug", &attrs.Config{
+			IsEmbedded: true,
+			Label:      "Slug",
+			HelpText:   trans.S("The slug for this chocolate list page."),
+			Blank:      true,
 		}),
 		editor.NewField(n, "Description", editor.FieldConfig{
 			Label:    trans.S("Description"),
@@ -111,17 +111,17 @@ func (n *ChocolateListPage) FieldDefs(ctx context.Context) attrs.Definitions {
 			//	"list",
 			//},
 		}),
-		attrs.NewField(n.Page, "CreatedAt", &attrs.FieldConfig{
-			Embedded: true,
-			ReadOnly: true,
-			Label:    "Created At",
-			HelpText: trans.S("The date and time this chocolate list page was created."),
+		attrs.NewField(n.Page, "CreatedAt", &attrs.Config{
+			IsEmbedded: true,
+			ReadOnly:   true,
+			Label:      "Created At",
+			HelpText:   trans.S("The date and time this chocolate list page was created."),
 		}),
-		attrs.NewField(n.Page, "UpdatedAt", &attrs.FieldConfig{
-			Embedded: true,
-			ReadOnly: true,
-			Label:    "Updated At",
-			HelpText: trans.S("The date and time this chocolate list page was last updated."),
+		attrs.NewField(n.Page, "UpdatedAt", &attrs.Config{
+			IsEmbedded: true,
+			ReadOnly:   true,
+			Label:      "Updated At",
+			HelpText:   trans.S("The date and time this chocolate list page was last updated."),
 		}),
 	)
 }
