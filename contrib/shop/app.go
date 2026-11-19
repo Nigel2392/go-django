@@ -33,6 +33,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -203,6 +204,13 @@ func NewAppConfig() (django.AppConfig, error) {
 					return django.Reverse("admin:apps:model", "shop", "orders")
 				},
 			},
+			&menu.Item{
+				ItemName: "coupons",
+				Label:    trans.T(r.Context(), "Coupons"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "coupons")
+				},
+			},
 		}
 	}
 
@@ -254,6 +262,7 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 			},
 			admin.ModelOptions{
+				MenuOrder:           100,
 				Model:               &models.Category{},
 				MenuLabel:           trans.S("Category"),
 				RegisterToAdminMenu: true,
@@ -262,7 +271,35 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 			},
 			admin.ModelOptions{
+				Name:                "products",
+				MenuOrder:           200,
+				Model:               &products.Product{},
+				MenuLabel:           trans.S("Products"),
+				RegisterToAdminMenu: true,
+				ListView: admin.ListViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition) views.View {
+						return adminviews.ViewProductList
+					},
+				},
+				AddView: admin.FormViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
+						return ShopHandler{
+							Handle: adminviews.ViewAddNewProductSupplier,
+						}
+					},
+				},
+				EditView: admin.FormViewOptions{
+					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
+						return ShopInstanceHandler[*products.Product]{
+							Instance: instance.(*products.Product),
+							Handle:   adminviews.ViewEditProduct,
+						}
+					},
+				},
+			},
+			admin.ModelOptions{
 				Name:                "orders",
+				MenuOrder:           300,
 				Model:               &orders.Order{},
 				MenuLabel:           trans.S("Orders"),
 				RegisterToAdminMenu: true,
@@ -287,28 +324,69 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 			},
 			admin.ModelOptions{
-				Name:                "products",
-				Model:               &products.Product{},
-				MenuLabel:           trans.S("Products"),
+				Name:                "coupons",
+				MenuOrder:           900,
+				Model:               &coupons.Coupon{},
+				MenuLabel:           trans.S("Coupons"),
 				RegisterToAdminMenu: true,
+				DisallowDelete:      true,
+				Labels: map[string]func(ctx context.Context) string{
+					"ShortDescription": trans.S("Description"),
+					"UsageCount":       trans.S("Uses"),
+					"UsageLimit":       trans.S("Limit"),
+					"ValidFrom":        trans.S("Start"),
+					"ValidUntil":       trans.S("End"),
+					"CreatedAt":        trans.S("Created"),
+				},
 				ListView: admin.ListViewOptions{
-					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition) views.View {
-						return adminviews.ViewProductList
+					Fields: []string{
+						"ID",
+						"Code",
+						"Title",
+						"ShortDescription",
+						"UsageCount",
+						"UsageLimit",
+						"ValidFrom",
+						"ValidUntil",
+						"CreatedAt",
 					},
 				},
 				AddView: admin.FormViewOptions{
-					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return ShopHandler{
-							Handle: adminviews.ViewAddNewProductSupplier,
-						}
-					},
-				},
-				EditView: admin.FormViewOptions{
-					GetHandler: func(adminSite *admin.AdminApplication, adminApp *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-						return ShopInstanceHandler[*products.Product]{
-							Instance: instance.(*products.Product),
-							Handle:   adminviews.ViewEditProduct,
-						}
+					Panels: []admin.Panel{
+						admin.TabbedPanel(
+							admin.PanelTab(
+								trans.S("Coupon"),
+								admin.FieldPanel("Title"),
+								admin.FieldPanel("Description"),
+								admin.FieldPanel("Code"),
+								admin.RowPanel(
+									admin.FieldPanel("MaxDiscount"),
+									admin.FieldPanel("IsPercentage"),
+								),
+							),
+							admin.PanelTab(
+								trans.S("Constraints"),
+								admin.FieldPanel("ValidFrom"),
+								admin.FieldPanel("ValidUntil"),
+								admin.FieldPanel("CreatedAt"),
+							),
+							admin.PanelTab(
+								trans.S("Products"),
+								&admin.ModelFormPanel[*products.Product, modelforms.ModelForm[*products.Product]]{
+									TargetType: &products.Product{},
+									FieldName:  "Products",
+									Classname:  "collapsible",
+									// SubClassname: "collapsed",
+									MinNum: 1,
+									// DisallowAdd:    true,
+									// DisallowRemove: true,
+									Panels: []admin.Panel{
+										admin.FieldPanel("ID"),
+										admin.FieldPanel("Product"),
+									},
+								},
+							),
+						),
 					},
 				},
 			},
