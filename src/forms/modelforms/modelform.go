@@ -43,7 +43,7 @@ type AfterModelFieldSaver interface {
 type modelFormFlag int
 
 const (
-	_ modelFormFlag = iota
+	_ modelFormFlag = 1 << iota
 	instanceWasSet
 	excludeWasSet
 	fieldsWasSet

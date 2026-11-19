@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"runtime/debug"
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -209,7 +210,7 @@ func (d *Tester) Setup(t TB) error {
 
 	if d.Auth != nil {
 		if !django.AppInstalled("session") {
-			t.Fatal("cannot initialize authentication without app 'session'")
+			t.Fatalf("cannot initialize authentication without app 'session':\n%v", string(debug.Stack()))
 		}
 
 		d.App.Mux.Use(

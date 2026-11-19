@@ -9,6 +9,7 @@ import (
 )
 
 type CouponProductThrough struct {
+	// ID      uint64
 	Coupon  *Coupon
 	Product *products.Product
 }
@@ -19,14 +20,20 @@ func (m *CouponProductThrough) BeforeSave(ctx context.Context) error {
 
 func (m *CouponProductThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
+		//	 fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*CouponProductThrough, uint64] {
+		//	 	return fattrs.PtrFieldConfig[*CouponProductThrough, uint64]{}
+		//	 }),
 		fattrs.Field(m, "Coupon", &m.Coupon, func() fattrs.PtrFieldConfig[*CouponProductThrough, *Coupon] {
 			return fattrs.PtrFieldConfig[*CouponProductThrough, *Coupon]{
 				Config: attrs.FieldConfig{
-					Column: "coupon_id",
-					// ReadOnly:      true,
-					// Null:          false,
-					// Blank:         false,
-					// RelForeignKey: attrs.Relate(&Coupon{}, "", nil),
+					Column:   "coupon_id",
+					ReadOnly: true,
+					Null:     false,
+					Blank:    false,
+					//	RelForeignKey: attrs.Relate(&Coupon{}, "", nil),
+					//	Attributes: map[string]interface{}{
+					//		attrs.AttrReverseAliasKey: "Products",
+					//	},
 				},
 			}
 		}),

@@ -37,6 +37,11 @@ import (
 	"golang.org/x/text/currency"
 )
 
+func init() {
+	coupons.MIN_CODE_LENGTH = 0
+	coupons.MAX_CODE_LENGTH = 128
+}
+
 type generatorTestUser struct {
 	ID              int `attrs:"primary"`
 	Name            string
