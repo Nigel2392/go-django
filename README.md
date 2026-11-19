@@ -119,13 +119,6 @@ GO-Django is tested to work on the following databases:
 
 - [go-django/queries](./queries/docs/README.md) - A library to help you create SQL queries specialized (and only useful) for go-django models.
 
-## Help Needed
-
-- [ ] Block application:
-  - [ ] Javascript for structblock
-  - [ ] Javascript for listblock
-  - [ ] (maybe) Javascript for fieldblock
-
 ## Projects written in Go-Django
 
 - [Docker-Mailserver-Mailman](https://github.com/Nigel2392/docker-mailserver-mailman) - A backend interface for [Docker Mailserver](https://github.com/docker-mailserver/docker-mailserver) which manages Postfix and Dovecot accounts through LDAP.
