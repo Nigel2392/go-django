@@ -27,7 +27,9 @@ const (
 	CPT_MINUTE                      // use current minute as code part
 	CPT_UUID                        // use random uuid as code part
 
-	ErrInvalidPartType errs.Error = "invalid code part type"
+	ErrInvalidPartType    errs.Error = "invalid code part type"
+	ErrCouponCodeTooShort errs.Error = "coupon code is too short"
+	ErrCouponCodeTooLong  errs.Error = "coupon code is too long"
 )
 
 type CodePart struct {
@@ -100,6 +102,14 @@ func generateCouponCode(parts []CodePart) (string, error) {
 		}
 
 		sb.WriteString(val)
+	}
+
+	if sb.Len() < int(coupons.MIN_CODE_LENGTH) {
+		return "", ErrCouponCodeTooLong
+	}
+
+	if sb.Len() > int(coupons.MAX_CODE_LENGTH) {
+		return "", ErrCouponCodeTooLong
 	}
 
 	return sb.String(), nil

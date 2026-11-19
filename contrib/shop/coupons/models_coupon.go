@@ -12,6 +12,11 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+var (
+	MIN_CODE_LENGTH int64 = 6
+	MAX_CODE_LENGTH int64 = 32
+)
+
 type Coupon struct {
 	ID               uint64
 	Title            string
@@ -67,8 +72,8 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(c, "Code", &c.Code, func() fattrs.PtrFieldConfig[*Coupon, string] {
 			return fattrs.PtrFieldConfig[*Coupon, string]{
 				Config: attrs.FieldConfig{
-					MinLength: 6,
-					MaxLength: 32,
+					MinLength: MIN_CODE_LENGTH,
+					MaxLength: MAX_CODE_LENGTH,
 					Blank:     false,
 				},
 			}

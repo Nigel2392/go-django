@@ -238,7 +238,7 @@ func NewAppConfig() (django.AppConfig, error) {
 			}}
 		}))
 
-		admin.RegisterApp(
+		app := admin.RegisterApp(
 			"shop",
 			admin.AppOptions{
 				AppLabel:            trans.S("Shop"),
@@ -314,6 +314,14 @@ func NewAppConfig() (django.AppConfig, error) {
 			},
 		)
 		// admin.RegisterSearchHook
+
+		app.Routing = func(m mux.Multiplexer) {
+			// admin:ext:shop
+			shopAdminApi := m.Any("/shop", nil, "shop")
+
+			// admin:ext:shop:generate_coupon
+			shopAdminApi.Post("/coupon/generate", mux.NewHandler(adminviews.GenerateCouponCode), "generate_coupon")
+		}
 
 		return nil
 	}
