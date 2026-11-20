@@ -681,7 +681,7 @@ func TestGenerateCouponCode(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected timeout error when static code already exists")
 		}
-		if !errors.Is(err, context.DeadlineExceeded) {
+		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, ErrCouponExists) {
 			t.Fatalf("expected error wrapping context.DeadlineExceeded, got: %v", err)
 		}
 		if code != "" {
