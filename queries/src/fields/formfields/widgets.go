@@ -327,7 +327,7 @@ func (o *MultiSelectWidget[T]) Validate(ctx context.Context, value interface{}) 
 	}
 
 	var (
-		errors  []error
+		valErrs []error
 		choices = o.Choices(ctx)
 		values  []string
 	)
@@ -337,23 +337,53 @@ func (o *MultiSelectWidget[T]) Validate(ctx context.Context, value interface{}) 
 		values = []string{v}
 	case []string:
 		values = v
-	}
-
-	if (len(values) == 0 || len(values) == 1 && values[0] == "") && o.IncludeBlank {
-		return nil
-	}
-
-	var valuesMap = make(map[string]struct{})
-	for _, valueStr := range values {
-		valuesMap[valueStr] = struct{}{}
-	}
-	for _, choice := range choices {
-		if _, ok := valuesMap[choice.Value()]; !ok {
-			errors = append(errors, errs.ErrInvalidValue)
+	case attrs.Definer:
+		if !versatile.IsZero(v) {
+			values = []string{fmt.Sprintf("%v", attrs.PrimaryKey(ctx, v))}
+		}
+	case []attrs.Definer:
+		values = make([]string, 0, len(v))
+		for _, obj := range v {
+			if obj == nil || versatile.IsZero(obj) {
+				continue
+			}
+			values = append(values, fmt.Sprintf("%v", attrs.PrimaryKey(ctx, obj)))
+		}
+	default:
+		if typedList, ok := value.([]T); ok {
+			values = make([]string, 0, len(typedList))
+			for _, obj := range typedList {
+				if versatile.IsZero(obj) {
+					continue
+				}
+				values = append(values, fmt.Sprintf("%v", attrs.PrimaryKey(ctx, obj)))
+			}
+		} else {
+			return []error{errs.ErrInvalidType}
 		}
 	}
 
-	return errors
+	if len(values) == 0 || (len(values) == 1 && values[0] == "") {
+		if o.IncludeBlank {
+			return nil
+		}
+		return []error{errs.ErrFieldRequired}
+	}
+
+	var choicesMap = make(map[string]struct{}, len(choices))
+	for _, choice := range choices {
+		choicesMap[choice.Value()] = struct{}{}
+	}
+	for _, valueStr := range values {
+		if valueStr == "" && o.IncludeBlank {
+			continue
+		}
+		if _, ok := choicesMap[valueStr]; !ok {
+			valErrs = append(valErrs, errs.ErrInvalidValue)
+		}
+	}
+
+	return valErrs
 }
 
 func (m *MultiSelectWidget[T]) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
