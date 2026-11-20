@@ -144,12 +144,12 @@ func (t *TestMigrationEngine) RenameIndex(ctx context.Context, table migrator.Ta
 
 func (t *TestMigrationEngine) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
 	t.t.Logf("Adding constraint: %s for object %T", table.TableName(), table.Model())
-	t.Actions = append(t.Actions, Action{Type: migrator.ActionAddIndex, Table: table, Constraint: constraint})
+	t.Actions = append(t.Actions, Action{Type: migrator.ActionAddConstraint, Table: table, Constraint: constraint})
 	return nil
 }
 func (t *TestMigrationEngine) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
 	t.t.Logf("Dropping constraint: %s for object %T", table.TableName(), table.Model())
-	t.Actions = append(t.Actions, Action{Type: migrator.ActionDropIndex, Table: table, Constraint: constraint})
+	t.Actions = append(t.Actions, Action{Type: migrator.ActionDropConstraint, Table: table, Constraint: constraint})
 	return nil
 }
 

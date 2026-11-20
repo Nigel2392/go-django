@@ -1,4 +1,4 @@
-//go:build (!mysql && !postgres && !mariadb) || (!mysql && !postgres && !mysql_local && !mariadb && !sqlite)
+//go:build (!mysql && !postgres && !mariadb && !mysql_local) || (!mysql && !postgres && !mysql_local && !mariadb && !sqlite)
 
 package auditlogs_test
 

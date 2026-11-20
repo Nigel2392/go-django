@@ -66,7 +66,10 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		}
 	}
 
-	var user = authentication.UserFromContext(ctx).(users.User)
+	var user, _ = authentication.UserFromContext(ctx).(users.User)
+	if user != nil && !user.IsAuthenticated() {
+		user = nil
+	}
 	var baseEntry = models.Setup(ctx, &Entry{
 		Typ:  drivers.String(entryType),
 		Lvl:  level,

@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
@@ -140,7 +141,20 @@ func (m *MySQLSchemaEditor) CreateTable(ctx context.Context, table migrator.Tabl
 		w.WriteString("  ")
 		writeColumn(&w, *col, false)
 		if col.Rel != nil && col.Rel.Through == nil {
-			relCols = append(relCols, *col)
+			hasExplicitFK := false
+			for _, c := range table.Constraints() {
+				if c != nil && c.Type() == constraints.C_FOREIGN_KEY {
+					if fk, ok := c.(interface{ ForeignKeyField() string }); ok {
+						if name := fk.ForeignKeyField(); name != "" && (name == col.Name || name == col.Column) {
+							hasExplicitFK = true
+							break
+						}
+					}
+				}
+			}
+			if !hasExplicitFK {
+				relCols = append(relCols, *col)
+			}
 		}
 		written = true
 	}
@@ -301,11 +315,56 @@ func (m *MySQLSchemaEditor) AlterField(ctx context.Context, table migrator.Table
 }
 
 func (m *MySQLSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
-	return errors.NotImplemented.Wrap("AddConstraint is not implemented")
+	if constraint == nil {
+		return errors.NilPointer.Wrap("constraint is nil")
+	}
+	var sb builder.BaseBuilder
+	constraint.SQL(&sb)
+	if err := sb.GetError(); err != nil {
+		return err
+	}
+	if len(sb.Vars) > 0 {
+		return fmt.Errorf("constraint %q cannot use bound parameters in DDL", constraint.ID())
+	}
+	sqlStr := strings.TrimSpace(sb.String())
+	if sqlStr == "" {
+		return fmt.Errorf("constraint %q generated empty SQL", constraint.ID())
+	}
+	_, err := m.Execute(ctx, fmt.Sprintf("ALTER TABLE `%s` ADD %s;", table.TableName(), sqlStr))
+	return err
 }
 
 func (m *MySQLSchemaEditor) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
-	return errors.NotImplemented.Wrap("DropConstraint is not implemented")
+	if constraint == nil {
+		return errors.NilPointer.Wrap("constraint is nil")
+	}
+	switch constraint.Type() {
+	case constraints.C_PRIMARY_KEY:
+		_, err := m.Execute(ctx, fmt.Sprintf("ALTER TABLE `%s` DROP PRIMARY KEY;", table.TableName()))
+		return err
+	}
+	if constraint.ID() == "" {
+		return errors.ValueError.Wrap("constraint ID cannot be empty")
+	}
+	var stmt string
+	switch constraint.Type() {
+	case constraints.C_FOREIGN_KEY:
+		stmt = fmt.Sprintf("ALTER TABLE `%s` DROP FOREIGN KEY `%s`;", table.TableName(), constraint.ID())
+	case constraints.C_UNIQUE:
+		stmt = fmt.Sprintf("ALTER TABLE `%s` DROP INDEX `%s`;", table.TableName(), constraint.ID())
+	case constraints.C_CHECK:
+		if m.db != nil {
+			if _, isMariaDB := m.db.Driver().(*drivers.DriverMariaDB); isMariaDB {
+				stmt = fmt.Sprintf("ALTER TABLE `%s` DROP CONSTRAINT `%s`;", table.TableName(), constraint.ID())
+				break
+			}
+		}
+		stmt = fmt.Sprintf("ALTER TABLE `%s` DROP CHECK `%s`;", table.TableName(), constraint.ID())
+	default:
+		stmt = fmt.Sprintf("ALTER TABLE `%s` DROP CONSTRAINT `%s`;", table.TableName(), constraint.ID())
+	}
+	_, err := m.Execute(ctx, stmt)
+	return err
 }
 
 func WriteColumn(w *strings.Builder, col migrator.Column) {
@@ -313,12 +372,13 @@ func WriteColumn(w *strings.Builder, col migrator.Column) {
 }
 
 func writeColumn(w *strings.Builder, col migrator.Column, includeRel bool) {
+	fieldType := migrator.GetFieldType(
+		&mysql.MySQLDriver{}, &col,
+	)
 	w.WriteString("`")
 	w.WriteString(col.Column)
 	w.WriteString("` ")
-	w.WriteString(migrator.GetFieldType(
-		&mysql.MySQLDriver{}, &col,
-	))
+	w.WriteString(fieldType)
 
 	if !col.Nullable {
 		w.WriteString(" NOT NULL")
@@ -336,7 +396,7 @@ func writeColumn(w *strings.Builder, col migrator.Column, includeRel bool) {
 		w.WriteString(" UNIQUE")
 	}
 
-	if col.HasDefault() {
+	if col.HasDefault() && fieldType != "TEXT" && fieldType != "BLOB" && fieldType != "JSON" && fieldType != "GEOMETRY" {
 		if valuer, ok := col.Default.V.(driver.Valuer); ok {
 			// If the default value is a driver.Valuer, we need to call it to get the actual value.
 			val, err := valuer.Value()

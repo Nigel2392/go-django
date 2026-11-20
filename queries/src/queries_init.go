@@ -54,13 +54,13 @@ func init() {
 		}
 
 	updateObject:
-		ct, err := GetQuerySetWithContext(c, m).
+		_, err = GetQuerySetWithContext(c, m).
 			ExplicitSave().
 			Filter(
 				primaryField.Name(), primaryValue,
 			).
 			Update(m)
-		return ct > 0, err
+		return err == nil, err
 	}))
 
 	goldcrest.Register(models.MODEL_DELETE_HOOK, 0, models.ModelFunc(func(c context.Context, m attrs.Definer) (changed bool, err error) {

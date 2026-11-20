@@ -23,6 +23,12 @@ import (
 	_ "github.com/Nigel2392/go-django/queries/src/migrator/sql/sqlite"
 )
 
+func init() {
+	migrator.CompilerForModel = func(model attrs.Definer) resolver.ExpressionCompiler {
+		return Compiler(GetDatabaseName(model))
+	}
+}
+
 const (
 	// MetaUniqueTogetherKey is the key used to store the unique together
 	// fields in the model's metadata.

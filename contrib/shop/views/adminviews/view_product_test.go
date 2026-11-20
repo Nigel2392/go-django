@@ -35,6 +35,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/fields"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -245,6 +246,9 @@ func TestAdminProductViews(t *testing.T) {
 			&testAdminSupplierProduct{},
 		}
 		cfg.Init = func(settings django.Settings, db drivers.Database) error {
+			if ed, err := migrator.GetSchemaEditor(db.Driver()); err == nil {
+				_ = ed.DropTable(context.Background(), migrator.NewModelTable(&auditlogs.Entry{}), true)
+			}
 			tables := quest.Table(t,
 				&AdminProductTestUser{},
 				&auditlogs.Entry{},
@@ -257,6 +261,9 @@ func TestAdminProductViews(t *testing.T) {
 			)
 			tables.IfNotExists = true
 			tables.Create()
+			_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
+			_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
+			_, _ = queries.GetQuerySet(&products.Product{}).Delete()
 			return nil
 		}
 		return cfg
@@ -284,12 +291,12 @@ func TestAdminProductViews(t *testing.T) {
 			session.NewAppConfig,
 			messages.NewAppConfig,
 			admin.NewAppConfig,
+			setupApp,
 			reports.NewAppConfig,
 			auditlogs.NewAppConfig,
 			editor.NewAppConfig,
 			blocks.NewAppConfig,
 			revisions.NewAppConfig,
-			setupApp,
 			shop.NewAppConfig,
 		},
 		Auth: &djester.TesterAuth{
@@ -675,5 +682,10 @@ func TestAdminProductViews(t *testing.T) {
 		},
 	}
 
+	defer func() {
+		_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
+		_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
+		_, _ = queries.GetQuerySet(&products.Product{}).Delete()
+	}()
 	d.Test(t)
 }

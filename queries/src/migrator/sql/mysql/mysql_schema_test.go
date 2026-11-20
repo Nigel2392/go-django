@@ -4,17 +4,24 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
-	_ "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	derrors "github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/migrator/sql/mysql"
+	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/queries/src/resolver"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -481,5 +488,142 @@ func TestBug_MySQL_DropIndex_IfExistsChecksInformationSchema(t *testing.T) {
 		if strings.Contains(strings.ToUpper(rec.query), "DROP INDEX") {
 			t.Errorf("expected DROP INDEX to be skipped when index does not exist (rowCount=0), executed %q", rec.query)
 		}
+	}
+}
+
+type mysqlConstraintModel struct {
+	models.Model `table:"mysql_ddl_constrained"`
+	ID           int64
+	Age          int64
+	Email        string
+	Parent       *mysqlParentModel
+}
+
+func (m *mysqlConstraintModel) Constraints() []constraints.Constraint {
+	return []constraints.Constraint{
+		constraints.CheckConstraint("chk_my_age", "too young", expr.Q("Age__gte", expr.V(18, true))),
+		constraints.UniqueConstraint("uq_my_email", "dup email", "Email"),
+		constraints.ForeignKeyConstraint("fk_my_parent", "bad parent", "Parent", constraints.A_RESTRICT, constraints.A_CASCADE),
+	}
+}
+
+func (m *mysqlConstraintModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, Column: "id"}),
+		attrs.NewField(m, "Age", &attrs.Config{Column: "age"}),
+		attrs.NewField(m, "Email", &attrs.Config{Column: "email", MaxLength: 100}),
+		attrs.NewField(m, "Parent", &attrs.Config{
+			Column:        "parent_id",
+			ReverseAlias:  "MySQLConstrainedChildren",
+			RelForeignKey: attrs.Relate(&mysqlParentModel{}, "", nil),
+		}),
+	)
+}
+
+type mockPKConstraint struct {
+	constraints.Base
+}
+
+func (p *mockPKConstraint) Type() constraints.ConstraintType         { return constraints.C_PRIMARY_KEY }
+func (p *mockPKConstraint) Clone() expr.Expression                   { return p }
+func (p *mockPKConstraint) Resolve(*expr.ExpressionInfo) expr.Expression { return p }
+func (p *mockPKConstraint) SQL(builder.Builder)                      {}
+
+func TestMySQLSchemaEditor_Constraints_DDL(t *testing.T) {
+	ctx := context.Background()
+	attrs.RegisterModel(&mysqlParentModel{})
+	attrs.RegisterModel(&mysqlConstraintModel{})
+	tbl := migrator.NewModelTable(&mysqlConstraintModel{})
+
+	for _, drv := range []struct {
+		name      string
+		driver    driver.Driver
+		dropCheck string
+	}{
+		{"MySQL", &drivers.DriverMySQL{}, "ALTER TABLE `mysql_ddl_constrained` DROP CHECK `chk_my_age`;"},
+		{"MariaDB", &drivers.DriverMariaDB{}, "ALTER TABLE `mysql_ddl_constrained` DROP CONSTRAINT `chk_my_age`;"},
+	} {
+		t.Run(drv.name, func(t *testing.T) {
+			db := &mockMySQLDB{drv: drv.driver}
+			ed := mysql.NewMySQLSchemaEditor(db)
+
+			prevGlobal := django.Global
+			t.Cleanup(func() { django.Global = prevGlobal })
+			django.Global = nil
+			django.App(
+				django.Configure(map[string]any{django.APPVAR_DATABASE: db}),
+				django.Flag(django.FlagSkipCmds, django.FlagSkipDepsCheck, django.FlagSkipChecks),
+			)
+
+			if err := ed.CreateTable(ctx, tbl, false); err != nil {
+				t.Fatalf("CreateTable: %v", err)
+			}
+			if strings.Contains(db.lastQuery().query, "FOREIGN KEY") {
+				t.Errorf("expected MySQL CreateTable to skip unnamed FOREIGN KEY when explicit ForeignKeyConstraint exists, got:\n%s", db.lastQuery().query)
+			}
+
+			res := resolver.New(ctx, &mysqlConstraintModel{}, queries.Compiler(django.APPVAR_DATABASE))
+			cs := tbl.Constraints()
+
+			if err := ed.AddConstraint(ctx, tbl, res.ResolveExpression(cs[0]).(constraints.Constraint)); err != nil {
+				t.Fatalf("AddConstraint check: %v", err)
+			}
+			if want := "ALTER TABLE `mysql_ddl_constrained` ADD CONSTRAINT `chk_my_age` CHECK (`age` >= 18);"; db.lastQuery().query != want {
+				t.Errorf("AddConstraint(Check):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+			}
+
+			if err := ed.AddConstraint(ctx, tbl, res.ResolveExpression(cs[1]).(constraints.Constraint)); err != nil {
+				t.Fatalf("AddConstraint unique: %v", err)
+			}
+			if want := "ALTER TABLE `mysql_ddl_constrained` ADD CONSTRAINT `uq_my_email` UNIQUE (`email`);"; db.lastQuery().query != want {
+				t.Errorf("AddConstraint(Unique):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+			}
+
+			if err := ed.AddConstraint(ctx, tbl, res.ResolveExpression(cs[2]).(constraints.Constraint)); err != nil {
+				t.Fatalf("AddConstraint fk: %v", err)
+			}
+			if want := "ALTER TABLE `mysql_ddl_constrained` ADD CONSTRAINT `fk_my_parent` FOREIGN KEY (`parent_id`) REFERENCES `mysql_ddl_parent` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT;"; db.lastQuery().query != want {
+				t.Errorf("AddConstraint(FK):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+			}
+
+			// DropConstraint by type
+			if err := ed.DropConstraint(ctx, tbl, cs[0]); err != nil {
+				t.Fatalf("DropConstraint(Check): %v", err)
+			}
+			if db.lastQuery().query != drv.dropCheck {
+				t.Errorf("DropConstraint(Check):\n  got:  %s\n  want: %s", db.lastQuery().query, drv.dropCheck)
+			}
+
+			if err := ed.DropConstraint(ctx, tbl, cs[1]); err != nil {
+				t.Fatalf("DropConstraint(Unique): %v", err)
+			}
+			if want := "ALTER TABLE `mysql_ddl_constrained` DROP INDEX `uq_my_email`;"; db.lastQuery().query != want {
+				t.Errorf("DropConstraint(Unique):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+			}
+
+			if err := ed.DropConstraint(ctx, tbl, cs[2]); err != nil {
+				t.Fatalf("DropConstraint(FK): %v", err)
+			}
+			if want := "ALTER TABLE `mysql_ddl_constrained` DROP FOREIGN KEY `fk_my_parent`;"; db.lastQuery().query != want {
+				t.Errorf("DropConstraint(FK):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+			}
+
+			if err := ed.DropConstraint(ctx, tbl, &mockPKConstraint{}); err != nil {
+				t.Fatalf("DropConstraint(PK): %v", err)
+			}
+			if want := "ALTER TABLE `mysql_ddl_constrained` DROP PRIMARY KEY;"; db.lastQuery().query != want {
+				t.Errorf("DropConstraint(PK):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+			}
+
+			if err := ed.AddConstraint(ctx, tbl, nil); !errors.Is(err, derrors.NilPointer) {
+				t.Errorf("expected NilPointer for AddConstraint(nil), got %v", err)
+			}
+			if err := ed.DropConstraint(ctx, tbl, nil); !errors.Is(err, derrors.NilPointer) {
+				t.Errorf("expected NilPointer for DropConstraint(nil), got %v", err)
+			}
+			if err := ed.DropConstraint(ctx, tbl, constraints.CheckConstraint("", "", nil)); !errors.Is(err, derrors.ValueError) {
+				t.Errorf("expected ValueError for empty constraint ID, got %v", err)
+			}
+		})
 	}
 }

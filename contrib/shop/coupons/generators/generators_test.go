@@ -215,6 +215,9 @@ func clearGeneratorTables(t *testing.T) {
 		&coupons.Redemption{},
 		&coupons.CouponProductThrough{},
 		&coupons.Coupon{},
+		&carts.CartItem{},
+		&carts.Cart{},
+		&products.Product{},
 	}
 	for _, m := range modelsToClear {
 		if _, err := queries.GetQuerySet(m).Delete(); err != nil {

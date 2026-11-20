@@ -11,6 +11,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
@@ -107,7 +108,18 @@ func (m *PostgresSchemaEditor) CreateTable(ctx context.Context, table migrator.T
 		if written {
 			w.WriteString(", ")
 		}
-		m.WriteColumn(&w, *col)
+		includeRel := true
+		for _, c := range table.Constraints() {
+			if c != nil && c.Type() == constraints.C_FOREIGN_KEY {
+				if fk, ok := c.(interface{ ForeignKeyField() string }); ok {
+					if name := fk.ForeignKeyField(); name != "" && (name == col.Name || name == col.Column) {
+						includeRel = false
+						break
+					}
+				}
+			}
+		}
+		m.writeColumn(&w, *col, includeRel)
 		written = true
 	}
 
@@ -330,14 +342,41 @@ func (m *PostgresSchemaEditor) AlterField(ctx context.Context, table migrator.Ta
 }
 
 func (m *PostgresSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
-	return errors.NotImplemented.Wrap("AddConstraint is not implemented")
+	if constraint == nil {
+		return errors.NilPointer.Wrap("constraint is nil")
+	}
+	var sb builder.BaseBuilder
+	constraint.SQL(&sb)
+	if err := sb.GetError(); err != nil {
+		return err
+	}
+	if len(sb.Vars) > 0 {
+		return fmt.Errorf("constraint %q cannot use bound parameters in DDL", constraint.ID())
+	}
+	sqlStr := strings.TrimSpace(sb.String())
+	if sqlStr == "" {
+		return fmt.Errorf("constraint %q generated empty SQL", constraint.ID())
+	}
+	_, err := m.Execute(ctx, fmt.Sprintf(`ALTER TABLE "%s" ADD %s;`, table.TableName(), sqlStr))
+	return err
 }
 
 func (m *PostgresSchemaEditor) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
-	return errors.NotImplemented.Wrap("DropConstraint is not implemented")
+	if constraint == nil {
+		return errors.NilPointer.Wrap("constraint is nil")
+	}
+	if constraint.ID() == "" {
+		return errors.ValueError.Wrap("constraint ID cannot be empty")
+	}
+	_, err := m.Execute(ctx, fmt.Sprintf(`ALTER TABLE "%s" DROP CONSTRAINT IF EXISTS "%s";`, table.TableName(), constraint.ID()))
+	return err
 }
 
 func (m *PostgresSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column) {
+	m.writeColumn(w, col, true)
+}
+
+func (m *PostgresSchemaEditor) writeColumn(w *strings.Builder, col migrator.Column, includeRel bool) {
 	var colName = col.Column
 	if colName == "" && col.Field != nil {
 		colName = col.Field.ColumnName()
@@ -405,7 +444,7 @@ func (m *PostgresSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Colu
 	}
 
 checkRels:
-	if col.Rel != nil {
+	if includeRel && col.Rel != nil {
 		// handle foreign keys
 		var relField = col.Rel.Field()
 		if relField == nil {

@@ -206,6 +206,7 @@ func setupCartQueryTestEnv(t *testing.T) {
 
 	t.Cleanup(func() {
 		clearCartQueryTables(t)
+		_, _ = queries.GetQuerySet(&products.Product{}).Delete()
 		_ = db.Close()
 	})
 }

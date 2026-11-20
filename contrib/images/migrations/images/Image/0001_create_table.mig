@@ -1,6 +1,6 @@
 {
   "table": {
-    "table": "image",
+    "table": "images_image",
     "model": "github.com/Nigel2392/go-django/contrib/images.Image",
     "fields": [
       {

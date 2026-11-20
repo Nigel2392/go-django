@@ -8,8 +8,13 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
+	"github.com/Nigel2392/go-django/queries/src/resolver"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
+
+// CompilerForModel returns the ExpressionCompiler used to resolve constraints
+// for the given model during migrations. Registered by the queries package.
+var CompilerForModel func(model attrs.Definer) resolver.ExpressionCompiler
 
 const (
 	// Keys for attrs.Field
@@ -80,6 +85,7 @@ type Table interface {
 	Columns() []*Column
 	Comment() string
 	Indexes() []Index
+	Constraints() []constraints.Constraint
 }
 
 // Embed this struct in your model or fields to indicate that it cannot be migrated.

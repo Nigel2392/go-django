@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -197,6 +198,8 @@ func (e *values) SQL(sb builder.Builder) {
 		if _, ok := e.driver.(*drivers.DriverPostgres); ok {
 			var rVal = reflect.ValueOf(v)
 			switch rVal.Kind() {
+			case reflect.Invalid:
+				// nil literal requires no explicit type cast on Postgres
 			case reflect.String:
 				sb.WriteString("::TEXT")
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -214,8 +217,12 @@ func (e *values) SQL(sb builder.Builder) {
 					sb.WriteString("::TEXT[]")
 				}
 			default:
-				sb.AddError(fmt.Errorf("unsupported value type %T in expression", v))
-				return
+				switch v.(type) {
+				case time.Time, *time.Time:
+				default:
+					sb.AddError(fmt.Errorf("unsupported value type %T in expression", v))
+					return
+				}
 			}
 		}
 	}
@@ -308,6 +315,8 @@ func (e *value) SQL(sb builder.Builder) {
 	if _, ok := e.driver.(*drivers.DriverPostgres); ok {
 		var rVal = reflect.ValueOf(e.v)
 		switch rVal.Kind() {
+		case reflect.Invalid:
+			// nil literal requires no explicit type cast on Postgres
 		case reflect.String:
 			sb.WriteString("::TEXT")
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -323,8 +332,12 @@ func (e *value) SQL(sb builder.Builder) {
 				sb.WriteString("::TEXT[]")
 			}
 		default:
-			sb.AddError(fmt.Errorf("unsupported value type %T in expression", e.v))
-			return
+			switch e.v.(type) {
+			case time.Time, *time.Time:
+			default:
+				sb.AddError(fmt.Errorf("unsupported value type %T in expression", e.v))
+				return
+			}
 		}
 	}
 

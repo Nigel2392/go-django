@@ -155,6 +155,7 @@ func TestSaveUpdated(t *testing.T) {
 
 func TestExpiry(t *testing.T) {
 	m := session.NewQueryStoreWithCleanupInterval(db, 200*time.Millisecond)
+	defer m.StopCleanup()
 
 	var err = m.Commit("expired_token", []byte("encoded_data"), time.Now().Add(400*time.Millisecond))
 	if err != nil {

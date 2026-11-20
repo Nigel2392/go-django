@@ -11,12 +11,12 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/elliotchance/orderedmap/v2"
 	"github.com/mattn/go-sqlite3"
 )
 
@@ -193,7 +193,18 @@ func (m *SQLiteSchemaEditor) CreateTable(ctx context.Context, table migrator.Tab
 		}
 
 		w.WriteString("  ")
-		m.WriteColumn(&w, *col)
+		includeRel := true
+		for _, c := range table.Constraints() {
+			if c != nil && c.Type() == constraints.C_FOREIGN_KEY {
+				if fk, ok := c.(interface{ ForeignKeyField() string }); ok {
+					if name := fk.ForeignKeyField(); name != "" && (name == col.Name || name == col.Column) {
+						includeRel = false
+						break
+					}
+				}
+			}
+		}
+		m.writeColumn(&w, *col, includeRel)
 
 		written = true
 	}
@@ -307,11 +318,305 @@ func (m *SQLiteSchemaEditor) RenameIndex(ctx context.Context, table migrator.Tab
 }
 
 func (m *SQLiteSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
-	return errors.NotImplemented.Wrap("AddConstraint is not implemented")
+	if constraint == nil {
+		return errors.NilPointer.Wrap("constraint is nil")
+	}
+	var sb builder.BaseBuilder
+	constraint.SQL(&sb)
+	if err := sb.GetError(); err != nil {
+		return err
+	}
+	if len(sb.Vars) > 0 {
+		return fmt.Errorf("constraint %q cannot use bound parameters in DDL", constraint.ID())
+	}
+	constraintSQL := strings.TrimSpace(sb.String())
+	if constraintSQL == "" {
+		return fmt.Errorf("constraint %q generated empty SQL", constraint.ID())
+	}
+
+	items, suffix, err := m.readSQLiteTableItems(ctx, table.TableName())
+	if err != nil {
+		return err
+	}
+	if constraint.ID() != "" {
+		for _, item := range items {
+			if isC, name := parseSQLiteTableConstraint(item); isC && strings.EqualFold(name, constraint.ID()) {
+				return fmt.Errorf("constraint %q already exists on table %q", constraint.ID(), table.TableName())
+			}
+		}
+	}
+	items = append(items, constraintSQL)
+
+	cols, err := m.sqliteColumnNames(ctx, table.TableName())
+	if err != nil {
+		return err
+	}
+	return m.rebuildSQLiteTable(ctx, table.TableName(), items, suffix, cols, cols, "", "")
 }
 
 func (m *SQLiteSchemaEditor) DropConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
-	return errors.NotImplemented.Wrap("DropConstraint is not implemented")
+	if constraint == nil {
+		return errors.NilPointer.Wrap("constraint is nil")
+	}
+	if constraint.ID() == "" {
+		return errors.ValueError.Wrap("constraint ID cannot be empty")
+	}
+
+	items, suffix, err := m.readSQLiteTableItems(ctx, table.TableName())
+	if err != nil {
+		return err
+	}
+
+	filtered := make([]string, 0, len(items))
+	found := false
+	for _, item := range items {
+		if isC, name := parseSQLiteTableConstraint(item); isC && strings.EqualFold(name, constraint.ID()) {
+			found = true
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	if !found {
+		return fmt.Errorf("constraint %q not found on table %q", constraint.ID(), table.TableName())
+	}
+
+	cols, err := m.sqliteColumnNames(ctx, table.TableName())
+	if err != nil {
+		return err
+	}
+	return m.rebuildSQLiteTable(ctx, table.TableName(), filtered, suffix, cols, cols, "", "")
+}
+
+func (m *SQLiteSchemaEditor) readSQLiteTableItems(ctx context.Context, tableName string) (items []string, suffix string, err error) {
+	var createSQL string
+	if err := m.queryRow(ctx,
+		"SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?", tableName,
+	).Scan(&createSQL); err != nil {
+		return nil, "", fmt.Errorf("fetch create table SQL for %q: %w", tableName, err)
+	}
+
+	openIdx := strings.IndexByte(createSQL, '(')
+	if openIdx == -1 {
+		return nil, "", fmt.Errorf("invalid CREATE TABLE SQL for %q: missing '('", tableName)
+	}
+
+	var (
+		depth     = 0
+		itemStart = openIdx + 1
+		closeIdx  = -1
+		inQuote   byte
+	)
+	for i := openIdx; i < len(createSQL); i++ {
+		ch := createSQL[i]
+		if inQuote != 0 {
+			if inQuote == '[' {
+				if ch == ']' {
+					inQuote = 0
+				}
+				continue
+			}
+			if ch == inQuote {
+				if i+1 < len(createSQL) && createSQL[i+1] == inQuote {
+					i++
+					continue
+				}
+				inQuote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"', '`', '[':
+			inQuote = ch
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				if item := strings.TrimSpace(createSQL[itemStart:i]); item != "" {
+					items = append(items, item)
+				}
+				closeIdx = i
+				goto done
+			}
+		case ',':
+			if depth == 1 {
+				if item := strings.TrimSpace(createSQL[itemStart:i]); item != "" {
+					items = append(items, item)
+				}
+				itemStart = i + 1
+			}
+		}
+	}
+done:
+	if closeIdx == -1 {
+		return nil, "", fmt.Errorf("invalid CREATE TABLE SQL for %q: missing matching ')'", tableName)
+	}
+	return items, strings.TrimSpace(createSQL[closeIdx:]), nil
+}
+
+func parseSQLiteTableConstraint(item string) (isConstraint bool, name string) {
+	s := strings.TrimSpace(item)
+	upper := strings.ToUpper(s)
+	if strings.HasPrefix(upper, "CONSTRAINT") && len(s) > len("CONSTRAINT") && (s[10] == ' ' || s[10] == '\t' || s[10] == '\n' || s[10] == '\r') {
+		rest := strings.TrimSpace(s[len("CONSTRAINT"):])
+		if rest == "" {
+			return true, ""
+		}
+		switch rest[0] {
+		case '`', '"':
+			q := rest[0]
+			var out strings.Builder
+			for i := 1; i < len(rest); i++ {
+				if rest[i] == q {
+					if i+1 < len(rest) && rest[i+1] == q {
+						out.WriteByte(q)
+						i++
+						continue
+					}
+					return true, out.String()
+				}
+				out.WriteByte(rest[i])
+			}
+		case '[':
+			if end := strings.IndexByte(rest[1:], ']'); end != -1 {
+				return true, rest[1 : 1+end]
+			}
+		default:
+			end := strings.IndexAny(rest, " \t\n\r(")
+			if end == -1 {
+				return true, rest
+			}
+			return true, rest[:end]
+		}
+		return true, ""
+	}
+	for _, kw := range []string{"CHECK", "UNIQUE", "FOREIGN KEY", "PRIMARY KEY"} {
+		if strings.HasPrefix(upper, kw) && (len(s) == len(kw) || s[len(kw)] == ' ' || s[len(kw)] == '\t' || s[len(kw)] == '\n' || s[len(kw)] == '(') {
+			return true, ""
+		}
+	}
+	return false, ""
+}
+
+func (m *SQLiteSchemaEditor) sqliteColumnNames(ctx context.Context, tableName string) ([]string, error) {
+	rows, err := m.query(ctx, fmt.Sprintf("PRAGMA table_info(`%s`);", tableName))
+	if err != nil {
+		return nil, fmt.Errorf("fetch columns for %q: %w", tableName, err)
+	}
+	defer rows.Close()
+
+	var cols []string
+	for rows.Next() {
+		var (
+			cid     int
+			name    string
+			typ     string
+			notnull int
+			dflt    sql.NullString
+			pk      int
+		)
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+			return nil, fmt.Errorf("scan table_info for %q: %w", tableName, err)
+		}
+		cols = append(cols, fmt.Sprintf("`%s`", name))
+	}
+	if len(cols) == 0 {
+		return nil, fmt.Errorf("no columns found for table %q", tableName)
+	}
+	return cols, nil
+}
+
+func (m *SQLiteSchemaEditor) rebuildSQLiteTable(
+	ctx context.Context,
+	tableName string,
+	items []string,
+	suffix string,
+	dstCols []string,
+	srcCols []string,
+	renameOldCol string,
+	renameNewCol string,
+) error {
+	rows, err := m.query(ctx, `
+		SELECT type, name, sql FROM sqlite_schema
+		WHERE tbl_name = ? AND type IN ('index', 'trigger') AND sql IS NOT NULL;
+	`, tableName)
+	if err != nil {
+		return fmt.Errorf("fetch schema items: %w", err)
+	}
+
+	var schemaItems []struct {
+		Type string
+		Name string
+		SQL  string
+	}
+	for rows.Next() {
+		var typ, name, sqlStmt string
+		if err := rows.Scan(&typ, &name, &sqlStmt); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan schema item: %w", err)
+		}
+		schemaItems = append(schemaItems, struct {
+			Type string
+			Name string
+			SQL  string
+		}{typ, name, sqlStmt})
+	}
+	rows.Close()
+
+	tempTableName := tableName + "__tmp"
+	if _, err := m.Execute(ctx, fmt.Sprintf("DROP TABLE IF EXISTS `%s`;", tempTableName)); err != nil {
+		return fmt.Errorf("drop temp table: %w", err)
+	}
+
+	if suffix == "" {
+		suffix = ")"
+	}
+	if !strings.HasSuffix(suffix, ";") {
+		suffix += ";"
+	}
+	createTemp := fmt.Sprintf("CREATE TABLE `%s` (\n  %s\n%s\n", tempTableName, strings.Join(items, ",\n  "), suffix)
+	if _, err := m.Execute(ctx, createTemp); err != nil {
+		return fmt.Errorf("create temp table: %w", err)
+	}
+
+	copyStmt := fmt.Sprintf(
+		"INSERT INTO `%s` (%s) SELECT %s FROM `%s`;",
+		tempTableName,
+		strings.Join(dstCols, ", "),
+		strings.Join(srcCols, ", "),
+		tableName,
+	)
+	if _, err := m.Execute(ctx, copyStmt); err != nil {
+		return fmt.Errorf("copy data to temp table: %w", err)
+	}
+
+	if _, err := m.Execute(ctx, fmt.Sprintf("DROP TABLE `%s`;", tableName)); err != nil {
+		return fmt.Errorf("drop original table: %w", err)
+	}
+
+	var count int
+	if err := m.queryRow(ctx, `SELECT COUNT(*) FROM sqlite_schema WHERE name = ? AND type = 'table';`, tableName).Scan(&count); err != nil {
+		return fmt.Errorf("check original table: %w", err)
+	}
+	if count > 0 {
+		return fmt.Errorf("original table still exists")
+	}
+
+	if _, err := m.Execute(ctx, fmt.Sprintf("ALTER TABLE `%s` RENAME TO `%s`;", tempTableName, tableName)); err != nil {
+		return fmt.Errorf("rename temp table: %w", err)
+	}
+
+	for _, item := range schemaItems {
+		stmt := strings.ReplaceAll(item.SQL, tempTableName, tableName)
+		if renameOldCol != "" && renameOldCol != renameNewCol {
+			stmt = strings.ReplaceAll(stmt, "`"+renameOldCol+"`", "`"+renameNewCol+"`")
+		}
+		if _, err := m.Execute(ctx, stmt); err != nil {
+			return fmt.Errorf("recreate %s %q: %w", item.Type, item.Name, err)
+		}
+	}
+
+	return nil
 }
 
 //	func (m *SQLiteSchemaEditor) AlterUniqueTogether(table migrator.Table, unique bool) error {
@@ -405,21 +710,14 @@ func (m *SQLiteSchemaEditor) AlterField(
 	newCol migrator.Column,
 ) error {
 	var (
-		tableName     = table.TableName()
-		tempTableName = tableName + "__tmp"
-		columns       = table.Columns()
+		tableName = table.TableName()
+		columns   = table.Columns()
 	)
-
-	// Step 1: Prepare new table structure with updated column
-	var newTable = &migrator.ModelTable{
-		Table:  tempTableName,
-		Object: table.Model(),
-		Fields: orderedmap.NewOrderedMap[string, migrator.Column](),
-	}
 
 	var (
 		columnNamesDst []string
 		columnNamesSrc []string
+		items          []string
 	)
 
 	for _, c := range columns {
@@ -427,12 +725,14 @@ func (m *SQLiteSchemaEditor) AlterField(
 			continue
 		}
 
+		var colBuf strings.Builder
+		includeRel := true
+		targetCol := *c
 		if c.Name == oldCol.Name {
-			newTable.Fields.Set(newCol.Name, newCol)
+			targetCol = newCol
 			columnNamesDst = append(columnNamesDst, fmt.Sprintf("`%s`", newCol.Column))
 
 			if oldCol.Nullable && !newCol.Nullable {
-				// Apply default only if existing data is NULL
 				switch newCol.Field.Type().Kind() {
 				case reflect.String:
 					columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("COALESCE(`%s`, '') AS `%s`", oldCol.Column, oldCol.Column))
@@ -449,106 +749,47 @@ func (m *SQLiteSchemaEditor) AlterField(
 				columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("`%s`", oldCol.Column))
 			}
 		} else {
-			newTable.Fields.Set(c.Name, *c)
 			columnNamesDst = append(columnNamesDst, fmt.Sprintf("`%s`", c.Column))
 			columnNamesSrc = append(columnNamesSrc, fmt.Sprintf("`%s`", c.Column))
 		}
-	}
 
-	// Step 2: Fetch related schema (indexes, triggers)
-	var rows, err = m.query(ctx, `
-		SELECT type, name, sql FROM sqlite_schema
-		WHERE tbl_name = ? AND type IN ('index', 'trigger') AND sql IS NOT NULL;
-	`, tableName)
-	if err != nil {
-		return fmt.Errorf("fetch schema items: %w", err)
-	}
-	defer rows.Close()
-
-	_, err = m.Execute(ctx, fmt.Sprintf(
-		"DROP TABLE IF EXISTS `%s`;", tempTableName,
-	))
-	if err != nil {
-		return fmt.Errorf("drop temp table: %w", err)
-	}
-
-	var schemaItems []struct {
-		Type string
-		Name string
-		SQL  string
-	}
-
-	for rows.Next() {
-		var typ, name, sqlStmt string
-		if err := rows.Scan(&typ, &name, &sqlStmt); err != nil {
-			return fmt.Errorf("scan schema item: %w", err)
+		for _, tc := range table.Constraints() {
+			if tc != nil && tc.Type() == constraints.C_FOREIGN_KEY {
+				if fk, ok := tc.(interface{ ForeignKeyField() string }); ok {
+					if name := fk.ForeignKeyField(); name != "" && (name == targetCol.Name || name == targetCol.Column) {
+						includeRel = false
+						break
+					}
+				}
+			}
 		}
-		schemaItems = append(schemaItems, struct {
-			Type string
-			Name string
-			SQL  string
-		}{typ, name, sqlStmt})
+
+		m.writeColumn(&colBuf, targetCol, includeRel)
+		items = append(items, colBuf.String())
 	}
 
-	// Step 3: Create temp table
-	if err := m.CreateTable(ctx, newTable, false); err != nil {
-		return fmt.Errorf("create temp table: %w", err)
-	}
-
-	// Step 4: Copy data
-	var copyStmt = fmt.Sprintf(
-		"INSERT INTO `%s` (%s) SELECT %s FROM `%s`;",
-		tempTableName,
-		strings.Join(columnNamesDst, ", "),
-		strings.Join(columnNamesSrc, ", "),
-		tableName,
-	)
-	if _, err := m.Execute(ctx, copyStmt); err != nil {
-		return fmt.Errorf("copy data to temp table: %w", err)
-	}
-
-	// Step 5: Drop original table
-	if err := m.DropTable(ctx, table, false); err != nil {
-		return fmt.Errorf("drop original table: %w", err)
-	}
-
-	// Check if the original table was dropped
-	var count int
-	err = m.queryRow(ctx, `
-		SELECT COUNT(*) FROM sqlite_schema
-		WHERE name = ? AND type = 'table';
-	`, tableName).Scan(&count)
-	if err != nil {
-		return fmt.Errorf("check original table: %w", err)
-	}
-	if count > 0 {
-		return fmt.Errorf("original table still exists")
-	}
-
-	// Step 6: Rename temp table back
-	var renameStmt = fmt.Sprintf(
-		"ALTER TABLE `%s` RENAME TO `%s`;",
-		tempTableName, tableName,
-	)
-	if _, err := m.Execute(ctx, renameStmt); err != nil {
-		return fmt.Errorf("rename temp table: %w", err)
-	}
-
-	// Step 7: Recreate triggers and indexes
-	for _, item := range schemaItems {
-		sql := strings.ReplaceAll(item.SQL, tempTableName, tableName)
-		if oldCol.Column != newCol.Column {
-			sql = strings.ReplaceAll(sql, "`"+oldCol.Column+"`", "`"+newCol.Column+"`")
-		}
-		if _, err := m.Execute(ctx, sql); err != nil {
-			return fmt.Errorf("recreate %s %q: %w", item.Type, item.Name, err)
+	var suffix string
+	if origItems, origSuffix, err := m.readSQLiteTableItems(ctx, tableName); err == nil {
+		suffix = origSuffix
+		for _, item := range origItems {
+			if isC, _ := parseSQLiteTableConstraint(item); isC {
+				if oldCol.Column != newCol.Column {
+					item = strings.ReplaceAll(item, "`"+oldCol.Column+"`", "`"+newCol.Column+"`")
+					item = strings.ReplaceAll(item, `"`+oldCol.Column+`"`, `"`+newCol.Column+`"`)
+				}
+				items = append(items, item)
+			}
 		}
 	}
 
-	return nil
+	return m.rebuildSQLiteTable(ctx, tableName, items, suffix, columnNamesDst, columnNamesSrc, oldCol.Column, newCol.Column)
 }
 
 func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column) {
+	m.writeColumn(w, col, true)
+}
+
+func (m *SQLiteSchemaEditor) writeColumn(w *strings.Builder, col migrator.Column, includeRel bool) {
 
 	if col.Field == nil && col.DBType() == 0 {
 		panic(fmt.Errorf("field is nil for column %q %#v", col.Column, col))
@@ -627,7 +868,7 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 	}
 
 checkRels:
-	if col.Rel != nil {
+	if includeRel && col.Rel != nil {
 		var (
 			relDefs  = attrs.GetModelMeta(col.Rel.Model()).Definitions()
 			relField = col.Rel.Field()

@@ -151,8 +151,10 @@ func (rs *Resolver) Resolve(fieldName string, inf *expr.ExpressionInfo) (attrs.D
 	}
 
 	var col = &expr.TableColumn{
-		TableOrAlias: table,
-		FieldColumn:  chain.Final.Field,
+		FieldColumn: chain.Final.Field,
+	}
+	if inf == nil || !inf.ForUpdate || len(chain.Chain) > 0 {
+		col.TableOrAlias = table
 	}
 
 	return chain.Final.Model, chain.Final.Field, col, nil

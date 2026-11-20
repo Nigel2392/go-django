@@ -3,13 +3,17 @@ package constraints
 import (
 	"encoding/json/jsontext"
 	"encoding/json/v2"
+	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
 
-var _ deconstruct.Deconstructible = (*uniqueConstraint)(nil)
+var (
+	_ deconstruct.Deconstructible = (*uniqueConstraint)(nil)
+	_ Constraint                  = (*uniqueConstraint)(nil)
+)
 
 func init() {
 	deconstruct.Constructors.Register("queries.expr.constraints.Unique", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
@@ -35,6 +39,10 @@ type uniqueConstraint struct {
 	used   bool
 }
 
+func (e *uniqueConstraint) Type() ConstraintType {
+	return C_UNIQUE
+}
+
 func (e *uniqueConstraint) Deconstruct() (path string, args []any, kwargs map[string]any) {
 	var exprArgs = make([]any, len(e.Fields))
 	for i, field := range e.Fields {
@@ -43,23 +51,30 @@ func (e *uniqueConstraint) Deconstruct() (path string, args []any, kwargs map[st
 	return "queries.expr.constraints.Unique", exprArgs, map[string]any{"identifier": e.Identifier, "error": e.Error}
 }
 
-func UniqueConstraint(id string, errorMessage string, fields any) expr.Expression {
+func UniqueConstraint(id string, errorMessage string, fields ...any) Constraint {
 	return &uniqueConstraint{
-		Identifier: id,
-		Error:      errorMessage,
-		Fields:     expr.ExpressionFromInterface[expr.Expression](fields, false),
+		Base: Base{
+			Identifier: id,
+			Error:      errorMessage,
+		},
+		Fields: expr.ExpressionFromInterface[expr.Expression](fields, false),
 	}
 }
 
 func (e *uniqueConstraint) Clone() expr.Expression {
 	var clonedFields = make([]expr.Expression, 0, len(e.Fields))
 	for _, field := range e.Fields {
+		if field == nil {
+			clonedFields = append(clonedFields, nil)
+			continue
+		}
 		clonedFields = append(clonedFields, field.Clone())
 	}
 
 	return &uniqueConstraint{
 		Base:   e.Base,
 		Fields: clonedFields,
+		used:   e.used,
 	}
 }
 
@@ -70,13 +85,56 @@ func (e *uniqueConstraint) Resolve(inf *expr.ExpressionInfo) expr.Expression {
 
 	var nE = e.Clone().(*uniqueConstraint)
 	nE.used = true
+	if inf == nil {
+		return nE
+	}
+
+	cpy := *inf
+	cpy.ForUpdate = true
+	cpy.SupportsWhereAlias = false
+	cpy.SupportsAsExpr = false
+	nE.inf = &cpy
 
 	for i, field := range nE.Fields {
-		nE.Fields[i] = field.Resolve(inf)
+		if field != nil {
+			nE.Fields[i] = field.Resolve(nE.inf)
+		}
 	}
 
 	return nE
 }
 
 func (e *uniqueConstraint) SQL(sb builder.Builder) {
+	if !e.used || e.inf == nil {
+		sb.AddError(fmt.Errorf("unique constraint %q must be resolved before generating SQL", e.Identifier))
+		return
+	}
+	if len(e.Fields) == 0 {
+		sb.AddError(fmt.Errorf("unique constraint %q has no fields", e.Identifier))
+		return
+	}
+	for i, field := range e.Fields {
+		if field == nil {
+			sb.AddError(fmt.Errorf("unique constraint %q has nil field at index %d", e.Identifier, i))
+			return
+		}
+	}
+	if e.Identifier != "" && e.inf.QuoteIdentifier == nil {
+		sb.AddError(fmt.Errorf("unique constraint %q requires ExpressionInfo.QuoteIdentifier", e.Identifier))
+		return
+	}
+
+	if e.Identifier != "" {
+		sb.WriteString("CONSTRAINT ")
+		sb.WriteString(e.inf.QuoteIdentifier(e.Identifier))
+		sb.WriteString(" ")
+	}
+	sb.WriteString("UNIQUE (")
+	for i, field := range e.Fields {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		field.SQL(sb)
+	}
+	sb.WriteString(")")
 }

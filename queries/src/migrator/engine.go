@@ -14,6 +14,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
+	"github.com/Nigel2392/go-django/queries/src/resolver"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -347,16 +348,19 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 		var working *ModelTable
 		if n.mig.Prev != nil && n.mig.Prev.Table != nil {
 			working = &ModelTable{
-				Object: n.mig.Prev.Table.Object,
-				Table:  n.mig.Prev.Table.Table,
-				Desc:   n.mig.Prev.Table.Desc,
-				Fields: orderedmap.NewOrderedMap[string, Column](),
-				Index:  n.mig.Prev.Table.Index,
+				Object:     n.mig.Prev.Table.Object,
+				Table:      n.mig.Prev.Table.Table,
+				Desc:       n.mig.Prev.Table.Desc,
+				Fields:     orderedmap.NewOrderedMap[string, Column](),
+				Index:      slices.Clone(n.mig.Prev.Table.Index),
+				Constraint: slices.Clone(n.mig.Prev.Table.Constraint),
 			}
 			for head := n.mig.Prev.Table.Fields.Front(); head != nil; head = head.Next() {
 				working.Fields.Set(head.Key, head.Value)
 			}
 		}
+
+		var res *resolver.Resolver
 
 		for _, action := range n.mig.Actions {
 			var err error
@@ -406,8 +410,61 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 					working.Fields.Set(action.Field.New.Name, *action.Field.New)
 				}
 			case ActionAddConstraint:
+				if action.Constraint == nil || action.Constraint.New == nil {
+					return fmt.Errorf("failed to apply migration %q: add_constraint action has nil constraint", n.mig.FileName())
+				}
+				if res == nil {
+					if CompilerForModel == nil {
+						return fmt.Errorf("failed to apply migration %q: migrator.CompilerForModel is not registered", n.mig.FileName())
+					}
+					res = resolver.New(ctx, n.mig.Table.Object, CompilerForModel(n.mig.Table.Object))
+				}
+				var targetTable = n.mig.Table
+				if working != nil {
+					targetTable = working
+				}
+				var resolved constraints.Constraint
+				err = func() (rErr error) {
+					defer func() {
+						if r := recover(); r != nil {
+							rErr = fmt.Errorf("failed to resolve constraint %q: %v", action.Constraint.New.ID(), r)
+						}
+					}()
+					resolved = res.ResolveExpression(action.Constraint.New).(constraints.Constraint)
+					return nil
+				}()
+				if err == nil {
+					err = m.SchemaEditor.AddConstraint(ctx, targetTable, resolved)
+					if err == nil && working != nil {
+						working.Constraint = append(working.Constraint, resolved)
+					}
+				}
 
 			case ActionDropConstraint:
+				if action.Constraint == nil || action.Constraint.Old == nil {
+					return fmt.Errorf("failed to apply migration %q: drop_constraint action has nil constraint", n.mig.FileName())
+				}
+				if res == nil && CompilerForModel != nil {
+					res = resolver.New(ctx, n.mig.Table.Object, CompilerForModel(n.mig.Table.Object))
+				}
+				var targetTable = n.mig.Table
+				if working != nil {
+					targetTable = working
+				}
+				var toDrop = action.Constraint.Old
+				if res != nil {
+					func() {
+						defer func() { _ = recover() }()
+						toDrop = res.ResolveExpression(action.Constraint.Old).(constraints.Constraint)
+					}()
+				}
+				err = m.SchemaEditor.DropConstraint(ctx, targetTable, toDrop)
+				if err == nil && working != nil {
+					dropID := action.Constraint.Old.ID()
+					working.Constraint = slices.DeleteFunc(working.Constraint, func(c constraints.Constraint) bool {
+						return c != nil && c.ID() == dropID
+					})
+				}
 
 			case ActionRemoveField:
 				if !action.Field.Old.UseInDB {
@@ -970,6 +1027,35 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 		shouldMigrate = true
 	}
 
+	var (
+		oldConstraints   = lastAppliedTable.Constraints()
+		newConstraints   = table.Constraints()
+		oldConstraintMap = make(map[string]constraints.Constraint, len(oldConstraints))
+		newConstraintMap = make(map[string]constraints.Constraint, len(newConstraints))
+	)
+	for _, c := range oldConstraints {
+		if c != nil {
+			oldConstraintMap[c.ID()] = c
+		}
+	}
+	for _, c := range newConstraints {
+		if c != nil {
+			newConstraintMap[c.ID()] = c
+		}
+	}
+
+	for _, oldC := range oldConstraints {
+		if oldC == nil {
+			continue
+		}
+		var newC, exists = newConstraintMap[oldC.ID()]
+		if !exists || !constraintsEqual(oldC, newC) {
+			migration.addAction(ActionDropConstraint, nil, nil, nil, changed(oldC, constraints.Constraint(nil)))
+			m.Log(ActionDropConstraint, migration, unchanged(table), nil, nil, changed(oldC, constraints.Constraint(nil)))
+			shouldMigrate = true
+		}
+	}
+
 	var added, removed, diffs = table.Diff(lastAppliedTable)
 
 	for _, col := range added {
@@ -1041,6 +1127,18 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 		if !exists || !indexesEqual(oldIdx, newIdx) {
 			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &newIdx), nil)
 			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&newIdx), nil)
+			shouldMigrate = true
+		}
+	}
+
+	for _, newC := range newConstraints {
+		if newC == nil {
+			continue
+		}
+		var oldC, exists = oldConstraintMap[newC.ID()]
+		if !exists || !constraintsEqual(oldC, newC) {
+			migration.addAction(ActionAddConstraint, nil, nil, nil, changed(constraints.Constraint(nil), newC))
+			m.Log(ActionAddConstraint, migration, unchanged(table), nil, nil, unchanged(newC))
 			shouldMigrate = true
 		}
 	}
@@ -1173,6 +1271,22 @@ func indexesEqual(a, b Index) bool {
 	}
 
 	return true
+}
+
+func constraintsEqual(a, b constraints.Constraint) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	if a.ID() != b.ID() || a.Type() != b.Type() || a.ErrorMessage() != b.ErrorMessage() {
+		return false
+	}
+	opts := deconstruct.Constructors.JSONOptions()
+	ba, errA := json.Marshal(a, opts, json.Deterministic(true))
+	bb, errB := json.Marshal(b, opts, json.Deterministic(true))
+	if errA == nil && errB == nil {
+		return string(ba) == string(bb)
+	}
+	return reflect.DeepEqual(a, b)
 }
 
 // WriteMigration writes the migration file to the specified path.

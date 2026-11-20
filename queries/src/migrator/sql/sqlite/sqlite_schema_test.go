@@ -11,13 +11,17 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	derrors "github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/migrator/sql/sqlite"
+	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/queries/src/resolver"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -401,12 +405,12 @@ func TestSQLiteSchemaEditor_FullDDL(t *testing.T) {
 		t.Fatalf("DropTable ifExists=true: %v", err)
 	}
 
-	// 9. AddConstraint / DropConstraint return NotImplemented
-	if err := ed.AddConstraint(ctx, parentTbl, nil); !errors.Is(err, derrors.NotImplemented) {
-		t.Errorf("expected NotImplemented from AddConstraint, got %v", err)
+	// 9. AddConstraint / DropConstraint reject nil constraints cleanly
+	if err := ed.AddConstraint(ctx, parentTbl, nil); !errors.Is(err, derrors.NilPointer) {
+		t.Errorf("expected NilPointer from AddConstraint(nil), got %v", err)
 	}
-	if err := ed.DropConstraint(ctx, parentTbl, nil); !errors.Is(err, derrors.NotImplemented) {
-		t.Errorf("expected NotImplemented from DropConstraint, got %v", err)
+	if err := ed.DropConstraint(ctx, parentTbl, nil); !errors.Is(err, derrors.NilPointer) {
+		t.Errorf("expected NilPointer from DropConstraint(nil), got %v", err)
 	}
 }
 
@@ -531,5 +535,356 @@ func TestBug_SQLite_DefaultSingleQuoteEscaping(t *testing.T) {
 	}
 	if got != "it's ok" {
 		t.Errorf("expected \"it's ok\", got %q", got)
+	}
+}
+
+type sqliteConstraintParent struct {
+	models.Model `table:"ddl_c_parent"`
+	ID           int64
+	Label        string
+}
+
+func (m *sqliteConstraintParent) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, Column: "id"}),
+		attrs.NewField(m, "Label", &attrs.Config{Column: "label"}),
+	)
+}
+
+type sqliteConstraintChild struct {
+	models.Model `table:"ddl_c_child"`
+	ID           int64
+	Age          int64
+	Code         string
+	Slug         string
+	Note         string
+	Parent       *sqliteConstraintParent
+}
+
+func (m *sqliteConstraintChild) Constraints() []constraints.Constraint {
+	return []constraints.Constraint{
+		constraints.CheckConstraint("chk_age_min", "too young", expr.Q("Age__gte", expr.V(18, true))),
+		constraints.CheckConstraint("chk_note_comma", "reserved note", expr.Q("Note__not", expr.V("bad, (val)", true))),
+		constraints.UniqueConstraint("uq_code_slug", "duplicate pair", "Code", "Slug"),
+		constraints.ForeignKeyConstraint("fk_parent_id", "invalid parent", "Parent", constraints.A_CASCADE, constraints.A_CASCADE),
+	}
+}
+
+func (m *sqliteConstraintChild) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, Column: "id"}),
+		attrs.NewField(m, "Age", &attrs.Config{Column: "age"}),
+		attrs.NewField(m, "Code", &attrs.Config{Column: "code", MaxLength: 32}),
+		attrs.NewField(m, "Slug", &attrs.Config{Column: "slug", MaxLength: 32}),
+		attrs.NewField(m, "Note", &attrs.Config{Column: "note", Default: "ok"}),
+		attrs.NewField(m, "Parent", &attrs.Config{
+			Column:        "parent_id",
+			Null:          true,
+			RelForeignKey: attrs.Relate(&sqliteConstraintParent{}, "", nil),
+		}),
+	)
+}
+
+type sqliteConstraintRestrict struct {
+	models.Model `table:"ddl_c_restrict"`
+	ID           int64
+	Parent       *sqliteConstraintParent
+}
+
+func (m *sqliteConstraintRestrict) Constraints() []constraints.Constraint {
+	return []constraints.Constraint{
+		constraints.ForeignKeyConstraint("fk_res_parent", "", "Parent", constraints.A_RESTRICT, constraints.A_RESTRICT),
+	}
+}
+
+func (m *sqliteConstraintRestrict) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, Column: "id"}),
+		attrs.NewField(m, "Parent", &attrs.Config{
+			Column:        "parent_id",
+			ReverseAlias:  "RestrictChildren",
+			RelForeignKey: attrs.Relate(&sqliteConstraintParent{}, "", nil),
+		}),
+	)
+}
+
+type sqliteConstraintSetNull struct {
+	models.Model `table:"ddl_c_setnull"`
+	ID           int64
+	Parent       *sqliteConstraintParent
+}
+
+func (m *sqliteConstraintSetNull) Constraints() []constraints.Constraint {
+	return []constraints.Constraint{
+		constraints.ForeignKeyConstraint("fk_sn_parent", "", "Parent", constraints.A_CASCADE, constraints.A_SET_NULL),
+	}
+}
+
+func (m *sqliteConstraintSetNull) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, Column: "id"}),
+		attrs.NewField(m, "Parent", &attrs.Config{
+			Column:        "parent_id",
+			Null:          true,
+			ReverseAlias:  "SetNullChildren",
+			RelForeignKey: attrs.Relate(&sqliteConstraintParent{}, "", nil),
+		}),
+	)
+}
+
+func TestSQLiteSchemaEditor_Constraints_LiveEnforcement(t *testing.T) {
+	ctx := context.Background()
+	testDB, ed := openSQLiteSchemaTestDB(t)
+	if _, err := testDB.ExecContext(ctx, "PRAGMA foreign_keys = ON;"); err != nil {
+		t.Fatalf("enable foreign_keys: %v", err)
+	}
+
+	prevGlobal := django.Global
+	t.Cleanup(func() { django.Global = prevGlobal })
+	django.Global = nil
+	django.App(
+		django.Configure(map[string]any{django.APPVAR_DATABASE: testDB}),
+		django.Flag(django.FlagSkipCmds, django.FlagSkipDepsCheck, django.FlagSkipChecks),
+	)
+
+	attrs.RegisterModel(&sqliteConstraintParent{})
+	attrs.RegisterModel(&sqliteConstraintChild{})
+	attrs.RegisterModel(&sqliteConstraintRestrict{})
+	attrs.RegisterModel(&sqliteConstraintSetNull{})
+
+	parentTbl := migrator.NewModelTable(&sqliteConstraintParent{})
+	childTbl := migrator.NewModelTable(&sqliteConstraintChild{})
+	restrictTbl := migrator.NewModelTable(&sqliteConstraintRestrict{})
+	setNullTbl := migrator.NewModelTable(&sqliteConstraintSetNull{})
+
+	for _, tbl := range []*migrator.ModelTable{parentTbl, childTbl, restrictTbl, setNullTbl} {
+		if err := ed.CreateTable(ctx, tbl, false); err != nil {
+			t.Fatalf("CreateTable(%s): %v", tbl.TableName(), err)
+		}
+	}
+
+	comp := queries.Compiler(django.APPVAR_DATABASE)
+
+	// Verify CreateTable skipped unnamed inline REFERENCES on ddl_c_child.parent_id
+	var createSQLBefore string
+	if err := testDB.QueryRowContext(ctx, "SELECT sql FROM sqlite_schema WHERE type='table' AND name='ddl_c_child'").Scan(&createSQLBefore); err != nil {
+		t.Fatalf("fetch create sql: %v", err)
+	}
+	if strings.Contains(createSQLBefore, "REFERENCES") {
+		t.Errorf("expected CreateTable to skip inline REFERENCES when explicit ForeignKeyConstraint exists, got:\n%s", createSQLBefore)
+	}
+
+	childRes := resolver.New(ctx, &sqliteConstraintChild{}, comp)
+	for _, c := range childTbl.Constraints() {
+		resolved := childRes.ResolveExpression(c).(constraints.Constraint)
+		if err := ed.AddConstraint(ctx, childTbl, resolved); err != nil {
+			t.Fatalf("AddConstraint(%s): %v", c.ID(), err)
+		}
+	}
+
+	restrictRes := resolver.New(ctx, &sqliteConstraintRestrict{}, comp)
+	for _, c := range restrictTbl.Constraints() {
+		resolved := restrictRes.ResolveExpression(c).(constraints.Constraint)
+		if err := ed.AddConstraint(ctx, restrictTbl, resolved); err != nil {
+			t.Fatalf("AddConstraint(%s): %v", c.ID(), err)
+		}
+	}
+
+	setNullRes := resolver.New(ctx, &sqliteConstraintSetNull{}, comp)
+	for _, c := range setNullTbl.Constraints() {
+		resolved := setNullRes.ResolveExpression(c).(constraints.Constraint)
+		if err := ed.AddConstraint(ctx, setNullTbl, resolved); err != nil {
+			t.Fatalf("AddConstraint(%s): %v", c.ID(), err)
+		}
+	}
+
+	// Duplicate ID must error
+	dupChk := childRes.ResolveExpression(constraints.CheckConstraint("chk_age_min", "", expr.Q("Age__gte", expr.V(0, true)))).(constraints.Constraint)
+	if err := ed.AddConstraint(ctx, childTbl, dupChk); err == nil {
+		t.Errorf("expected duplicate constraint error for chk_age_min")
+	}
+
+	// Unresolved & bound-parameter checks must error
+	if err := ed.AddConstraint(ctx, childTbl, constraints.CheckConstraint("chk_unres", "", expr.Q("Age__gt", expr.V(0, true)))); err == nil {
+		t.Errorf("expected error for unresolved constraint")
+	}
+	boundChk := childRes.ResolveExpression(constraints.CheckConstraint("chk_bound", "", expr.Q("Age__gt", 0))).(constraints.Constraint)
+	if err := ed.AddConstraint(ctx, childTbl, boundChk); err == nil || !strings.Contains(err.Error(), "bound parameters") {
+		t.Errorf("expected bound parameters error, got %v", err)
+	}
+
+	// Live enforcement
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_parent (id, label) VALUES (1, 'p1'), (2, 'p2'), (3, 'p3')"); err != nil {
+		t.Fatalf("insert parents: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, age, code, slug, note, parent_id) VALUES (1, 17, 'C1', 's1', 'ok', 1)"); err == nil {
+		t.Errorf("expected CHECK chk_age_min to reject age=17")
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, age, code, slug, note, parent_id) VALUES (1, 20, 'C1', 's1', 'bad, (val)', 1)"); err == nil {
+		t.Errorf("expected CHECK chk_note_comma to reject note='bad, (val)'")
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, age, code, slug, note, parent_id) VALUES (1, 20, 'C1', 's1', 'ok', 999)"); err == nil {
+		t.Errorf("expected FK fk_parent_id to reject missing parent_id=999")
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, age, code, slug, note, parent_id) VALUES (1, 20, 'C1', 's1', 'ok', 1)"); err != nil {
+		t.Fatalf("valid insert failed: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, age, code, slug, note, parent_id) VALUES (2, 22, 'C1', 's1', 'ok', 1)"); err == nil {
+		t.Errorf("expected UNIQUE uq_code_slug to reject duplicate ('C1', 's1')")
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, age, code, slug, note, parent_id) VALUES (2, 22, 'C1', 's2', 'ok', 2)"); err != nil {
+		t.Fatalf("valid non-dup composite insert failed: %v", err)
+	}
+
+	// Verify FK RESTRICT and SET NULL and CASCADE behavior
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_restrict (id, parent_id) VALUES (1, 2)"); err != nil {
+		t.Fatalf("insert restrict row: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "DELETE FROM ddl_c_parent WHERE id = 2"); err == nil {
+		t.Errorf("expected RESTRICT FK to prevent deleting parent 2")
+	}
+	if _, err := testDB.ExecContext(ctx, "DELETE FROM ddl_c_restrict WHERE id = 1"); err != nil {
+		t.Fatalf("delete restrict row: %v", err)
+	}
+
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_setnull (id, parent_id) VALUES (1, 3)"); err != nil {
+		t.Fatalf("insert setnull row: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "DELETE FROM ddl_c_parent WHERE id = 3"); err != nil {
+		t.Fatalf("delete parent 3 with SET NULL: %v", err)
+	}
+	var nullParent sql.NullInt64
+	if err := testDB.QueryRowContext(ctx, "SELECT parent_id FROM ddl_c_setnull WHERE id = 1").Scan(&nullParent); err != nil || nullParent.Valid {
+		t.Errorf("expected parent_id to be NULL after SET NULL cascade, got %+v err=%v", nullParent, err)
+	}
+
+	// Delete parent 2 now -> CASCADE removes ddl_c_child id=2
+	if _, err := testDB.ExecContext(ctx, "DELETE FROM ddl_c_parent WHERE id = 2"); err != nil {
+		t.Fatalf("delete parent 2 with CASCADE: %v", err)
+	}
+	var remaining int
+	if err := testDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM ddl_c_child").Scan(&remaining); err != nil || remaining != 1 {
+		t.Errorf("expected 1 child row after CASCADE delete, got %d err=%v", remaining, err)
+	}
+
+	// Create an index and trigger on ddl_c_child, then AlterField renaming `age` -> `years`
+	if _, err := testDB.ExecContext(ctx, "CREATE INDEX `idx_child_code` ON `ddl_c_child` (`code`, `age`);"); err != nil {
+		t.Fatalf("create index: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "CREATE TABLE `ddl_c_audit` (`msg` TEXT);"); err != nil {
+		t.Fatalf("create audit table: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "CREATE TRIGGER `trg_child_audit` AFTER INSERT ON `ddl_c_child` BEGIN INSERT INTO `ddl_c_audit` (`msg`) VALUES ('inserted'); END;"); err != nil {
+		t.Fatalf("create trigger: %v", err)
+	}
+
+	var ageCol migrator.Column
+	for _, c := range childTbl.Columns() {
+		if c.Name == "Age" {
+			ageCol = *c
+		}
+	}
+	yearsCol := ageCol
+	yearsCol.Column = "years"
+
+	tx, err := ed.StartTransaction(ctx)
+	if err != nil {
+		t.Fatalf("StartTransaction: %v", err)
+	}
+	txCtx := migrator.ContextWithDb(ctx, tx)
+	if err := ed.AlterField(txCtx, childTbl, ageCol, yearsCol); err != nil {
+		_ = tx.Rollback(ctx)
+		t.Fatalf("AlterField rename with constraints: %v", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("Commit: %v", err)
+	}
+
+	// Verify FK pragmas were restored ON after migration transaction
+	var fkState int
+	if err := testDB.QueryRowContext(ctx, "PRAGMA foreign_keys;").Scan(&fkState); err != nil || fkState != 1 {
+		t.Errorf("expected PRAGMA foreign_keys = 1 restored, got %d err=%v", fkState, err)
+	}
+
+	// Verify index, trigger, and all 4 constraints survived AlterField and age -> years was rewritten
+	var schemaAfterAlter string
+	if err := testDB.QueryRowContext(ctx, "SELECT sql FROM sqlite_schema WHERE type='table' AND name='ddl_c_child'").Scan(&schemaAfterAlter); err != nil {
+		t.Fatalf("fetch alter sql: %v", err)
+	}
+	for _, want := range []string{"chk_age_min", "chk_note_comma", "uq_code_slug", "fk_parent_id", "`years` >="} {
+		if !strings.Contains(schemaAfterAlter, want) {
+			t.Errorf("expected %q preserved after AlterField, got:\n%s", want, schemaAfterAlter)
+		}
+	}
+
+	var trigCount, idxCount int
+	_ = testDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM sqlite_schema WHERE tbl_name='ddl_c_child' AND type='trigger' AND name='trg_child_audit'").Scan(&trigCount)
+	_ = testDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM sqlite_schema WHERE tbl_name='ddl_c_child' AND type='index' AND name='idx_child_code'").Scan(&idxCount)
+	if trigCount != 1 || idxCount != 1 {
+		t.Errorf("expected trigger=1 & index=1 preserved across AlterField, got trigger=%d index=%d", trigCount, idxCount)
+	}
+
+	// Rewritten CHECK still rejects years=15; valid insert fires trigger
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, years, code, slug, note, parent_id) VALUES (3, 15, 'C3', 's3', 'ok', 1)"); err == nil {
+		t.Errorf("expected rewritten CHECK on years to reject 15")
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, years, code, slug, note, parent_id) VALUES (3, 25, 'C3', 's3', 'ok', 1)"); err != nil {
+		t.Fatalf("insert valid row after rename failed: %v", err)
+	}
+	var auditRows int
+	if err := testDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM ddl_c_audit").Scan(&auditRows); err != nil || auditRows != 1 {
+		t.Errorf("expected preserved trigger to insert 1 audit row, got %d err=%v", auditRows, err)
+	}
+
+	// AddConstraint must fail when existing rows violate the new CHECK
+	violatingChk := constraints.CheckConstraint("chk_years_gt_50", "", expr.Raw("![Age] >= ?", expr.V(50, true)))
+	// Resolve via column years since field Age now maps to age; use raw SQL matching live column `years`
+	_ = violatingChk
+	liveCheck := constraints.CheckConstraint("chk_years_gt_50", "", expr.String("`years` >= 50")).Resolve(childRes.ExpressionInfo()).(constraints.Constraint)
+	if err := ed.AddConstraint(ctx, childTbl, liveCheck); err == nil {
+		t.Errorf("expected AddConstraint to fail when existing rows violate CHECK")
+	}
+
+	// DropConstraint error cases & valid drop
+	if err := ed.DropConstraint(ctx, childTbl, constraints.UniqueConstraint("", "", "Code")); !errors.Is(err, derrors.ValueError) {
+		t.Errorf("expected ValueError for empty constraint ID, got %v", err)
+	}
+	if err := ed.DropConstraint(ctx, childTbl, constraints.CheckConstraint("does_not_exist", "", nil)); err == nil {
+		t.Errorf("expected error dropping missing constraint")
+	}
+	if err := ed.DropConstraint(ctx, childTbl, constraints.CheckConstraint("chk_age_min", "", nil)); err != nil {
+		t.Fatalf("DropConstraint(chk_age_min): %v", err)
+	}
+	// Dropping chk_age_min allows years=10, while chk_note_comma and uq_code_slug remain enforced
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, years, code, slug, note, parent_id) VALUES (4, 10, 'C4', 's4', 'ok', 1)"); err != nil {
+		t.Fatalf("insert years=10 after dropping chk_age_min failed: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, years, code, slug, note, parent_id) VALUES (5, 10, 'C5', 's5', 'bad, (val)', 1)"); err == nil {
+		t.Errorf("expected remaining chk_note_comma to still enforce after dropping chk_age_min")
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO ddl_c_child (id, years, code, slug, note, parent_id) VALUES (5, 10, 'C4', 's4', 'ok', 1)"); err == nil {
+		t.Errorf("expected remaining uq_code_slug to still enforce after dropping chk_age_min")
+	}
+
+	// WITHOUT ROWID parser edge case
+	if _, err := testDB.ExecContext(ctx, "CREATE TABLE `ddl_c_wor` (`k` TEXT PRIMARY KEY, `v` INTEGER) WITHOUT ROWID;"); err != nil {
+		t.Fatalf("create WITHOUT ROWID table: %v", err)
+	}
+	worTbl := &migrator.ModelTable{Table: "ddl_c_wor"}
+	worCheck := constraints.CheckConstraint("chk_wor_v", "", expr.String("`v` > 0")).Resolve(childRes.ExpressionInfo()).(constraints.Constraint)
+	if err := ed.AddConstraint(ctx, worTbl, worCheck); err != nil {
+		t.Fatalf("AddConstraint on WITHOUT ROWID failed: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO `ddl_c_wor` (`k`, `v`) VALUES ('a', -1)"); err == nil {
+		t.Errorf("expected CHECK on WITHOUT ROWID table to fail for v=-1")
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO `ddl_c_wor` (`k`, `v`) VALUES ('a', 5)"); err != nil {
+		t.Fatalf("valid insert into WITHOUT ROWID failed: %v", err)
+	}
+	if err := ed.DropConstraint(ctx, worTbl, worCheck); err != nil {
+		t.Fatalf("DropConstraint on WITHOUT ROWID failed: %v", err)
+	}
+	if _, err := testDB.ExecContext(ctx, "INSERT INTO `ddl_c_wor` (`k`, `v`) VALUES ('b', -1)"); err != nil {
+		t.Fatalf("expected insert v=-1 after DropConstraint on WITHOUT ROWID to succeed, got %v", err)
 	}
 }

@@ -429,12 +429,12 @@ func TestAllContribModels_ShippedEmbeddedMigrationsApplyCleanly(t *testing.T) {
 			{
 				name:   "session",
 				models: []attrs.Definer{&session.Session{}},
-				fs:     os.DirFS("../session/migrations/session"),
+				fs:     os.DirFS("../../session/migrations/session"),
 			},
 			{
 				name:   "settings",
 				models: []attrs.Definer{&settings.RegisteredSetting{}},
-				fs:     os.DirFS("../settings/migrations/settings"),
+				fs:     os.DirFS("../../settings/migrations/settings"),
 			},
 			{
 				name: "auth",
@@ -446,32 +446,32 @@ func TestAllContribModels_ShippedEmbeddedMigrationsApplyCleanly(t *testing.T) {
 					&users.GroupPermission{},
 					&users.UserPermission{},
 				},
-				fs: os.DirFS("../auth/migrations/auth"),
+				fs: os.DirFS("../../auth/migrations/auth"),
 			},
 			{
 				name:   "documents",
 				models: []attrs.Definer{&documents.Document{}},
-				fs:     os.DirFS("../documents/migrations/documents"),
+				fs:     os.DirFS("../../documents/migrations/documents"),
 			},
 			{
 				name:   "images",
 				models: []attrs.Definer{&images.Image{}},
-				fs:     os.DirFS("../images/migrations/images"),
+				fs:     os.DirFS("../../images/migrations/images"),
 			},
 			{
 				name:   "pages",
 				models: []attrs.Definer{&pages.Site{}, &pages.PageNode{}},
-				fs:     os.DirFS("../pages/migrations/pages"),
+				fs:     os.DirFS("../../pages/migrations/pages"),
 			},
 			{
 				name:   "revisions",
 				models: []attrs.Definer{&revisions.Revision{}},
-				fs:     os.DirFS("../revisions/migrations/revisions"),
+				fs:     os.DirFS("../../revisions/migrations/revisions"),
 			},
 			{
 				name:   "auditlogs",
 				models: []attrs.Definer{&auditlogs.Entry{}},
-				fs:     os.DirFS("../reports/audit_logs/migrations/auditlogs"),
+				fs:     os.DirFS("../../reports/audit_logs/migrations/auditlogs"),
 			},
 		}
 
@@ -517,7 +517,7 @@ func TestAllContribModels_ShippedEmbeddedMigrationsApplyCleanly(t *testing.T) {
 					&users.GroupPermission{},
 					&users.UserPermission{},
 				},
-				fs: os.DirFS("../openauth2/migrations/openauth2"),
+				fs: os.DirFS("../../openauth2/migrations/openauth2"),
 			},
 		}
 

@@ -9,13 +9,19 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	derrors "github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/migrator/sql/postgres"
+	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/queries/src/resolver"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/pkg/errors"
 )
 
 type recordedPGSQL struct {
@@ -565,5 +571,108 @@ func TestBug_Postgres_DefaultSingleQuoteEscaping(t *testing.T) {
 	}
 	if !strings.Contains(db.lastQuery().query, "SET DEFAULT 'it''s'") {
 		t.Errorf("AlterField did not escape single quote in default: %q", db.lastQuery().query)
+	}
+}
+
+type pgConstraintModel struct {
+	models.Model `table:"pg_ddl_constrained"`
+	ID           int64
+	Age          int64
+	Email        string
+	Parent       *pgParentModel
+}
+
+func (m *pgConstraintModel) Constraints() []constraints.Constraint {
+	return []constraints.Constraint{
+		constraints.CheckConstraint("chk_pg_age", "too young", expr.Q("Age__gte", expr.V(18, true))),
+		constraints.UniqueConstraint("uq_pg_email", "dup email", "Email"),
+		constraints.ForeignKeyConstraint("fk_pg_parent", "bad parent", "Parent", constraints.A_CASCADE, constraints.A_SET_NULL),
+	}
+}
+
+func (m *pgConstraintModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, Column: "id"}),
+		attrs.NewField(m, "Age", &attrs.Config{Column: "age"}),
+		attrs.NewField(m, "Email", &attrs.Config{Column: "email"}),
+		attrs.NewField(m, "Parent", &attrs.Config{
+			Column:        "parent_id",
+			Null:          true,
+			ReverseAlias:  "PGConstrainedChildren",
+			RelForeignKey: attrs.Relate(&pgParentModel{}, "", nil),
+		}),
+	)
+}
+
+func TestPostgresSchemaEditor_Constraints_DDL(t *testing.T) {
+	ctx := context.Background()
+	db := &mockPostgresDB{}
+	ed := postgres.NewPostgresSchemaEditor(db)
+
+	prevGlobal := django.Global
+	t.Cleanup(func() { django.Global = prevGlobal })
+	django.Global = nil
+	django.App(
+		django.Configure(map[string]any{django.APPVAR_DATABASE: db}),
+		django.Flag(django.FlagSkipCmds, django.FlagSkipDepsCheck, django.FlagSkipChecks),
+	)
+
+	attrs.RegisterModel(&pgParentModel{})
+	attrs.RegisterModel(&pgConstraintModel{})
+	tbl := migrator.NewModelTable(&pgConstraintModel{})
+
+	if err := ed.CreateTable(ctx, tbl, false); err != nil {
+		t.Fatalf("CreateTable: %v", err)
+	}
+	createQ := db.lastQuery().query
+	if strings.Contains(createQ, "REFERENCES") {
+		t.Errorf("expected Postgres CreateTable to skip inline REFERENCES when ForeignKeyConstraint exists, got:\n%s", createQ)
+	}
+
+	res := resolver.New(ctx, &pgConstraintModel{}, queries.Compiler(django.APPVAR_DATABASE))
+	cs := tbl.Constraints()
+
+	if err := ed.AddConstraint(ctx, tbl, res.ResolveExpression(cs[0]).(constraints.Constraint)); err != nil {
+		t.Fatalf("AddConstraint check: %v", err)
+	}
+	if want := `ALTER TABLE "pg_ddl_constrained" ADD CONSTRAINT "chk_pg_age" CHECK ("age" >= 18);`; db.lastQuery().query != want {
+		t.Errorf("AddConstraint(Check):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+	}
+
+	if err := ed.AddConstraint(ctx, tbl, res.ResolveExpression(cs[1]).(constraints.Constraint)); err != nil {
+		t.Fatalf("AddConstraint unique: %v", err)
+	}
+	if want := `ALTER TABLE "pg_ddl_constrained" ADD CONSTRAINT "uq_pg_email" UNIQUE ("email");`; db.lastQuery().query != want {
+		t.Errorf("AddConstraint(Unique):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+	}
+
+	if err := ed.AddConstraint(ctx, tbl, res.ResolveExpression(cs[2]).(constraints.Constraint)); err != nil {
+		t.Fatalf("AddConstraint fk: %v", err)
+	}
+	if want := `ALTER TABLE "pg_ddl_constrained" ADD CONSTRAINT "fk_pg_parent" FOREIGN KEY ("parent_id") REFERENCES "pg_ddl_parent" ("id") ON DELETE SET NULL ON UPDATE CASCADE;`; db.lastQuery().query != want {
+		t.Errorf("AddConstraint(FK):\n  got:  %s\n  want: %s", db.lastQuery().query, want)
+	}
+
+	for _, c := range cs {
+		if err := ed.DropConstraint(ctx, tbl, c); err != nil {
+			t.Fatalf("DropConstraint(%s): %v", c.ID(), err)
+		}
+		want := fmt.Sprintf(`ALTER TABLE "pg_ddl_constrained" DROP CONSTRAINT IF EXISTS "%s";`, c.ID())
+		if db.lastQuery().query != want {
+			t.Errorf("DropConstraint(%s):\n  got:  %s\n  want: %s", c.ID(), db.lastQuery().query, want)
+		}
+	}
+
+	if err := ed.AddConstraint(ctx, tbl, nil); !errors.Is(err, derrors.NilPointer) {
+		t.Errorf("expected NilPointer for AddConstraint(nil), got %v", err)
+	}
+	if err := ed.DropConstraint(ctx, tbl, nil); !errors.Is(err, derrors.NilPointer) {
+		t.Errorf("expected NilPointer for DropConstraint(nil), got %v", err)
+	}
+	if err := ed.DropConstraint(ctx, tbl, constraints.CheckConstraint("", "", nil)); !errors.Is(err, derrors.ValueError) {
+		t.Errorf("expected ValueError for DropConstraint empty ID, got %v", err)
+	}
+	if err := ed.AddConstraint(ctx, tbl, cs[0]); err == nil {
+		t.Errorf("expected error adding unresolved constraint")
 	}
 }

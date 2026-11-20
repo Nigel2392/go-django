@@ -33,6 +33,7 @@ $flags = @{
     verbose = $true
     failslow = $false
     runTests = $true
+    resetDatabases = $true
 }
 
 # Check script arguments that were passed in
@@ -56,6 +57,10 @@ foreach ($arg in $args) {
                 docker volume rm "${dirname}_go-django_${db}_data" -f
             }
             exit 0
+        }
+        "noreset" {
+            $flags.resetDatabases = $false
+            continue
         }
         default {
             $testsToRun += $arg
@@ -92,6 +97,10 @@ if (-not $flags.runTests) {
     exit 0
 }
 
+$errors = @(
+
+)
+
 # Run tests for each database type
 foreach ($Database in $testsToRun) {
 
@@ -110,10 +119,30 @@ foreach ($Database in $testsToRun) {
     Write-Host "----------------------------------------"
     Invoke-Expression $cmd
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "----------------------------------------"
+        $errors += $Database
         Write-Host "Tests failed for $Database"
-        exit $LASTEXITCODE
+        Write-Host "----------------------------------------"
+        # exit $LASTEXITCODE
+    } else {
+        Write-Host "Tests passed for $Database"
+        Write-Host "----------------------------------------"
     }
-    Write-Host "Tests passed for $Database"
-    Write-Host "----------------------------------------"
+}
+
+foreach ($db in $errors) {
+    Write-Host "Tests failed for $db"
+}
+
+if ($errors.Count -ne 0) {
+    exit 1
+}
+
+if ($resetDatabases) {
+    # Check if the argument is a valid Docker database type
+    # if it is, reset the corresponding Docker volume and start the container
+    docker-compose -f "$DOCKER_COMPOSE_FILE" down
+    if ($DockerDatabases.ContainsKey($Database)) {
+        docker volume rm "${dirname}_go-django_${Database}_data"
+        $upString += " $Database"
+    }
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -29,7 +30,27 @@ type pgxConn interface {
 }
 
 func OpenPGX(ctx context.Context, drv *Driver, dsn string, opts ...OpenOption) (Database, error) {
-	var pool, err = pgxpool.New(ctx, dsn)
+	config, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, databaseError(drv, err)
+	}
+
+	prevAfterConnect := config.AfterConnect
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		if prevAfterConnect != nil {
+			if err := prevAfterConnect(ctx, conn); err != nil {
+				return err
+			}
+		}
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Codec: numericCodec{},
+			Name:  "numeric",
+			OID:   pgtype.NumericOID,
+		})
+		return nil
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, databaseError(drv, err)
 	}
@@ -43,6 +64,21 @@ func OpenPGX(ctx context.Context, drv *Driver, dsn string, opts ...OpenOption) (
 	var qW = queryWrapperPGX[*pgxpool.Pool]{conn: pool, d: drv}
 	var cW = connWrapperPGX[*pgxpool.Pool]{queryWrapperPGX: qW}
 	return &poolWrapperPGX{connWrapperPGX: cW}, nil
+}
+
+type numericCodec struct {
+	pgtype.NumericCodec
+}
+
+func (c numericCodec) DecodeValue(m *pgtype.Map, oid uint32, format int16, src []byte) (any, error) {
+	v, err := c.NumericCodec.DecodeValue(m, oid, format, src)
+	if err != nil {
+		return nil, err
+	}
+	if n, ok := v.(pgtype.Numeric); ok {
+		return n.Value()
+	}
+	return v, nil
 }
 
 func PGXOption(opt func(driverName string, db *pgxpool.Pool) error) OpenOption {

@@ -67,11 +67,14 @@ func (c CartAPI) getOrCreateCart(r *http.Request, preloads bool) (*carts.CartRow
 	u := authentication.UserFromContext(r.Context())
 	q := cartQuery(r.Context(), r, u, preloads)
 
-	cart, created, err := q.CalcOneOrCreate(&carts.Cart{
+	newCart := &carts.Cart{
 		Active:  true,
-		User:    u.(users.User),
 		Session: sessions.Retrieve(r).Token(),
-	})
+	}
+	if u != nil && u.IsAuthenticated() {
+		newCart.User = u.(users.User)
+	}
+	cart, created, err := q.CalcOneOrCreate(newCart)
 	if err != nil {
 		return nil, created, errors.Wrap(err, "getOrCreateCart")
 	}

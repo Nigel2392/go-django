@@ -1,6 +1,13 @@
 package constraints
 
-import "github.com/Nigel2392/go-django/queries/src/expr"
+import (
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
+	"github.com/Nigel2392/go-django/queries/src/expr"
+)
+
+func init() {
+	deconstruct.Constructors.RegisterDestructibleType[Constraint]()
+}
 
 type ConstraintType uint
 
@@ -11,6 +18,21 @@ const (
 	C_FOREIGN_KEY
 	C_CHECK
 )
+
+func (t ConstraintType) String() string {
+	switch t {
+	case C_PRIMARY_KEY:
+		return "PRIMARY KEY"
+	case C_UNIQUE:
+		return "UNIQUE"
+	case C_FOREIGN_KEY:
+		return "FOREIGN KEY"
+	case C_CHECK:
+		return "CHECK"
+	default:
+		return "INVALID"
+	}
+}
 
 // Action is the action to take when the target model is deleted or updated.
 type MutationAction int
@@ -56,4 +78,13 @@ type Constraint interface {
 type Base struct {
 	Identifier string
 	Error      string
+	inf        *expr.ExpressionInfo
+}
+
+func (b Base) ID() string {
+	return b.Identifier
+}
+
+func (b Base) ErrorMessage() string {
+	return b.Error
 }

@@ -300,11 +300,16 @@ func clearMergeTables(t *testing.T) {
 		&MergeTag{},
 		&MergeProduct{},
 		&MergeSupplier{},
-		&MergeCategory{},
-		&MergeAddress{},
-		&MergeCountry{},
 	}
 	for _, m := range modelsToClear {
+		if _, err := queries.GetQuerySet(m).Delete(); err != nil {
+			t.Fatalf("failed to clear %T: %v", m, err)
+		}
+	}
+	if _, err := queries.GetQuerySet(&MergeCategory{}).Filter("Parent__isnull", false).Delete(); err != nil {
+		t.Fatalf("failed to clear child *queries_test.MergeCategory: %v", err)
+	}
+	for _, m := range []attrs.Definer{&MergeCategory{}, &MergeAddress{}, &MergeCountry{}} {
 		if _, err := queries.GetQuerySet(m).Delete(); err != nil {
 			t.Fatalf("failed to clear %T: %v", m, err)
 		}
@@ -585,7 +590,7 @@ func TestPreloadQuerySetMerge(t *testing.T) {
 
 		p := getPreloadEntry(t, mainQS, "Items")
 		assertNoDuplicateSelectColumns(t, p.QuerySet)
-		sqlStr := p.QuerySet.QueryAll().SQL()
+		sqlStr := strings.ReplaceAll(p.QuerySet.QueryAll().SQL(), `"`, "`")
 		if strings.Count(sqlStr, "`quantity`") != 1 || strings.Count(sqlStr, "`note`") != 1 {
 			t.Fatalf("expected each root column once, got SQL: %s", sqlStr)
 		}
@@ -1404,7 +1409,7 @@ func TestPreloadQuerySetMerge(t *testing.T) {
 		if gbIdx := strings.Index(sqlStr, "GROUP BY "); gbIdx < 0 {
 			t.Fatalf("expected GROUP BY in SQL: %s", sqlStr)
 		} else {
-			gbPart := sqlStr[gbIdx:]
+			gbPart := strings.ReplaceAll(sqlStr[gbIdx:], `"`, "`")
 			if strings.Count(gbPart, "`title`") != 1 || strings.Count(gbPart, "`slug`") != 1 {
 				t.Fatalf("expected deduplicated GROUP BY columns, got: %s", gbPart)
 			}

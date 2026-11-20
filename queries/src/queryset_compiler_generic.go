@@ -1524,7 +1524,7 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 			}
 
 			// No need to return last insert ID if there is no primary key.
-			var _, err = g.queryInfo.DB.ExecContext(ctx, query, args...)
+			var _, err = g.DB().ExecContext(ctx, query, args...)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"failed to execute query: %w", err,

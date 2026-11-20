@@ -575,19 +575,41 @@ func TestDeconstructOuterRef(t *testing.T) {
 func TestDeconstructConstraints(t *testing.T) {
 	tests := []struct {
 		name       string
-		constraint expr.Expression
+		constraint constraints.Constraint
 	}{
 		{
 			name:       "ForeignKeyConstraint",
 			constraint: constraints.ForeignKeyConstraint("fk_user", "invalid user", "Name", constraints.A_CASCADE, constraints.A_SET_NULL),
 		},
 		{
-			name:       "CheckConstraint",
-			constraint: constraints.CheckConstraint("chk_age", "too young", "Age", constraints.A_RESTRICT, constraints.A_RESTRICT),
+			name:       "CheckConstraint_Simple",
+			constraint: constraints.CheckConstraint("chk_age", "too young", expr.Q("Age__gte", expr.V(18, true))),
+		},
+		{
+			name: "CheckConstraint_Complex",
+			constraint: constraints.CheckConstraint(
+				"chk_complex",
+				"invalid range",
+				expr.And[expr.Expression](
+					expr.Q("Age__gte", expr.V(18, true)),
+					expr.Or(
+						expr.Q("Score__gt", expr.V(0, true)),
+						expr.Q("Nickname__isnull", false),
+					),
+				),
+			),
+		},
+		{
+			name:       "CheckConstraint_Raw",
+			constraint: constraints.CheckConstraint("chk_len", "name too short", expr.Raw("LENGTH(![Name]) >= ?", expr.V(3, true))),
 		},
 		{
 			name:       "UniqueConstraint",
 			constraint: constraints.UniqueConstraint("uq_name_age", "duplicate", []string{"Name", "Age"}),
+		},
+		{
+			name:       "UniqueConstraint_SingleAndVariadic",
+			constraint: constraints.UniqueConstraint("uq_single", "dup", "FirstName", "LastName"),
 		},
 	}
 
@@ -601,12 +623,27 @@ func TestDeconstructConstraints(t *testing.T) {
 
 			rtExpr := roundTrip[expr.Expression](t, tc.constraint)
 			rtDecon := roundTrip[deconstruct.Deconstructible](t, tc.constraint)
+			rtConstraint := roundTrip[constraints.Constraint](t, tc.constraint)
+
+			if rtConstraint.ID() != tc.constraint.ID() {
+				t.Errorf("ID() = %q, want %q", rtConstraint.ID(), tc.constraint.ID())
+			}
+			if rtConstraint.Type() != tc.constraint.Type() {
+				t.Errorf("Type() = %v, want %v", rtConstraint.Type(), tc.constraint.Type())
+			}
+			if rtConstraint.ErrorMessage() != tc.constraint.ErrorMessage() {
+				t.Errorf("ErrorMessage() = %q, want %q", rtConstraint.ErrorMessage(), tc.constraint.ErrorMessage())
+			}
 
 			gotExprDecon, ok := rtExpr.(deconstruct.Deconstructible)
 			if !ok {
 				t.Fatalf("%T does not implement deconstruct.Deconstructible", rtExpr)
 			}
-			for _, rt := range []deconstruct.Deconstructible{gotExprDecon, rtDecon} {
+			gotConsDecon, ok := rtConstraint.(deconstruct.Deconstructible)
+			if !ok {
+				t.Fatalf("%T does not implement deconstruct.Deconstructible", rtConstraint)
+			}
+			for _, rt := range []deconstruct.Deconstructible{gotExprDecon, rtDecon, gotConsDecon} {
 				gotPath, gotArgs, gotKwargs := rt.Deconstruct()
 				if gotPath != wantPath {
 					t.Errorf("path = %q, want %q", gotPath, wantPath)
@@ -628,6 +665,14 @@ func TestDeconstructConstraints(t *testing.T) {
 				if string(b1) != string(b2) {
 					t.Errorf("re-marshaled JSON mismatch:\nwant: %s\ngot:  %s", string(b1), string(b2))
 				}
+			}
+
+			// Verify Clone() produces an equivalent independent constraint
+			cloned := tc.constraint.Clone().(constraints.Constraint)
+			bOrig, _ := json.Marshal(tc.constraint, deconstruct.Constructors.JSONOptions(), json.Deterministic(true))
+			bClone, _ := json.Marshal(cloned, deconstruct.Constructors.JSONOptions(), json.Deterministic(true))
+			if string(bOrig) != string(bClone) {
+				t.Errorf("Clone() JSON mismatch:\nwant: %s\ngot:  %s", string(bOrig), string(bClone))
 			}
 		})
 	}

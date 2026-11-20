@@ -1,6 +1,6 @@
 {
   "table": {
-    "table": "document",
+    "table": "documents_document",
     "model": "github.com/Nigel2392/go-django/contrib/documents.Document",
     "fields": [
       {
