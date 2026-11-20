@@ -462,6 +462,7 @@ func NewAppConfig() (django.AppConfig, error) {
 								),
 							),
 							admin.PanelTab(
+								// Constraints for the coupon
 								trans.S("Constraints"),
 								admin.FieldPanel("UsageCount"),
 								admin.FieldPanel("UsageLimit"),
