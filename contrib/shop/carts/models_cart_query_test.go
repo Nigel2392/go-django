@@ -341,7 +341,7 @@ func seedCoupon(t *testing.T, code, title string, isPct bool, maxDiscount string
 	now := time.Now()
 	c, err := queries.GetQuerySet(&coupons.Coupon{}).Create(&coupons.Coupon{
 		Title:        title,
-		Code:         code,
+		Code:         coupons.CouponCode(code),
 		IsPercentage: isPct,
 		MaxDiscount:  d(maxDiscount),
 		ValidFrom:    now.Add(-time.Hour),

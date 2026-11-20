@@ -131,7 +131,7 @@ module.exports = [
         entry: './contrib/shop/assets/static_src/index.ts',
         output: {
             'path': path.resolve(__dirname, 'contrib/shop/assets/static/shop/admin/js/'),
-            'filename': 'supplier-block.js'
+            'filename': 'coupon-generator.js'
         },
         ...baseConfig(),
     },

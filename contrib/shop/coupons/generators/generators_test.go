@@ -233,7 +233,7 @@ func seedCouponWithContext(t *testing.T, ctx context.Context, code string) *coup
 	now := time.Now()
 	c, err := queries.GetQuerySetWithContext(ctx, &coupons.Coupon{}).Create(&coupons.Coupon{
 		Title:          "Test Coupon",
-		Code:           code,
+		Code:           coupons.CouponCode(code),
 		IsPercentage:   false,
 		MaxDiscount:    decimal.RequireFromString("10.00"),
 		MinOrderAmount: decimal.Zero,

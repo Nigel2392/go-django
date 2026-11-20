@@ -113,7 +113,8 @@ func (m *ffTestReflectlessSource) FieldDefs(ctx context.Context) attrs.Definitio
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*ffTestReflectlessSource, uint64] {
 			return fattrs.PtrFieldConfig[*ffTestReflectlessSource, uint64]{
-				Config: attrs.Config{Primary: true, ReadOnly: true},
+				Primary:  true,
+				ReadOnly: true,
 			}
 		}),
 		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*ffTestReflectlessSource, string] {
@@ -121,17 +122,15 @@ func (m *ffTestReflectlessSource) FieldDefs(ctx context.Context) attrs.Definitio
 		}),
 		fattrs.NewField(m, "Products", func() fattrs.FieldConfig[*ffTestReflectlessSource] {
 			return fattrs.FieldConfig[*ffTestReflectlessSource]{
-				Config: attrs.Config{
-					RelManyToMany: attrs.Relate(
-						&ffTestTarget{},
-						"",
-						&attrs.ThroughModel{
-							This:   &ffTestReflectlessThrough{},
-							Source: "Source",
-							Target: "Target",
-						},
-					),
-				},
+				RelManyToMany: attrs.Relate(
+					&ffTestTarget{},
+					"",
+					&attrs.ThroughModel{
+						This:   &ffTestReflectlessThrough{},
+						Source: "Source",
+						Target: "Target",
+					},
+				),
 				GetValue: func(obj *ffTestReflectlessSource) interface{} { return obj.Products },
 				SetValue: func(obj *ffTestReflectlessSource, value any) error {
 					obj.Products = value

@@ -1,4 +1,3 @@
-import { SupplierBlock } from "./supplier-block";
+import { CouponGeneratorController } from "./widgets/CouponGenerator";
 
-window.telepath.register('django.blocks.SupplierBlock', SupplierBlock);
-window.blocks.registerBlock('django.blocks.supplier-block', SupplierBlock);
+window.Stimulus.register('coupon-generator', CouponGeneratorController);

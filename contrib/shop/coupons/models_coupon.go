@@ -17,11 +17,13 @@ var (
 	MAX_CODE_LENGTH int64 = 32
 )
 
+type CouponCode string
+
 type Coupon struct {
 	ID               uint64
 	Title            string
 	ShortDescription string
-	Code             string
+	Code             CouponCode
 
 	// price related
 	IsPercentage   bool
@@ -69,8 +71,8 @@ func (c *Coupon) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(c, "Code", &c.Code, func() fattrs.PtrFieldConfig[*Coupon, string] {
-			return fattrs.PtrFieldConfig[*Coupon, string]{
+		fattrs.Field(c, "Code", &c.Code, func() fattrs.PtrFieldConfig[*Coupon, CouponCode] {
+			return fattrs.PtrFieldConfig[*Coupon, CouponCode]{
 				Config: attrs.Config{
 					MinLength: MIN_CODE_LENGTH,
 					MaxLength: MAX_CODE_LENGTH,

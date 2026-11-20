@@ -30,7 +30,28 @@ const (
 	ErrInvalidPartType    errs.Error = "invalid code part type"
 	ErrCouponCodeTooShort errs.Error = "coupon code is too short"
 	ErrCouponCodeTooLong  errs.Error = "coupon code is too long"
+	ErrCouponExists       errs.Error = "coupon already exists"
 )
+
+var partStrings = map[CodePartType]string{
+	CPT_RANDOM:  "CPT_RANDOM",
+	CPT_STATIC:  "CPT_STATIC",
+	CPT_YEAR:    "CPT_YEAR",
+	CPT_MONTH:   "CPT_MONTH",
+	CPT_WEEKDAY: "CPT_WEEKDAY",
+	CPT_DAY:     "CPT_DAY",
+	CPT_HOUR:    "CPT_HOUR",
+	CPT_MINUTE:  "CPT_MINUTE",
+	CPT_UUID:    "CPT_UUID",
+}
+
+func (c CodePartType) String() string {
+	s, ok := partStrings[c]
+	if !ok {
+		return "CPT_UNKNOWN"
+	}
+	return s
+}
 
 type CodePart struct {
 	// type of the code part
@@ -58,17 +79,19 @@ func randStringBytes(n int) string {
 	return string(b)
 }
 
-func generateCouponCode(parts []CodePart) (string, error) {
+func generateCouponCode(parts []CodePart) (string, bool, error) {
 	var (
 		sb strings.Builder
 		t  = time.Now()
 	)
 
+	var isStatic bool = true
 	for _, part := range parts {
 		var val string
 		switch part.Type {
 		case CPT_RANDOM:
 			sb.WriteString(randStringBytes(part.Length))
+			isStatic = false
 			continue
 		case CPT_STATIC:
 			sb.WriteString(part.Value)
@@ -91,10 +114,11 @@ func generateCouponCode(parts []CodePart) (string, error) {
 			sb.WriteString(strconv.Itoa(t.Minute()))
 			continue
 		case CPT_UUID:
+			isStatic = false
 			u := uuid.New()
 			val = strings.Replace(u.String(), "-", "", -1)
 		default:
-			return "", ErrInvalidPartType
+			return "", false, ErrInvalidPartType
 		}
 
 		if part.Length > 0 && part.Length < len(val) {
@@ -105,20 +129,21 @@ func generateCouponCode(parts []CodePart) (string, error) {
 	}
 
 	if sb.Len() < int(coupons.MIN_CODE_LENGTH) {
-		return "", ErrCouponCodeTooLong
+		return "", false, ErrCouponCodeTooLong
 	}
 
 	if sb.Len() > int(coupons.MAX_CODE_LENGTH) {
-		return "", ErrCouponCodeTooLong
+		return "", false, ErrCouponCodeTooLong
 	}
 
-	return sb.String(), nil
+	return sb.String(), isStatic, nil
 }
 
 func GenerateCouponCode(ctx context.Context, parts []CodePart) (code string, err error) {
 	var qs = queries.GetQuerySetWithContext(ctx, &coupons.Coupon{})
+	var isStatic bool
 	for {
-		code, err = generateCouponCode(parts)
+		code, isStatic, err = generateCouponCode(parts)
 		if err != nil {
 			return "", errors.Wrap(err, "GenerateCouponCode")
 		}
@@ -132,6 +157,10 @@ func GenerateCouponCode(ctx context.Context, parts []CodePart) (code string, err
 
 		if !exists {
 			return code, nil
+		}
+
+		if isStatic {
+			return "", errors.Wrap(err, "GenerateCouponCode")
 		}
 	}
 }
