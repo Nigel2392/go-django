@@ -1,10 +1,31 @@
 package expr
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.Raw", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("expected 1 arg for Raw, got %d", len(args))
+		}
+		var r = &RawNamedExpression{
+			Field: kwargs.Get[string]("field"),
+			not:   kwargs.Get[bool]("not"),
+		}
+		if err := json.Unmarshal(args[0], &r.Statement, opts...); err != nil {
+			return nil, err
+		}
+		return r, nil
+	})
+}
+
+var _ deconstruct.Deconstructible = (*RawNamedExpression)(nil)
 
 // RawExpr is a function expression for SQL queries.
 // It is used to represent a function call in SQL queries.
@@ -33,6 +54,24 @@ type RawNamedExpression struct {
 	Field     string
 	not       bool
 	used      bool
+}
+
+func (e *RawNamedExpression) Deconstruct() (string, []any, map[string]any) {
+	var stmtArg any
+	if e.Statement != nil {
+		stmtArg = e.Statement
+	}
+	var kwargs map[string]any
+	if e.Field != "" || e.not {
+		kwargs = make(map[string]any, 2)
+		if e.Field != "" {
+			kwargs["field"] = e.Field
+		}
+		if e.not {
+			kwargs["not"] = true
+		}
+	}
+	return "queries.expr.Raw", []any{stmtArg}, kwargs
 }
 
 // F creates a new RawNamedExpression or chainExpr with the given statement and values.

@@ -1,6 +1,8 @@
 package expr
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"maps"
 	"regexp"
@@ -9,10 +11,71 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+)
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.Statement", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("expected at least 1 arg for Statement, got 0")
+		}
+		var stmt string
+		if err := json.Unmarshal(args[0], &stmt, opts...); err != nil {
+			return nil, err
+		}
+		var vals []any
+		if len(args) > 1 {
+			vals = make([]any, len(args)-1)
+			for i, arg := range args[1:] {
+				v, err := unmarshalAnyArg(arg, opts...)
+				if err != nil {
+					return nil, err
+				}
+				vals[i] = v
+			}
+		}
+		return ParseExprStatement(stmt, vals), nil
+	})
+	deconstruct.Constructors.Register("queries.expr.ParserArg", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("expected 2 args for ParserArg, got %d", len(args))
+		}
+		var which string
+		if err := json.Unmarshal(args[0], &which, opts...); err != nil {
+			return nil, err
+		}
+		data, err := unmarshalAnyArg(args[1], opts...)
+		if err != nil {
+			return nil, err
+		}
+		return parserArg{
+			which: which,
+			data:  data,
+		}, nil
+	})
+	deconstruct.Constructors.Register("queries.expr.ExpressionData", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("expected 2 args for ExpressionData, got %d", len(args))
+		}
+		var d expressionData
+		if err := json.Unmarshal(args[0], &d._list, opts...); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(args[1], &d._map, opts...); err != nil {
+			return nil, err
+		}
+		return &d, nil
+	})
+}
+
+var (
+	_ deconstruct.Deconstructible = (*ExpressionStatement)(nil)
+	_ deconstruct.Deconstructible = parserArg{}
+	_ deconstruct.Deconstructible = (*expressionData)(nil)
 )
 
 const SELF_TABLE = "SELF" // the name of the self table, used in expressions
@@ -335,6 +398,21 @@ type expressionData struct {
 	_list []Expression
 }
 
+func (d *expressionData) Deconstruct() (string, []any, map[string]any) {
+	var list = make([]any, len(d._list))
+	for i, e := range d._list {
+		list[i] = e
+	}
+	var m map[string]any
+	if d._map != nil {
+		m = make(map[string]any, len(d._map))
+		for k, v := range d._map {
+			m[k] = v
+		}
+	}
+	return "queries.expr.ExpressionData", []any{list, m}, nil
+}
+
 type expressionParser struct {
 	statementParser
 }
@@ -467,6 +545,10 @@ type statementInfoNode struct {
 type parserArg struct {
 	which string // the type of the node
 	data  any
+}
+
+func (p parserArg) Deconstruct() (string, []any, map[string]any) {
+	return "queries.expr.ParserArg", []any{p.which, p.data}, nil
 }
 
 // StatementParserArg creates a parserArg for the given type and data.
@@ -621,6 +703,13 @@ type ExpressionStatement struct {
 	info      expressionStatementInfo
 	Statement string
 	Values    []any
+}
+
+func (s *ExpressionStatement) Deconstruct() (string, []any, map[string]any) {
+	var args = make([]any, 1+len(s.Values))
+	args[0] = s.Statement
+	copy(args[1:], s.Values)
+	return "queries.expr.Statement", args, nil
 }
 
 func (s *ExpressionStatement) Raw(which string) []string {

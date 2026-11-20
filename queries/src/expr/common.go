@@ -15,27 +15,63 @@ import (
 
 func init() {
 	deconstruct.Constructors.Register("queries.expr.String", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
-		return deconstruct.UnmarshalDefault[string](args[0])
+		if len(args) != 1 {
+			return nil, fmt.Errorf("expected 1 arg for String, got %d", len(args))
+		}
+		var s string
+		if err := json.Unmarshal(args[0], &s, opts...); err != nil {
+			return nil, err
+		}
+		return String(s), nil
 	})
 	deconstruct.Constructors.Register("queries.expr.Field", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("expected 1 arg for Field, got %d", len(args))
+		}
 		var f field
-		var err = json.Unmarshal(args[0], &f.field, opts...)
-		return &f, err
+		if err := json.Unmarshal(args[0], &f.fieldName, opts...); err != nil {
+			return nil, err
+		}
+		return &f, nil
 	})
 	deconstruct.Constructors.Register("queries.expr.Values", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
 		var vals = make([]any, len(args))
 		for i, arg := range args {
-			err := json.Unmarshal(arg, &vals[i], opts...)
+			v, err := unmarshalAnyArg(arg, opts...)
 			if err != nil {
 				return nil, err
 			}
+			vals[i] = v
 		}
 		return &values{values: vals}, nil
 	})
 	deconstruct.Constructors.Register("queries.expr.Value", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
-		return &value{v: kwargs.Get[any]("value"), unsafe: kwargs.Get[bool]("unsafe")}, nil
+		if len(args) > 1 {
+			return nil, fmt.Errorf("expected at most 1 arg for Value, got %d", len(args))
+		}
+		var val any
+		if len(args) == 1 {
+			var err error
+			val, err = unmarshalAnyArg(args[0], opts...)
+			if err != nil {
+				return nil, err
+			}
+		} else if rawVal, ok := kwargs["value"]; ok && rawVal != nil {
+			b, err := json.Marshal(rawVal, opts...)
+			if err != nil {
+				return nil, err
+			}
+			val, err = unmarshalAnyArg(b, opts...)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &value{v: val, unsafe: kwargs.Get[bool]("unsafe")}, nil
 	})
 	deconstruct.Constructors.Register("queries.expr.As", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("expected 2 args for As, got %d", len(args))
+		}
 		var f namedExpression
 		if err := json.Unmarshal(args[0], &f.fieldName, opts...); err != nil {
 			return nil, err
@@ -47,6 +83,14 @@ func init() {
 	})
 }
 
+var (
+	_ deconstruct.Deconstructible = String("")
+	_ deconstruct.Deconstructible = (*field)(nil)
+	_ deconstruct.Deconstructible = (*values)(nil)
+	_ deconstruct.Deconstructible = (*value)(nil)
+	_ deconstruct.Deconstructible = (*namedExpression)(nil)
+)
+
 // StringExpr is a string type which implements the Expression interface.
 // It is used to represent a string value in SQL queries.
 //
@@ -54,6 +98,10 @@ func init() {
 //
 //	StringExpr("a = b")
 type String string
+
+func (e String) Deconstruct() (string, []any, map[string]any) {
+	return "queries.expr.String", []any{string(e)}, nil
+}
 
 func (e String) String() string                         { return string(e) }
 func (e String) SQL(sb builder.Builder)                 { sb.WriteString(string(e)) }
@@ -73,6 +121,10 @@ type field struct {
 
 func Field(fld string) NamedExpression {
 	return &field{fieldName: fld}
+}
+
+func (e *field) Deconstruct() (string, []any, map[string]any) {
+	return "queries.expr.Field", []any{e.fieldName}, nil
 }
 
 func (e *field) FieldName() string {
@@ -125,6 +177,10 @@ func Values(vs ...any) Expression {
 		values: slices.Clone(vs),
 		used:   false,
 	}
+}
+
+func (e *values) Deconstruct() (string, []any, map[string]any) {
+	return "queries.expr.Values", slices.Clone(e.values), nil
 }
 
 func (e *values) SQL(sb builder.Builder) {
@@ -197,6 +253,14 @@ type value struct {
 	unsafe      bool
 	driver      driver.Driver
 	placeholder string // Placeholder for the value, if needed
+}
+
+func (e *value) Deconstruct() (string, []any, map[string]any) {
+	var kwargs map[string]any
+	if e.unsafe {
+		kwargs = map[string]any{"unsafe": true}
+	}
+	return "queries.expr.Value", []any{e.v}, kwargs
 }
 
 // Value is a function that creates a value expression.
@@ -333,6 +397,10 @@ func As(name string, expr Expression) NamedExpression {
 		fieldName:  name,
 		Expression: expr,
 	}
+}
+
+func (n *namedExpression) Deconstruct() (string, []any, map[string]any) {
+	return "queries.expr.As", []any{n.fieldName, n.Expression}, nil
 }
 
 func (n *namedExpression) FieldName() string {

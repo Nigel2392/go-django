@@ -1,15 +1,74 @@
 package expr
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
+)
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.When", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("expected 2 args for When, got %d", len(args))
+		}
+		var w when
+		if err := json.Unmarshal(args[0], &w.lhs, opts...); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(args[1], &w.then, opts...); err != nil {
+			return nil, err
+		}
+		rhs, ok, err := unmarshalKwarg[Expression](kwargs, "rhs", opts...)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			w.rhs = rhs
+		}
+		return &w, nil
+	})
+	deconstruct.Constructors.Register("queries.expr.Case", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		var whenClauses = make([]*when, len(args))
+		for i, arg := range args {
+			var w WhenExpression
+			if err := json.Unmarshal(arg, &w, opts...); err != nil {
+				return nil, err
+			}
+			whenClauses[i] = w
+		}
+		var dflt Expression
+		if rawDflt, ok, err := unmarshalKwarg[Expression](kwargs, "default", opts...); err != nil {
+			return nil, err
+		} else if ok {
+			dflt = rawDflt
+		}
+		return &CaseExpression{
+			when: whenClauses,
+			dflt: dflt,
+		}, nil
+	})
+}
+
+var (
+	_ deconstruct.Deconstructible = (*when)(nil)
+	_ deconstruct.Deconstructible = (*CaseExpression)(nil)
 )
 
 type when struct {
 	lhs  Expression
 	rhs  Expression
 	then Expression
+}
+
+func (w *when) Deconstruct() (string, []any, map[string]any) {
+	var kwargs map[string]any
+	if w.rhs != nil {
+		kwargs = map[string]any{"rhs": w.rhs}
+	}
+	return "queries.expr.When", []any{w.lhs, w.then}, kwargs
 }
 
 type WhenExpression = *when
@@ -80,6 +139,18 @@ type CaseExpression struct {
 
 	used bool
 	inf  *ExpressionInfo
+}
+
+func (c *CaseExpression) Deconstruct() (string, []any, map[string]any) {
+	var args = make([]any, len(c.when))
+	for i, w := range c.when {
+		args[i] = w
+	}
+	var kwargs map[string]any
+	if c.dflt != nil {
+		kwargs = map[string]any{"default": c.dflt}
+	}
+	return "queries.expr.Case", args, kwargs
 }
 
 func Case(cases ...any) *CaseExpression {

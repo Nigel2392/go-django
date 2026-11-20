@@ -2,11 +2,14 @@ package expr
 
 import (
 	"database/sql/driver"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
@@ -84,7 +87,36 @@ func init() {
 	registerCastTypeFunc(0, CastTypeUUID, "CAST(%s AS UUID)", &drivers.DriverPostgres{})
 	registerCastTypeFunc(0, CastTypeNull, "CAST(%s AS NULL)", &drivers.DriverPostgres{})
 	registerCastTypeFunc(0, CastTypeArray, "CAST(%s AS JSONB)", &drivers.DriverPostgres{})
+
+	deconstruct.Constructors.Register("queries.expr.Cast", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("expected at least 2 args for Cast, got %d", len(args))
+		}
+		var typ uint
+		if err := json.Unmarshal(args[0], &typ, opts...); err != nil {
+			return nil, err
+		}
+		var col Expression
+		if err := json.Unmarshal(args[1], &col, opts...); err != nil {
+			return nil, err
+		}
+		var params = make([]any, len(args)-2)
+		for i, arg := range args[2:] {
+			v, err := unmarshalAnyArg(arg, opts...)
+			if err != nil {
+				return nil, err
+			}
+			params[i] = v
+		}
+		return &castExpr{
+			typ:  CastType(typ),
+			col:  col,
+			args: params,
+		}, nil
+	})
 }
+
+var _ deconstruct.Deconstructible = (*castExpr)(nil)
 
 var (
 	CastString  = newCastFunc(CastTypeString)
@@ -108,6 +140,14 @@ type castExpr struct {
 	col       Expression
 	args      []any
 	used      bool
+}
+
+func (c *castExpr) Deconstruct() (string, []any, map[string]any) {
+	var args = make([]any, 2+len(c.args))
+	args[0] = uint(c.typ)
+	args[1] = c.col
+	copy(args[2:], c.args)
+	return "queries.expr.Cast", args, nil
 }
 
 func (c *castExpr) FieldName() string {

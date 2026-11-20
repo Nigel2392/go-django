@@ -1,11 +1,77 @@
 package expr
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
+)
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.ExprNode", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("expected at least 2 args for ExprNode, got %d", len(args))
+		}
+		var node = ExprNode{
+			not: kwargs.Get[bool]("not"),
+		}
+		if err := json.Unmarshal(args[0], &node.field, opts...); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(args[1], &node.lookup, opts...); err != nil {
+			return nil, err
+		}
+		if len(args) > 2 {
+			node.args = make([]any, len(args)-2)
+			for i, arg := range args[2:] {
+				v, err := unmarshalAnyArg(arg, opts...)
+				if err != nil {
+					return nil, err
+				}
+				node.args[i] = v
+			}
+		}
+		return &node, nil
+	})
+	deconstruct.Constructors.Register("queries.expr.ExprGroup", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		var children = make([]Expression, len(args))
+		for i, arg := range args {
+			if err := json.Unmarshal(arg, &children[i], opts...); err != nil {
+				return nil, err
+			}
+		}
+		return &ExprGroup{
+			children: children,
+			op:       ExprOp(kwargs.Get[string]("op")),
+			not:      kwargs.Get[bool]("not"),
+			wrap:     kwargs.Get[bool]("wrap"),
+		}, nil
+	})
+	deconstruct.Constructors.Register("queries.expr.Logical", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) == 0 {
+			return nil, fmt.Errorf("expected at least 1 arg for Logical, got 0")
+		}
+		var inner = make([]Expression, len(args))
+		for i, arg := range args {
+			if err := json.Unmarshal(arg, &inner[i], opts...); err != nil {
+				return nil, err
+			}
+		}
+		return &logicalChainExpr{
+			fieldName: kwargs.Get[string]("field"),
+			inner:     inner,
+		}, nil
+	})
+}
+
+var (
+	_ deconstruct.Deconstructible = (*ExprNode)(nil)
+	_ deconstruct.Deconstructible = (*ExprGroup)(nil)
+	_ deconstruct.Deconstructible = (*logicalChainExpr)(nil)
 )
 
 func Q(fieldLookup LookupFilter, value ...any) *ExprNode {
@@ -42,6 +108,22 @@ type ExprNode struct {
 	field  NamedExpression
 	lookup string
 	used   bool
+}
+
+func (e *ExprNode) Deconstruct() (string, []any, map[string]any) {
+	var fieldArg any
+	if e.field != nil {
+		fieldArg = e.field
+	}
+	var args = make([]any, 2+len(e.args))
+	args[0] = fieldArg
+	args[1] = e.lookup
+	copy(args[2:], e.args)
+	var kwargs map[string]any
+	if e.not {
+		kwargs = map[string]any{"not": true}
+	}
+	return "queries.expr.ExprNode", args, kwargs
 }
 
 func Expr(field any, operation string, value ...any) *ExprNode {
@@ -136,6 +218,27 @@ type ExprGroup struct {
 	wrap     bool
 }
 
+func (g *ExprGroup) Deconstruct() (string, []any, map[string]any) {
+	var args = make([]any, len(g.children))
+	for i, c := range g.children {
+		args[i] = c
+	}
+	var kwargs map[string]any
+	if g.op != "" || g.not || g.wrap {
+		kwargs = make(map[string]any, 3)
+		if g.op != "" {
+			kwargs["op"] = string(g.op)
+		}
+		if g.not {
+			kwargs["not"] = true
+		}
+		if g.wrap {
+			kwargs["wrap"] = true
+		}
+	}
+	return "queries.expr.ExprGroup", args, kwargs
+}
+
 func (g *ExprGroup) SQL(sb builder.Builder) {
 	if g.not {
 		sb.WriteString("NOT ")
@@ -217,6 +320,18 @@ type logicalChainExpr struct {
 	used      bool
 	forUpdate bool
 	inner     []Expression
+}
+
+func (l *logicalChainExpr) Deconstruct() (string, []any, map[string]any) {
+	var args = make([]any, len(l.inner))
+	for i, inner := range l.inner {
+		args[i] = inner
+	}
+	var kwargs map[string]any
+	if l.fieldName != "" {
+		kwargs = map[string]any{"field": l.fieldName}
+	}
+	return "queries.expr.Logical", args, kwargs
 }
 
 func newChainExpr(expr NamedExpression) *logicalChainExpr {

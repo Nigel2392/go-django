@@ -3,13 +3,31 @@ package expr
 import (
 	"context"
 	"database/sql/driver"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.LogicalOp", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("expected 1 arg for LogicalOp, got %d", len(args))
+		}
+		var s string
+		if err := json.Unmarshal(args[0], &s, opts...); err != nil {
+			return nil, err
+		}
+		return LogicalOp(s), nil
+	})
+}
+
+var _ deconstruct.Deconstructible = LogicalOp("")
 
 // LogicalOp represents the logical operator to use in a query.
 //
@@ -17,6 +35,10 @@ import (
 // The logical operators are used in the WHERE clause of a SQL query,
 // or inside of queryset join conditions.
 type LogicalOp string
+
+func (op LogicalOp) Deconstruct() (string, []any, map[string]any) {
+	return "queries.expr.LogicalOp", []any{string(op)}, nil
+}
 
 func (op LogicalOp) Resolve(*ExpressionInfo) Expression { return op }
 func (op LogicalOp) Clone() Expression                  { return op }

@@ -1,14 +1,46 @@
 package constraints
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
+
+var _ deconstruct.Deconstructible = (*uniqueConstraint)(nil)
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.constraints.Unique", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		var fields = make([]expr.Expression, len(args))
+		for i, arg := range args {
+			if err := json.Unmarshal(arg, &fields[i], opts...); err != nil {
+				return nil, err
+			}
+		}
+		return &uniqueConstraint{
+			Base: Base{
+				Identifier: kwargs.Get[string]("identifier"),
+				Error:      kwargs.Get[string]("error"),
+			},
+			Fields: fields,
+		}, nil
+	})
+}
 
 type uniqueConstraint struct {
 	Base
 	Fields []expr.Expression
 	used   bool
+}
+
+func (e *uniqueConstraint) Deconstruct() (path string, args []any, kwargs map[string]any) {
+	var exprArgs = make([]any, len(e.Fields))
+	for i, field := range e.Fields {
+		exprArgs[i] = field
+	}
+	return "queries.expr.constraints.Unique", exprArgs, map[string]any{"identifier": e.Identifier, "error": e.Error}
 }
 
 func UniqueConstraint(id string, errorMessage string, fields any) expr.Expression {

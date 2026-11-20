@@ -3,6 +3,7 @@ package constraints
 import (
 	"encoding/json/jsontext"
 	"encoding/json/v2"
+	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -13,6 +14,9 @@ var _ deconstruct.Deconstructible = (*foreignKeyConstraint)(nil)
 
 func init() {
 	deconstruct.Constructors.Register("queries.expr.constraints.ForeignKey", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("expected 1 arg for ForeignKeyConstraint, got %d", len(args))
+		}
 		var fk = &foreignKeyConstraint{
 			Identifier: kwargs.Get[string]("identifier"),
 			Error:      kwargs.Get[string]("error"),

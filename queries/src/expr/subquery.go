@@ -2,11 +2,29 @@ package expr
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.OuterRef", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("expected 1 arg for OuterRef, got %d", len(args))
+		}
+		var o outerRef
+		if err := json.Unmarshal(args[0], &o.fieldName, opts...); err != nil {
+			return nil, err
+		}
+		return &o, nil
+	})
+}
+
+var _ deconstruct.Deconstructible = (*outerRef)(nil)
 
 type subqueryContextKey struct{}
 
@@ -40,6 +58,10 @@ type outerRef struct {
 	fieldName string
 	field     *ResolvedField
 	used      bool
+}
+
+func (e *outerRef) Deconstruct() (string, []any, map[string]any) {
+	return "queries.expr.OuterRef", []any{e.fieldName}, nil
 }
 
 func OuterRef(fld string) NamedExpression {

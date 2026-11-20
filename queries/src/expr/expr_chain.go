@@ -1,16 +1,46 @@
 package expr
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.Chain", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		if len(args) == 0 {
+			return nil, fmt.Errorf("expected at least 1 arg for Chain, got 0")
+		}
+		var inner = make([]Expression, len(args))
+		for i, arg := range args {
+			if err := json.Unmarshal(arg, &inner[i], opts...); err != nil {
+				return nil, err
+			}
+		}
+		return &chainExpr{
+			inner: inner,
+		}, nil
+	})
+}
+
+var _ deconstruct.Deconstructible = (*chainExpr)(nil)
 
 type chainExpr struct {
 	used      bool
 	forUpdate bool
 	inner     []Expression
+}
+
+func (e *chainExpr) Deconstruct() (string, []any, map[string]any) {
+	var args = make([]any, len(e.inner))
+	for i, inner := range e.inner {
+		args[i] = inner
+	}
+	return "queries.expr.Chain", args, nil
 }
 
 func (e *chainExpr) FieldName() string {

@@ -1,11 +1,53 @@
 package expr
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 )
+
+func init() {
+	deconstruct.Constructors.Register("queries.expr.Function", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		funcLookup, ok := kwargs.GetOk[string]("func")
+		if !ok || funcLookup == "" {
+			return nil, fmt.Errorf("missing func name for Function")
+		}
+		var inner = make([]Expression, len(args))
+		for i, arg := range args {
+			if err := json.Unmarshal(arg, &inner[i], opts...); err != nil {
+				return nil, err
+			}
+		}
+		var params []any
+		if rawParams, hasParams := kwargs["params"]; hasParams && rawParams != nil {
+			b, err := json.Marshal(rawParams, opts...)
+			if err != nil {
+				return nil, err
+			}
+			v, err := unmarshalAnyArg(b, opts...)
+			if err != nil {
+				return nil, err
+			}
+			paramSlice, ok := v.([]any)
+			if !ok {
+				return nil, fmt.Errorf("invalid params type %T for Function", v)
+			}
+			params = paramSlice
+		}
+		return &Function{
+			funcLookup: funcLookup,
+			fieldName:  kwargs.Get[string]("field"),
+			args:       params,
+			inner:      inner,
+		}, nil
+	})
+}
+
+var _ deconstruct.Deconstructible = (*Function)(nil)
 
 type Function struct {
 	sql        func(col []Expression, funcParams []any) (sql string, args []any, err error)
@@ -14,6 +56,23 @@ type Function struct {
 	args       []any
 	used       bool
 	inner      []Expression
+}
+
+func (e *Function) Deconstruct() (string, []any, map[string]any) {
+	var args = make([]any, 0, len(e.inner))
+	for _, inner := range e.inner {
+		args = append(args, inner)
+	}
+	var kwargs = map[string]any{
+		"func": e.funcLookup,
+	}
+	if e.fieldName != "" {
+		kwargs["field"] = e.fieldName
+	}
+	if len(e.args) > 0 {
+		kwargs["params"] = slices.Clone(e.args)
+	}
+	return "queries.expr.Function", args, kwargs
 }
 
 func (e *Function) FieldName() string {
