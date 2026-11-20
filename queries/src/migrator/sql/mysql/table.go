@@ -129,6 +129,7 @@ func (m *MySQLSchemaEditor) CreateTable(ctx context.Context, table migrator.Tabl
 	w.WriteString("` (")
 
 	var written bool
+	var relCols []migrator.Column
 	for _, col := range table.Columns() {
 		if !col.UseInDB {
 			continue
@@ -137,8 +138,30 @@ func (m *MySQLSchemaEditor) CreateTable(ctx context.Context, table migrator.Tabl
 			w.WriteString(",\n")
 		}
 		w.WriteString("  ")
-		WriteColumn(&w, *col)
+		writeColumn(&w, *col, false)
+		if col.Rel != nil && col.Rel.Through == nil {
+			relCols = append(relCols, *col)
+		}
 		written = true
+	}
+	for _, col := range relCols {
+		relField := col.Rel.Field()
+		if relField == nil {
+			relField = attrs.GetModelMeta(col.Rel.Model()).Definitions().Primary()
+		}
+		fmt.Fprintf(&w, ",\n  FOREIGN KEY (`%s`) REFERENCES `%s`(`%s`)",
+			col.Column,
+			attrs.GetModelMeta(col.Rel.Model()).Definitions().TableName(),
+			relField.ColumnName(),
+		)
+		if col.Rel.OnDelete != 0 {
+			w.WriteString(" ON DELETE ")
+			w.WriteString(col.Rel.OnDelete.String())
+		}
+		if col.Rel.OnUpdate != 0 {
+			w.WriteString(" ON UPDATE ")
+			w.WriteString(col.Rel.OnUpdate.String())
+		}
 	}
 	w.WriteString("\n);")
 	_, err := m.Execute(ctx, w.String())
@@ -286,6 +309,10 @@ func (m *MySQLSchemaEditor) DropConstraint(ctx context.Context, table migrator.T
 }
 
 func WriteColumn(w *strings.Builder, col migrator.Column) {
+	writeColumn(w, col, true)
+}
+
+func writeColumn(w *strings.Builder, col migrator.Column, includeRel bool) {
 	w.WriteString("`")
 	w.WriteString(col.Column)
 	w.WriteString("` ")
@@ -359,7 +386,7 @@ func WriteColumn(w *strings.Builder, col migrator.Column) {
 	}
 
 checkRels:
-	if col.Rel != nil {
+	if includeRel && col.Rel != nil {
 		relField := col.Rel.Field()
 		if relField == nil {
 			relField = attrs.GetModelMeta(col.Rel.Model()).Definitions().Primary()

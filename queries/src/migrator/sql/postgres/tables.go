@@ -206,28 +206,87 @@ func (m *PostgresSchemaEditor) AddField(ctx context.Context, table migrator.Tabl
 }
 
 func (m *PostgresSchemaEditor) RemoveField(ctx context.Context, table migrator.Table, col migrator.Column) error {
+	var colName = col.Column
+	if colName == "" && col.Field != nil {
+		colName = col.Field.ColumnName()
+	}
 	var w strings.Builder
 	w.WriteString(`ALTER TABLE "`)
 	w.WriteString(table.TableName())
 	w.WriteString(`" DROP COLUMN IF EXISTS "`)
-	w.WriteString(col.Field.ColumnName())
+	w.WriteString(colName)
 	w.WriteString(`" CASCADE;`)
 	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
+func pgDefaultSQL(v any) (string, error) {
+	if valuer, ok := v.(driver.Valuer); ok {
+		val, err := valuer.Value()
+		if err != nil {
+			return "", err
+		}
+		v = val
+	}
+	if v == nil {
+		return "NULL", nil
+	}
+	var rv = reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return "NULL", nil
+		}
+		rv = rv.Elem()
+	}
+	if t, ok := rv.Interface().(time.Time); ok {
+		if t.IsZero() {
+			return "CURRENT_TIMESTAMP", nil
+		}
+		return "'" + t.Format("2006-01-02 15:04:05") + "'", nil
+	}
+	switch rv.Kind() {
+	case reflect.String:
+		return "'" + strings.ReplaceAll(rv.String(), "'", "''") + "'", nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return fmt.Sprintf("%d", rv.Int()), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return fmt.Sprintf("%d", rv.Uint()), nil
+	case reflect.Float32, reflect.Float64:
+		return fmt.Sprintf("%f", rv.Float()), nil
+	case reflect.Bool:
+		if rv.Bool() {
+			return "TRUE", nil
+		}
+		return "FALSE", nil
+	case reflect.Slice, reflect.Array:
+		if rv.Kind() == reflect.Slice && rv.IsNil() {
+			return "NULL", nil
+		}
+		if rv.Type().Elem().Kind() == reflect.Uint8 {
+			return "'" + strings.ReplaceAll(string(rv.Bytes()), "'", "''") + "'", nil
+		}
+	}
+	return "", fmt.Errorf("unsupported default type %T", v)
+}
+
 func (m *PostgresSchemaEditor) AlterField(ctx context.Context, table migrator.Table, oldCol migrator.Column, newCol migrator.Column) error {
 	var (
-		w         strings.Builder
 		tableName = table.TableName()
-		colName   = oldCol.Field.ColumnName()
+		colName   = oldCol.Column
+		clauses   []string
 	)
 
-	w.WriteString(`ALTER TABLE "`)
-	w.WriteString(tableName)
-	w.WriteString(`"`)
+	if colName == "" && oldCol.Field != nil {
+		colName = oldCol.Field.ColumnName()
+	}
 
-	// Alter column type
+	if newCol.Column != "" && newCol.Column != colName {
+		var rename = fmt.Sprintf(`ALTER TABLE "%s" RENAME COLUMN "%s" TO "%s";`, tableName, colName, newCol.Column)
+		if _, err := m.Execute(ctx, rename); err != nil {
+			return fmt.Errorf("alter field rename failed: %w\nquery: %s", err, rename)
+		}
+		colName = newCol.Column
+	}
 
 	var (
 		aTyp = migrator.GetFieldType(&drivers.DriverPostgres{}, &oldCol)
@@ -235,81 +294,34 @@ func (m *PostgresSchemaEditor) AlterField(ctx context.Context, table migrator.Ta
 	)
 
 	if aTyp != bTyp {
-		w.WriteString(` ALTER COLUMN "`)
-		w.WriteString(colName)
-		w.WriteString(`" TYPE `)
-		w.WriteString(bTyp)
-		w.WriteString(`,`)
+		clauses = append(clauses, fmt.Sprintf(`ALTER COLUMN "%s" TYPE %s`, colName, bTyp))
 	}
 
-	// Alter NULL / NOT NULL
 	if oldCol.Nullable != newCol.Nullable {
-		w.WriteString(` ALTER COLUMN "`)
-		w.WriteString(colName)
 		if newCol.Nullable {
-			w.WriteString(`" DROP NOT NULL,`)
+			clauses = append(clauses, fmt.Sprintf(`ALTER COLUMN "%s" DROP NOT NULL`, colName))
 		} else {
-			w.WriteString(`" SET NOT NULL,`)
+			clauses = append(clauses, fmt.Sprintf(`ALTER COLUMN "%s" SET NOT NULL`, colName))
 		}
 	}
 
-	// Alter default
-	var oldDefault = oldCol.Default.V
-	var newDefault = newCol.Default.V
-	if !migrator.EqualDefaultValue(oldDefault, newDefault) {
-		w.WriteString(` ALTER COLUMN "`)
-		w.WriteString(colName)
-		if newDefault == nil {
-			w.WriteString(`" DROP DEFAULT,`)
+	if !migrator.EqualDefaultValue(oldCol.Default.V, newCol.Default.V) {
+		if newCol.Default.V == nil {
+			clauses = append(clauses, fmt.Sprintf(`ALTER COLUMN "%s" DROP DEFAULT`, colName))
 		} else {
-			w.WriteString(`" SET DEFAULT `)
-			var rv = reflect.ValueOf(newDefault)
-			if rv.Kind() == reflect.Ptr {
-				if !rv.IsValid() || rv.IsNil() {
-					w.WriteString(`NULL`)
-					w.WriteString(`,`)
-					return nil
-				}
-				rv = rv.Elem()
+			var dflt, err = pgDefaultSQL(newCol.Default.V)
+			if err != nil {
+				return err
 			}
-
-			switch rv.Kind() {
-			case reflect.String:
-				w.WriteString(fmt.Sprintf("'%s'", rv.String()))
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				w.WriteString(fmt.Sprintf("%d", rv.Int()))
-			case reflect.Float32, reflect.Float64:
-				w.WriteString(fmt.Sprintf("%f", rv.Float()))
-			case reflect.Bool:
-				if rv.Bool() {
-					w.WriteString("TRUE")
-				} else {
-					w.WriteString("FALSE")
-				}
-			case reflect.Slice, reflect.Array:
-				if rv.IsNil() {
-					w.WriteString(`NULL`)
-					w.WriteString(`,`)
-					return nil
-				}
-				if rv.Type().Elem().Kind() == reflect.Uint8 {
-					w.WriteString(`'`)
-					w.Write(rv.Bytes())
-					w.WriteString(`'`)
-				} else {
-					return fmt.Errorf("unsupported default type %T", rv.Interface())
-				}
-			default:
-				return fmt.Errorf("unsupported default type %T", newDefault)
-			}
-			w.WriteString(`,`)
+			clauses = append(clauses, fmt.Sprintf(`ALTER COLUMN "%s" SET DEFAULT %s`, colName, dflt))
 		}
 	}
 
-	// Trim trailing comma
-	sql := strings.TrimSuffix(w.String(), ",")
+	if len(clauses) == 0 {
+		return nil
+	}
 
-	// Execute ALTER TABLE ... for collected changes
+	var sql = fmt.Sprintf(`ALTER TABLE "%s" %s`, tableName, strings.Join(clauses, ", "))
 	if _, err := m.Execute(ctx, sql); err != nil {
 		return fmt.Errorf("alter field failed: %w\nquery: %s", err, sql)
 	}
@@ -326,8 +338,12 @@ func (m *PostgresSchemaEditor) DropConstraint(ctx context.Context, table migrato
 }
 
 func (m *PostgresSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column) {
+	var colName = col.Column
+	if colName == "" && col.Field != nil {
+		colName = col.Field.ColumnName()
+	}
 	w.WriteString(`"`)
-	w.WriteString(col.Field.ColumnName())
+	w.WriteString(colName)
 	w.WriteString(`" `)
 	w.WriteString(migrator.GetFieldType(&drivers.DriverPostgres{}, &col))
 
@@ -361,7 +377,7 @@ func (m *PostgresSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Colu
 		w.WriteString(" DEFAULT ")
 		switch v := col.Default.V.(type) {
 		case string:
-			w.WriteString(fmt.Sprintf("'%s'", v))
+			w.WriteString(fmt.Sprintf("'%s'", strings.ReplaceAll(v, "'", "''")))
 		case int, int8, int16, int32, int64,
 			uint, uint8, uint16, uint32, uint64:
 			w.WriteString(fmt.Sprintf("%d", v))

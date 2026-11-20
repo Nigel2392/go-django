@@ -93,8 +93,55 @@ func (m *SQLiteSchemaEditor) Setup(ctx context.Context) error {
 	return nil
 }
 
+type sqliteMigrationTx struct {
+	drivers.Transaction
+	db          drivers.Database
+	restoreFKOn bool
+}
+
+func (t *sqliteMigrationTx) restoreFK(ctx context.Context) {
+	if !t.restoreFKOn {
+		return
+	}
+	t.restoreFKOn = false
+	_, _ = t.db.ExecContext(ctx, "PRAGMA foreign_keys = ON;")
+}
+
+func (t *sqliteMigrationTx) Commit(ctx context.Context) error {
+	err := t.Transaction.Commit(ctx)
+	t.restoreFK(ctx)
+	return err
+}
+
+func (t *sqliteMigrationTx) Rollback(ctx context.Context) error {
+	err := t.Transaction.Rollback(ctx)
+	t.restoreFK(ctx)
+	return err
+}
+
 func (m *SQLiteSchemaEditor) StartTransaction(ctx context.Context) (drivers.Transaction, error) {
-	return m.db.Begin(ctx)
+	var fkOn int
+	_ = m.db.QueryRowContext(ctx, "PRAGMA foreign_keys;").Scan(&fkOn)
+	if fkOn != 0 {
+		if _, err := m.db.ExecContext(ctx, "PRAGMA foreign_keys = OFF;"); err != nil {
+			return nil, err
+		}
+	}
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		if fkOn != 0 {
+			_, _ = m.db.ExecContext(ctx, "PRAGMA foreign_keys = ON;")
+		}
+		return nil, err
+	}
+	if fkOn != 0 {
+		return &sqliteMigrationTx{
+			Transaction: tx,
+			db:          m.db,
+			restoreFKOn: true,
+		}, nil
+	}
+	return tx, nil
 }
 
 func (m *SQLiteSchemaEditor) StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
@@ -418,11 +465,6 @@ func (m *SQLiteSchemaEditor) AlterField(
 	}
 	defer rows.Close()
 
-	_, err = m.Execute(ctx, "PRAGMA defer_foreign_keys = ON;")
-	if err != nil {
-		return fmt.Errorf("defer foreign keys: %w", err)
-	}
-
 	_, err = m.Execute(ctx, fmt.Sprintf(
 		"DROP TABLE IF EXISTS `%s`;", tempTableName,
 	))
@@ -508,7 +550,7 @@ func (m *SQLiteSchemaEditor) AlterField(
 
 func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column) {
 
-	if col.Field == nil {
+	if col.Field == nil && col.DBType() == 0 {
 		panic(fmt.Errorf("field is nil for column %q %#v", col.Column, col))
 	}
 

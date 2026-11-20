@@ -20,6 +20,7 @@ import (
 type Column struct {
 	Table        Table              `json:"-"`
 	Field        attrs.Field        `json:"-"`
+	dbType       dbtype.Type        `json:"-"`
 	Name         string             `json:"name"`
 	Column       string             `json:"column"`
 	UseInDB      bool               `json:"use_in_db,omitempty"`
@@ -214,6 +215,9 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 func (c *Column) DBType() dbtype.Type {
 	var fieldType = c.FieldType()
 	if fieldType == nil {
+		if c.dbType != 0 {
+			return c.dbType
+		}
 		panic(fmt.Sprintf("fieldType is nil for column %q and model %T", c.Name, c.Table.Model()))
 	}
 

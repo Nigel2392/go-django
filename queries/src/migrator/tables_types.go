@@ -64,10 +64,12 @@ func checkDBType(fn func(c *Column) string) func(c *Column) string {
 	}
 
 	return func(c *Column) string {
-		var atts = c.Field.Attrs()
-		var dbType = atts[AttrDBTypeKey]
-		if dbType != nil {
-			return dbType.(string)
+		if c.Field != nil {
+			var atts = c.Field.Attrs()
+			var dbType = atts[AttrDBTypeKey]
+			if dbType != nil {
+				return dbType.(string)
+			}
 		}
 
 		return fn(c)

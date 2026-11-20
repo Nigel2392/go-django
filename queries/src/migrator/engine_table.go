@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/deconstruct"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -282,8 +283,11 @@ func (t *ModelTable) UnmarshalJSON(data []byte) error {
 		if ok {
 			col.Field = f
 		}
+		if dt, ok := dbtype.NewFromString(col.DBType); ok {
+			col.Column.dbType = dt
+		}
 
-		if col.Column.Default.V != nil {
+		if col.Field != nil && col.Column.Default.V != nil {
 			if err := attrs.BindValueToModel(t.Object, col.Field, col.Column.Default.V); err != nil {
 				return err
 			}
