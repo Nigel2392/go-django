@@ -564,3 +564,264 @@ func TestOneToOneFormField_DirectVsThrough(t *testing.T) {
 		t.Fatalf("saved direct O2O Target = %+v, want ID=%d", saved.Object.Target, target.ID)
 	}
 }
+
+func TestFormField_BeforeWidgetDispatch(t *testing.T) {
+	clearMSRelTables(t)
+	ctx := t.Context()
+
+	coupon := mustCreateThroughReg(t, &ThroughRegCoupon{Title: "PreWidget"})
+	p1 := mustCreateThroughReg(t, &ThroughRegProduct{Title: "P1"})
+	_ = p1
+	parent := mustCreateThroughReg(t, &MSRelParent{Title: "ValidParent"})
+	_ = parent
+	child := mustCreateThroughReg(t, &MSRelChild{Title: "Child"})
+
+	t.Run("ManyToManyFormField_ValidateRejectsInvalidBeforeWidget", func(t *testing.T) {
+		loaded, err := queries.GetQuerySet(&ThroughRegCoupon{}).Filter("ID", coupon.ID).First()
+		if err != nil {
+			t.Fatalf("fetch coupon: %v", err)
+		}
+		prodFld, ok := attrs.Define(ctx, loaded.Object).Field("Products")
+		if !ok {
+			t.Fatalf("missing Products field")
+		}
+		m2mFF, ok := prodFld.FormField().(*formfields.ManyToManyFormField)
+		if !ok {
+			t.Fatalf("expected *formfields.ManyToManyFormField, got %T", prodFld.FormField())
+		}
+
+		// Calling Validate before Widget() must dispatch to MultiSelectWidget.Validate,
+		// not BaseField -> TextInput.Validate.
+		valErrs := m2mFF.Validate(ctx, []string{"999999"})
+		if len(valErrs) == 0 || !errors.Is(valErrs[0], errs.ErrInvalidValue) {
+			t.Errorf("Validate([]string{\"999999\"}) before Widget() = %v, want ErrInvalidValue", valErrs)
+		}
+
+		// Use a fresh field instance (still without calling Widget()) for []attrs.Definer.
+		loaded2, err := queries.GetQuerySet(&ThroughRegCoupon{}).Filter("ID", coupon.ID).First()
+		if err != nil {
+			t.Fatalf("fetch coupon 2: %v", err)
+		}
+		prodFld2, ok := attrs.Define(ctx, loaded2.Object).Field("Products")
+		if !ok {
+			t.Fatalf("missing Products field 2")
+		}
+		m2mFF2, ok := prodFld2.FormField().(*formfields.ManyToManyFormField)
+		if !ok {
+			t.Fatalf("expected *formfields.ManyToManyFormField, got %T", prodFld2.FormField())
+		}
+
+		valErrs2 := m2mFF2.Validate(ctx, []attrs.Definer{&ThroughRegProduct{ID: 999999}})
+		if len(valErrs2) == 0 || !errors.Is(valErrs2[0], errs.ErrInvalidValue) {
+			t.Errorf("Validate([]attrs.Definer{999999}) before Widget() = %v, want ErrInvalidValue", valErrs2)
+		}
+	})
+
+	t.Run("ManyToManyFormField_HideBeforeWidgetPreservesMultiSelect", func(t *testing.T) {
+		loaded, err := queries.GetQuerySet(&ThroughRegCoupon{}).Filter("ID", coupon.ID).First()
+		if err != nil {
+			t.Fatalf("fetch coupon: %v", err)
+		}
+		prodFld, ok := attrs.Define(ctx, loaded.Object).Field("Products")
+		if !ok {
+			t.Fatalf("missing Products field")
+		}
+		m2mFF, ok := prodFld.FormField().(*formfields.ManyToManyFormField)
+		if !ok {
+			t.Fatalf("expected *formfields.ManyToManyFormField, got %T", prodFld.FormField())
+		}
+
+		m2mFF.Hide(true)
+		w := m2mFF.Widget()
+		msw, ok := w.(*formfields.MultiSelectWidget[attrs.Definer])
+		if !ok {
+			t.Fatalf("Widget() after Hide(true) = %T, want *formfields.MultiSelectWidget[attrs.Definer]", w)
+		}
+		if !msw.IsHidden() {
+			t.Errorf("expected MultiSelectWidget.IsHidden() = true after Hide(true)")
+		}
+	})
+
+	t.Run("ForeignKeyFormField_ValidateRejectsInvalidBeforeWidget", func(t *testing.T) {
+		parentFld, ok := attrs.Define(ctx, child).Field("Parent")
+		if !ok {
+			t.Fatalf("missing Parent field")
+		}
+		fkFF, ok := parentFld.FormField().(*formfields.ForeignKeyFormField)
+		if !ok {
+			t.Fatalf("expected *formfields.ForeignKeyFormField, got %T", parentFld.FormField())
+		}
+
+		// Calling Validate before Widget() must dispatch to ModelSelect.Validate,
+		// not BaseField -> TextInput.Validate.
+		valErrs := fkFF.Validate(ctx, &MSRelParent{ID: 999999})
+		if len(valErrs) == 0 {
+			t.Fatalf("Validate(&MSRelParent{ID: 999999}) before Widget() = nil, want validation error")
+		}
+	})
+
+	t.Run("ForeignKeyFormField_HideBeforeWidgetPreservesModelSelect", func(t *testing.T) {
+		loadedChild, err := queries.GetQuerySet(&MSRelChild{}).Filter("ID", child.ID).First()
+		if err != nil {
+			t.Fatalf("fetch child: %v", err)
+		}
+		parentFld, ok := attrs.Define(ctx, loadedChild.Object).Field("Parent")
+		if !ok {
+			t.Fatalf("missing Parent field")
+		}
+		fkFF, ok := parentFld.FormField().(*formfields.ForeignKeyFormField)
+		if !ok {
+			t.Fatalf("expected *formfields.ForeignKeyFormField, got %T", parentFld.FormField())
+		}
+
+		fkFF.Hide(true)
+		w := fkFF.Widget()
+		ms, ok := w.(*formfields.ModelSelect)
+		if !ok {
+			t.Fatalf("Widget() after Hide(true) = %T, want *formfields.ModelSelect", w)
+		}
+		if !ms.IsHidden() {
+			t.Errorf("expected ModelSelect.IsHidden() = true after Hide(true)")
+		}
+	})
+}
+
+func TestRelationFormField_InMemoryCacheSyncOnSaveField(t *testing.T) {
+	clearMSRelTables(t)
+	ctx := t.Context()
+
+	t.Run("ManyToManyFormField_SaveField_SyncsReplaceAndClearInMemory", func(t *testing.T) {
+		coupon := mustCreateThroughReg(t, &ThroughRegCoupon{Title: "CacheSyncM2M"})
+		p1 := mustCreateThroughReg(t, &ThroughRegProduct{Title: "SyncP1"})
+		p2 := mustCreateThroughReg(t, &ThroughRegProduct{Title: "SyncP2"})
+
+		row, err := queries.GetQuerySet(&ThroughRegCoupon{}).Filter("ID", coupon.ID).First()
+		if err != nil {
+			t.Fatalf("fetch coupon: %v", err)
+		}
+		loaded := row.Object
+		prodFld, ok := attrs.Define(ctx, loaded).Field("Products")
+		if !ok {
+			t.Fatalf("missing Products field")
+		}
+		_ = prodFld.GetValue()
+
+		if _, err := loaded.Products.Objects().WithContext(ctx).SetTargets([]*ThroughRegProduct{p1, p2}); err != nil {
+			t.Fatalf("seed [p1, p2]: %v", err)
+		}
+		if list := loaded.Products.AsList(); len(list) != 2 {
+			t.Fatalf("expected 2 in-memory products after seed, got %d", len(list))
+		}
+
+		m2mFF, ok := prodFld.FormField().(*formfields.ManyToManyFormField)
+		if !ok {
+			t.Fatalf("expected *formfields.ManyToManyFormField, got %T", prodFld.FormField())
+		}
+
+		// 1. Replace [p1, p2] -> [p2]
+		if err := m2mFF.SaveField(ctx, prodFld, []attrs.Definer{p2}, loaded); err != nil {
+			t.Fatalf("SaveField([p2]) failed: %v", err)
+		}
+		list := loaded.Products.AsList()
+		if len(list) != 1 || list[0].Object.ID != p2.ID {
+			t.Errorf("after SaveField([p2]): in-memory Products = %v, want [p2 (ID=%d)]", list, p2.ID)
+		}
+
+		// 2. Clear via empty slice
+		if err := m2mFF.SaveField(ctx, prodFld, []attrs.Definer{}, loaded); err != nil {
+			t.Fatalf("SaveField([]) failed: %v", err)
+		}
+		if list := loaded.Products.AsList(); len(list) != 0 {
+			t.Errorf("after SaveField([]): in-memory Products len = %d, want 0 (%v)", len(list), list)
+		}
+
+		// 3. Re-seed [p1], then clear via nil
+		if _, err := loaded.Products.Objects().WithContext(ctx).SetTargets([]*ThroughRegProduct{p1}); err != nil {
+			t.Fatalf("re-seed [p1]: %v", err)
+		}
+		if list := loaded.Products.AsList(); len(list) != 1 {
+			t.Fatalf("expected 1 in-memory product after re-seed, got %d", len(list))
+		}
+		if err := m2mFF.SaveField(ctx, prodFld, nil, loaded); err != nil {
+			t.Fatalf("SaveField(nil) failed: %v", err)
+		}
+		if list := loaded.Products.AsList(); len(list) != 0 {
+			t.Errorf("after SaveField(nil): in-memory Products len = %d, want 0 (%v)", len(list), list)
+		}
+	})
+
+	t.Run("OneToOneFormField_SaveField_SyncsSetReplaceAndClearInMemory", func(t *testing.T) {
+		src := mustCreateThroughReg(t, &ThroughRegO2OSource{Title: "CacheSyncO2O"})
+		tgt1 := mustCreateThroughReg(t, &ThroughRegO2OTarget{Title: "O2OTgt1"})
+		tgt2 := mustCreateThroughReg(t, &ThroughRegO2OTarget{Title: "O2OTgt2"})
+		models.Setup(ctx, src)
+		models.Setup(ctx, tgt1)
+		models.Setup(ctx, tgt2)
+
+		srcFld, ok := attrs.Define(ctx, src).Field("Target")
+		if !ok {
+			t.Fatalf("missing Target field")
+		}
+		o2oFF, ok := srcFld.FormField().(*formfields.OneToOneFormField)
+		if !ok {
+			t.Fatalf("expected *formfields.OneToOneFormField, got %T", srcFld.FormField())
+		}
+
+		// 1. Set tgt1
+		if err := o2oFF.SaveField(ctx, srcFld, tgt1, src); err != nil {
+			t.Fatalf("SaveField(tgt1) failed: %v", err)
+		}
+		if src.Target == nil || src.Target.Object == nil || src.Target.Object.ID != tgt1.ID {
+			t.Errorf("after SaveField(tgt1): src.Target = %+v, want Object.ID=%d", src.Target, tgt1.ID)
+		}
+
+		// 2. Replace tgt1 -> tgt2
+		if err := o2oFF.SaveField(ctx, srcFld, tgt2, src); err != nil {
+			t.Fatalf("SaveField(tgt2) failed: %v", err)
+		}
+		if src.Target == nil || src.Target.Object == nil || src.Target.Object.ID != tgt2.ID {
+			t.Errorf("after SaveField(tgt2): src.Target = %+v, want Object.ID=%d", src.Target, tgt2.ID)
+		}
+
+		// 3. Clear via nil
+		if err := o2oFF.SaveField(ctx, srcFld, nil, src); err != nil {
+			t.Fatalf("SaveField(nil) failed: %v", err)
+		}
+		if src.Target != nil && (src.Target.Object != nil || src.Target.ThroughObject != nil) {
+			t.Errorf("after SaveField(nil): expected Object=nil and ThroughObject=nil, got Object=%+v ThroughObject=%+v",
+				src.Target.Object, src.Target.ThroughObject)
+		}
+	})
+}
+
+func TestRelO2O_ClearResetsInMemoryObjectAndThrough(t *testing.T) {
+	clearMSRelTables(t)
+	ctx := t.Context()
+
+	src := mustCreateThroughReg(t, &ThroughRegO2OSource{Title: "O2OClearSrc"})
+	tgt := mustCreateThroughReg(t, &ThroughRegO2OTarget{Title: "O2OClearTgt"})
+	models.Setup(ctx, src)
+	models.Setup(ctx, tgt)
+
+	if _, _, err := src.Target.Objects().WithContext(ctx).SetTarget(tgt); err != nil {
+		t.Fatalf("SetTarget failed: %v", err)
+	}
+	if src.Target == nil || src.Target.Object == nil || src.Target.Object.ID != tgt.ID || src.Target.ThroughObject == nil {
+		t.Fatalf("expected populated Object and ThroughObject after SetTarget, got %+v", src.Target)
+	}
+
+	deleted, err := src.Target.Objects().Clear(ctx)
+	if err != nil {
+		t.Fatalf("Clear(ctx) failed: %v", err)
+	}
+	if !deleted {
+		t.Fatalf("expected Clear(ctx) deleted = true")
+	}
+
+	if src.Target.Object != nil {
+		t.Errorf("after Clear(ctx): src.Target.Object = %+v, want nil", src.Target.Object)
+	}
+	if src.Target.ThroughObject != nil {
+		t.Errorf("after Clear(ctx): src.Target.ThroughObject = %+v, want nil", src.Target.ThroughObject)
+	}
+}

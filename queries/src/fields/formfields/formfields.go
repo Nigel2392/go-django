@@ -201,6 +201,15 @@ func (f *ForeignKeyFormField) Widget() widgets.Widget {
 	return f.BaseField.FormWidget
 }
 
+func (f *ForeignKeyFormField) Hide(hidden bool) {
+	f.Widget().Hide(hidden)
+}
+
+func (f *ForeignKeyFormField) Validate(ctx context.Context, value interface{}) []error {
+	f.Widget()
+	return f.BaseField.Validate(ctx, value)
+}
+
 var _ modelforms.AfterModelFieldSaver = (*ManyToManyFormField)(nil)
 
 type ManyToManyFormField struct {
@@ -221,15 +230,24 @@ func (o *ManyToManyFormField) SaveField(ctx context.Context, field attrs.Field, 
 		)
 	}
 
-	var backRef = queries.RelM2M[attrs.Definer, attrs.Definer]{
-		Parent: &queries.ParentInfo{
-			Object: model,
-			Field:  fld,
-		},
+	var backRef queries.MultiThroughRelationValue
+	if v, ok := fld.GetValue().(queries.MultiThroughRelationValue); ok && v != nil && (reflect.ValueOf(v).Kind() != reflect.Ptr || !reflect.ValueOf(v).IsNil()) {
+		if v.ParentInfo() == nil {
+			_ = attrs.BindValueToModel(model, fld, v)
+		}
+		backRef = v
+	} else {
+		backRef = &queries.RelM2M[attrs.Definer, attrs.Definer]{
+			Parent: &queries.ParentInfo{
+				Object: model,
+				Field:  fld,
+			},
+		}
 	}
+	var relQs = queries.ManyToManyQuerySet[attrs.Definer](backRef)
 
 	if value == nil {
-		var _, err = backRef.Objects().
+		var _, err = relQs.
 			WithContext(ctx).
 			ClearTargets()
 
@@ -248,7 +266,7 @@ func (o *ManyToManyFormField) SaveField(ctx context.Context, field attrs.Field, 
 		)
 	}
 
-	var _, err = backRef.Objects().
+	var _, err = relQs.
 		WithContext(ctx).
 		SetTargets(objects)
 	if err != nil {
@@ -273,6 +291,23 @@ func (o *ManyToManyFormField) Widget() widgets.Widget {
 	return o.BaseField.FormWidget
 }
 
+func (o *ManyToManyFormField) ValueToForm(value interface{}) interface{} {
+	return o.Widget().ValueToForm(value)
+}
+
+func (o *ManyToManyFormField) ValueToGo(value interface{}) (interface{}, error) {
+	return o.Widget().ValueToGo(value)
+}
+
+func (o *ManyToManyFormField) Hide(hidden bool) {
+	o.Widget().Hide(hidden)
+}
+
+func (o *ManyToManyFormField) Validate(ctx context.Context, value interface{}) []error {
+	o.Widget()
+	return o.BaseField.Validate(ctx, value)
+}
+
 type OneToOneFormField struct {
 	ForeignKeyFormField
 }
@@ -291,15 +326,24 @@ func (o *OneToOneFormField) SaveField(ctx context.Context, field attrs.Field, va
 		)
 	}
 
-	var backRef = queries.RelO2O[attrs.Definer, attrs.Definer]{
-		Parent: &queries.ParentInfo{
-			Object: model,
-			Field:  fld,
-		},
+	var backRef queries.ThroughRelationValue
+	if v, ok := fld.GetValue().(queries.ThroughRelationValue); ok && v != nil && (reflect.ValueOf(v).Kind() != reflect.Ptr || !reflect.ValueOf(v).IsNil()) {
+		if v.ParentInfo() == nil {
+			_ = attrs.BindValueToModel(model, fld, v)
+		}
+		backRef = v
+	} else {
+		backRef = &queries.RelO2O[attrs.Definer, attrs.Definer]{
+			Parent: &queries.ParentInfo{
+				Object: model,
+				Field:  fld,
+			},
+		}
 	}
+	var relQs = queries.OneToOneQuerySet[attrs.Definer](backRef)
 
 	if value == nil {
-		var _, err = backRef.Objects().Clear(ctx)
+		var _, err = relQs.Clear(ctx)
 
 		if err != nil && !errors.Is(err, errors.NoChanges) {
 			return errors.Wrapf(err, "failed to clear targets for %s", o.Field.Name())
@@ -316,7 +360,7 @@ func (o *OneToOneFormField) SaveField(ctx context.Context, field attrs.Field, va
 		)
 	}
 
-	var _, _, err = backRef.Objects().
+	var _, _, err = relQs.
 		WithContext(ctx).
 		SetTarget(objects)
 	if err != nil {

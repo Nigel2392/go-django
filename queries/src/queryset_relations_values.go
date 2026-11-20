@@ -292,9 +292,15 @@ func (rl *RelO2O[T1, T2]) Objects() *RelOneToOneQuerySet[T1] {
 func (rl *RelO2O[T1, T2]) SetValue(instance attrs.Definer, through attrs.Definer) {
 	if instance != nil {
 		rl.Object = instance.(T1)
+	} else {
+		var zero T1
+		rl.Object = zero
 	}
 	if through != nil {
 		rl.ThroughObject = through.(T2)
+	} else {
+		var zero T2
+		rl.ThroughObject = zero
 	}
 }
 
