@@ -9,11 +9,13 @@ import (
 	autherrors "github.com/Nigel2392/go-django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/Nigel2392/go-django/contrib/messages"
+	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -295,6 +297,13 @@ func viewSettingsEdit(w http.ResponseWriter, r *http.Request) {
 					Select("Data").
 					BulkUpdate(settings)
 				if err == nil {
+					auditlogs.Log(
+						r.Context(), "settings:changed", logger.WRN,
+						nil, map[string]interface{}{
+							"settings": settings,
+						},
+					)
+
 					messages.Success(r, "Settings saved succesfully.")
 					http.Redirect(w, r, django.Reverse("admin:settings"), http.StatusSeeOther)
 					return

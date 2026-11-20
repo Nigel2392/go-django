@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
+	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
@@ -25,6 +26,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -269,6 +271,51 @@ func NewAppConfig() (django.AppConfig, error) {
 				RegisterToAdminMenu: true,
 				ListView: admin.ListViewOptions{
 					Fields: []string{"Name", "ParentCategory"},
+					Search: &searches.SearchOptions{
+						Fields: []searches.SearchField{
+							{Name: "Name", Lookup: expr.LOOKUP_ICONTANS},
+						},
+					},
+				},
+				AddView: admin.FormViewOptions{
+					Panels: []admin.Panel{
+						admin.FieldPanel("Name"),
+						admin.FieldPanel("Slug"),
+						admin.FieldPanel("ParentCategory"),
+						&admin.ModelFormPanel[*models.Category, modelforms.ModelForm[*models.Category]]{
+							TargetType: &models.Category{},
+							FieldName:  "Children",
+							Classname:  "collapsible",
+							// SubClassname: "collapsed",
+							MinNum: 1,
+							// DisallowAdd:    true,
+							// DisallowRemove: true,
+							Panels: []admin.Panel{
+								admin.FieldPanel("Name"),
+								admin.FieldPanel("Slug"),
+							},
+						},
+					},
+				},
+				EditView: admin.FormViewOptions{
+					Panels: []admin.Panel{
+						admin.FieldPanel("Name"),
+						admin.FieldPanel("Slug"),
+						admin.FieldPanel("ParentCategory"),
+						&admin.ModelFormPanel[*models.Category, modelforms.ModelForm[*models.Category]]{
+							TargetType: &models.Category{},
+							FieldName:  "Children",
+							Classname:  "collapsible",
+							// SubClassname: "collapsed",
+							MinNum: 1,
+							// DisallowAdd:    true,
+							// DisallowRemove: true,
+							Panels: []admin.Panel{
+								admin.FieldPanel("Name"),
+								admin.FieldPanel("Slug"),
+							},
+						},
+					},
 				},
 			},
 			admin.ModelOptions{
@@ -351,6 +398,14 @@ func NewAppConfig() (django.AppConfig, error) {
 						"ValidUntil",
 						"CreatedAt",
 					},
+					Search: &searches.SearchOptions{
+						Fields: []searches.SearchField{
+							{Name: "Code", Lookup: expr.LOOKUP_ICONTANS},
+							{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
+							{Name: "ShortDescription", Lookup: expr.LOOKUP_ICONTANS},
+							{Name: "CreatedBy.Email", Lookup: expr.LOOKUP_ICONTANS},
+						},
+					},
 				},
 				AddView: admin.FormViewOptions{
 					Panels: []admin.Panel{
@@ -371,7 +426,6 @@ func NewAppConfig() (django.AppConfig, error) {
 								admin.FieldPanel("MinOrderAmount"),
 								admin.FieldPanel("ValidFrom"),
 								admin.FieldPanel("ValidUntil"),
-								admin.FieldPanel("CreatedAt"),
 							),
 							admin.PanelTab(
 								trans.S("Products"),
@@ -415,6 +469,7 @@ func NewAppConfig() (django.AppConfig, error) {
 								admin.FieldPanel("ValidFrom"),
 								admin.FieldPanel("ValidUntil"),
 								admin.FieldPanel("CreatedAt"),
+								admin.FieldPanel("UpdatedAt"),
 							),
 							admin.PanelTab(
 								trans.S("Products"),

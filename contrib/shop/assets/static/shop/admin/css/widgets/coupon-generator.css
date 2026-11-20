@@ -45,6 +45,11 @@
     flex-direction: row;
     flex-wrap: nowrap;
 }
+.coupon-generator-part-controls .coupon-generator-part--dash {
+    flex: 0 0 0;
+    aspect-ratio: 1;
+    width: fit-content;
+}
 .coupon-generator-part {
     display: flex;
     flex: 1 1 auto;

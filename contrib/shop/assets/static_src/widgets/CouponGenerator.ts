@@ -103,7 +103,7 @@ class CouponGeneratorController extends Controller<any> {
             group: `sortableGroup-${this.outputTarget.id}`,
             draggable: ".coupon-generator-part",
             animation: 150,
-            onAdd: this.compileParts.bind(this),
+            onChange: this.compileParts.bind(this),
         })
 
         this.refreshTarget.addEventListener("click", this.compileParts.bind(this))

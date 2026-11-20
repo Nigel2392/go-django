@@ -16,42 +16,48 @@
         <div class="coupon-generator-controls" data-coupon-generator-target="controls">
             <div data-part-value="CPT_RANDOM" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_RANDOM }}">
                 <div class="coupon-generator-part-label">
-                    <strong>CPT_RANDOM</strong>
+                    <strong>{{ .Data.generator.i18n.random }}</strong>
                 </div>
                 <input class="coupon-generator-part-control" type="number" placeholder="{{ .Data.generator.i18n.Length }}"/>
             </div>
             <div data-part-value="CPT_STATIC" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_STATIC }}">
                 <div class="coupon-generator-part-label">
-                    <strong>CPT_STATIC</strong>
+                    <strong>{{ .Data.generator.i18n.static }}</strong>
                 </div>
                 <input class="coupon-generator-part-control" type="text" placeholder="{{ .Data.generator.i18n.Value }}"/>
             </div>
             {{ $generator := (.Get "generator") }}
-            {{ $generatorTime := (index $generator "time") }}
+            <!-- {{ $generatorTime := (index $generator "time") }} -->
             <div data-part-value="CPT_YEAR" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_YEAR }}">
-                <strong>{{ index $generatorTime "year" }}</strong>
+                <!-- <strong>{{ index $generatorTime "year" }}</strong> -->
+                <strong>{{ .Data.generator.i18n.year }}</strong>
             </div>
             <div data-part-value="CPT_MONTH" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_MONTH }}">
-                <strong>{{ index $generatorTime "month" }}</strong>
+                <!-- <strong>{{ index $generatorTime "month" }}</strong> -->
+                <strong>{{ .Data.generator.i18n.month }}</strong>
             </div>
             <div data-part-value="CPT_WEEKDAY" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_WEEKDAY }}">
-                <strong>{{ index $generatorTime "weekday" }}</strong>
+                <!-- <strong>{{ index $generatorTime "weekday" }}</strong> -->
+                <strong>{{ .Data.generator.i18n.weekday }}</strong>
             </div>
             <div data-part-value="CPT_DAY" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_DAY }}">
-                <strong>{{ index $generatorTime "day" }}</strong>
+                <!-- <strong>{{ index $generatorTime "day" }}</strong> -->
+                <strong>{{ .Data.generator.i18n.day }}</strong>
             </div>
             <div data-part-value="CPT_HOUR" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_HOUR }}">
-                <strong>{{ index $generatorTime "hour" }}</strong>
+                <!-- <strong>{{ index $generatorTime "hour" }}</strong> -->
+                <strong>{{ .Data.generator.i18n.hour }}</strong>
             </div>
             <div data-part-value="CPT_MINUTE" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_MINUTE }}">
-                <strong>{{ index $generatorTime "minute" }}</strong>
+                <!-- <strong>{{ index $generatorTime "minute" }}</strong> -->
+                <strong>{{ .Data.generator.i18n.minute }}</strong>
             </div>
-            <div data-part-value="CPT_DASH" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_DASH }}">
+            <div data-part-value="CPT_DASH" data-coupon-generator-target="part" class="coupon-generator-part coupon-generator-part--dash" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_DASH }}">
                 <strong>-</strong>
             </div>
             <div data-part-value="CPT_UUID" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_UUID }}">
                 <div class="coupon-generator-part-label">
-                    <strong>CPT_UUID</strong>
+                    <strong>{{ .Data.generator.i18n.uuid }}</strong>
                 </div>
                 <input class="coupon-generator-part-control" type="number" placeholder="{{ .Data.generator.i18n.Length }}"/>
             </div>
