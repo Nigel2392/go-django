@@ -25,6 +25,19 @@ const (
 	APPVAR_MIGRATION_DIR = "migrator.migration_dir"
 )
 
+type IndexDefiner interface {
+	DatabaseIndexes(obj attrs.Definer) []Index
+}
+
+type UniqueTogetherDefiner interface {
+	attrs.Definer
+	UniqueTogether() [][]string
+}
+
+type ConstraintDefiner interface {
+	Constraints() []constraints.Constraint
+}
+
 type CanColumnDBType interface {
 	DBType(*Column) dbtype.Type
 }

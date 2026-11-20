@@ -2,12 +2,13 @@ package migrator
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
@@ -262,20 +263,20 @@ func jsonCompare(newDefault, oldDefault interface{}) (bool, error) {
 		aBytes, bBytes []byte
 		err            error
 	)
-	if aBytes, err = json.Marshal(newDefault); err != nil {
+	if aBytes, err = json.Marshal(newDefault, deconstruct.Constructors.JSONOptions()); err != nil {
 		return false, err
 	}
-	if bBytes, err = json.Marshal(oldDefault); err != nil {
+	if bBytes, err = json.Marshal(oldDefault, deconstruct.Constructors.JSONOptions()); err != nil {
 		return false, err
 	}
 	var (
 		aFace = new(interface{})
 		bFace = new(interface{})
 	)
-	if err = json.Unmarshal(aBytes, aFace); err != nil {
+	if err = json.Unmarshal(aBytes, aFace, deconstruct.Constructors.JSONOptions()); err != nil {
 		return false, err
 	}
-	if err = json.Unmarshal(bBytes, bFace); err != nil {
+	if err = json.Unmarshal(bBytes, bFace, deconstruct.Constructors.JSONOptions()); err != nil {
 		return false, err
 	}
 
@@ -359,6 +360,12 @@ func (c *Column) ChangeList(other *Column) []string {
 	if c.MaxValue != other.MaxValue {
 		l = append(l, "MaxValue")
 	}
+	if c.Precision != other.Precision {
+		l = append(l, "Precision")
+	}
+	if c.Scale != other.Scale {
+		l = append(l, "Scale")
+	}
 	if c.Unique != other.Unique {
 		l = append(l, "Unique")
 	}
@@ -408,6 +415,12 @@ checkRevAlias:
 		var other = other.Rel
 		if c.Rel.Type != other.Type {
 			l = append(l, "Rel:Type")
+		}
+		if c.Rel.OnDelete != other.OnDelete {
+			l = append(l, "Rel:OnDelete")
+		}
+		if c.Rel.OnUpdate != other.OnUpdate {
+			l = append(l, "Rel:OnUpdate")
 		}
 
 		if (c.Rel.TargetModel == nil) != (other.TargetModel == nil) {

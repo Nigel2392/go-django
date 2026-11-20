@@ -2,8 +2,9 @@ package migrator
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -112,12 +113,12 @@ func (m *MigrationRelation) MarshalJSON() ([]byte, error) {
 		OnDelete:    m.OnDelete,
 		OnUpdate:    m.OnUpdate,
 	}
-	return json.Marshal(rel)
+	return json.Marshal(rel, deconstruct.Constructors.JSONOptions())
 }
 
 func (m *MigrationRelation) UnmarshalJSON(data []byte) error {
 	var rel migrationRelationSerialized
-	if err := json.Unmarshal(data, &rel); err != nil {
+	if err := json.Unmarshal(data, &rel, deconstruct.Constructors.JSONOptions()); err != nil {
 		return errors.Wrap(
 			err, "error unmarshalling relation",
 		)

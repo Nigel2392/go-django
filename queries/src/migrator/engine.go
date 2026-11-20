@@ -2,7 +2,8 @@ package migrator
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io/fs"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -148,7 +150,7 @@ func (m *MigrationFile) addLazyDependency(modelKey string) {
 	}
 }
 
-func (m *MigrationFile) addAction(actionType ActionType, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index]) {
+func (m *MigrationFile) addAction(actionType ActionType, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index], constraint *Changed[constraints.Constraint]) {
 	if m.Actions == nil {
 		m.Actions = make([]MigrationAction, 0)
 	}
@@ -157,6 +159,7 @@ func (m *MigrationFile) addAction(actionType ActionType, table *Changed[*ModelTa
 		Table:      table,
 		Field:      column,
 		Index:      index,
+		Constraint: constraint,
 	})
 }
 
@@ -341,6 +344,20 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 			continue
 		}
 
+		var working *ModelTable
+		if n.mig.Prev != nil && n.mig.Prev.Table != nil {
+			working = &ModelTable{
+				Object: n.mig.Prev.Table.Object,
+				Table:  n.mig.Prev.Table.Table,
+				Desc:   n.mig.Prev.Table.Desc,
+				Fields: orderedmap.NewOrderedMap[string, Column](),
+				Index:  n.mig.Prev.Table.Index,
+			}
+			for head := n.mig.Prev.Table.Fields.Front(); head != nil; head = head.Next() {
+				working.Fields.Set(head.Key, head.Value)
+			}
+		}
+
 		for _, action := range n.mig.Actions {
 			var err error
 
@@ -353,6 +370,9 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 
 			case ActionRenameTable:
 				err = m.SchemaEditor.RenameTable(ctx, action.Table.Old, action.Table.New.TableName())
+				if working != nil {
+					working.Table = action.Table.New.TableName()
+				}
 
 			case ActionAddField:
 				if !action.Field.New.UseInDB {
@@ -362,6 +382,9 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
 				err = m.SchemaEditor.AddField(ctx, n.mig.Table, *action.Field.New)
+				if working != nil {
+					working.Fields.Set(action.Field.New.Name, *action.Field.New)
+				}
 
 			case ActionAlterField:
 				if !(action.Field.New.UseInDB && action.Field.Old.UseInDB) {
@@ -374,7 +397,18 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
 
-				err = m.SchemaEditor.AlterField(ctx, n.mig.Table, *action.Field.Old, *action.Field.New)
+				var alterTable Table = n.mig.Table
+				if working != nil {
+					alterTable = working
+				}
+				err = m.SchemaEditor.AlterField(ctx, alterTable, *action.Field.Old, *action.Field.New)
+				if working != nil {
+					working.Fields.Set(action.Field.New.Name, *action.Field.New)
+				}
+			case ActionAddConstraint:
+
+			case ActionDropConstraint:
+
 			case ActionRemoveField:
 				if !action.Field.Old.UseInDB {
 					continue
@@ -382,6 +416,9 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 				action.Field.Old.Table = n.mig.Table
 				action.Field.Old.Field, _ = defs.Field(action.Field.Old.Name)
 				err = m.SchemaEditor.RemoveField(ctx, n.mig.Table, *action.Field.Old)
+				if working != nil {
+					working.Fields.Delete(action.Field.Old.Name)
+				}
 			case ActionAddIndex:
 				action.Index.New.table = n.mig.Table
 				err = m.SchemaEditor.AddIndex(ctx, n.mig.Table, *action.Index.New, false)
@@ -541,6 +578,9 @@ func (m *MigrationEngine) NeedsToMakeMigrations(ctx context.Context, apps ...str
 		}
 
 		for _, model := range app.Models() {
+			if !CheckCanMigrate(model) {
+				continue
+			}
 			var cType = contenttypes.NewContentType(model)
 			var modelName = cType.Model()
 
@@ -832,6 +872,12 @@ func (m *MigrationEngine) buildDependencyGraph(migrations []*migrationFileInfo) 
 			n.deps = append(n.deps, depNode)
 		}
 
+		if prev := n.mig.Prev; prev != nil {
+			if prevNode, ok := nodeMap[fmt.Sprintf("%s:%s:%s", prev.AppName, prev.ModelName, prev.FileName())]; ok {
+				n.deps = append(n.deps, prevNode)
+			}
+		}
+
 		for _, lazyDep := range n.mig.LazyDependencies {
 			// lazy dependencies are loaded using contenttypes.LoadModel()
 			var lazyModel = contenttypes.LoadModel(lazyDep)
@@ -846,6 +892,9 @@ func (m *MigrationEngine) buildDependencyGraph(migrations []*migrationFileInfo) 
 			}
 
 			var lastMigration = m.GetLastMigration(app.Name(), cType.Model())
+			if lastMigration == nil {
+				return nil, fmt.Errorf("lazy dependency %q has no migrations for migration %q/%q", lazyDep, n.mig.AppName, n.mig.ModelName)
+			}
 			var depKey = fmt.Sprintf("%s:%s:%s", app.Name(), cType.Model(), lastMigration.FileName())
 			depNode, ok := nodeMap[depKey]
 			if !ok {
@@ -892,12 +941,17 @@ func (m *MigrationEngine) buildDependencyGraph(migrations []*migrationFileInfo) 
 // makeMigrationDiff diffs the last migration with the current table state and returns true if a migration is needed.
 func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *MigrationFile, table *ModelTable) (shouldMigrate bool) {
 	if last == nil || last.Table == nil {
-		migration.addAction(ActionCreateTable, nil, nil, nil)
+		migration.addAction(ActionCreateTable, nil, nil, nil, nil)
 		m.Log(ActionCreateTable, migration, unchanged(table), nil, nil, nil)
 
 		for _, idx := range table.Indexes() {
-			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &idx))
+			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &idx), nil)
 			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&idx), nil)
+		}
+
+		for _, c := range table.Constraints() {
+			migration.addAction(ActionAddConstraint, nil, nil, nil, changed(nil, c))
+			m.Log(ActionAddConstraint, migration, unchanged(table), nil, nil, unchanged(c))
 		}
 
 		return true
@@ -905,13 +959,13 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 
 	var lastAppliedTable = last.Table
 	if table == nil {
-		migration.addAction(ActionDropTable, changed(lastAppliedTable, nil), nil, nil)
+		migration.addAction(ActionDropTable, changed(lastAppliedTable, nil), nil, nil, nil)
 		m.Log(ActionDropTable, migration, unchanged(lastAppliedTable), nil, nil, nil)
 		return true
 	}
 
 	if lastAppliedTable.TableName() != table.TableName() {
-		migration.addAction(ActionRenameTable, changed(lastAppliedTable, table), nil, nil)
+		migration.addAction(ActionRenameTable, changed(lastAppliedTable, table), nil, nil, nil)
 		m.Log(ActionRenameTable, migration, changed(lastAppliedTable, table), nil, nil, nil)
 		shouldMigrate = true
 	}
@@ -919,68 +973,75 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 	var added, removed, diffs = table.Diff(lastAppliedTable)
 
 	for _, col := range added {
-		migration.addAction(ActionAddField, nil, unchanged(&col), nil)
+		migration.addAction(ActionAddField, nil, unchanged(&col), nil, nil)
 		m.Log(ActionAddField, migration, unchanged(table), unchanged(&col), nil, nil)
 		shouldMigrate = true
 	}
 
 	for _, col := range removed {
-		migration.addAction(ActionRemoveField, nil, changed(&col, nil), nil)
+		migration.addAction(ActionRemoveField, nil, changed(&col, nil), nil, nil)
 		m.Log(ActionRemoveField, migration, unchanged(table), changed(&col, nil), nil, nil)
 		shouldMigrate = true
 	}
 
 	for _, col := range diffs {
-		migration.addAction(ActionAlterField, nil, changed(&col.Old, &col.New), nil)
+		migration.addAction(ActionAlterField, nil, changed(&col.Old, &col.New), nil, nil)
 		m.Log(ActionAlterField, migration, unchanged(table), changed(&col.Old, &col.New), nil, nil)
 		shouldMigrate = true
 	}
 
 	var (
-		oldIndexes = lastAppliedTable.Indexes()
-		newIndexes = table.Indexes()
-		oldMap     = make(map[string]Index, len(oldIndexes))
-		newMap     = make(map[string]Index, len(newIndexes))
+		oldIndexes  = lastAppliedTable.Indexes()
+		newIndexes  = table.Indexes()
+		oldIndexMap = make(map[string]Index, len(oldIndexes))
+		newIndexMap = make(map[string]Index, len(newIndexes))
 	)
 
 	for _, idx := range oldIndexes {
-		oldMap[idx.Name()] = idx
+		oldIndexMap[idx.Name()] = idx
 	}
+
 	for _, idx := range newIndexes {
-		newMap[idx.Name()] = idx
+		newIndexMap[idx.Name()] = idx
+	}
+
+	// Detect and rename matching indexes with different names
+	for oldName, oldIdx := range oldIndexMap {
+		if _, ok := newIndexMap[oldName]; ok {
+			continue
+		}
+		for newName, candidate := range newIndexMap {
+			if _, ok := oldIndexMap[newName]; ok {
+				continue
+			}
+			if indexesEqual(oldIdx, candidate) {
+				delete(oldIndexMap, oldName)
+				delete(newIndexMap, newName)
+				migration.addAction(ActionRenameIndex, nil, nil, changed(&oldIdx, &candidate), nil)
+				m.Log(ActionRenameIndex, migration, unchanged(table), nil, changed(&oldIdx, &candidate), nil)
+				shouldMigrate = true
+				break
+			}
+		}
 	}
 
 	// Drop removed or changed indexes
-	for name, oldIdx := range oldMap {
-		var newIdx, exists = newMap[name]
+	for name, oldIdx := range oldIndexMap {
+		var newIdx, exists = newIndexMap[name]
 		if !exists || !indexesEqual(oldIdx, newIdx) {
-			migration.addAction(ActionDropIndex, nil, nil, changed(&oldIdx, nil))
+			migration.addAction(ActionDropIndex, nil, nil, changed(&oldIdx, nil), nil)
 			m.Log(ActionDropIndex, migration, unchanged(table), nil, changed(&oldIdx, nil), nil)
 			shouldMigrate = true
 		}
 	}
 
 	// Add new or changed indexes
-	for name, newIdx := range newMap {
-		var oldIdx, exists = oldMap[name]
+	for name, newIdx := range newIndexMap {
+		var oldIdx, exists = oldIndexMap[name]
 		if !exists || !indexesEqual(oldIdx, newIdx) {
-			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &newIdx))
+			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &newIdx), nil)
 			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&newIdx), nil)
 			shouldMigrate = true
-		}
-	}
-
-	// Detect and rename matching indexes with different names
-	for oldName, oldIdx := range oldMap {
-		for newName, candidate := range newMap {
-			if indexesEqual(oldIdx, candidate) && oldName != newName {
-				delete(oldMap, oldName)
-				delete(newMap, newName)
-				migration.addAction(ActionRenameIndex, nil, nil, changed(&oldIdx, &candidate))
-				m.Log(ActionRenameIndex, migration, unchanged(table), nil, changed(&oldIdx, &candidate), nil)
-				shouldMigrate = true
-				break
-			}
 		}
 	}
 
@@ -1097,7 +1158,7 @@ func storeInMap(m map[string]map[string][]*MigrationFile, mig *MigrationFile) {
 }
 
 func indexesEqual(a, b Index) bool {
-	if a.Name() != b.Name() || a.Unique != b.Unique || a.Type != b.Type {
+	if a.Unique != b.Unique || a.Type != b.Type {
 		return false
 	}
 
@@ -1124,7 +1185,7 @@ func (e *MigrationEngine) WriteMigration(migration *MigrationFile) error {
 		return fmt.Errorf("migration file %q already exists", filePath)
 	}
 
-	var data, err = json.MarshalIndent(migration, "", "  ")
+	var data, err = json.Marshal(migration, deconstruct.Constructors.JSONOptions(), jsontext.WithIndent("  "))
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal migration file %q", filePath)
 	}
@@ -1245,7 +1306,7 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 			)
 		}
 
-		if _, ok := e.apps.Get(appMigrationDir.Name()); !ok {
+		if _, ok := e.apps.Get(appMigrationDir.Name()); !ok || !slices.Contains(apps, appMigrationDir.Name()) {
 			logger.Debugf(
 				"Skip reading migrations for app %q, not found in migration engines' apps list", appMigrationDir.Name(),
 			)
@@ -1355,7 +1416,7 @@ func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelN
 			)
 		}
 
-		if err := json.Unmarshal(migrationFileBytes, &migrationFile); err != nil {
+		if err := json.Unmarshal(migrationFileBytes, &migrationFile, deconstruct.Constructors.JSONOptions()); err != nil {
 			return nil, errors.Wrapf(
 				err, "failed to unmarshal migration file %q", filePath,
 			)

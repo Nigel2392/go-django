@@ -412,6 +412,13 @@ type relWithFromField struct {
 	fld attrs.FieldDefinition
 }
 
+func (r *relWithFromField) ModelKey() string {
+	if lz, ok := r.Relation.(attrs.LazyRelation); ok {
+		return lz.ModelKey()
+	}
+	return ""
+}
+
 func (r *relWithFromField) From() attrs.RelationTarget {
 	return &relWithField{
 		RelationTarget: r.Relation.From(),

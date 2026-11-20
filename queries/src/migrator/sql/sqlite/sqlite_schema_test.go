@@ -425,7 +425,7 @@ func (m *sqliteIdxCommentModel) FieldDefs(ctx context.Context) attrs.Definitions
 	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.Config{Primary: true}),
 		attrs.NewField(m, "Name"),
-	).WithTableName("sqlite_idx_comment_tbl")
+	).WithTableName("ddl_idx_comment_tbl")
 }
 
 func TestBug_SQLite_AddIndexWithComment(t *testing.T) {
@@ -457,7 +457,7 @@ func (m *sqliteRenIdxModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.Config{Primary: true}),
 		attrs.NewField(m, "Name"),
-	).WithTableName("sqlite_ren_idx_tbl")
+	).WithTableName("ddl_ren_idx_tbl")
 }
 
 func TestBug_SQLite_RenameIndex(t *testing.T) {
@@ -477,7 +477,7 @@ func TestBug_SQLite_RenameIndex(t *testing.T) {
 		t.Fatalf("RenameIndex failed on SQLite: %v", err)
 	}
 
-	rows, err := db.QueryContext(ctx, "PRAGMA index_list(`sqlite_ren_idx_tbl`)")
+	rows, err := db.QueryContext(ctx, "PRAGMA index_list(`ddl_ren_idx_tbl`)")
 	if err != nil {
 		t.Fatalf("PRAGMA index_list: %v", err)
 	}
@@ -510,7 +510,7 @@ func (m *sqliteQuoteDefaultModel) FieldDefs(ctx context.Context) attrs.Definitio
 	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.Config{Primary: true}),
 		attrs.NewField(m, "Note", &attrs.Config{Default: "it's ok"}),
-	).WithTableName("sqlite_quote_dflt_tbl")
+	).WithTableName("ddl_quote_dflt_tbl")
 }
 
 func TestBug_SQLite_DefaultSingleQuoteEscaping(t *testing.T) {
@@ -522,11 +522,11 @@ func TestBug_SQLite_DefaultSingleQuoteEscaping(t *testing.T) {
 	if err := ed.CreateTable(ctx, tbl, false); err != nil {
 		t.Fatalf("CreateTable with single-quote default failed: %v", err)
 	}
-	if _, err := db.ExecContext(ctx, "INSERT INTO sqlite_quote_dflt_tbl (id) VALUES (1)"); err != nil {
+	if _, err := db.ExecContext(ctx, "INSERT INTO ddl_quote_dflt_tbl (id) VALUES (1)"); err != nil {
 		t.Fatalf("INSERT using default failed: %v", err)
 	}
 	var got string
-	if err := db.QueryRowContext(ctx, "SELECT note FROM sqlite_quote_dflt_tbl WHERE id = 1").Scan(&got); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT note FROM ddl_quote_dflt_tbl WHERE id = 1").Scan(&got); err != nil {
 		t.Fatalf("SELECT note: %v", err)
 	}
 	if got != "it's ok" {

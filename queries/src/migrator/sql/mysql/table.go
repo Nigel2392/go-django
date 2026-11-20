@@ -226,6 +226,19 @@ func (m *MySQLSchemaEditor) DropIndex(ctx context.Context, table migrator.Table,
 	// without checking if it exists.
 	// If you want to check before dropping, you would need to query the information_schema.
 	// This is a workaround, as MySQL does not support IF EXISTS for DROP INDEX.
+	if ifExists {
+		var count int
+		var err = m.queryRow(ctx,
+			"SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?",
+			table.TableName(), index.Name(),
+		).Scan(&count)
+		if err != nil {
+			return fmt.Errorf("failed to check if index exists: %w", err)
+		}
+		if count == 0 {
+			return nil
+		}
+	}
 	query := fmt.Sprintf("DROP INDEX `%s` ON `%s`;", index.Name(), table.TableName())
 	_, err := m.Execute(ctx, query)
 	return err
@@ -253,9 +266,12 @@ func (m *MySQLSchemaEditor) RemoveField(ctx context.Context, table migrator.Tabl
 }
 
 func (m *MySQLSchemaEditor) AlterField(ctx context.Context, table migrator.Table, oldCol, newCol migrator.Column) error {
-	query := fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN ", table.TableName())
 	var w strings.Builder
-	w.WriteString(query)
+	if oldCol.Column != newCol.Column {
+		fmt.Fprintf(&w, "ALTER TABLE `%s` CHANGE COLUMN `%s` ", table.TableName(), oldCol.Column)
+	} else {
+		fmt.Fprintf(&w, "ALTER TABLE `%s` MODIFY COLUMN ", table.TableName())
+	}
 	WriteColumn(&w, newCol)
 	_, err := m.Execute(ctx, w.String())
 	return err
@@ -312,7 +328,7 @@ func WriteColumn(w *strings.Builder, col migrator.Column) {
 		switch v := col.Default.V.(type) {
 		case string:
 			w.WriteString("'")
-			w.WriteString(v)
+			w.WriteString(strings.ReplaceAll(v, "'", "''"))
 			w.WriteString("'")
 		case int, int8, int16, int32, int64,
 			uint, uint8, uint16, uint32, uint64:

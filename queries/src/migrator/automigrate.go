@@ -151,6 +151,9 @@ func Migrate(ctx context.Context, opts ...AutoMigrateOption) error {
 
 func AutoMigrate(ctx context.Context, opts ...AutoMigrateOption) (madeMigrations, migrated bool, err error) {
 	cnf, engine, err := initAutoMigrateConfig(ctx, opts)
+	if err != nil {
+		return false, false, err
+	}
 	types, err := engine.NeedsToMakeMigrations(ctx, cnf.apps()...)
 	if err != nil {
 		return false, false, err

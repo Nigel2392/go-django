@@ -3,12 +3,14 @@ package migrator
 import (
 	"context"
 	"crypto/sha1"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
@@ -34,15 +36,6 @@ func changed[T any](old, new T) *Changed[T] {
 		Old: old,
 		New: new,
 	}
-}
-
-type IndexDefiner interface {
-	DatabaseIndexes(obj attrs.Definer) []Index
-}
-
-type UniqueTogetherDefiner interface {
-	attrs.Definer
-	UniqueTogether() [][]string
 }
 
 type Index struct {
@@ -102,11 +95,12 @@ func (i Index) Columns() []Column {
 }
 
 type ModelTable struct {
-	Object attrs.Definer
-	Table  string
-	Desc   string
-	Fields *orderedmap.OrderedMap[string, Column]
-	Index  []Index
+	Object     attrs.Definer
+	Table      string
+	Desc       string
+	Fields     *orderedmap.OrderedMap[string, Column]
+	Index      []Index
+	Constraint []constraints.Constraint
 }
 
 func (t *ModelTable) String() string {
@@ -204,6 +198,10 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 		}
 	}
 
+	if cDef, ok := obj.(ConstraintDefiner); ok {
+		t.Constraint = cDef.Constraints()
+	}
+
 	if uqDef, ok := obj.(UniqueTogetherDefiner); ok {
 		uqTogether := uqDef.UniqueTogether()
 		for _, uq := range uqTogether {
@@ -231,20 +229,22 @@ type serializableTableColumn struct {
 }
 
 type serializableModelTable struct {
-	Table   string                                       `json:"table"`
-	Model   *contenttypes.BaseContentType[attrs.Definer] `json:"model"`
-	Fields  []serializableTableColumn                    `json:"fields"`
-	Indexes []Index                                      `json:"indexes"`
-	Comment string                                       `json:"comment"`
+	Table       string                                       `json:"table"`
+	Model       *contenttypes.BaseContentType[attrs.Definer] `json:"model"`
+	Fields      []serializableTableColumn                    `json:"fields"`
+	Indexes     []Index                                      `json:"indexes"`
+	Constraints []constraints.Constraint                     `json:"constraints"`
+	Comment     string                                       `json:"comment"`
 }
 
 func (t *ModelTable) MarshalJSON() ([]byte, error) {
 	var s = serializableModelTable{
-		Table:   t.TableName(),
-		Model:   contenttypes.NewContentType(t.Object),
-		Indexes: t.Indexes(),
-		Comment: t.Comment(),
-		Fields:  make([]serializableTableColumn, 0, t.Fields.Len()),
+		Table:       t.TableName(),
+		Model:       contenttypes.NewContentType(t.Object),
+		Indexes:     t.Indexes(),
+		Comment:     t.Comment(),
+		Constraints: t.Constraints(),
+		Fields:      make([]serializableTableColumn, 0, t.Fields.Len()),
 	}
 
 	for head := t.Fields.Front(); head != nil; head = head.Next() {
@@ -254,12 +254,12 @@ func (t *ModelTable) MarshalJSON() ([]byte, error) {
 		})
 	}
 
-	return json.Marshal(s)
+	return json.Marshal(s, deconstruct.Constructors.JSONOptions())
 }
 
 func (t *ModelTable) UnmarshalJSON(data []byte) error {
 	var s serializableModelTable
-	if err := json.Unmarshal(data, &s); err != nil {
+	if err := json.Unmarshal(data, &s, deconstruct.Constructors.JSONOptions()); err != nil {
 		return err
 	}
 
@@ -268,6 +268,7 @@ func (t *ModelTable) UnmarshalJSON(data []byte) error {
 	t.Object = s.Model.New()
 	t.Fields = orderedmap.NewOrderedMap[string, Column]()
 	t.Index = make([]Index, 0, len(s.Indexes))
+	t.Constraint = s.Constraints
 	for _, idx := range s.Indexes {
 		idx.table = t
 		t.Index = append(t.Index, idx)
@@ -334,6 +335,10 @@ func (t *ModelTable) Indexes() []Index {
 	return t.Index
 }
 
+func (t *ModelTable) Constraints() []constraints.Constraint {
+	return t.Constraint
+}
+
 func (t *ModelTable) Diff(old *ModelTable) (added, removed []Column, diffs []Changed[Column]) {
 	if t == nil && old == nil {
 		return nil, nil, nil
@@ -349,8 +354,8 @@ func (t *ModelTable) Diff(old *ModelTable) (added, removed []Column, diffs []Cha
 			continue
 		}
 
-		var _, ok = t.Fields.Get(col.Name)
-		if !ok {
+		var newCol, ok = t.Fields.Get(col.Name)
+		if !ok || !newCol.UseInDB {
 			removed = append(removed, col)
 			continue
 		}
@@ -362,7 +367,7 @@ func (t *ModelTable) Diff(old *ModelTable) (added, removed []Column, diffs []Cha
 		var oldCol, ok = old.Fields.Get(col.Name)
 
 		// only add columns that are used in db
-		if !ok && col.UseInDB {
+		if (!ok || !oldCol.UseInDB) && col.UseInDB {
 			added = append(added, col)
 			continue
 		}

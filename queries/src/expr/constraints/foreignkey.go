@@ -14,22 +14,35 @@ var _ deconstruct.Deconstructible = (*foreignKeyConstraint)(nil)
 
 func init() {
 	deconstruct.Constructors.Register("queries.expr.constraints.ForeignKey", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
-		if len(args) != 1 {
-			return nil, fmt.Errorf("expected 1 arg for ForeignKeyConstraint, got %d", len(args))
+		if len(args) != 3 {
+			return nil, fmt.Errorf("expected 3 arg for ForeignKeyConstraint, got %d", len(args))
 		}
+
 		var fk = &foreignKeyConstraint{
 			Identifier: kwargs.Get[string]("identifier"),
 			Error:      kwargs.Get[string]("error"),
 		}
 
-		return fk, json.Unmarshal(args[0], &fk.Field, opts...)
+		if err := json.Unmarshal(args[0], &fk.Field, opts...); err != nil {
+			return fk, err
+		}
+		if err := json.Unmarshal(args[1], &fk.OnUpdate, opts...); err != nil {
+			return fk, err
+		}
+		if err := json.Unmarshal(args[2], &fk.OnDelete, opts...); err != nil {
+			return fk, err
+		}
+
+		return fk, nil
 	})
 }
 
 type foreignKeyConstraint struct {
 	Base
-	Field expr.Expression
-	used  bool
+	Field    expr.Expression
+	OnUpdate MutationAction
+	OnDelete MutationAction
+	used     bool
 }
 
 func ForeignKeyConstraint(id string, errorMessage string, field string, onUpdate, onDelete MutationAction) expr.Expression {
@@ -37,11 +50,13 @@ func ForeignKeyConstraint(id string, errorMessage string, field string, onUpdate
 		Identifier: id,
 		Error:      errorMessage,
 		Field:      expr.Field(field),
+		OnUpdate:   onUpdate,
+		OnDelete:   onDelete,
 	}
 }
 
 func (e *foreignKeyConstraint) Deconstruct() (path string, args []any, kwargs map[string]any) {
-	return "queries.expr.constraints.ForeignKey", []any{e.Field}, map[string]any{"identifier": e.Identifier, "error": e.Error}
+	return "queries.expr.constraints.ForeignKey", []any{e.Field, e.OnUpdate, e.OnDelete}, map[string]any{"identifier": e.Identifier, "error": e.Error}
 }
 
 func (e *foreignKeyConstraint) Clone() expr.Expression {

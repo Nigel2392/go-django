@@ -3,7 +3,7 @@ package migrator_test
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +16,7 @@ import (
 	"time"
 
 	_ "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	derrors "github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -208,7 +209,7 @@ func readMigrationFileJSON(t *testing.T, path string) map[string]any {
 		t.Fatalf("read migration file %q: %v", path, err)
 	}
 	var m map[string]any
-	if err := json.Unmarshal(b, &m); err != nil {
+	if err := deconstruct.Constructors.Unmarshal(b, &m); err != nil {
 		t.Fatalf("unmarshal migration file %q: %v", path, err)
 	}
 	return m
@@ -268,31 +269,41 @@ func (m *customCanMigrateModel) FieldDefs(ctx context.Context) attrs.Definitions
 	return attrs.AutoDefinitions(ctx, m)
 }
 
-type metaBoolFalseModel struct{ ID int64 `attrs:"primary"` }
+type metaBoolFalseModel struct {
+	ID int64 `attrs:"primary"`
+}
 
 func (m *metaBoolFalseModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.AutoDefinitions(ctx, m)
 }
 
-type metaBoolTrueModel struct{ ID int64 `attrs:"primary"` }
+type metaBoolTrueModel struct {
+	ID int64 `attrs:"primary"`
+}
 
 func (m *metaBoolTrueModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.AutoDefinitions(ctx, m)
 }
 
-type metaIntZeroModel struct{ ID int64 `attrs:"primary"` }
+type metaIntZeroModel struct {
+	ID int64 `attrs:"primary"`
+}
 
 func (m *metaIntZeroModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.AutoDefinitions(ctx, m)
 }
 
-type metaFloatNonZeroModel struct{ ID int64 `attrs:"primary"` }
+type metaFloatNonZeroModel struct {
+	ID int64 `attrs:"primary"`
+}
 
 func (m *metaFloatNonZeroModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.AutoDefinitions(ctx, m)
 }
 
-type metaInvalidTypeModel struct{ ID int64 `attrs:"primary"` }
+type metaInvalidTypeModel struct {
+	ID int64 `attrs:"primary"`
+}
 
 func (m *metaInvalidTypeModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.AutoDefinitions(ctx, m)
@@ -393,7 +404,7 @@ type customMigField struct {
 	dbType     dbtype.Type
 }
 
-func (c *customMigField) CanMigrate() bool               { return c.canMigrate }
+func (c *customMigField) CanMigrate() bool                    { return c.canMigrate }
 func (c *customMigField) DBType(*migrator.Column) dbtype.Type { return c.dbType }
 
 type customDBTypeField struct {
@@ -769,43 +780,43 @@ func (m *migAllTypesThrough) FieldDefs(ctx context.Context) attrs.Definitions {
 }
 
 type migAllTypesModel struct {
-	ID            int64 `attrs:"primary"`
-	FInt          int
-	FInt8         int8
-	FInt16        int16
-	FInt32        int32
-	FInt64        int64
-	FUint         uint
-	FUint64       uint64
-	FFloat32      float32
-	FFloat64      float64
-	FBool         bool
-	FString       string
-	FBytes        []byte
-	FTime         time.Time
-	FDecimal      decimal.Decimal
-	FULID         drivers.ULID
-	FUUID         drivers.UUID
-	FEmail        drivers.Email
-	FChar         drivers.Char
-	FText         drivers.Text
-	FDrvString    drivers.String
-	FDrvBytes     drivers.Bytes
-	FDrvBLOB      drivers.BLOB
-	FTimestamp    drivers.Timestamp
-	FLocalTime    drivers.LocalTime
-	FDateTime     drivers.DateTime
-	FJSON         drivers.JSON[map[string]any]
-	FNullString   sql.NullString
-	FNullInt64    sql.NullInt64
-	FNullBool     sql.NullBool
-	FNullFloat64  sql.NullFloat64
-	FNullTime     sql.NullTime
-	FNullDecimal  decimal.NullDecimal
-	FEncrypted    *securedb.EncryptedString
-	FFK           *migAllTypesTarget
-	FLazyFK       *migAllTypesTarget
-	FM2M          any
+	ID           int64 `attrs:"primary"`
+	FInt         int
+	FInt8        int8
+	FInt16       int16
+	FInt32       int32
+	FInt64       int64
+	FUint        uint
+	FUint64      uint64
+	FFloat32     float32
+	FFloat64     float64
+	FBool        bool
+	FString      string
+	FBytes       []byte
+	FTime        time.Time
+	FDecimal     decimal.Decimal
+	FULID        drivers.ULID
+	FUUID        drivers.UUID
+	FEmail       drivers.Email
+	FChar        drivers.Char
+	FText        drivers.Text
+	FDrvString   drivers.String
+	FDrvBytes    drivers.Bytes
+	FDrvBLOB     drivers.BLOB
+	FTimestamp   drivers.Timestamp
+	FLocalTime   drivers.LocalTime
+	FDateTime    drivers.DateTime
+	FJSON        drivers.JSON[map[string]any]
+	FNullString  sql.NullString
+	FNullInt64   sql.NullInt64
+	FNullBool    sql.NullBool
+	FNullFloat64 sql.NullFloat64
+	FNullTime    sql.NullTime
+	FNullDecimal decimal.NullDecimal
+	FEncrypted   *securedb.EncryptedString
+	FFK          *migAllTypesTarget
+	FLazyFK      *migAllTypesTarget
+	FM2M         any
 }
 
 func (m *migAllTypesModel) DatabaseIndexes(attrs.Definer) []migrator.Index {
@@ -915,13 +926,13 @@ func TestModelTable_JSONRoundTrip_AllFieldTypes(t *testing.T) {
 	_ = attrs.ResetDefinitions.Send(context.Background(), nil)
 
 	orig := migrator.NewModelTable(&migAllTypesModel{})
-	raw, err := json.Marshal(orig)
+	raw, err := json.Marshal(orig, deconstruct.Constructors.JSONOptions())
 	if err != nil {
 		t.Fatalf("json.Marshal(ModelTable) failed: %v", err)
 	}
 
 	var decoded migrator.ModelTable
-	if err := json.Unmarshal(raw, &decoded); err != nil {
+	if err := json.Unmarshal(raw, &decoded, deconstruct.Constructors.JSONOptions()); err != nil {
 		t.Fatalf("json.Unmarshal(ModelTable) failed: %v", err)
 	}
 
@@ -1479,13 +1490,17 @@ func (m *migLazySource) FieldDefs(ctx context.Context) attrs.Definitions {
 	).WithTableName("mig_lazy_source")
 }
 
-type migCycleA struct{ ID int64 `attrs:"primary"` }
+type migCycleA struct {
+	ID int64 `attrs:"primary"`
+}
 
 func (m *migCycleA) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.AutoDefinitions(ctx, m)
 }
 
-type migCycleB struct{ ID int64 `attrs:"primary"` }
+type migCycleB struct {
+	ID int64 `attrs:"primary"`
+}
 
 func (m *migCycleB) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.AutoDefinitions(ctx, m)
@@ -1920,9 +1935,9 @@ func TestRegisterMigrateFunc_And_ActionExecGoCode(t *testing.T) {
 	// 1. Validation & panic checks on RegisterMigrateFunc
 	noopFn := func(context.Context, *migrator.MigrationEngine, *migrator.ModelTable) error { return nil }
 	for name, fn := range map[string]func(){
-		"NilModel":    func() { migrator.RegisterMigrateFunc(nil, "0001_x.mig", noopFn) },
-		"NilFunc":     func() { migrator.RegisterMigrateFunc(&MigExecItem{}, "0001_x.mig", nil) },
-		"EmptyFile":   func() { migrator.RegisterMigrateFunc(&MigExecItem{}, "", noopFn) },
+		"NilModel":  func() { migrator.RegisterMigrateFunc(nil, "0001_x.mig", noopFn) },
+		"NilFunc":   func() { migrator.RegisterMigrateFunc(&MigExecItem{}, "0001_x.mig", nil) },
+		"EmptyFile": func() { migrator.RegisterMigrateFunc(&MigExecItem{}, "", noopFn) },
 	} {
 		func() {
 			defer func() {

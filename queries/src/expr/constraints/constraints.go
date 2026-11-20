@@ -1,5 +1,7 @@
 package constraints
 
+import "github.com/Nigel2392/go-django/queries/src/expr"
+
 type ConstraintType uint
 
 const (
@@ -45,6 +47,7 @@ var actions_map = map[MutationAction]string{
 }
 
 type Constraint interface {
+	expr.Expression
 	ID() string
 	Type() ConstraintType
 	ErrorMessage() string

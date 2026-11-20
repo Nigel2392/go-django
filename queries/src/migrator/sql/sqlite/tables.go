@@ -214,9 +214,9 @@ func (m *SQLiteSchemaEditor) AddIndex(ctx context.Context, table migrator.Table,
 	}
 	w.WriteString(")")
 	if index.Comment != "" {
-		w.WriteString(" COMMENT '")
-		w.WriteString(index.Comment)
-		w.WriteString("'")
+		w.WriteString(" /* ")
+		w.WriteString(strings.ReplaceAll(index.Comment, "*/", ""))
+		w.WriteString(" */")
 	}
 	w.WriteString("\n")
 	w.WriteString(";")
@@ -244,16 +244,18 @@ func (m *SQLiteSchemaEditor) DropIndex(ctx context.Context, table migrator.Table
 }
 
 func (m *SQLiteSchemaEditor) RenameIndex(ctx context.Context, table migrator.Table, oldName string, newName string) error {
-	var w strings.Builder
-	w.WriteString("ALTER INDEX `")
-	w.WriteString(oldName)
-	w.WriteString("` RENAME TO `")
-	w.WriteString(newName)
-	w.WriteString("`;")
-	w.WriteString("\n")
-
-	// Execute the query
-	_, err := m.Execute(ctx, w.String())
+	// SQLite has no ALTER INDEX: recreate the index under the new name.
+	var stmt string
+	var err = m.queryRow(ctx,
+		"SELECT sql FROM sqlite_schema WHERE type = 'index' AND name = ?", oldName,
+	).Scan(&stmt)
+	if err != nil {
+		return fmt.Errorf("fetch index %q: %w", oldName, err)
+	}
+	if _, err = m.Execute(ctx, fmt.Sprintf("DROP INDEX `%s`;", oldName)); err != nil {
+		return err
+	}
+	_, err = m.Execute(ctx, strings.Replace(stmt, "`"+oldName+"`", "`"+newName+"`", 1))
 	return err
 }
 
@@ -416,6 +418,11 @@ func (m *SQLiteSchemaEditor) AlterField(
 	}
 	defer rows.Close()
 
+	_, err = m.Execute(ctx, "PRAGMA defer_foreign_keys = ON;")
+	if err != nil {
+		return fmt.Errorf("defer foreign keys: %w", err)
+	}
+
 	_, err = m.Execute(ctx, fmt.Sprintf(
 		"DROP TABLE IF EXISTS `%s`;", tempTableName,
 	))
@@ -488,6 +495,9 @@ func (m *SQLiteSchemaEditor) AlterField(
 	// Step 7: Recreate triggers and indexes
 	for _, item := range schemaItems {
 		sql := strings.ReplaceAll(item.SQL, tempTableName, tableName)
+		if oldCol.Column != newCol.Column {
+			sql = strings.ReplaceAll(sql, "`"+oldCol.Column+"`", "`"+newCol.Column+"`")
+		}
 		if _, err := m.Execute(ctx, sql); err != nil {
 			return fmt.Errorf("recreate %s %q: %w", item.Type, item.Name, err)
 		}
@@ -546,7 +556,7 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 		switch v := defaultVal.(type) {
 		case string:
 			w.WriteString("'")
-			w.WriteString(v)
+			w.WriteString(strings.ReplaceAll(v, "'", "''"))
 			w.WriteString("'")
 		case int, int8, int16, int32, int64,
 			uint, uint8, uint16, uint32, uint64:

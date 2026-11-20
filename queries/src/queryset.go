@@ -4796,6 +4796,10 @@ func calcJoinType(rel attrs.Relation, parentField attrs.FieldDefinition) expr.Jo
 	}
 }
 
+func GetDatabaseName(model attrs.Definer) string {
+	return getDatabaseName(model)
+}
+
 func getDatabaseName(model attrs.Definer, database ...string) string {
 	var defaultDb = django.APPVAR_DATABASE
 	if len(database) > 1 {

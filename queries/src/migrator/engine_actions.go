@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -31,7 +32,7 @@ func (a *ActionType) UnmarshalJSON(data []byte) error {
 		*a = v
 		return nil
 	}
-	return nil
+	return fmt.Errorf("unknown action type %q", s)
 }
 
 const (
@@ -91,10 +92,11 @@ var stringToActionType = map[string]ActionType{
 
 // Actions are kept track of to ensure a proper name can be generated for the migration file.
 type MigrationAction struct {
-	ActionType ActionType            `json:"action"`
-	Table      *Changed[*ModelTable] `json:"table,omitempty"`
-	Field      *Changed[*Column]     `json:"field,omitempty"`
-	Index      *Changed[*Index]      `json:"index,omitempty"`
+	ActionType ActionType                       `json:"action"`
+	Table      *Changed[*ModelTable]            `json:"table,omitempty"`
+	Field      *Changed[*Column]                `json:"field,omitempty"`
+	Index      *Changed[*Index]                 `json:"index,omitempty"`
+	Constraint *Changed[constraints.Constraint] `json:"constraint,omitempty"`
 }
 
 // map of model -> migration file -> func(*ModelTable)
