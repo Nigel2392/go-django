@@ -169,7 +169,7 @@ func GenerateCouponCode(ctx context.Context, parts []CodePart) (code string, err
 		}
 
 		if isStatic {
-			return "", errors.Wrap(err, "GenerateCouponCode")
+			return "", errors.Wrap(ErrCouponExists, "GenerateCouponCode")
 		}
 	}
 }
