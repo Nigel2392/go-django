@@ -3,6 +3,9 @@
     <div class="coupon-generator" data-controller="coupon-generator" data-coupon-generator-url-value="{{ .Data.generator.url }}">
 
         <div class="coupon-generator-input" id="{{ .Get "id" }}-input">
+            <div class="coupon-generator-part-label">
+                <strong>{{ .Data.generator.i18n.Preview }}</strong>
+            </div>
             <input class="coupon-generator-input-value" data-coupon-generator-target="output" type="text" name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ if (.Get "value") }}value="{{ .Get "value" }}"{{ end }}/>
             <button class="coupon-generator-refresh-generated-value" data-coupon-generator-target="refresh" type="button">{{ .Data.generator.i18n.Refresh }}</button>
         </div>

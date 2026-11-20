@@ -1,7 +1,10 @@
 .coupon-generator {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--primary-bg-color-dark);;
+    color: var(--text-color);
+    background-color: hsl(0, 0%, 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius, .3125rem);
 }
 .coupon-generator-controls {
     display: flex;
@@ -11,10 +14,20 @@
     justify-content: center;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--primary-bg-color-dark);;
+    border-bottom: 1px solid var(--border-color);
+}
+.coupon-generator-part-label,
+.coupon-generator-part strong {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
 }
 .coupon-generator-part-label {
-    vertical-align: middle;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.coupon-generator-controls .coupon-generator-part {
+    cursor: grab;
 }
 .coupon-generator-part-controls .coupon-generator-part-label {
     display: none;
@@ -33,15 +46,13 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding-left: 0.25rem;
-    padding-right: 0.25rem;
 }
 .coupon-generator-part:not(:last-child) {
-    border-right: 1px solid var(--primary-bg-color-dark);;
+    border-right: 1px solid var(--border-color);
 }
 
 .coupon-generator-input {
-    border-bottom: 1px solid var(--primary-bg-color-dark);
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     flex-direction: row;
 }

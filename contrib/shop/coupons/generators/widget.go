@@ -54,6 +54,7 @@ func (b *CouponGeneratorWidget) GetContextData(c context.Context, id string, nam
 			"Length":  trans.T(c, "Length"),
 			"Value":   trans.T(c, "Value"),
 			"Refresh": trans.T(c, "Refresh"),
+			"Preview": trans.T(c, "Preview"),
 
 			"CPT_RANDOM":  trans.T(c, "Random String, requires length"),
 			"CPT_STATIC":  trans.T(c, "Static String, requires custom input"),
