@@ -1005,6 +1005,10 @@ func (a *Application) middlewareBuiltins() []func(http.Handler) http.Handler {
 	if !ConfigGet(a.Settings, APPVAR_DISABLE_NOSURF, false) {
 		mw = append(mw, func(h http.Handler) http.Handler {
 			var hnd = nosurf.New(h)
+			hnd.ExemptFunc(func(r *http.Request) bool {
+				csrfToken := r.Header.Get("X-CSRF-Token")
+				return nosurf.VerifyToken(nosurf.Token(r), csrfToken)
+			})
 			var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
 			for _, hook := range hooks {
 				hook(a, hnd)

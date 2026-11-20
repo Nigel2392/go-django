@@ -21,6 +21,11 @@
     padding-left: 0.35rem;
     padding-right: 0.35rem;
 }
+.coupon-generator-part-preview {
+    padding-left: 0.55rem;
+    padding-right: 0.55rem;
+    border-right: 1px dotted var(--border-color);
+}
 .coupon-generator-part-label {
     display: flex;
     justify-content: center;

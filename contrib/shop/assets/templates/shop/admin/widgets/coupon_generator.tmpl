@@ -1,9 +1,12 @@
 {{ define "coupon_generator" }}
 
-    <div class="coupon-generator" data-controller="coupon-generator" data-coupon-generator-url-value="{{ .Data.generator.url }}">
+    <div class="coupon-generator"
+    data-controller="coupon-generator"
+    data-coupon-generator-url-value="{{ .Data.generator.url }}"
+    data-coupon-generator-csrf-token-value="{{ .Data.csrf_token }}">
 
         <div class="coupon-generator-input" id="{{ .Get "id" }}-input">
-            <div class="coupon-generator-part-label">
+            <div class="coupon-generator-part-label coupon-generator-part-preview">
                 <strong>{{ .Data.generator.i18n.Preview }}</strong>
             </div>
             <input class="coupon-generator-input-value" data-coupon-generator-target="output" type="text" name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ if (.Get "value") }}value="{{ .Get "value" }}"{{ end }}/>
@@ -42,6 +45,9 @@
             </div>
             <div data-part-value="CPT_MINUTE" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_MINUTE }}">
                 <strong>{{ index $generatorTime "minute" }}</strong>
+            </div>
+            <div data-part-value="CPT_DASH" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_DASH }}">
+                <strong>-</strong>
             </div>
             <div data-part-value="CPT_UUID" data-coupon-generator-target="part" class="coupon-generator-part" data-controller="tooltip" data-tooltip-content-value="{{ .Data.generator.i18n.CPT_UUID }}">
                 <div class="coupon-generator-part-label">

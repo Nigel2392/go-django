@@ -21,7 +21,8 @@ const CPT_WEEKDAY: CPT_TYPE = 4;
 const CPT_DAY:     CPT_TYPE = 5;
 const CPT_HOUR:    CPT_TYPE = 6;
 const CPT_MINUTE:  CPT_TYPE = 7;
-const CPT_UUID:    CPT_TYPE = 8;
+const CPT_DASH:    CPT_TYPE = 8;
+const CPT_UUID:    CPT_TYPE = 9;
 const CPT_CONV: any = {
     CPT_RANDOM:  CPT_RANDOM,
     CPT_STATIC:  CPT_STATIC,
@@ -31,6 +32,7 @@ const CPT_CONV: any = {
     CPT_DAY:     CPT_DAY,
     CPT_HOUR:    CPT_HOUR,
     CPT_MINUTE:  CPT_MINUTE,
+    CPT_DASH:    CPT_DASH,
     CPT_UUID:    CPT_UUID,
 }
 
@@ -58,7 +60,7 @@ class CouponGeneratorController extends Controller<any> {
     declare hasInputTarget: boolean;
     declare hasRefreshTarget: boolean;
     declare inputTarget: HTMLElement;
-    declare outputTarget: HTMLElement;
+    declare outputTarget: HTMLInputElement;
     declare controlsTarget: HTMLElement;
     declare partTargets: HTMLElement[];
     declare refreshTarget: HTMLElement;
@@ -123,11 +125,25 @@ class CouponGeneratorController extends Controller<any> {
             l.push(part)
         }
 
-        console.log(l)
+        let csrf_input = document.querySelector("input[name=csrf_token]") as HTMLInputElement;
+        fetch(this.urlValue, {
+            method: "post",
+            body: JSON.stringify({
+                code_format_parts: l,
+            }),
+            headers: {
+                "X-CSRF-Token": csrf_input.value,
+            }
+        }).then((resp) => {
+            return resp.json()
+        }).catch((reason) => {
+            console.error("failed to generate coupon: ", reason)
+        }).then((data) => {
+            this.outputTarget.value = data.coupon_code;
+        })
     }
 }
 
-window.Stimulus.register('coupon-generator', CouponGeneratorController);
 
 export {
     CouponGeneratorController

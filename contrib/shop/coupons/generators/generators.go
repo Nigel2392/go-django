@@ -25,6 +25,7 @@ const (
 	CPT_DAY                         // use current day as code part
 	CPT_HOUR                        // use current hour as code part
 	CPT_MINUTE                      // use current minute as code part
+	CPT_DASH                        // use a dash for the code part
 	CPT_UUID                        // use random uuid as code part
 
 	ErrInvalidPartType    errs.Error = "invalid code part type"
@@ -42,6 +43,7 @@ var partStrings = map[CodePartType]string{
 	CPT_DAY:     "CPT_DAY",
 	CPT_HOUR:    "CPT_HOUR",
 	CPT_MINUTE:  "CPT_MINUTE",
+	CPT_DASH:    "CPT_DASH",
 	CPT_UUID:    "CPT_UUID",
 }
 
@@ -112,6 +114,9 @@ func generateCouponCode(parts []CodePart) (string, bool, error) {
 			continue
 		case CPT_MINUTE:
 			sb.WriteString(strconv.Itoa(t.Minute()))
+			continue
+		case CPT_DASH:
+			sb.WriteRune('-')
 			continue
 		case CPT_UUID:
 			isStatic = false

@@ -357,9 +357,9 @@ func NewAppConfig() (django.AppConfig, error) {
 						admin.TabbedPanel(
 							admin.PanelTab(
 								trans.S("Coupon"),
-								admin.FieldPanel("Title"),
-								admin.FieldPanel("ShortDescription"),
+								admin.TitlePanel(admin.FieldPanel("Title")),
 								admin.FieldPanel("Code"),
+								admin.FieldPanel("ShortDescription"),
 								admin.RowPanel(
 									admin.FieldPanel("MaxDiscount"),
 									admin.FieldPanel("IsPercentage"),
@@ -367,6 +367,49 @@ func NewAppConfig() (django.AppConfig, error) {
 							),
 							admin.PanelTab(
 								trans.S("Constraints"),
+								admin.FieldPanel("UsageLimit"),
+								admin.FieldPanel("MinOrderAmount"),
+								admin.FieldPanel("ValidFrom"),
+								admin.FieldPanel("ValidUntil"),
+								admin.FieldPanel("CreatedAt"),
+							),
+							admin.PanelTab(
+								trans.S("Products"),
+								&admin.ModelFormPanel[*products.Product, modelforms.ModelForm[*products.Product]]{
+									TargetType: &products.Product{},
+									FieldName:  "Products",
+									Classname:  "collapsible",
+									// SubClassname: "collapsed",
+									MinNum: 1,
+									// DisallowAdd:    true,
+									// DisallowRemove: true,
+									Panels: []admin.Panel{
+										admin.FieldPanel("ID"),
+										admin.FieldPanel("Title"),
+										admin.FieldPanel("Price"),
+									},
+								},
+							),
+						),
+					},
+				},
+				EditView: admin.FormViewOptions{
+					Panels: []admin.Panel{
+						admin.TabbedPanel(
+							admin.PanelTab(
+								trans.S("Coupon"),
+								admin.TitlePanel(admin.FieldPanel("Title")),
+								admin.FieldPanel("Code"),
+								admin.FieldPanel("ShortDescription"),
+								admin.FieldPanel("CreatedBy"),
+								admin.RowPanel(
+									admin.FieldPanel("MaxDiscount"),
+									admin.FieldPanel("IsPercentage"),
+								),
+							),
+							admin.PanelTab(
+								trans.S("Constraints"),
+								admin.FieldPanel("UsageCount"),
 								admin.FieldPanel("UsageLimit"),
 								admin.FieldPanel("MinOrderAmount"),
 								admin.FieldPanel("ValidFrom"),

@@ -64,6 +64,7 @@ func (b *CouponGeneratorWidget) GetContextData(c context.Context, id string, nam
 			"CPT_DAY":     trans.T(c, "Current day of the year"),
 			"CPT_HOUR":    trans.T(c, "Current hour"),
 			"CPT_MINUTE":  trans.T(c, "Current minute"),
+			"CPT_DASH":    trans.T(c, "Dash delimiter"),
 			"CPT_UUID":    trans.T(c, "Random UUID, requires length"),
 		},
 	})
