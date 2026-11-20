@@ -295,7 +295,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 			for _, field := range attrs.Define(r.Context(), &products.Product{}).Fields() {
 				initial[field.Name()] = field.GetDefault()
 			}
-			initial["Supplier"] = supplierVal
+			initial["Supplier"] = supplierVal.InternalName()
 			return initial
 		},
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]) {
