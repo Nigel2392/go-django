@@ -92,6 +92,10 @@ func generateCouponCode(parts []CodePart) (string, bool, error) {
 		var val string
 		switch part.Type {
 		case CPT_RANDOM:
+			if part.Length == 0 {
+				continue
+			}
+
 			sb.WriteString(randStringBytes(part.Length))
 			isStatic = false
 			continue
@@ -134,7 +138,7 @@ func generateCouponCode(parts []CodePart) (string, bool, error) {
 	}
 
 	if sb.Len() < int(coupons.MIN_CODE_LENGTH) {
-		return "", false, ErrCouponCodeTooLong
+		return "", false, ErrCouponCodeTooShort
 	}
 
 	if sb.Len() > int(coupons.MAX_CODE_LENGTH) {
