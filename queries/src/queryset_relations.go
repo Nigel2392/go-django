@@ -404,6 +404,10 @@ func OneToOneQuerySet[T attrs.Definer](backRef ThroughRelationValue) *RelOneToOn
 }
 
 func (r *RelOneToOneQuerySet[T]) Clear(ctx context.Context) (bool, error) {
+	if r.backRef == nil {
+		return false, fmt.Errorf("back reference is nil, cannot clear target")
+	}
+	r.setup()
 	r.qs = r.qs.WithContext(ctx)
 
 	var throughIdsResult, err = r.qs.
@@ -561,9 +565,15 @@ func (r *RelManyToManyQuerySet[T]) SetTargets(targets []T) (added int64, err err
 		return 0, fmt.Errorf("back reference is nil, cannot set targets")
 	}
 
+	r.setup()
+
 	_, err = r.ClearTargets()
 	if err != nil && !errors.Is(err, errors.NoChanges) {
 		return 0, fmt.Errorf("failed to clear targets: %w", err)
+	}
+
+	if len(targets) == 0 {
+		return 0, nil
 	}
 
 	relations, added, err := r.createThroughObjects(targets)
@@ -600,7 +610,12 @@ func (r *RelManyToManyQuerySet[T]) RemoveTargets(targets ...any) (int64, error) 
 		return 0, fmt.Errorf("back reference is nil, cannot remove targets")
 	}
 
+	r.setup()
+
 	targets = listUnpack(targets)
+	if len(targets) == 0 {
+		return 0, nil
+	}
 
 	var (
 		pkValues = make([]any, 0, len(targets))
@@ -709,6 +724,8 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	if r.backRef == nil {
 		return 0, fmt.Errorf("back reference is nil, cannot clear targets")
 	}
+
+	r.setup()
 
 	var throughModel = newThroughProxy(r.rel.Through())
 	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).WithContext(r.qs.Context()).ValuesList()

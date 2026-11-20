@@ -81,12 +81,23 @@ func init() {
 					Relation:  rel,
 				}, true
 			case attrs.RelOneToOne:
+				if rel.Through() == nil {
+					if rel.Field() != nil && !rel.Field().IsPrimary() {
+						return nil, true
+					}
+					return &ForeignKeyFormField{
+						BaseField: django_formfields.NewField(opts...),
+						Field:     f,
+						Relation:  rel,
+					}, true
+				}
 				return &OneToOneFormField{
 					BaseField: django_formfields.NewField(opts...),
 					Field:     f,
 					Relation:  rel,
 				}, true
 			case attrs.RelOneToMany:
+				return nil, true
 			default:
 				assert.Fail("unknown relation type %s for field %s", relType, f.Name())
 			}
@@ -300,7 +311,7 @@ func (o *OneToOneFormField) SaveField(ctx context.Context, field attrs.Field, va
 	objects, ok := value.(attrs.Definer)
 	if !ok {
 		return errors.TypeMismatch.Wrapf(
-			"Value %v (%T) is not a []attrs.Definer",
+			"Value %v (%T) is not a attrs.Definer",
 			value, value,
 		)
 	}

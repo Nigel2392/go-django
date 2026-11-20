@@ -3,12 +3,15 @@ package modelforms_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/Nigel2392/go-django/internal/forms"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 )
 
@@ -282,5 +285,210 @@ func TestModelForm(t *testing.T) {
 				}
 			})
 		})
+	})
+}
+
+type mockAfterRelValue struct {
+	Items []string
+}
+
+type mockAfterSaverModel struct {
+	ID   int
+	Name string
+	Tags *mockAfterRelValue
+	Fail string
+	fail bool
+}
+
+func (m *mockAfterSaverModel) Save(ctx context.Context) error {
+	return nil
+}
+
+type strictTypeAttrsField struct {
+	attrs.Field
+	failOnSet error
+}
+
+func (f *strictTypeAttrsField) SetValue(v any, force bool) error {
+	if f.failOnSet != nil {
+		return f.failOnSet
+	}
+	if _, ok := v.(*mockAfterRelValue); !ok {
+		return fmt.Errorf("value %v (%T) is not of type *mockAfterRelValue", v, v)
+	}
+	return f.Field.SetValue(v, force)
+}
+
+func (m *mockAfterSaverModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	tagsBase := attrs.NewField(m, "Tags", &attrs.Config{Null: true, Blank: true})
+	failBase := attrs.NewField(m, "Fail", &attrs.Config{Null: true, Blank: true})
+
+	var failErr error
+	if m.fail {
+		failErr = errors.New("intentional field SetValue failure")
+	}
+
+	return attrs.Make[*mockAfterSaverModel, attrs.Field](ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, Blank: true}),
+		attrs.NewField(m, "Name", &attrs.Config{Blank: true}),
+		&strictTypeAttrsField{Field: tagsBase},
+		&strictTypeAttrsField{Field: failBase, failOnSet: failErr},
+	)
+}
+
+type mockAfterSaverFormField struct {
+	*fields.BaseField
+	saveErr   error
+	saveCalls int
+	savedVal  any
+	savedMdl  attrs.Definer
+}
+
+var _ modelforms.AfterModelFieldSaver = (*mockAfterSaverFormField)(nil)
+
+func (f *mockAfterSaverFormField) ValueToGo(v any) (any, error) {
+	if s, ok := v.(string); ok {
+		if s == "" {
+			return []string(nil), nil
+		}
+		return strings.Split(s, ","), nil
+	}
+	return v, nil
+}
+
+func (f *mockAfterSaverFormField) SaveField(ctx context.Context, field attrs.Field, value interface{}, model attrs.Definer) error {
+	f.saveCalls++
+	f.savedVal = value
+	f.savedMdl = model
+	return f.saveErr
+}
+
+func TestBaseModelForm_Instance_SkipsAfterModelFieldSaver(t *testing.T) {
+	m := &mockAfterSaverModel{ID: 1, Name: "initial"}
+	mf := modelforms.NewBaseModelForm(t.Context(), m)
+
+	afterFF := &mockAfterSaverFormField{
+		BaseField: fields.NewField(fields.Name("Tags"), fields.Required(false)),
+	}
+	mf.AddField("Tags", afterFF)
+	mf.SetExclude("ID", "Fail")
+	mf.Load()
+
+	mf.WithData(url.Values{
+		"Name": {"updated"},
+		"Tags": {"alpha,beta"},
+	}, nil, nil)
+
+	if !forms.IsValid(t.Context(), mf) {
+		t.Fatalf("expected form valid, errList=%v boundErrs=%v", mf.ErrorList(), mf.BoundErrors())
+	}
+
+	// Simulate AdminForm.FormSet() calling Instance() before Save().
+	inst := mf.Instance()
+	if inst.Name != "updated" {
+		t.Errorf("Instance().Name = %q, want %q", inst.Name, "updated")
+	}
+
+	if mf.BoundErrors() != nil && mf.BoundErrors().Len() > 0 {
+		t.Fatalf("Instance() recorded unexpected bound errors for AfterModelFieldSaver field: %v", mf.BoundErrors())
+	}
+	if len(mf.ErrorList()) > 0 {
+		t.Fatalf("Instance() recorded unexpected form errors: %v", mf.ErrorList())
+	}
+	if afterFF.saveCalls != 0 {
+		t.Errorf("Instance() should not call AfterModelFieldSaver.SaveField; got %d calls", afterFF.saveCalls)
+	}
+
+	if _, err := mf.Save(); err != nil {
+		t.Fatalf("Save() failed after Instance(): %v (boundErrs=%v)", err, mf.BoundErrors())
+	}
+	if afterFF.saveCalls != 1 {
+		t.Errorf("Save() AfterModelFieldSaver.SaveField calls = %d, want 1", afterFF.saveCalls)
+	}
+	if got, ok := afterFF.savedVal.([]string); !ok || !reflect.DeepEqual(got, []string{"alpha", "beta"}) {
+		t.Errorf("SaveField value = %#v, want []string{alpha, beta}", afterFF.savedVal)
+	}
+	if afterFF.savedMdl != m {
+		t.Errorf("SaveField model = %p, want %p", afterFF.savedMdl, m)
+	}
+}
+
+func TestBaseModelForm_SaveFields_NoDuplicateErrors(t *testing.T) {
+	t.Run("Instance_SetValueError_ReportedOnce", func(t *testing.T) {
+		m := &mockAfterSaverModel{ID: 1, Name: "ok", fail: true}
+		mf := modelforms.NewBaseModelForm(t.Context(), m)
+		mf.SetFields("Name", "Fail")
+		mf.Load()
+		mf.WithData(url.Values{
+			"Name": {"ok"},
+			"Fail": {"bad"},
+		}, nil, nil)
+
+		if !forms.IsValid(t.Context(), mf) {
+			t.Fatalf("expected valid before save, errList=%v boundErrs=%v", mf.ErrorList(), mf.BoundErrors())
+		}
+
+		mf.Instance()
+
+		errsForFail, ok := mf.BoundErrors().Get("Fail")
+		if !ok || len(errsForFail) != 1 {
+			t.Fatalf("expected exactly 1 error on Fail after Instance(), got present=%v errs=%v", ok, errsForFail)
+		}
+	})
+
+	t.Run("Save_SetValueError_ReportedOnce", func(t *testing.T) {
+		m := &mockAfterSaverModel{ID: 1, Name: "ok", fail: true}
+		mf := modelforms.NewBaseModelForm(t.Context(), m)
+		mf.SetFields("Name", "Fail")
+		mf.Load()
+		mf.WithData(url.Values{
+			"Name": {"ok"},
+			"Fail": {"bad"},
+		}, nil, nil)
+
+		if !forms.IsValid(t.Context(), mf) {
+			t.Fatalf("expected valid before save, errList=%v boundErrs=%v", mf.ErrorList(), mf.BoundErrors())
+		}
+
+		_, err := mf.Save()
+		if err == nil {
+			t.Fatalf("expected Save() to return error")
+		}
+
+		errsForFail, ok := mf.BoundErrors().Get("Fail")
+		if !ok || len(errsForFail) != 1 {
+			t.Fatalf("expected exactly 1 error on Fail after Save(), got present=%v errs=%v", ok, errsForFail)
+		}
+	})
+
+	t.Run("Save_AfterModelFieldSaverError_ReportedOnce", func(t *testing.T) {
+		m := &mockAfterSaverModel{ID: 1, Name: "ok"}
+		mf := modelforms.NewBaseModelForm(t.Context(), m)
+		sentinelErr := errors.New("after saver failure")
+		afterFF := &mockAfterSaverFormField{
+			BaseField: fields.NewField(fields.Name("Tags"), fields.Required(false)),
+			saveErr:   sentinelErr,
+		}
+		mf.AddField("Tags", afterFF)
+		mf.SetFields("Name", "Tags")
+		mf.Load()
+		mf.WithData(url.Values{
+			"Name": {"ok"},
+			"Tags": {"alpha"},
+		}, nil, nil)
+
+		if !forms.IsValid(t.Context(), mf) {
+			t.Fatalf("expected valid before save, errList=%v boundErrs=%v", mf.ErrorList(), mf.BoundErrors())
+		}
+
+		_, err := mf.Save()
+		if !errors.Is(err, sentinelErr) {
+			t.Fatalf("expected Save() error wrapping %v, got %v", sentinelErr, err)
+		}
+
+		errsForTags, ok := mf.BoundErrors().Get("Tags")
+		if !ok || len(errsForTags) != 1 {
+			t.Fatalf("expected exactly 1 error on Tags after Save(), got present=%v errs=%v", ok, errsForTags)
+		}
 	})
 }

@@ -26,8 +26,17 @@ func Categories() *CategoryQuery {
 	return base
 }
 
+func (c *CategoryQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Category, *CategoryQuery, *queries.QuerySet[*Category]]) *CategoryQuery {
+	return &CategoryQuery{
+		WrappedQuerySet: wrapped,
+	}
+}
+
 func (c *CategoryQuery) ChildrenOf(cat *Category) *CategoryQuery {
-	return c.Filter("ParentCategory", cat.ParentCategory.ID)
+	if cat == nil {
+		return c.Filter("ParentCategory__isnull", true)
+	}
+	return c.Filter("ParentCategory", cat.ID)
 }
 
 type Category struct {
@@ -77,6 +86,7 @@ func (c *Category) FieldDefs(ctx context.Context) attrs.Definitions {
 					Blank:         true,
 					Column:        "parent_id",
 					RelForeignKey: attrs.Relate(&Category{}, "", nil),
+					ReverseAlias:  "Children",
 					FormWidget: func(fc attrs.Config) widgets.Widget {
 						return formfields.ModelSelectWidget(
 							true, "-----",
@@ -89,14 +99,14 @@ func (c *Category) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(c, "Children", &c.Children, func() fattrs.PtrFieldConfig[*Category, *queries.RelRevFK[*Category]] {
 			return fattrs.PtrFieldConfig[*Category, *queries.RelRevFK[*Category]]{
-				Config: attrs.Config{
-					ReadOnly:             true,
-					Label:                trans.S("Child Categories."),
-					HelpText:             trans.S("Subcategories bound to this category."),
-					RelForeignKeyReverse: attrs.Relate(&Category{}, "", nil),
-					FormField: func(opts ...func(fields.Field)) fields.Field {
-						return nil
-					},
+				Flags:    fattrs.F_IS_REVERSE_FLD,
+				ReadOnly: true,
+				Label:    trans.S("Child Categories."),
+				HelpText: trans.S("Subcategories bound to this category."),
+				// RelForeignKeyReverse: attrs.Relate(&Category{}, "ParentCategory", nil),
+				ReverseAlias: "ParentCategory",
+				FormField: func(opts ...func(fields.Field)) fields.Field {
+					return nil
 				},
 			}
 		}),

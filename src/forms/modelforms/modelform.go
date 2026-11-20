@@ -163,11 +163,12 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 func (f *BaseModelForm[T]) Instance() T {
 	if f.Cleaned != nil {
 		f.SaveFields(f.Context(), f.Cleaned, func(ctx context.Context, formField forms.Field, field attrs.Field, fieldName string, value any) (err error) {
-			if err = field.SetValue(value, true); err != nil {
-				f.AddError(
-					fieldName,
-					err,
-				)
+			switch fld := formField.(type) {
+			case ModelFieldSaver:
+				err = fld.SaveField(ctx, field, value)
+			case AfterModelFieldSaver:
+			default:
+				err = field.SetValue(value, true)
 			}
 			return err
 		})
@@ -417,12 +418,6 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 		default:
 			err = field.SetValue(value, true)
 		}
-		if err != nil {
-			f.AddError(
-				fieldName,
-				err,
-			)
-		}
 		return err
 	})
 	if err != nil {
@@ -448,12 +443,6 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 	err = f.SaveFields(ctx, cleaned, func(ctx context.Context, formField forms.Field, field attrs.Field, fieldName string, value any) (err error) {
 		if saver, ok := formField.(AfterModelFieldSaver); ok {
 			err = saver.SaveField(ctx, field, value, f.Model)
-		}
-		if err != nil {
-			f.AddError(
-				fieldName,
-				err,
-			)
 		}
 		return err
 	})
