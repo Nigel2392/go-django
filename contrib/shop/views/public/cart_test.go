@@ -678,6 +678,7 @@ func TestCartsAPI(t *testing.T) {
 
 					// 3. Calling ClearCart when no active cart exists for the session still returns a new active cart
 					_, _ = d.Logout()
+					_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
 					_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
 					clearedCarts = nil
 
