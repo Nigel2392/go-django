@@ -15,6 +15,9 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type Option struct {
+}
+
 // Config is a configuration for a field.
 //
 // This defines the general behaviour of fields, albeit in forms or queries.

@@ -327,6 +327,12 @@ func TextComponent(text any) templ.Component {
 	case error:
 		return templ.Raw(html.EscapeString(v.Error()))
 
+	case trans.TranslateFunc:
+		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+			_, err = w.Write([]byte(html.EscapeString(v(ctx))))
+			return err
+		})
+
 	case func(context.Context) string:
 		return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
 			_, err = w.Write([]byte(html.EscapeString(v(ctx))))
@@ -656,7 +662,7 @@ func (p *BoundTitlePanel[T, P]) Component() templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.encodeOutputIDs())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 290, Col: 145}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 296, Col: 145}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
 		if templ_7745c5c3_Err != nil {
@@ -749,7 +755,7 @@ func (p *BoundRowPanel[T]) Component() templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(panelId)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 326, Col: 132}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 332, Col: 132}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
@@ -895,7 +901,7 @@ func (p *BoundPanelGroup[T]) Component() templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(panelId)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 369, Col: 134}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 375, Col: 134}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -1196,7 +1202,7 @@ func (p *boundTabbedPanel) Component() templ.Component {
 				var templ_7745c5c3_Var37 string
 				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 464, Col: 169}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 470, Col: 169}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 				if templ_7745c5c3_Err != nil {
@@ -1245,7 +1251,7 @@ func (p *boundTabbedPanel) Component() templ.Component {
 				var templ_7745c5c3_Var40 string
 				templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 471, Col: 108}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 477, Col: 108}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var40)
 				if templ_7745c5c3_Err != nil {
@@ -1361,7 +1367,7 @@ func (p *BoundJSONDetailPanel) Component() templ.Component {
 		var templ_7745c5c3_Var44 string
 		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.ResolveAttributeValue(panelId)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 516, Col: 136}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 522, Col: 136}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var44)
 		if templ_7745c5c3_Err != nil {
@@ -1374,7 +1380,7 @@ func (p *BoundJSONDetailPanel) Component() templ.Component {
 		var templ_7745c5c3_Var45 string
 		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.BoundField.ID())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 516, Col: 178}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 522, Col: 178}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 		if templ_7745c5c3_Err != nil {
@@ -1456,7 +1462,7 @@ func (p *BoundJSONDetailPanel) Component() templ.Component {
 					var templ_7745c5c3_Var50 string
 					templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.ResolveAttributeValue(panelId)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 533, Col: 116}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 539, Col: 116}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var50)
 					if templ_7745c5c3_Err != nil {
@@ -1469,7 +1475,7 @@ func (p *BoundJSONDetailPanel) Component() templ.Component {
 					var templ_7745c5c3_Var51 string
 					templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.ResolveAttributeValue(boundField.ID())
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 533, Col: 156}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 539, Col: 156}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var51)
 					if templ_7745c5c3_Err != nil {
@@ -1643,7 +1649,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 		var templ_7745c5c3_Var57 string
 		templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.ResolveAttributeValue(panelId)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 602, Col: 147}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 608, Col: 147}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var57)
 		if templ_7745c5c3_Err != nil {
@@ -1656,7 +1662,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 		var templ_7745c5c3_Var58 string
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.ResolveAttributeValue(idParam)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 602, Col: 162}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 608, Col: 162}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var58)
 		if templ_7745c5c3_Err != nil {
@@ -1713,7 +1719,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var60 string
 				templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Form error:"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 615, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 621, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 				if templ_7745c5c3_Err != nil {
@@ -1742,7 +1748,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 						var templ_7745c5c3_Var61 string
 						templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(field.Label(ctx))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 627, Col: 54}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 633, Col: 54}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 						if templ_7745c5c3_Err != nil {
@@ -1781,7 +1787,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var62 string
 				templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.ResolveAttributeValue(idParam)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 641, Col: 241}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 647, Col: 241}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var62)
 				if templ_7745c5c3_Err != nil {
@@ -1794,7 +1800,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var63 string
 				templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.ResolveAttributeValue(trans.T(ctx, "Add"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 641, Col: 309}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 647, Col: 309}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var63)
 				if templ_7745c5c3_Err != nil {
@@ -1823,7 +1829,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var64 string
 				templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.ResolveAttributeValue(idParam)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 649, Col: 236}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 655, Col: 236}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var64)
 				if templ_7745c5c3_Err != nil {
@@ -1836,7 +1842,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var65 string
 				templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.ResolveAttributeValue(form.PrefixName("__FIELD__"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 649, Col: 298}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 655, Col: 298}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var65)
 				if templ_7745c5c3_Err != nil {
@@ -1849,7 +1855,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var66 string
 				templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.ResolveAttributeValue(trans.T(ctx, "Remove"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 649, Col: 331}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 655, Col: 331}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var66)
 				if templ_7745c5c3_Err != nil {
@@ -1878,7 +1884,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var67 string
 				templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.ResolveAttributeValue(idParam)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 657, Col: 239}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 663, Col: 239}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var67)
 				if templ_7745c5c3_Err != nil {
@@ -1891,7 +1897,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelform
 				var templ_7745c5c3_Var68 string
 				templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.ResolveAttributeValue(trans.T(ctx, "Add"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 657, Col: 305}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 663, Col: 305}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var68)
 				if templ_7745c5c3_Err != nil {
@@ -2013,7 +2019,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() templ.Component {
 			var templ_7745c5c3_Var71 string
 			templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.ResolveAttributeValue(0)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 704, Col: 184}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 710, Col: 184}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var71)
 			if templ_7745c5c3_Err != nil {
@@ -2026,7 +2032,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() templ.Component {
 			var templ_7745c5c3_Var72 string
 			templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.ResolveAttributeValue(trans.T(ctx, "Add"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 704, Col: 252}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 710, Col: 252}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var72)
 			if templ_7745c5c3_Err != nil {
@@ -2081,7 +2087,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() templ.Component {
 							var templ_7745c5c3_Var73 string
 							templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(field.Label(ctx))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 735, Col: 58}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `contrib/admin/component_form_panels_bound.templ`, Line: 741, Col: 58}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 							if templ_7745c5c3_Err != nil {

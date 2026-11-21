@@ -1,8 +1,8 @@
 package constraints
 
 import (
-	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 )
 
 func init() {

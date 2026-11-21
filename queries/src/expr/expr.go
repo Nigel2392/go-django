@@ -9,9 +9,9 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
-	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 )
 
 func init() {

@@ -26,6 +26,8 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
+
+	// _ "github.com/Nigel2392/go-django/queries/src/migrator/pkg/javascript"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -78,6 +80,7 @@ func main() {
 
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/commerce/migrations",
+			// migrator.APPVAR_MIGRATION_FORMAT: ".js",
 		}),
 
 		django.Apps(

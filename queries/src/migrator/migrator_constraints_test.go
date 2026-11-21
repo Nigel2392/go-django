@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	_ "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
@@ -22,6 +21,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 )
 
 // --- Models & evolving state for TestMigrator_Constraints_FullLifecycle_LiveSQLite ---
@@ -554,12 +554,12 @@ func TestMigrator_Constraints_ComplexCheckExpressions_LiveSQLite(t *testing.T) {
 
 type dialectMockRows struct{}
 
-func (r *dialectMockRows) Close() error             { return nil }
+func (r *dialectMockRows) Close() error               { return nil }
 func (r *dialectMockRows) Columns() ([]string, error) { return nil, nil }
-func (r *dialectMockRows) Err() error               { return nil }
-func (r *dialectMockRows) Next() bool               { return false }
-func (r *dialectMockRows) NextResultSet() bool      { return false }
-func (r *dialectMockRows) Scan(...any) error        { return nil }
+func (r *dialectMockRows) Err() error                 { return nil }
+func (r *dialectMockRows) Next() bool                 { return false }
+func (r *dialectMockRows) NextResultSet() bool        { return false }
+func (r *dialectMockRows) Scan(...any) error          { return nil }
 
 type dialectMockRow struct{ val int64 }
 
@@ -583,12 +583,12 @@ type dialectMockDB struct {
 	queries []string
 }
 
-func (m *dialectMockDB) Unwrap() any             { return m }
-func (m *dialectMockDB) Driver() driver.Driver   { return m.drv }
-func (m *dialectMockDB) Ping(context.Context) error { return nil }
-func (m *dialectMockDB) Close() error            { return nil }
-func (m *dialectMockDB) Finished() bool          { return false }
-func (m *dialectMockDB) Commit(context.Context) error { return nil }
+func (m *dialectMockDB) Unwrap() any                    { return m }
+func (m *dialectMockDB) Driver() driver.Driver          { return m.drv }
+func (m *dialectMockDB) Ping(context.Context) error     { return nil }
+func (m *dialectMockDB) Close() error                   { return nil }
+func (m *dialectMockDB) Finished() bool                 { return false }
+func (m *dialectMockDB) Commit(context.Context) error   { return nil }
 func (m *dialectMockDB) Rollback(context.Context) error { return nil }
 func (m *dialectMockDB) Begin(context.Context) (drivers.Transaction, error) {
 	return m, nil

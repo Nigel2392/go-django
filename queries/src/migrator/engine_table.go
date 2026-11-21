@@ -9,11 +9,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -202,6 +202,24 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 	if cDef, ok := obj.(ConstraintDefiner); ok {
 		t.Constraint = cDef.Constraints()
 	}
+
+	//	for head := t.Fields.Front(); head != nil; head = head.Next() {
+	//		if head.Value.MinLength > 0 {
+	//			t.Constraint = append(t.Constraint, constraints.CheckConstraint(
+	//				fmt.Sprintf("constraint_%s_min_length", head.Value.Column),
+	//				fmt.Sprintf("Field %s must be longer than %d", head.Value.Name, head.Value.MinLength),
+	//				expr.Logical(expr.LENGTH(head.Value.Name)).GTE(expr.Value(head.Value.MinLength, true)),
+	//			))
+	//		}
+	//
+	//		if head.Value.MaxLength > 0 {
+	//			t.Constraint = append(t.Constraint, constraints.CheckConstraint(
+	//				fmt.Sprintf("constraint_%s_max_length", head.Value.Column),
+	//				fmt.Sprintf("Field %s must be shorter than %d", head.Value.Name, head.Value.MaxLength),
+	//				expr.Logical(expr.LENGTH(head.Value.Name)).GTE(expr.Value(head.Value.MaxLength, true)),
+	//			))
+	//		}
+	//	}
 
 	if uqDef, ok := obj.(UniqueTogetherDefiner); ok {
 		uqTogether := uqDef.UniqueTogether()

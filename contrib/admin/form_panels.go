@@ -594,13 +594,9 @@ func (a *AlertPanel) GetType() AlertType {
 }
 
 func (a *AlertPanel) GetLabel(ctx context.Context) string {
-	switch v := a.Label.(type) {
-	case string:
-		return v
-	case func() string:
-		return v()
-	case func(context.Context) string:
-		return v(ctx)
+	s, ok := trans.GetText(ctx, a.Label)
+	if ok {
+		return s
 	}
 
 	assert.Fail(
@@ -610,13 +606,9 @@ func (a *AlertPanel) GetLabel(ctx context.Context) string {
 }
 
 func (a *AlertPanel) GetHTML(ctx context.Context) template.HTML {
-	switch v := a.HTML.(type) {
-	case string:
-		return template.HTML(v)
-	case func() string:
-		return template.HTML(v())
-	case func(context.Context) string:
-		return template.HTML(v(ctx))
+	s, ok := trans.GetText(ctx, a.HTML)
+	if ok {
+		return template.HTML(s)
 	}
 
 	logger.Warnf("AlertPanel.GetHTML: unexpected HTML type %T", a.HTML)

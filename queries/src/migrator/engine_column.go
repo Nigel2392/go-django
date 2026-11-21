@@ -8,12 +8,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 	dr "github.com/Nigel2392/versatile"
 )
 

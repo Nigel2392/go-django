@@ -31,7 +31,7 @@ import (
 
 // utility application to easily generate migrations during development
 //
-// migrations should be placed in <app>/migrations/<app_name>/<model_name>/<migration_name>.mig
+// migrations should be placed in <app>/migrations/<app_name>/<model_name>/
 //
 // the app where the migrations are placed should be wrapped by [migrator.MigratorAppConfig], or implement [migrator.MigrationAppConfig],
 // which is used to provide the migration filesystem to the migrator engine
@@ -149,9 +149,10 @@ func main() {
 		)
 	}
 
-	var opts = make([]migrator.EngineOption, 0, 2)
+	var opts = make([]migrator.EngineOption, 0, 3)
 	opts = append(opts,
 		migrator.EngineOptionApps(apps.List()...),
+		// migrator.EngineOptionMigrationOutput(config.Format),
 	)
 
 	if len(config.SourceDirs) == 0 {

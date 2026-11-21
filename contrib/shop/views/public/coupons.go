@@ -12,6 +12,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
@@ -226,5 +227,21 @@ createRedemption:
 		WithContext(ctx).
 		Create(redemption)
 
-	// cart, items, err := cartQ
+	cartsRow, err := cartQ.CalcOne()
+	if err != nil {
+		api.RespondError(w,
+			http.StatusNotFound,
+			a.ErrInvalid(ctx),
+		)
+		return
+	}
+
+	// encode the response
+	err = api.Respond(w, cartsRow)
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to encode the cart item response: %v", err,
+		)
+	}
 }

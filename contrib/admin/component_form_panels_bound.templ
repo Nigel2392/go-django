@@ -111,6 +111,12 @@ func TextComponent(text any) templ.Component {
     case error:
         return templ.Raw(html.EscapeString(v.Error()))
 
+    case trans.TranslateFunc:
+        return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+            _, err = w.Write([]byte(html.EscapeString(v(ctx))))
+            return err
+        })
+
     case func(context.Context) string:
         return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
             _, err = w.Write([]byte(html.EscapeString(v(ctx))))

@@ -168,14 +168,30 @@ func (m *MySQLSchemaEditor) CreateTable(ctx context.Context, table migrator.Tabl
 			attrs.GetModelMeta(col.Rel.Model()).Definitions().TableName(),
 			relField.ColumnName(),
 		)
-		if col.Rel.OnDelete != 0 {
-			w.WriteString(" ON DELETE ")
-			w.WriteString(col.Rel.OnDelete.String())
+
+		var (
+			onDelete = col.Rel.OnDelete
+			onUpdate = col.Rel.OnUpdate
+		)
+
+		if onDelete == 0 {
+			if col.Nullable {
+				onDelete = constraints.A_SET_NULL
+			}
 		}
-		if col.Rel.OnUpdate != 0 {
-			w.WriteString(" ON UPDATE ")
-			w.WriteString(col.Rel.OnUpdate.String())
+
+		if onUpdate == 0 {
+			if col.Nullable {
+				onUpdate = constraints.A_SET_NULL
+			}
 		}
+
+		w.WriteString(" ON DELETE ")
+		w.WriteString(col.Rel.OnDelete.String())
+
+		w.WriteString(" ON UPDATE ")
+		w.WriteString(col.Rel.OnUpdate.String())
+
 	}
 	w.WriteString("\n);")
 	_, err := m.Execute(ctx, w.String())
@@ -456,13 +472,28 @@ checkRels:
 		w.WriteString("`(`")
 		w.WriteString(relField.ColumnName())
 		w.WriteString("`)")
-		if col.Rel.OnDelete != 0 {
-			w.WriteString(" ON DELETE ")
-			w.WriteString(col.Rel.OnDelete.String())
+
+		var (
+			onDelete = col.Rel.OnDelete
+			onUpdate = col.Rel.OnUpdate
+		)
+
+		if onDelete == 0 {
+			if col.Nullable {
+				onDelete = constraints.A_SET_NULL
+			}
 		}
-		if col.Rel.OnUpdate != 0 {
-			w.WriteString(" ON UPDATE ")
-			w.WriteString(col.Rel.OnUpdate.String())
+
+		if onUpdate == 0 {
+			if col.Nullable {
+				onUpdate = constraints.A_SET_NULL
+			}
 		}
+
+		w.WriteString(" ON DELETE ")
+		w.WriteString(col.Rel.OnDelete.String())
+
+		w.WriteString(" ON UPDATE ")
+		w.WriteString(col.Rel.OnUpdate.String())
 	}
 }

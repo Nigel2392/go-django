@@ -457,13 +457,28 @@ checkRels:
 			attrs.GetModelMeta(col.Rel.Model()).Definitions().TableName(),
 			relField.ColumnName(),
 		))
-		// if col.Rel.OnDelete != 0 {
+
+		var (
+			onDelete = col.Rel.OnDelete
+			onUpdate = col.Rel.OnUpdate
+		)
+
+		if onDelete == 0 {
+			if col.Nullable {
+				onDelete = constraints.A_SET_NULL
+			}
+		}
+
+		if onUpdate == 0 {
+			if col.Nullable {
+				onUpdate = constraints.A_SET_NULL
+			}
+		}
+
 		w.WriteString(" ON DELETE ")
 		w.WriteString(col.Rel.OnDelete.String())
-		// }
-		// if col.Rel.OnUpdate != 0 {
+
 		w.WriteString(" ON UPDATE ")
 		w.WriteString(col.Rel.OnUpdate.String())
-		// }
 	}
 }

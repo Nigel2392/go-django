@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 )
 
 func init() {

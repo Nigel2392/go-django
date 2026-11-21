@@ -16,7 +16,6 @@ import (
 	"time"
 
 	_ "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/deconstruct"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	derrors "github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -31,6 +30,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )

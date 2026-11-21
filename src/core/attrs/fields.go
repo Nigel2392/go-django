@@ -410,17 +410,14 @@ func (f *FieldDef) HelpText(ctx context.Context) string {
 	}
 
 	if f.Config.HelpText != nil {
-		switch helpText := f.Config.HelpText.(type) {
-		case string:
-			return trans.T(ctx, helpText)
-		case func(ctx context.Context) string:
-			return helpText(ctx)
-		default:
+		t, ok := trans.GetText(ctx, f.Config.HelpText)
+		if !ok {
 			panic(fmt.Sprintf(
 				"HelpText for field %q (%T) is not a `string` or `function(context) string`, got %T",
-				f.field_t.Name, f.field_v.Interface(), helpText,
+				f.field_t.Name, f.field_v.Interface(), f.Config.HelpText,
 			))
 		}
+		return t
 	}
 
 	return ""

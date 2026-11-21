@@ -2,6 +2,8 @@ package trans
 
 import (
 	"context"
+	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"reflect"
 	"slices"
@@ -9,8 +11,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/src/core/deconstruct"
 	"golang.org/x/text/language"
 )
+
+func init() {
+	deconstruct.Constructors.Register("django.translations.Lazy", func(args []jsontext.Value, kwargs deconstruct.Kwargs, opts ...json.Options) (any, error) {
+		return Lazy{Text: kwargs["text"].(string), Args: kwargs["args"].([]any)}, nil
+	})
+}
 
 var DefaultBackend TranslationBackend = &SprintBackend{}
 
@@ -19,12 +28,26 @@ const PACKAGE_PATH = "github.com/Nigel2392/go-django/src/core/trans"
 var TRANSLATIONS_DEFAULT_LOCALE = language.English
 
 type (
-	Locale             = string
-	Translation        = string
-	Untranslated       = string
-	TranslationTextMap = map[Untranslated]Translation
-	LocaleMap          = map[Locale]TranslationTextMap
+	Locale        = string
+	Translation   = string
+	Untranslated  = string
+	TranslateFunc func(ctx context.Context) string
+	Lazy          struct {
+		Text string
+		Args []any
+	}
 )
+
+func (l Lazy) T(ctx context.Context) string {
+	return T(ctx, l.Text, l.Args...)
+}
+
+func (l Lazy) Deconstruct() (string, []any, map[string]any) {
+	return "django.translations.Lazy", []any{}, map[string]any{
+		"args": l.Args,
+		"text": l.Text,
+	}
+}
 
 type TranslationBackend interface {
 	Translate(ctx context.Context, v Untranslated) Translation
@@ -38,7 +61,7 @@ type TranslationBackend interface {
 //
 // It returns a function that can be used in templates to translate the string.
 // The function takes a context and returns a Translation (alias for string).
-func S(v Untranslated, args ...any) func(ctx context.Context) Translation {
+func S(v Untranslated, args ...any) TranslateFunc {
 	return func(ctx context.Context) Translation {
 		return T(ctx, v, args...)
 	}
@@ -49,7 +72,7 @@ func S(v Untranslated, args ...any) func(ctx context.Context) Translation {
 // It returns a function that can be used in templates to pluralize the string.
 // The function takes a context, singular and plural forms, and a count.
 // It returns a Translation (alias for string) that can be used in templates.
-func SP(singular, plural Untranslated, n any, args ...any) func(ctx context.Context) Translation {
+func SP(singular, plural Untranslated, n any, args ...any) TranslateFunc {
 	return func(ctx context.Context) Translation {
 		return P(ctx, singular, plural, n, args...)
 	}
@@ -96,7 +119,7 @@ func P(ctx context.Context, singular, plural Untranslated, n any, args ...any) T
 	return DefaultBackend.Pluralizef(ctx, singular, plural, int(val), args...)
 }
 
-func GetTextFunc(v any) (fn func(ctx context.Context) Translation) {
+func GetTextFunc(v any) (fn TranslateFunc) {
 	if v == nil {
 		return nil
 	}
@@ -104,8 +127,14 @@ func GetTextFunc(v any) (fn func(ctx context.Context) Translation) {
 	switch v := v.(type) {
 	case string:
 		fn = S(v)
+	case func() string:
+		fn = func(_ context.Context) string { return v() }
 	case func(ctx context.Context) string:
 		fn = v
+	case TranslateFunc:
+		fn = v
+	case Lazy:
+		fn = v.T
 	default:
 		panic(fmt.Errorf(
 			"unsupported type %T for translation", v,
