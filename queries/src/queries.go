@@ -446,12 +446,6 @@ type QuerySetDatabaseDefiner interface {
 // that the model has a default ordering that should be used when executing queries.
 type OrderByDefiner = resolver.OrderByDefiner
 
-// DatabaseSpecificTransaction is an interface for transactions that are specific to a database.
-type DatabaseSpecificTransaction interface {
-	drivers.Transaction
-	DatabaseName() string
-}
-
 // A QueryInfo interface is used to retrieve information about a query.
 //
 // It is possible to introspect the queries' SQL, arguments, model, and compiler.
@@ -517,7 +511,7 @@ func rawStatementExpr(ctx context.Context, model attrs.Definer, sqlStr string, a
 		sql = rebind.Rebind(ctx, sql)
 	}
 
-	return sql, args, compiler.DB()
+	return sql, args, drivers.ContextDatabase(ctx, compiler.DB())
 }
 
 func QueryRow(ctx context.Context, model attrs.Definer, sqlStr string, args ...interface{}) drivers.SQLRow {

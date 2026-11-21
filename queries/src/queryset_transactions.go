@@ -53,7 +53,7 @@ func transactionToContext(ctx context.Context, tx drivers.Transaction, dbName st
 // The context returned will have the transaction stored in it, so that it can be used later, the
 // transaction is stored in the context - a queryset will automatically use the transaction
 // from the context if it exists when using [QuerySet.WithContext].
-func StartTransaction(ctx context.Context, database ...string) (context.Context, DatabaseSpecificTransaction, error) {
+func StartTransaction(ctx context.Context, database ...string) (context.Context, drivers.DatabaseSpecificTransaction, error) {
 	var (
 		databaseName   = getDatabaseName(nil, database...)
 		tx, dbName, ok = transactionFromContext(ctx)

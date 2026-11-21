@@ -81,6 +81,12 @@ type Transaction interface {
 	Rollback(context.Context) error
 }
 
+// DatabaseSpecificTransaction is an interface for transactions that are specific to a database.
+type DatabaseSpecificTransaction interface {
+	Transaction
+	DatabaseName() string
+}
+
 type dbContextKey struct {
 	v string
 }

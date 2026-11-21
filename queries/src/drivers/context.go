@@ -6,9 +6,25 @@ import (
 )
 
 var (
-	queryContextKey = dbContextKey{"db.query.context"}
-	txContextKey    = dbContextKey{"db.query.tx.mark"}
+	databaseContextKey = dbContextKey{"db"}
+	queryContextKey    = dbContextKey{"db.query.context"}
+	txContextKey       = dbContextKey{"db.query.tx.mark"}
 )
+
+func ContextWithDatabase(ctx context.Context, db DB) context.Context {
+	return context.WithValue(ctx, databaseContextKey, db)
+}
+
+func ContextDatabase(ctx context.Context, defaultDb ...DB) DB {
+	var db, ok = ctx.Value(databaseContextKey).(DB)
+	if ok {
+		return db
+	}
+	if len(defaultDb) > 0 {
+		return defaultDb[0]
+	}
+	return nil
+}
 
 func ContextWithQueryInfo(ctx context.Context) (context.Context, *QueryInformation) {
 	var qi = &QueryInformation{
