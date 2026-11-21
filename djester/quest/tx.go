@@ -8,10 +8,11 @@ import (
 
 	"github.com/Nigel2392/go-django/djester"
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 )
 
 // Start a transaction that will automatically be rolled back on test cleanup.
-func StartTransaction[TEST djester.BaseTB](t TEST, database ...string) (context.Context, queries.DatabaseSpecificTransaction) {
+func StartTransaction[TEST djester.BaseTB](t TEST, database ...string) (context.Context, drivers.DatabaseSpecificTransaction) {
 	t.Helper()
 
 	ctx, tx, err := queries.StartTransaction(t.Context(), database...)
