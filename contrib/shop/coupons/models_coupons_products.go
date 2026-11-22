@@ -3,9 +3,11 @@ package coupons
 import (
 	"context"
 
+	"github.com/Nigel2392/go-django/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 type CouponProductThrough struct {
@@ -41,6 +43,10 @@ func (m *CouponProductThrough) FieldDefs(ctx context.Context) attrs.Definitions 
 			return fattrs.PtrFieldConfig[*CouponProductThrough, *products.Product]{
 				Config: attrs.Config{
 					Column: "product_id",
+					FormField: func(opts ...func(fields.Field)) fields.Field {
+						var widget = chooser.NewChooserWidget(&products.Product{}, map[string]string{}, chooser.DEFAULT_KEY)
+						return fields.CharField(append(opts, fields.Widget(widget))...)
+					},
 					// ReadOnly:      true,
 					// Null:          true,
 					// Blank:         true,

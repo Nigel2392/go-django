@@ -297,7 +297,6 @@ type ptrField[MODEL attrs.Definer, VALUE any] struct {
 	opts      *ptrFieldOpts[MODEL, VALUE]
 	optsKey   []string
 	confFunc  func() PtrFieldConfig[MODEL, VALUE]
-	formField fields.Field
 }
 
 func Field[MODEL attrs.Definer, VALUE any](obj MODEL, name string, ptr *VALUE, cnf func() PtrFieldConfig[MODEL, VALUE], optionsKey ...string) attrs.Field {

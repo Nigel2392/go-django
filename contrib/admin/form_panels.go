@@ -893,8 +893,68 @@ func (f *modelFormPanelForm[TARGET, FORM]) Save() (map[string]any, error) {
 	var (
 		ctx     = f.Context()
 		relType = f.relation.Type()
-		wasNew  = f.isNew || attrs.IsZero(attrs.PrimaryKey(ctx, f.ModelForm.Instance()))
 	)
+
+	if relType == attrs.RelManyToMany && f.relation.Through() != nil && reflect.TypeOf(f.relation.Through().Model()) == reflect.TypeFor[TARGET]() {
+		var (
+			cleaned         = f.ModelForm.CleanedData()
+			targetFieldName = f.relation.Through().TargetField()
+			newTarget       attrs.Definer
+			newPK           any
+			oldTarget       attrs.Definer
+			oldPK           any
+		)
+		if cleaned != nil {
+			if raw := cleaned[targetFieldName]; !versatile.IsZero(raw) {
+				if d, ok := raw.(attrs.Definer); ok {
+					newTarget = d
+				} else if !attrs.IsZero(raw) {
+					newTarget = attrs.NewObject[attrs.Definer](ctx, f.relation.Model())
+					_ = attrs.Define(ctx, newTarget).Primary().Scan(raw)
+				}
+				if newTarget != nil {
+					newPK = attrs.PrimaryKey(ctx, newTarget)
+				}
+			}
+		}
+
+		if initial := f.ModelForm.InitialData(); initial != nil {
+			if raw := initial[targetFieldName]; !versatile.IsZero(raw) {
+				if d, ok := raw.(attrs.Definer); ok {
+					oldTarget = d
+				} else if !attrs.IsZero(raw) {
+					oldTarget = attrs.NewObject[attrs.Definer](ctx, f.relation.Model())
+					_ = attrs.Define(ctx, oldTarget).Primary().Scan(raw)
+				}
+				if oldTarget != nil {
+					oldPK = attrs.PrimaryKey(ctx, oldTarget)
+				}
+			}
+		}
+
+		if !attrs.IsZero(oldPK) && !attrs.IsZero(newPK) && reflect.DeepEqual(oldPK, newPK) {
+			return cleaned, nil
+		}
+
+		var backRef, err = getM2MBackRef(ctx, f.source, f.panel.FieldName)
+		if err != nil {
+			return cleaned, err
+		}
+		var qs = queries.ManyToManyQuerySet[attrs.Definer](backRef).WithContext(ctx)
+		if !attrs.IsZero(oldPK) {
+			if _, err := qs.RemoveTargets(oldTarget); err != nil && !errors.Is(err, errors.NoChanges) {
+				return cleaned, err
+			}
+		}
+		if !attrs.IsZero(newPK) {
+			if _, err := qs.AddTargets(newTarget); err != nil {
+				return cleaned, err
+			}
+		}
+		return cleaned, nil
+	}
+
+	var wasNew = f.isNew || attrs.IsZero(attrs.PrimaryKey(ctx, f.ModelForm.Instance()))
 
 	if relType == attrs.RelOneToMany || (relType == attrs.RelOneToOne && f.relation.Through() == nil && f.relation.Field() != nil && !f.relation.Field().IsPrimary()) {
 		if revField := f.relation.Field(); revField != nil {
@@ -1275,6 +1335,42 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 				return m.GetForms(ctx, r, instance, min, targetFields, targetList), nil
 			},
 			DeleteForms: func(ctx context.Context, forms []modelforms.ModelForm[TARGET]) error {
+				var rel = fld.Rel()
+				if rel.Type() == attrs.RelManyToMany && rel.Through() != nil && reflect.TypeOf(rel.Through().Model()) == reflect.TypeOf(m.TargetType) {
+					var targetFieldName = rel.Through().TargetField()
+					var anyTargets = make([]any, 0, len(forms))
+					for _, form := range forms {
+						var tgt any
+						if inst := form.Instance(); !versatile.IsZero(inst) {
+							if f, ok := attrs.Define(ctx, inst).Field(targetFieldName); ok {
+								tgt = f.GetValue()
+							}
+						}
+						if versatile.IsZero(tgt) {
+							if init := form.InitialData(); init != nil {
+								tgt = init[targetFieldName]
+							}
+						}
+						if !versatile.IsZero(tgt) {
+							anyTargets = append(anyTargets, tgt)
+						}
+					}
+					if len(anyTargets) == 0 {
+						return nil
+					}
+					var backRef, err = getM2MBackRef(ctx, instance, m.FieldName)
+					if err != nil {
+						return err
+					}
+					_, err = queries.ManyToManyQuerySet[attrs.Definer](backRef).
+						WithContext(ctx).
+						RemoveTargets(anyTargets...)
+					if err != nil && !errors.Is(err, errors.NoChanges) {
+						return err
+					}
+					return nil
+				}
+
 				var instances = make([]TARGET, 0, len(forms))
 				for _, form := range forms {
 					var inst = form.Instance()
@@ -1286,7 +1382,6 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 				if len(instances) == 0 {
 					return nil
 				}
-				var rel = fld.Rel()
 				var relType = rel.Type()
 				switch {
 				case relType == attrs.RelManyToMany:
@@ -1449,6 +1544,45 @@ func getRelatedList[TARGET attrs.Definer](ctx context.Context, source attrs.Defi
 		return field, list, nil
 
 	case relType == attrs.RelManyToMany:
+		if rel.Through() != nil && reflect.TypeOf(rel.Through().Model()) == reflect.TypeFor[TARGET]() {
+			var qs = queries.ManyToManyQuerySet[attrs.Definer](&queries.RelM2M[attrs.Definer, attrs.Definer]{
+				Parent: &queries.ParentInfo{
+					Object: source,
+					Field:  field,
+				},
+			})
+
+			rows, err := qs.WithContext(ctx).OrderBy().All()
+			if err != nil {
+				return nil, nil, errors.Wrapf(
+					err, "Error fetching related objects for field %q", fieldName,
+				)
+			}
+
+			if len(rows) == 0 {
+				goto createDefaultList
+			}
+
+			var (
+				list            = make([]TARGET, len(rows))
+				targetFieldName = rel.Through().TargetField()
+				sourceFieldName = rel.Through().SourceField()
+			)
+			for i, row := range rows {
+				var th = row.Through.(TARGET)
+				var thDefs = attrs.Define(ctx, th)
+				if f, ok := thDefs.Field(targetFieldName); ok {
+					_ = f.SetValue(row.Object, true)
+				}
+				if f, ok := thDefs.Field(sourceFieldName); ok {
+					_ = f.SetValue(source, true)
+				}
+				list[i] = th
+			}
+
+			return field, list, nil
+		}
+
 		var qs = queries.ManyToManyQuerySet[TARGET](&queries.RelM2M[attrs.Definer, attrs.Definer]{
 			Parent: &queries.ParentInfo{
 				Object: source,
@@ -1525,8 +1659,11 @@ createDefaultList:
 	case queries.MultiThroughRelationValue:
 		if !versatile.IsZero(v) {
 			for _, item := range v.GetValues() {
-				t := item.Model()
-				targetList = append(targetList, t.(TARGET))
+				if t, ok := item.Model().(TARGET); ok {
+					targetList = append(targetList, t)
+				} else if th, ok := item.Through().(TARGET); ok {
+					targetList = append(targetList, th)
+				}
 			}
 		}
 	}

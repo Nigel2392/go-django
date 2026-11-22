@@ -98,6 +98,7 @@ func main() {
 			revisions.NewAppConfig,
 			dbsupplier.NewAppConfig,
 			settings.NewAppConfig,
+			NewAppConfig,
 		),
 	)
 	go func() {

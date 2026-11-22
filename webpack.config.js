@@ -128,10 +128,18 @@ module.exports = [
         ...baseConfig(),
     },
     {
-        entry: './contrib/shop/assets/static_src/index.ts',
+        entry: './contrib/shop/assets/static_src/admin/index.ts',
         output: {
             'path': path.resolve(__dirname, 'contrib/shop/assets/static/shop/admin/js/'),
             'filename': 'coupon-generator.js'
+        },
+        ...baseConfig(),
+    },
+    {
+        entry: './contrib/shop/assets/static_src/public/index.ts',
+        output: {
+            'path': path.resolve(__dirname, 'contrib/shop/assets/static/shop/public/js/'),
+            'filename': 'index.js'
         },
         ...baseConfig(),
     },

@@ -17,14 +17,7 @@ func AddOptions(typ reflect.Type, name string, opts optionsType, extra ...string
 		cachedOptions[typ] = optsMap
 	}
 
-	var sb strings.Builder
-	sb.WriteString(name)
-	for _, opt := range extra {
-		sb.WriteRune(':')
-		sb.WriteString(opt)
-	}
-
-	optsMap[sb.String()] = opts
+	optsMap[optionsKey(name, extra)] = opts
 }
 
 func GetOptions[OPTIONS any](typ reflect.Type, name string, extra ...string) (opts OPTIONS, ok bool) {
@@ -34,14 +27,7 @@ func GetOptions[OPTIONS any](typ reflect.Type, name string, extra ...string) (op
 		cachedOptions[typ] = optsMap
 	}
 
-	var sb strings.Builder
-	sb.WriteString(name)
-	for _, opt := range extra {
-		sb.WriteRune(':')
-		sb.WriteString(opt)
-	}
-
-	optsV, ok := optsMap[sb.String()]
+	optsV, ok := optsMap[optionsKey(name, extra)]
 	if !ok {
 		// panic(fmt.Sprintf("ReflectLessField options were not configured for field %q in type %s", name, typ))
 		return opts, false
@@ -53,4 +39,18 @@ func GetOptions[OPTIONS any](typ reflect.Type, name string, extra ...string) (op
 	}
 
 	return opts, true
+}
+
+func optionsKey(name string, extra []string) string {
+	if len(extra) == 0 {
+		return name
+	}
+
+	var key strings.Builder
+	key.WriteString(name)
+	for _, part := range extra {
+		key.WriteByte(':')
+		key.WriteString(part)
+	}
+	return key.String()
 }

@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/contrib/admin/searches"
@@ -225,6 +226,23 @@ func NewAppConfig() (django.AppConfig, error) {
 
 	}
 
+	chooser.Register(&chooser.ChooserDefinition[*products.Product]{
+		Model: &products.Product{},
+		Title: trans.S("Product Chooser"),
+		PreviewString: func(ctx context.Context, instance *products.Product) string {
+			return instance.Title
+		},
+		ListPage: &chooser.ChooserListPage[*products.Product]{
+			Fields: []string{"Title", "Supplier", "Price", "TaxRate", "DiscountPrice"},
+			QuerySet: func(r *http.Request, model *products.Product) (*queries.QuerySet[*products.Product], error) {
+				return queries.GetQuerySet(model).OrderBy("Title", "-Price"), nil
+			},
+			SearchFields: []searches.SearchField{
+				{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
+			},
+		},
+	})
+
 	SHOP.Init = func(settings django.Settings, db drivers.Database) error {
 
 		goldcrest.Register(admin.RegisterRouteHook, 0, admin.RegisterRouteHookFunc(func(adminSite *admin.AdminApplication, route mux.Multiplexer) {
@@ -433,18 +451,13 @@ func NewAppConfig() (django.AppConfig, error) {
 							),
 							admin.PanelTab(
 								trans.S("Products"),
-								&admin.ModelFormPanel[*products.Product, modelforms.ModelForm[*products.Product]]{
-									TargetType: &products.Product{},
+								&admin.ModelFormPanel[*coupons.CouponProductThrough, modelforms.ModelForm[*coupons.CouponProductThrough]]{
+									TargetType: &coupons.CouponProductThrough{},
 									FieldName:  "Products",
 									Classname:  "collapsible",
-									// SubClassname: "collapsed",
-									MinNum: 1,
-									// DisallowAdd:    true,
-									// DisallowRemove: true,
+									MinNum:     1,
 									Panels: []admin.Panel{
-										admin.FieldPanel("ID"),
-										admin.FieldPanel("Title"),
-										admin.FieldPanel("Price"),
+										admin.FieldPanel("Product"),
 									},
 								},
 							),
@@ -478,18 +491,13 @@ func NewAppConfig() (django.AppConfig, error) {
 							),
 							admin.PanelTab(
 								trans.S("Products"),
-								&admin.ModelFormPanel[*products.Product, modelforms.ModelForm[*products.Product]]{
-									TargetType: &products.Product{},
+								&admin.ModelFormPanel[*coupons.CouponProductThrough, modelforms.ModelForm[*coupons.CouponProductThrough]]{
+									TargetType: &coupons.CouponProductThrough{},
 									FieldName:  "Products",
 									Classname:  "collapsible",
-									// SubClassname: "collapsed",
-									MinNum: 1,
-									// DisallowAdd:    true,
-									// DisallowRemove: true,
+									MinNum:     1,
 									Panels: []admin.Panel{
-										admin.FieldPanel("ID"),
-										admin.FieldPanel("Title"),
-										admin.FieldPanel("Price"),
+										admin.FieldPanel("Product"),
 									},
 								},
 							),
