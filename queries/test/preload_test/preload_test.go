@@ -1,12 +1,29 @@
 package preload_test
 
 import (
+	"database/sql/driver"
 	"slices"
 	"testing"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
+
+func TestPreloadBookReferencePrimaryKeyDDL(t *testing.T) {
+	model := &PreloadBookReference{}
+	table := migrator.NewModelTable(model)
+	column := migrator.NewTableColumn(table, attrs.Define(t.Context(), model).Primary())
+	if !column.Primary {
+		t.Fatal("book reference ID must be a primary key")
+	}
+	for _, drv := range []driver.Driver{&drivers.DriverMySQL{}, &drivers.DriverMariaDB{}} {
+		if got := migrator.GetFieldType(drv, &column); got != "VARCHAR(48)" {
+			t.Errorf("%T: book reference ID type is %s, want VARCHAR(48)", drv, got)
+		}
+	}
+}
 
 func TestPreloadForwardForeignKey(t *testing.T) {
 	sharedBook, otherBook := author0Books[0], author1Books[0]

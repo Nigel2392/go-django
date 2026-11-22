@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nigel2392/go-django/queries/src"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	derrors "github.com/Nigel2392/go-django/queries/src/drivers/errors"

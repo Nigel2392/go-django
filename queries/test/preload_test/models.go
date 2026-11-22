@@ -26,7 +26,7 @@ type PreloadBook struct {
 
 type PreloadBookReference struct {
 	models.Model `table:"preload_book_references"`
-	ID           string       `attrs:"primary;max_length:48"`
+	ID           string       `attrs:"primary;max_length=48"`
 	Book         *PreloadBook `attrs:"-"`
 }
 
