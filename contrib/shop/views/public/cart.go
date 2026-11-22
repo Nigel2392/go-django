@@ -58,6 +58,9 @@ func cartQuery(ctx context.Context, r *http.Request, preloads bool) *carts.CartQ
 }
 
 func (c CartAPI) getOrCreateCart(r *http.Request, preloads bool) (*carts.CartRow, bool, error) {
+	if err := ensureCartSession(r); err != nil {
+		return nil, false, err
+	}
 	u := authentication.UserFromContext(r.Context())
 	q := cartQuery(r.Context(), r, preloads)
 
@@ -85,6 +88,17 @@ func (c CartAPI) getOrCreateCart(r *http.Request, preloads bool) (*carts.CartRow
 	}
 
 	return cart, created, nil
+}
+
+func ensureCartSession(r *http.Request) error {
+	s := sessions.Retrieve(r)
+	if s == nil {
+		return errors.NilPointer.Wrap("cart requires session middleware")
+	}
+	if s.Token() == "" {
+		return s.RenewToken()
+	}
+	return nil
 }
 
 func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
@@ -172,6 +186,10 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// retrieve or create the users' cart
+	if err := ensureCartSession(r); err != nil {
+		api.RespondError(w, http.StatusServiceUnavailable, "cart session unavailable")
+		return
+	}
 	u := authentication.UserFromContext(r.Context())
 	q := cartQuery(ctx, r, false)
 	cart := &carts.Cart{
@@ -179,7 +197,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 		Session: sessions.Retrieve(r).Token(),
 	}
 
-	if u.IsAuthenticated() {
+	if u != nil && u.IsAuthenticated() {
 		cart.User = u.(users.User)
 	}
 

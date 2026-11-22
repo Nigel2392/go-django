@@ -2,19 +2,26 @@ package auth_test
 
 import (
 	"context"
+	stderrors "errors"
 	"flag"
 	"os"
 	"testing"
+	"testing/fstest"
+	"time"
 
 	"github.com/Nigel2392/go-django/contrib/auth"
 	"github.com/Nigel2392/go-django/contrib/auth/users"
+	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "unsafe"
@@ -27,25 +34,57 @@ func TestMain(m *testing.M) {
 
 	var which, db = testdb.Open()
 	var settings = map[string]interface{}{
-		django.APPVAR_DATABASE: db,
+		django.APPVAR_DATABASE:       db,
+		django.APPVAR_DISABLE_NOSURF: true,
+		django.APPVAR_ALLOWED_HOSTS:  []string{"*"},
 	}
 
-	logger.Setup(&logger.Logger{
+	var appLogger = &logger.Logger{
 		Level:       logger.DBG,
 		WrapPrefix:  logger.ColoredLogWrapper,
 		OutputDebug: os.Stdout,
 		OutputInfo:  os.Stdout,
 		OutputWarn:  os.Stdout,
 		OutputError: os.Stdout,
-	})
-
-	django.App(django.Configure(settings))
-
-	logger.Debugf("Using %s database for queries tests", which)
+	}
+	logger.Setup(appLogger)
 
 	if !testing.Verbose() {
-		logger.SetLevel(logger.WRN)
+		appLogger.SetLevel(logger.WRN)
 	}
+
+	var app = django.App(
+		django.Configure(settings),
+		django.Apps(
+			session.NewAppConfig,
+			auth.NewAppConfig,
+		),
+		django.Flag(
+			django.FlagSkipCmds,
+			django.FlagSkipChecks,
+			django.FlagSkipDepsCheck,
+		),
+		django.AppLogger(appLogger),
+	)
+
+	if err := app.Initialize(); err != nil {
+		panic(err)
+	}
+
+	tpl.Add(tpl.Config{
+		AppName: "auth",
+		FS: fstest.MapFS{
+			"auth/login.tmpl": {
+				Data: []byte(`{{ define "login" }}<form method="post" action="{{ .Get "FormURL" }}"><input type="hidden" name="next" value="{{ .Get "NextURL" }}">{{ $f := .Get "Form" }}{{ range $f.ErrorList }}<div class="form-error">{{ . }}</div>{{ end }}{{ $f.AsP }}</form>{{ end }}`),
+			},
+			"auth/register.tmpl": {
+				Data: []byte(`{{ define "register" }}<form method="post" action="{{ .Get "FormURL" }}"><input type="hidden" name="next" value="{{ .Get "NextURL" }}">{{ $f := .Get "Form" }}{{ range $f.ErrorList }}<div class="form-error">{{ . }}</div>{{ end }}{{ $f.AsP }}</form>{{ end }}`),
+			},
+		},
+		Matches: filesystem.MatchPrefix("auth/"),
+	})
+
+	logger.Debugf("Using %s database for queries tests", which)
 
 	var tables = quest.Table[*testing.T](nil,
 		&auth.User{},
@@ -57,7 +96,6 @@ func TestMain(m *testing.M) {
 	)
 	tables.IfNotExists = true
 	tables.Create()
-	defer tables.Drop()
 
 	attrs.ResetDefinitions.Send(context.Background(), nil)
 
@@ -67,6 +105,7 @@ func TestMain(m *testing.M) {
 		// For now, we just exit with the code returned by m.Run().
 	}
 
+	tables.Drop()
 	os.Exit(exitCode)
 }
 
@@ -579,6 +618,115 @@ func TestUserHasPermissions(t *testing.T) {
 
 		if u.HasObjectPermission(ctx, nil, "Can create users") {
 			t.Errorf("User should not have 'Can create users' permission, but does")
+		}
+	})
+}
+
+func TestUser_StringAndEdgeCases(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("String", func(t *testing.T) {
+		noName := &auth.User{ID: 42}
+		if got := noName.String(); got != "User<42>" {
+			t.Errorf("User.String() with empty username = %q, want %q", got, "User<42>")
+		}
+
+		withName := &auth.User{ID: 42, Username: "alice"}
+		if got := withName.String(); got != "alice" {
+			t.Errorf("User.String() with username = %q, want %q", got, "alice")
+		}
+	})
+
+	t.Run("UniqueTogetherAndIndexes", func(t *testing.T) {
+		u := &auth.User{}
+		ut := u.UniqueTogether()
+		if len(ut) != 2 || len(ut[0]) != 1 || ut[0][0] != "Email" || len(ut[1]) != 1 || ut[1][0] != "Username" {
+			t.Errorf("unexpected UniqueTogether: %#v", ut)
+		}
+
+		idxs := u.DatabaseIndexes(u)
+		if len(idxs) != 2 {
+			t.Fatalf("expected 2 indexes, got %d", len(idxs))
+		}
+		if idxs[0].Identifier != "auth_users_email_idx" || !idxs[0].Unique || idxs[0].Fields[0] != "Email" {
+			t.Errorf("unexpected email index: %#v", idxs[0])
+		}
+		if idxs[1].Identifier != "auth_users_username_idx" || !idxs[1].Unique || idxs[1].Fields[0] != "Username" {
+			t.Errorf("unexpected username index: %#v", idxs[1])
+		}
+	})
+
+	t.Run("BeforeCreateAndBeforeSave", func(t *testing.T) {
+		u := &auth.User{
+			Email:    drivers.MustParseEmail("edge_beforesave@example.com"),
+			Username: "edge_beforesave",
+		}
+		if err := u.BeforeCreate(ctx); err != nil {
+			t.Fatalf("BeforeCreate error: %v", err)
+		}
+		if time.Time(u.CreatedAt).IsZero() {
+			t.Errorf("expected CreatedAt to be set by BeforeCreate")
+		}
+
+		if err := u.BeforeSave(ctx); !stderrors.Is(err, errors.ValueError) {
+			t.Errorf("expected errors.ValueError when password is nil, got %v", err)
+		}
+
+		u.Password = auth.NewPassword("")
+		if err := u.BeforeSave(ctx); !stderrors.Is(err, errors.ValueError) {
+			t.Errorf("expected errors.ValueError when password is zero, got %v", err)
+		}
+
+		u.SetPassword("ValidPass1!")
+		if err := u.BeforeSave(ctx); err != nil {
+			t.Fatalf("BeforeSave with valid password error: %v", err)
+		}
+		if time.Time(u.UpdatedAt).IsZero() {
+			t.Errorf("expected UpdatedAt to be set by BeforeSave")
+		}
+	})
+
+	t.Run("CloneQuerySetAndUniqueViolation", func(t *testing.T) {
+		qs := auth.GetUserQuerySet()
+		cloned := qs.WithContext(ctx).Filter("Username", "nonexistent_clone_check")
+		if cloned == qs {
+			t.Errorf("expected cloned QuerySet to be a distinct instance")
+		}
+
+		ctxTx, tx, err := queries.StartTransaction(ctx)
+		if err != nil {
+			t.Fatalf("StartTransaction: %v", err)
+		}
+		defer tx.Rollback(ctxTx)
+
+		_, err = auth.GetUserQuerySet().WithContext(ctxTx).Create(&auth.User{
+			Email:    drivers.MustParseEmail("dup_user@example.com"),
+			Username: "dup_user",
+			Password: auth.NewPassword("Secret123!"),
+			Base:     users.Base{IsActive: true},
+		})
+		if err != nil {
+			t.Fatalf("create first user: %v", err)
+		}
+
+		_, err = auth.GetUserQuerySet().WithContext(ctxTx).Create(&auth.User{
+			Email:    drivers.MustParseEmail("dup_user@example.com"),
+			Username: "dup_user_other",
+			Password: auth.NewPassword("Secret123!"),
+			Base:     users.Base{IsActive: true},
+		})
+		if err == nil {
+			t.Errorf("expected duplicate email creation to fail with unique index error")
+		}
+
+		_, err = auth.GetUserQuerySet().WithContext(ctxTx).Create(&auth.User{
+			Email:    drivers.MustParseEmail("dup_user_other@example.com"),
+			Username: "dup_user",
+			Password: auth.NewPassword("Secret123!"),
+			Base:     users.Base{IsActive: true},
+		})
+		if err == nil {
+			t.Errorf("expected duplicate username creation to fail with unique index error")
 		}
 	})
 }

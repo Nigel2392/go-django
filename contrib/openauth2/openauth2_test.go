@@ -6,15 +6,20 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
 	"github.com/Nigel2392/go-django/contrib/openauth2"
+	"github.com/Nigel2392/go-django/contrib/session"
+	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"golang.org/x/oauth2"
 )
@@ -27,6 +32,7 @@ type User struct {
 
 func init() {
 	var openauth = openauth2.NewAppConfig(openauth2.Config{
+		BaseCallbackURL: "https://example.com",
 		AuthConfigurations: []openauth2.AuthConfig{
 			{
 				ProviderInfo: openauth2.ConfigInfo{
@@ -56,9 +62,12 @@ func init() {
 	var _, db = testdb.Open()
 	var app = django.App(
 		django.Configure(map[string]interface{}{
-			django.APPVAR_DATABASE: db,
+			django.APPVAR_DATABASE:       db,
+			django.APPVAR_DISABLE_NOSURF: true,
+			django.APPVAR_ALLOWED_HOSTS:  []string{"*"},
 		}),
 		django.Apps(
+			session.NewAppConfig,
 			openauth,
 		),
 		django.Flag(
@@ -76,6 +85,27 @@ func init() {
 	if err := app.Initialize(); err != nil {
 		panic(err)
 	}
+
+	var tables = quest.Table[*testing.T](nil,
+		&openauth2.User{},
+		&users.Group{},
+		&users.Permission{},
+		&users.UserGroup{},
+		&users.GroupPermission{},
+		&users.UserPermission{},
+	)
+	tables.IfNotExists = true
+	tables.Create()
+
+	tpl.Add(tpl.Config{
+		AppName: "oauth2",
+		FS: fstest.MapFS{
+			"oauth2/login.tmpl": {
+				Data: []byte(`{{ define "login" }}<div id="oauth2-login">OAuth2 Login</div>{{ end }}`),
+			},
+		},
+		Matches: filesystem.MatchPrefix("oauth2/"),
+	})
 }
 
 type shimTokenSource struct {

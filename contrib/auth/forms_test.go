@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
 type testUser struct {
@@ -224,7 +226,13 @@ func TestRegisterForm(t *testing.T) {
 		formData.Set("isActive", "true")
 
 		t.Run(fmt.Sprintf("registerUser-%s", test.user.Username), func(t *testing.T) {
-			var req, _ = http.NewRequest("POST", "/register", nil)
+			var rawReq, _ = http.NewRequest("POST", "/register", nil)
+			var req = rawReq
+			if auth.Auth != nil && auth.Auth.Session != nil {
+				sessions.SessionMiddleware(auth.Auth.Session)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					req = r
+				})).ServeHTTP(httptest.NewRecorder(), rawReq)
+			}
 			var form = auth.UserRegisterForm(
 				req, test.formConfig,
 			)

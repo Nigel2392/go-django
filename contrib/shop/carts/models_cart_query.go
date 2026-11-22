@@ -61,16 +61,17 @@ func (qs *CartQuery) CartForRequest(r *http.Request) *CartQuery {
 	}
 
 	var (
-		user    = authentication.Retrieve(r)
-		session = sessions.Retrieve(r)
-		hasUser = user != nil && user.IsAuthenticated()
+		user       = authentication.Retrieve(r)
+		session    = sessions.Retrieve(r)
+		hasUser    = user != nil && user.IsAuthenticated()
+		hasSession = session != nil && session.Token() != ""
 	)
 
 	var baseQ expr.ClauseExpression
 	switch {
-	case session != nil && hasUser:
+	case hasSession && hasUser:
 		baseQ = expr.Q("Session", session.Token()).Or(expr.Q("User", user))
-	case session != nil:
+	case hasSession:
 		baseQ = expr.Q("Session", session.Token())
 	case hasUser:
 		baseQ = expr.Q("User", user)
