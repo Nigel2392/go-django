@@ -13,18 +13,23 @@ import (
 )
 
 type Payment struct {
-	ID            drivers.ULID
-	Order         attrs.Definer
-	Account       *ProviderAccount
-	Provider      string
-	TransactionID sql.NullString
-	CheckoutURL   string
-	Amount        decimal.Decimal
-	Fee           decimal.Decimal
-	Currency      string
-	State         paystate.PayState
-	CreatedAt     drivers.Timestamp
-	UpdatedAt     drivers.Timestamp
+	ID               drivers.ULID
+	Order            attrs.Definer
+	Account          *ProviderAccount
+	Provider         string
+	TransactionID    sql.NullString
+	CheckoutURL      string
+	Amount           decimal.Decimal
+	Fee              decimal.Decimal
+	Currency         string
+	State            paystate.PayState
+	CreatedAt        drivers.Timestamp
+	UpdatedAt        drivers.Timestamp
+	AuthorizationRef string
+	CaptureRef       string
+	OperationKey     string
+	OperationVersion uint64
+	Operations       drivers.JSON[map[string]OperationRecord]
 }
 
 func (m *Payment) BeforeCreate(context.Context) error {
@@ -60,5 +65,10 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		paymentField(m, "Currency", &m.Currency, attrs.Config{MaxLength: 3, Blank: true, Default: ""}),
 		paymentField(m, "CreatedAt", &m.CreatedAt, attrs.Config{AutoNowAdd: true}),
 		paymentField(m, "UpdatedAt", &m.UpdatedAt, attrs.Config{AutoNow: true}),
+		paymentField(m, "AuthorizationRef", &m.AuthorizationRef, attrs.Config{MaxLength: 255, Blank: true, Default: ""}),
+		paymentField(m, "CaptureRef", &m.CaptureRef, attrs.Config{MaxLength: 255, Blank: true, Default: ""}),
+		paymentField(m, "OperationKey", &m.OperationKey, attrs.Config{MaxLength: 128, Blank: true, Default: ""}),
+		paymentField(m, "OperationVersion", &m.OperationVersion, attrs.Config{Null: true, Blank: true, Default: uint64(0)}),
+		paymentField(m, "Operations", &m.Operations, attrs.Config{Null: true, Blank: true}),
 	)
 }

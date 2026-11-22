@@ -38,6 +38,11 @@ func transactionToContext(ctx context.Context, tx drivers.Transaction, dbName st
 	})
 }
 
+func IsTransactionContext(ctx context.Context) bool {
+	tx, _, ok := transactionFromContext(ctx)
+	return ok && tx != nil && !tx.Finished()
+}
+
 // StartTransaction starts a new transaction for the given database.
 //
 // If a transaction already exists in the context, it will return a no-op transaction,
