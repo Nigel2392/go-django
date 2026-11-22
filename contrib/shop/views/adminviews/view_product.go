@@ -225,13 +225,6 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	var model = supplierVal.ProductType(r.Context())
-	var form = forms.NewAdminForm(r, model, func(p supplier.ProductModel) []admin.Panel {
-		return supplierVal.ProductAddPanel(r.Context())
-	})
-
-	form.Load()
-
 	transactionCtx, tx, err := queries.StartTransaction(r.Context())
 	if err != nil {
 		except.Fail(
@@ -242,6 +235,13 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 
 	defer tx.Rollback(transactionCtx)
 	r = r.WithContext(transactionCtx)
+
+	var model = supplierVal.ProductType(r.Context())
+	var form = forms.NewAdminForm(r, model, func(p supplier.ProductModel) []admin.Panel {
+		return supplierVal.ProductAddPanel(r.Context())
+	})
+
+	form.Load()
 
 	form.Form.SaveInstance = func(ctx context.Context, p supplier.ProductModel) error {
 		saved, err := djmodels.SaveModel(ctx, p)
@@ -257,6 +257,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 		product.Supplier = supplier.SupplierValue(supplierVal.InternalName())
 
 		_, err = queries.GetQuerySet[attrs.Definer](&products.Product{}).
+			WithContext(ctx).
 			ExplicitSave().
 			Create(product)
 

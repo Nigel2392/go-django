@@ -137,6 +137,9 @@ func NewDecimalInput(attrs map[string]string, decimalPlaces int) Widget {
 func (d *DecimalWidget) ValueToGo(value interface{}) (interface{}, error) {
 	switch val := value.(type) {
 	case string:
+		if val == "" {
+			return decimal.Zero, nil
+		}
 		return decimal.NewFromString(val)
 	case decimal.Decimal:
 		return val, nil
@@ -217,7 +220,7 @@ func (d *DateWidget) ValueToGo(value interface{}) (interface{}, error) {
 	switch val := value.(type) {
 	case string:
 		if val == "" {
-			return "", nil
+			return time.Time{}, nil
 		}
 
 		if d.DateType == DateWidgetTypeDate {
@@ -255,12 +258,18 @@ func (d *DateWidget) ValueToForm(value interface{}) interface{} {
 
 	switch val := value.(type) {
 	case time.Time:
+		if val.IsZero() {
+			return ""
+		}
 		if d.DateType == DateWidgetTypeDate {
 			return val.Format(DateWidgetDateFormat)
 		}
 		return val.Format(DateWidgetDateTimeSecFormat)
 	case interface{ Time() time.Time }:
 		var t = val.Time()
+		if t.IsZero() {
+			return ""
+		}
 		if d.DateType == DateWidgetTypeDate {
 			return t.Format(DateWidgetDateFormat)
 		}

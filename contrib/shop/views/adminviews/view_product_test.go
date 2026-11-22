@@ -25,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/shop"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
@@ -258,9 +259,15 @@ func TestAdminProductViews(t *testing.T) {
 				&products.Product{},
 				&carts.Cart{},
 				&carts.CartItem{},
+				&coupons.Coupon{},
+				&coupons.Redemption{},
+				&coupons.CouponProductThrough{},
 			)
 			tables.IfNotExists = true
 			tables.Create()
+			_, _ = queries.GetQuerySet(&coupons.CouponProductThrough{}).Delete()
+			_, _ = queries.GetQuerySet(&coupons.Redemption{}).Delete()
+			_, _ = queries.GetQuerySet(&coupons.Coupon{}).Delete()
 			_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
 			_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
 			_, _ = queries.GetQuerySet(&products.Product{}).Delete()
@@ -682,7 +689,12 @@ func TestAdminProductViews(t *testing.T) {
 		},
 	}
 
+	d.Tests = append(d.Tests, adminCouponUITests()...)
+
 	defer func() {
+		_, _ = queries.GetQuerySet(&coupons.CouponProductThrough{}).Delete()
+		_, _ = queries.GetQuerySet(&coupons.Redemption{}).Delete()
+		_, _ = queries.GetQuerySet(&coupons.Coupon{}).Delete()
 		_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
 		_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
 		_, _ = queries.GetQuerySet(&products.Product{}).Delete()

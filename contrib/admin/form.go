@@ -8,6 +8,9 @@ import (
 	"reflect"
 	"slices"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -153,20 +156,145 @@ func (a *AdminForm[T1, T2]) AddWidget(name string, widget widgets.Widget) {
 	a.Form.AddWidget(name, widget)
 }
 
-func (a *AdminForm[T1, T2]) UnpackErrors(bound forms.BoundForm, boundErrors *orderedmap.OrderedMap[string, []error]) []forms.FieldError {
-	var errors = make([]forms.FieldError, 0)
-	errors = append(errors, forms.UnpackErrors(bound, a.Form, boundErrors, func(s string) (forms.Field, bool) {
-		return a.Form.Field(s)
-	})...)
+func collectFormSetBoundErrors(root any) (*orderedmap.OrderedMap[string, []error], map[string]forms.Field) {
+	var (
+		errMap      = orderedmap.NewOrderedMap[string, []error]()
+		fieldLabels = make(map[string]forms.Field)
+		seen        = make(map[uintptr]struct{})
+	)
 
-	if a.formset != nil {
-		if mgmt := a.formset.ManagementForm(); mgmt != nil {
-			errors = append(errors, forms.UnpackErrors(bound, mgmt, mgmt.BoundErrors(), func(s string) (forms.Field, bool) {
-				return mgmt.Field(s)
-			})...)
+	var appendErrors = func(key string, errs []error) {
+		if len(errs) == 0 {
+			return
+		}
+		var existing, _ = errMap.Get(key)
+		var next = make([]error, len(existing)+len(errs))
+		copy(next, existing)
+		copy(next[len(existing):], errs)
+		errMap.Set(key, next)
+	}
+
+	var walk func(node any)
+	walk = func(node any) {
+		if node == nil {
+			return
+		}
+		var rv = reflect.ValueOf(node)
+		if rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
+			if rv.IsNil() {
+				return
+			}
+			if rv.Kind() == reflect.Ptr {
+				var ptr = rv.Pointer()
+				if _, ok := seen[ptr]; ok {
+					return
+				}
+				seen[ptr] = struct{}{}
+			}
+		}
+
+		if cluster, ok := node.(ClusterOrderableFormT[formsets.BaseFormSetForm]); ok {
+			walk(cluster.Form())
+			return
+		}
+		if w, ok := node.(forms.FormWrapper[forms.Form]); ok {
+			for _, child := range w.Unwrap() {
+				walk(child)
+			}
+			return
+		}
+		if w, ok := node.(forms.FormWrapper[any]); ok {
+			for _, child := range w.Unwrap() {
+				walk(child)
+			}
+			return
+		}
+		if mgmtProvider, ok := node.(interface{ ManagementForm() *formsets.ManagementForm }); ok {
+			if mgmt := mgmtProvider.ManagementForm(); mgmt != nil {
+				walk(mgmt)
+			}
+		}
+		if formsMethod := rv.MethodByName("Forms"); formsMethod.IsValid() &&
+			formsMethod.Type().NumIn() == 0 &&
+			formsMethod.Type().NumOut() == 2 {
+			var out = formsMethod.Call(nil)
+			if out[1].IsNil() && out[0].Kind() == reflect.Slice {
+				for i := 0; i < out[0].Len(); i++ {
+					walk(out[0].Index(i).Interface())
+				}
+			}
+			return
+		}
+
+		if leaf, ok := node.(interface {
+			BoundErrors() *orderedmap.OrderedMap[string, []error]
+			Field(string) (fields.Field, bool)
+		}); ok {
+			var errs = leaf.BoundErrors()
+			if errs == nil || errs.Len() == 0 {
+				return
+			}
+			var prefixer, hasPrefix = node.(interface{ PrefixName(string) string })
+			for head := errs.Front(); head != nil; head = head.Next() {
+				var key = head.Key
+				if hasPrefix {
+					key = prefixer.PrefixName(head.Key)
+				}
+				appendErrors(key, head.Value)
+				if fld, ok := leaf.Field(head.Key); ok {
+					fieldLabels[key] = fld
+				}
+			}
 		}
 	}
-	return errors
+
+	walk(root)
+	return errMap, fieldLabels
+}
+
+func (a *AdminForm[T1, T2]) UnpackErrors(bound forms.BoundForm, boundErrors *orderedmap.OrderedMap[string, []error]) []forms.FieldError {
+	if a.formset == nil {
+		return forms.UnpackErrors(bound, a.Form, boundErrors, func(s string) (forms.Field, bool) {
+			return a.Form.Field(s)
+		})
+	}
+
+	var fsErrs, fsLabels = collectFormSetBoundErrors(a.formset)
+	var getField = func(s string) (forms.Field, bool) {
+		if fld, ok := a.Form.Field(s); ok {
+			return fld, true
+		}
+		if fld, ok := fsLabels[s]; ok {
+			return fld, true
+		}
+		if mgmt := a.formset.ManagementForm(); mgmt != nil {
+			if fld, ok := mgmt.Field(s); ok {
+				return fld, true
+			}
+		}
+		return nil, false
+	}
+
+	var errorsList = make([]forms.FieldError, 0)
+	if boundErrors != nil && boundErrors.Len() > 0 {
+		errorsList = append(errorsList, forms.UnpackErrors(bound, a.Form, boundErrors, getField)...)
+	}
+
+	if fsErrs != nil && fsErrs.Len() > 0 {
+		var extraErrs = orderedmap.NewOrderedMap[string, []error]()
+		for head := fsErrs.Front(); head != nil; head = head.Next() {
+			if boundErrors != nil {
+				if _, exists := boundErrors.Get(head.Key); exists {
+					continue
+				}
+			}
+			extraErrs.Set(head.Key, head.Value)
+		}
+		if extraErrs.Len() > 0 {
+			errorsList = append(errorsList, forms.UnpackErrors(bound, a.Form, extraErrs, getField)...)
+		}
+	}
+	return errorsList
 }
 
 func (a *AdminForm[T1, T2]) BoundForm() forms.BoundForm {
@@ -182,7 +310,32 @@ func (a *AdminForm[T1, T2]) BoundFields() *orderedmap.OrderedMap[string, forms.B
 	return a.Form.BoundFields()
 }
 func (a *AdminForm[T1, T2]) BoundErrors() *orderedmap.OrderedMap[string, []error] {
-	return a.Form.BoundErrors()
+	var baseErrs = a.Form.BoundErrors()
+	if a.formset == nil {
+		return baseErrs
+	}
+
+	var fsErrs, _ = collectFormSetBoundErrors(a.formset)
+	if fsErrs == nil || fsErrs.Len() == 0 {
+		return baseErrs
+	}
+
+	var merged = orderedmap.NewOrderedMap[string, []error]()
+	if baseErrs != nil {
+		for head := baseErrs.Front(); head != nil; head = head.Next() {
+			var copied = make([]error, len(head.Value))
+			copy(copied, head.Value)
+			merged.Set(head.Key, copied)
+		}
+	}
+	for head := fsErrs.Front(); head != nil; head = head.Next() {
+		var existing, _ = merged.Get(head.Key)
+		var next = make([]error, len(existing)+len(head.Value))
+		copy(next, existing)
+		copy(next[len(existing):], head.Value)
+		merged.Set(head.Key, next)
+	}
+	return merged
 }
 func (a *AdminForm[T1, T2]) ErrorList() []error {
 	var errList = a.Form.ErrorList()
@@ -473,13 +626,53 @@ func (a *AdminForm[T1, T2]) FormSet() formsets.ListFormSet[formsets.BaseFormSetF
 	//return formsList //, nil
 }
 
+func (a *AdminForm[T1, T2]) startSaveTx(origCtx context.Context) (context.Context, drivers.DatabaseSpecificTransaction, error) {
+	if django.Global == nil || django.Global.Settings == nil || django.ConfigGet[any](django.Global.Settings, django.APPVAR_DATABASE) == nil {
+		return origCtx, nil, nil
+	}
+	txCtx, tx, err := queries.StartTransaction(origCtx)
+	if err != nil {
+		return origCtx, nil, err
+	}
+	a.WithContext(txCtx)
+	return txCtx, tx, nil
+}
+
 func (a *AdminForm[T1, T2]) SaveFunc(fn func(context.Context, T1) (map[string]interface{}, error)) (map[string]interface{}, error) {
 	if len(a.forms) == 0 {
 		a.FormSet()
 	}
 
+	var origCtx = a.Context()
+	_, tx, txErr := a.startSaveTx(origCtx)
+	if txErr != nil {
+		return nil, txErr
+	}
+	var committed bool
+	if tx != nil {
+		defer func() {
+			a.WithContext(origCtx)
+			if !committed {
+				_ = tx.Rollback(origCtx)
+			}
+		}()
+	}
+
 	if a.formset == nil {
-		return a.Form.Save()
+		data, err := a.Form.Save()
+		if err != nil {
+			return data, err
+		}
+		if forms.HasErrors(a) {
+			return data, errors.Join(a.ErrorList()...)
+		}
+		if tx != nil {
+			if commitErr := tx.Commit(origCtx); commitErr != nil {
+				return data, commitErr
+			}
+			committed = true
+		}
+		return data, nil
 	}
 
 	var (
@@ -577,6 +770,17 @@ outer:
 		a.saveFormSetForm(form)
 	}
 
+	if forms.HasErrors(a) {
+		return data, errors.Join(a.ErrorList()...)
+	}
+
+	if tx != nil {
+		if commitErr := tx.Commit(origCtx); commitErr != nil {
+			return data, commitErr
+		}
+		committed = true
+	}
+
 	return data, nil
 }
 
@@ -593,6 +797,21 @@ func (a *AdminForm[T1, T2]) SaveForms(formList ...forms.Form) (err error) {
 		a.FormSet()
 	}
 
+	var origCtx = a.Context()
+	txCtx, tx, txErr := a.startSaveTx(origCtx)
+	if txErr != nil {
+		return txErr
+	}
+	var committed bool
+	if tx != nil {
+		defer func() {
+			a.WithContext(origCtx)
+			if !committed {
+				_ = tx.Rollback(origCtx)
+			}
+		}()
+	}
+
 	var flist = make([]formsets.BaseFormSetForm, 0, len(formList))
 	if len(formList) == 0 {
 		flist, err = a.FormSet().Forms()
@@ -601,12 +820,27 @@ func (a *AdminForm[T1, T2]) SaveForms(formList ...forms.Form) (err error) {
 		}
 	} else {
 		for _, f := range formList {
+			if tx != nil {
+				f.WithContext(txCtx)
+				defer f.WithContext(origCtx)
+			}
 			flist = append(flist, f)
 		}
 	}
 
 	for _, form := range flist {
 		a.saveFormSetForm(form)
+	}
+
+	if forms.HasErrors(a) {
+		return errors.Join(a.ErrorList()...)
+	}
+
+	if tx != nil {
+		if commitErr := tx.Commit(origCtx); commitErr != nil {
+			return commitErr
+		}
+		committed = true
 	}
 
 	return nil

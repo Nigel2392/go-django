@@ -102,7 +102,22 @@ func (w *ChooserWidget) ValueToForm(value interface{}) interface{} {
 	return value
 }
 
+func isChooserValueZero(ctx context.Context, value interface{}) bool {
+	if value == nil || versatile.IsZero(value) || attrs.IsZero(value) {
+		return true
+	}
+	if def, ok := value.(attrs.Definer); ok {
+		var pk = attrs.PrimaryKey(ctx, def)
+		return pk == nil || versatile.IsZero(pk) || attrs.IsZero(pk)
+	}
+	return false
+}
+
 func (w *ChooserWidget) ValueToGo(value interface{}) (interface{}, error) {
+	if isChooserValueZero(context.Background(), value) {
+		return nil, nil
+	}
+
 	if _, ok := value.(attrs.Definer); ok {
 		return value, nil
 	}
@@ -126,7 +141,7 @@ func (w *ChooserWidget) Validate(ctx context.Context, value interface{}) []error
 		return errs
 	}
 
-	if !versatile.IsZero(value) {
+	if !isChooserValueZero(ctx, value) {
 		var meta = attrs.GetModelMeta(w.Model)
 		var defs = meta.Definitions()
 		var primDef = defs.Primary()
@@ -169,7 +184,7 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 	ctx.Set("urls", urlMap)
 	ctx.Set("title", b.Definition.GetTitle(c))
 
-	if versatile.IsZero(value) {
+	if isChooserValueZero(c, value) {
 		ctx.Set("value", nil)
 		ctx.Set("preview", nil)
 	} else {

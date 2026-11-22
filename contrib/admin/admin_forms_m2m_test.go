@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	qfields "github.com/Nigel2392/go-django/queries/src/fields"
+	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	qmodels "github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -25,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/views"
@@ -1892,5 +1895,544 @@ func TestAdminForm_ModelFormPanelManyToMany_Extended(t *testing.T) {
 			}
 			assertAdminFormSaveReportedError(t, saveErr, af, errM2MTabFail, "")
 		})
+	})
+}
+
+func TestAdminForm_ModelFormPanelManyToMany_ThroughModel(t *testing.T) {
+	setupFormsTestDB(t)
+
+	seedProducts := func(t *testing.T) (*FormTestProduct, *FormTestProduct, *FormTestProduct) {
+		t.Helper()
+		setupFormsTestDB(t)
+		pA := &FormTestProduct{Title: "Alpha Product", Slug: "alpha-product", Price: 100}
+		pB := &FormTestProduct{Title: "Beta Product", Slug: "beta-product", Price: 200}
+		pC := &FormTestProduct{Title: "Gamma Product", Slug: "gamma-product", Price: 300}
+		for _, p := range []*FormTestProduct{pA, pB, pC} {
+			if _, err := queries.GetQuerySet(&FormTestProduct{}).Create(p); err != nil {
+				t.Fatalf("failed to seed product %s: %v", p.Title, err)
+			}
+		}
+		return pA, pB, pC
+	}
+
+	buildPanels := func(minNum, maxNum, extra int, saveFn func(context.Context, modelforms.ModelForm[*FormTestCouponProduct], *FormTestCouponProduct) error) []admin.Panel {
+		return []admin.Panel{
+			admin.FieldPanel("Title"),
+			admin.FieldPanel("Description"),
+			admin.FieldPanel("Code"),
+			admin.FieldPanel("MaxDiscount"),
+			admin.FieldPanel("IsPercentage"),
+			admin.FieldPanel("ValidFrom"),
+			admin.FieldPanel("ValidUntil"),
+			&admin.ModelFormPanel[*FormTestCouponProduct, modelforms.ModelForm[*FormTestCouponProduct]]{
+				TargetType:   &FormTestCouponProduct{},
+				FieldName:    "Products",
+				MinNum:       minNum,
+				MaxNum:       maxNum,
+				Extra:        extra,
+				SaveInstance: saveFn,
+				Form: func() modelforms.ModelForm[*FormTestCouponProduct] {
+					mf := modelforms.NewBaseModelForm(context.Background(), &FormTestCouponProduct{})
+					prodField, _ := attrs.Define(context.Background(), &FormTestCouponProduct{}).Field("Product")
+					mf.AddField("Product", &formfields.ForeignKeyFormField{
+						BaseRelationField: formfields.BaseRelationField{
+							BaseField: fields.NewField(fields.Required(true)),
+							Field:     prodField,
+							Relation:  attrs.Relate(&FormTestProduct{}, "", nil),
+						},
+					})
+					return mf
+				},
+				Panels: []admin.Panel{
+					admin.FieldPanel("Product"),
+				},
+			},
+		}
+	}
+
+	linkedProductIDs := func(t *testing.T, couponID int64) []int64 {
+		t.Helper()
+		rows, err := queries.GetQuerySet(&FormTestCouponProduct{}).
+			Filter("Coupon", couponID).
+			All()
+		if err != nil {
+			t.Fatalf("query through rows failed: %v", err)
+		}
+		ids := make([]int64, 0, len(rows))
+		for _, r := range rows {
+			if r.Object.Product != nil {
+				ids = append(ids, r.Object.Product.ID)
+			}
+		}
+		slices.Sort(ids)
+		return ids
+	}
+
+	linkProducts := func(t *testing.T, c *FormTestCoupon, prods ...*FormTestProduct) {
+		t.Helper()
+		for _, p := range prods {
+			if _, err := queries.GetQuerySet(&FormTestCouponProduct{}).Create(&FormTestCouponProduct{
+				Coupon:  c,
+				Product: p,
+			}); err != nil {
+				t.Fatalf("failed to seed through link %s -> %s: %v", c.Code, p.Title, err)
+			}
+		}
+	}
+
+	t.Run("Add_SingleAndMultipleDistinctProducts", func(t *testing.T) {
+		pA, pB, _ := seedProducts(t)
+
+		// Single product
+		c1 := &FormTestCoupon{}
+		req1 := httptest.NewRequest(http.MethodPost, "/admin/coupon/add", nil)
+		af1 := newTestAdminForm(req1, c1, nil, buildPanels(0, 5, 1, nil)...)
+		data1 := mergeFormValues(
+			baseCouponPOST("Single Through", "THRU1"),
+			inlineMgmtValues("Products", 1, 0, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af1.WithData(data1, nil, req1)
+		if !forms.IsValid(req1.Context(), af1) {
+			t.Fatalf("expected single through coupon valid, errs=%v bound=%v", af1.ErrorList(), af1.BoundErrors())
+		}
+		if _, err := af1.Save(); err != nil {
+			t.Fatalf("Save() failed: %v", err)
+		}
+		if got := linkedProductIDs(t, c1.ID); !slices.Equal(got, []int64{pA.ID}) {
+			t.Errorf("expected [%d], got %v", pA.ID, got)
+		}
+
+		// Multiple distinct products
+		c2 := &FormTestCoupon{}
+		req2 := httptest.NewRequest(http.MethodPost, "/admin/coupon/add", nil)
+		af2 := newTestAdminForm(req2, c2, nil, buildPanels(0, 5, 1, nil)...)
+		data2 := mergeFormValues(
+			baseCouponPOST("Multi Through", "THRU2"),
+			inlineMgmtValues("Products", 2, 0, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Product":                           {fmt.Sprint(pB.ID)},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af2.WithData(data2, nil, req2)
+		if !forms.IsValid(req2.Context(), af2) {
+			t.Fatalf("expected multi through coupon valid, errs=%v bound=%v", af2.ErrorList(), af2.BoundErrors())
+		}
+		if _, err := af2.Save(); err != nil {
+			t.Fatalf("Save() failed: %v", err)
+		}
+		want := []int64{pA.ID, pB.ID}
+		slices.Sort(want)
+		if got := linkedProductIDs(t, c2.ID); !slices.Equal(got, want) {
+			t.Errorf("expected %v, got %v", want, got)
+		}
+		if prodCount, _ := queries.GetQuerySet(&FormTestProduct{}).Count(); prodCount != 3 {
+			t.Errorf("expected existing 3 products without creating duplicates, got %d", prodCount)
+		}
+	})
+
+	t.Run("Add_InvalidAndBlankPKRejected", func(t *testing.T) {
+		seedProducts(t)
+
+		// 1. Blank required Product with MinNum=1 fails validation and surfaces errors.
+		cBlank := &FormTestCoupon{}
+		reqBlank := httptest.NewRequest(http.MethodPost, "/admin/coupon/add", nil)
+		afBlank := newTestAdminForm(reqBlank, cBlank, nil, buildPanels(1, 5, 1, nil)...)
+		dataBlank := mergeFormValues(
+			baseCouponPOST("Blank PK", "BLANKPK"),
+			inlineMgmtValues("Products", 1, 0, 1, 5),
+			url.Values{
+				"Products-0-Product":                           {""},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		afBlank.WithData(dataBlank, nil, reqBlank)
+		if forms.IsValid(reqBlank.Context(), afBlank) {
+			t.Fatalf("expected blank product PK to fail validation")
+		}
+		if afBlank.BoundErrors().Len() == 0 {
+			t.Errorf("expected BoundErrors() to include blank product error")
+		}
+		if unpacked := afBlank.UnpackErrors(afBlank.BoundForm(), afBlank.BoundErrors()); len(unpacked) == 0 {
+			t.Errorf("expected UnpackErrors() to include blank product error")
+		}
+		if ct, _ := queries.GetQuerySet(&FormTestCoupon{}).Count(); ct != 0 {
+			t.Errorf("expected 0 coupons in DB, got %d", ct)
+		}
+
+		// 2. Non-existent PK on ForeignKeyFormField / ModelSelect fails validation.
+		cBad := &FormTestCoupon{}
+		reqBad := httptest.NewRequest(http.MethodPost, "/admin/coupon/add", nil)
+		fkPanels := []admin.Panel{
+			admin.FieldPanel("Title"),
+			admin.FieldPanel("Description"),
+			admin.FieldPanel("Code"),
+			admin.FieldPanel("MaxDiscount"),
+			admin.FieldPanel("IsPercentage"),
+			admin.FieldPanel("ValidFrom"),
+			admin.FieldPanel("ValidUntil"),
+			&admin.ModelFormPanel[*FormTestCouponProduct, modelforms.ModelForm[*FormTestCouponProduct]]{
+				TargetType: &FormTestCouponProduct{},
+				FieldName:  "Products",
+				MinNum:     0,
+				MaxNum:     5,
+				Extra:      1,
+				Form: func() modelforms.ModelForm[*FormTestCouponProduct] {
+					mf := modelforms.NewBaseModelForm(reqBad.Context(), &FormTestCouponProduct{})
+					prodField, _ := attrs.Define(reqBad.Context(), &FormTestCouponProduct{}).Field("Product")
+					mf.AddField("Product", &formfields.ForeignKeyFormField{
+						BaseField: fields.NewField(fields.Required(true)),
+						Field:     prodField,
+						Relation:  attrs.Relate(&FormTestProduct{}, "", nil),
+					})
+					return mf
+				},
+				Panels: []admin.Panel{
+					admin.FieldPanel("Product"),
+				},
+			},
+		}
+		afBad := newTestAdminForm(reqBad, cBad, nil, fkPanels...)
+		dataBad := mergeFormValues(
+			baseCouponPOST("Bad FK PK", "BADFKPK"),
+			inlineMgmtValues("Products", 1, 0, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {"999999"},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		afBad.WithData(dataBad, nil, reqBad)
+		if forms.IsValid(reqBad.Context(), afBad) {
+			t.Fatalf("expected non-existent product PK to fail FK validation")
+		}
+		if afBad.BoundErrors().Len() == 0 {
+			t.Errorf("expected BoundErrors() to include invalid FK product PK error")
+		}
+		if unpacked := afBad.UnpackErrors(afBad.BoundForm(), afBad.BoundErrors()); len(unpacked) == 0 {
+			t.Errorf("expected UnpackErrors() to include invalid FK product PK error")
+		}
+		if ct, _ := queries.GetQuerySet(&FormTestCoupon{}).Count(); ct != 0 {
+			t.Errorf("expected 0 coupons in DB, got %d", ct)
+		}
+	})
+
+	t.Run("Add_DuplicateProductRejected", func(t *testing.T) {
+		pA, _, _ := seedProducts(t)
+
+		c := &FormTestCoupon{}
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/add", nil)
+		af := newTestAdminForm(req, c, nil, buildPanels(0, 5, 1, nil)...)
+		data := mergeFormValues(
+			baseCouponPOST("Dup Add", "DUPADD"),
+			inlineMgmtValues("Products", 2, 0, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected duplicate product on Add to fail validation")
+		}
+		if af.BoundErrors() == nil || af.BoundErrors().Len() == 0 {
+			t.Fatalf("expected BoundErrors() to contain duplicate product error")
+		}
+		if _, ok := af.BoundErrors().Get("Products-1-Product"); !ok {
+			t.Errorf("expected error key %q in BoundErrors()", "Products-1-Product")
+		}
+		unpacked := af.UnpackErrors(af.BoundForm(), af.BoundErrors())
+		if len(unpacked) == 0 {
+			t.Fatalf("expected UnpackErrors() to surface duplicate product error")
+		}
+		var foundDup bool
+		for _, fe := range unpacked {
+			for _, e := range fe.Errors() {
+				if strings.Contains(strings.ToLower(e.Error()), "duplicate") {
+					foundDup = true
+				}
+			}
+		}
+		if !foundDup {
+			t.Errorf("expected duplicate error message in UnpackErrors(), got %+v", unpacked)
+		}
+		if ct, _ := queries.GetQuerySet(&FormTestCouponProduct{}).Count(); ct != 0 {
+			t.Errorf("expected 0 through rows created, got %d", ct)
+		}
+	})
+
+	t.Run("Edit_DuplicateProductRejected", func(t *testing.T) {
+		pA, pB, _ := seedProducts(t)
+		c := &FormTestCoupon{Title: "Edit Dup", Code: "EDITDUP"}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(c); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		linkProducts(t, c, pA, pB)
+
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/edit", nil)
+		af := newTestAdminForm(req, c, nil, buildPanels(0, 5, 1, nil)...)
+		data := mergeFormValues(
+			couponEditPOST(c),
+			inlineMgmtValues("Products", 2, 2, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected duplicate product on Edit to fail validation")
+		}
+		if _, ok := af.BoundErrors().Get("Products-1-Product"); !ok {
+			t.Errorf("expected error key %q in BoundErrors()", "Products-1-Product")
+		}
+		unpacked := af.UnpackErrors(af.BoundForm(), af.BoundErrors())
+		if len(unpacked) == 0 {
+			t.Errorf("expected non-empty UnpackErrors() on Edit duplicate")
+		}
+		want := []int64{pA.ID, pB.ID}
+		slices.Sort(want)
+		if got := linkedProductIDs(t, c.ID); !slices.Equal(got, want) {
+			t.Errorf("expected links unchanged %v, got %v", want, got)
+		}
+	})
+
+	t.Run("Edit_Unchanged_HasChangedFalse", func(t *testing.T) {
+		pA, pB, _ := seedProducts(t)
+		c := &FormTestCoupon{
+			Title:        "Same Coupon",
+			Description:  "Same desc",
+			Code:         "SAME1",
+			MaxDiscount:  10,
+			IsPercentage: true,
+			ValidFrom:    "2026-01-01",
+			ValidUntil:   "2026-12-31",
+		}
+		if _, err := queries.GetQuerySet(&FormTestCoupon{}).Create(c); err != nil {
+			t.Fatalf("create coupon: %v", err)
+		}
+		linkProducts(t, c, pA, pB)
+
+		// Fetch initial order from getRelatedList equivalent via QuerySet so row order matches DefaultForms
+		existing := linkedProductIDs(t, c.ID)
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/edit", nil)
+		af := newTestAdminForm(req, c, nil, buildPanels(0, 5, 0, nil)...)
+		data := mergeFormValues(
+			couponEditPOST(c),
+			inlineMgmtValues("Products", 2, 2, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(existing[0])},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Product":                           {fmt.Sprint(existing[1])},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected unchanged form valid, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if af.HasChanged() {
+			t.Errorf("expected HasChanged() == false when all fields and through products are unchanged")
+		}
+		if _, err := af.Save(); err != nil {
+			t.Fatalf("Save() failed: %v", err)
+		}
+		if got := linkedProductIDs(t, c.ID); !slices.Equal(got, existing) {
+			t.Errorf("expected unchanged links %v, got %v", existing, got)
+		}
+	})
+
+	t.Run("Edit_Swap_AB_to_BA", func(t *testing.T) {
+		pA, pB, _ := seedProducts(t)
+		c := &FormTestCoupon{Title: "Swap", Code: "SWAP1"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(c)
+		linkProducts(t, c, pA, pB)
+
+		initialIDs := linkedProductIDs(t, c.ID)
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/edit", nil)
+		af := newTestAdminForm(req, c, nil, buildPanels(0, 5, 0, nil)...)
+		data := mergeFormValues(
+			couponEditPOST(c),
+			inlineMgmtValues("Products", 2, 2, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(initialIDs[1])},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Product":                           {fmt.Sprint(initialIDs[0])},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected swap valid, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if _, err := af.Save(); err != nil {
+			t.Fatalf("swap Save() failed: %v", err)
+		}
+		if got := linkedProductIDs(t, c.ID); !slices.Equal(got, initialIDs) {
+			t.Errorf("expected %v after swap, got %v", initialIDs, got)
+		}
+	})
+
+	t.Run("Edit_ChainShift_AB_to_BC", func(t *testing.T) {
+		pA, pB, pC := seedProducts(t)
+		c := &FormTestCoupon{Title: "Chain", Code: "CHAIN1"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(c)
+		linkProducts(t, c, pA, pB)
+
+		// DefaultForms orders by through PK ascending so row 0 is pA, row 1 is pB.
+		// Shift row 0: pA -> pB, row 1: pB -> pC.
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/edit", nil)
+		af := newTestAdminForm(req, c, nil, buildPanels(0, 5, 0, nil)...)
+		data := mergeFormValues(
+			couponEditPOST(c),
+			inlineMgmtValues("Products", 2, 2, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pB.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Product":                           {fmt.Sprint(pC.ID)},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected chain-shift valid, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if _, err := af.Save(); err != nil {
+			t.Fatalf("chain-shift Save() failed: %v", err)
+		}
+		want := []int64{pB.ID, pC.ID}
+		slices.Sort(want)
+		if got := linkedProductIDs(t, c.ID); !slices.Equal(got, want) {
+			t.Errorf("expected %v after chain-shift, got %v", want, got)
+		}
+	})
+
+	t.Run("Edit_DeleteAndReAdd_DeleteA_EditBToA", func(t *testing.T) {
+		pA, pB, _ := seedProducts(t)
+		c := &FormTestCoupon{Title: "DelReAdd", Code: "DELRE1"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(c)
+		linkProducts(t, c, pA, pB)
+
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/edit", nil)
+		af := newTestAdminForm(req, c, nil, buildPanels(0, 5, 0, nil)...)
+		data := mergeFormValues(
+			couponEditPOST(c),
+			inlineMgmtValues("Products", 2, 2, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"true"},
+				"Products-1-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected delete+re-add valid, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if _, err := af.Save(); err != nil {
+			t.Fatalf("delete+re-add Save() failed: %v", err)
+		}
+		if got := linkedProductIDs(t, c.ID); !slices.Equal(got, []int64{pA.ID}) {
+			t.Errorf("expected [%d] preserved after delete+re-add, got %v", pA.ID, got)
+		}
+	})
+
+	t.Run("Edit_DeleteAll", func(t *testing.T) {
+		pA, pB, _ := seedProducts(t)
+		c := &FormTestCoupon{Title: "DelAll", Code: "DELALL"}
+		_, _ = queries.GetQuerySet(&FormTestCoupon{}).Create(c)
+		linkProducts(t, c, pA, pB)
+
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/edit", nil)
+		af := newTestAdminForm(req, c, nil, buildPanels(0, 5, 0, nil)...)
+		data := mergeFormValues(
+			couponEditPOST(c),
+			inlineMgmtValues("Products", 2, 2, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"true"},
+				"Products-1-Product":                           {fmt.Sprint(pB.ID)},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"true"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected delete-all valid, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		if _, err := af.Save(); err != nil {
+			t.Fatalf("delete-all Save() failed: %v", err)
+		}
+		if got := linkedProductIDs(t, c.ID); len(got) != 0 {
+			t.Errorf("expected 0 links after delete-all, got %v", got)
+		}
+	})
+
+	t.Run("Save_TransactionRollbackOnSecondRowFailure", func(t *testing.T) {
+		pA, pB, _ := seedProducts(t)
+		errRow2 := errors.New("boom on second through row")
+		var callCount int
+		c := &FormTestCoupon{}
+		req := httptest.NewRequest(http.MethodPost, "/admin/coupon/add", nil)
+		panels := buildPanels(0, 5, 1, func(ctx context.Context, form modelforms.ModelForm[*FormTestCouponProduct], instance *FormTestCouponProduct) error {
+			callCount++
+			if callCount == 2 {
+				return errRow2
+			}
+			return nil
+		})
+		af := newTestAdminForm(req, c, nil, panels...)
+		data := mergeFormValues(
+			baseCouponPOST("Rollback Test", "ROLLBK1"),
+			inlineMgmtValues("Products", 2, 0, 0, 5),
+			url.Values{
+				"Products-0-Product":                           {fmt.Sprint(pA.ID)},
+				"Products-0-" + formsets.ORDERING_FIELD_NAME: {"0"},
+				"Products-0-" + formsets.DELETION_FIELD_NAME: {"false"},
+				"Products-1-Product":                           {fmt.Sprint(pB.ID)},
+				"Products-1-" + formsets.ORDERING_FIELD_NAME: {"1"},
+				"Products-1-" + formsets.DELETION_FIELD_NAME: {"false"},
+			},
+		)
+		af.WithData(data, nil, req)
+		if !forms.IsValid(req.Context(), af) {
+			t.Fatalf("expected form valid before Save, errs=%v bound=%v", af.ErrorList(), af.BoundErrors())
+		}
+		_, saveErr := af.Save()
+		assertAdminFormSaveReportedError(t, saveErr, af, errRow2, "")
+
+		if couponCount, _ := queries.GetQuerySet(&FormTestCoupon{}).Count(); couponCount != 0 {
+			t.Errorf("expected 0 coupons persisted after TX rollback, got %d", couponCount)
+		}
+		if throughCount, _ := queries.GetQuerySet(&FormTestCouponProduct{}).Count(); throughCount != 0 {
+			t.Errorf("expected 0 M2M through rows persisted after TX rollback, got %d", throughCount)
+		}
 	})
 }

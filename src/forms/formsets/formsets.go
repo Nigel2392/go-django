@@ -340,6 +340,9 @@ func (fs *BaseFormSet[FORM]) WithContext(ctx context.Context) {
 	for _, form := range fs.FormList {
 		form.WithContext(ctx)
 	}
+	for _, form := range fs.DeletedFormsList {
+		form.WithContext(ctx)
+	}
 }
 
 func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isValid bool) {
@@ -349,6 +352,12 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	}
 
 	isValid = true
+	if fs.opts.BeforeCheckValid != nil {
+		if err := fs.opts.BeforeCheckValid(ctx, formObj); err != nil {
+			form.AddFormError(err)
+			isValid = false
+		}
+	}
 	var data, files = form.Data()
 	for mixin := range mixins.Mixins[any, any](form, true) {
 		if prevalidator, ok := mixin.(forms.PrevalidatorMixin); ok {

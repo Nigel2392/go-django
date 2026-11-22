@@ -203,6 +203,12 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 		panic("Through model is nil, cannot create through object")
 	}
 
+	tx, err := t.qs.GetOrCreateTransaction()
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback(t.qs.Context())
+
 	var (
 		targetsToSave   = make([]T, 0, len(targets))
 		existingTargets = make([]T, 0, len(targets))
@@ -248,11 +254,12 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 
 		sourceObject        = attrs.Define(t.qs.Context(), t.source.Object)
 		sourceObjectPrimary = sourceObject.Primary()
-		sourceObjectPk, err = sourceObjectPrimary.Value()
+		sourceObjectPk      any
 
 		relations     = make([]Relation, 0, len(targets))
 		throughModels = make([]attrs.Definer, 0, len(targets))
 	)
+	sourceObjectPk, err = sourceObjectPrimary.Value()
 	if err != nil {
 		// return nil, created, fmt.Errorf("failed to get primary key for source object %T: %w", t.source.Object, err)
 		return nil, created, errors.ValueError.WithCause(fmt.Errorf(
@@ -315,6 +322,10 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 
 	_, err = GetQuerySet(throughObj).WithContext(t.qs.Context()).BulkCreate(throughModels)
 	if err != nil {
+		return nil, created, err
+	}
+
+	if err = tx.Commit(t.qs.Context()); err != nil {
 		return nil, created, err
 	}
 
@@ -410,7 +421,13 @@ func (r *RelOneToOneQuerySet[T]) Clear(ctx context.Context) (bool, error) {
 	r.setup()
 	r.qs = r.qs.WithContext(ctx)
 
-	var throughIdsResult, err = r.qs.
+	tx, err := r.qs.GetOrCreateTransaction()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(r.qs.Context())
+
+	throughIdsResult, err := r.qs.
 		Select(r.qs.Meta().PrimaryKey().Name()).
 		ValuesList()
 	if err != nil {
@@ -439,6 +456,10 @@ func (r *RelOneToOneQuerySet[T]) Clear(ctx context.Context) (bool, error) {
 	ct, err = throughQs.Delete()
 	if err != nil {
 		return ct > 0, fmt.Errorf("failed to delete through objects: %w", err)
+	}
+
+	if err = tx.Commit(r.qs.Context()); err != nil {
+		return false, err
 	}
 
 	r.backRef.SetValue(nil, nil)
@@ -567,12 +588,21 @@ func (r *RelManyToManyQuerySet[T]) SetTargets(targets []T) (added int64, err err
 
 	r.setup()
 
+	tx, err := r.qs.GetOrCreateTransaction()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(r.qs.Context())
+
 	_, err = r.ClearTargets()
 	if err != nil && !errors.Is(err, errors.NoChanges) {
 		return 0, fmt.Errorf("failed to clear targets: %w", err)
 	}
 
 	if len(targets) == 0 {
+		if err = tx.Commit(r.qs.Context()); err != nil {
+			return 0, err
+		}
 		return 0, nil
 	}
 
@@ -583,6 +613,10 @@ func (r *RelManyToManyQuerySet[T]) SetTargets(targets []T) (added int64, err err
 
 	if len(relations) == 0 {
 		return added, fmt.Errorf("no relations created for targets %T", targets)
+	}
+
+	if err = tx.Commit(r.qs.Context()); err != nil {
+		return 0, err
 	}
 
 	r.backRef.SetValues(relations)
@@ -616,6 +650,12 @@ func (r *RelManyToManyQuerySet[T]) RemoveTargets(targets ...any) (int64, error) 
 	if len(targets) == 0 {
 		return 0, nil
 	}
+
+	tx, err := r.qs.GetOrCreateTransaction()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(r.qs.Context())
 
 	var (
 		pkValues = make([]any, 0, len(targets))
@@ -663,7 +703,7 @@ targetLoop:
 			),
 		)
 
-	var deleted, err = throughQs.Delete()
+	deleted, err := throughQs.Delete()
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete through objects: %w", err)
 	}
@@ -677,6 +717,9 @@ targetLoop:
 
 	var relList = r.backRef.GetValues()
 	if len(relList) == 0 {
+		if err = tx.Commit(r.qs.Context()); err != nil {
+			return 0, err
+		}
 		return deleted, nil
 	}
 
@@ -716,6 +759,10 @@ targetLoop:
 		}
 	}
 
+	if err = tx.Commit(r.qs.Context()); err != nil {
+		return 0, err
+	}
+
 	r.backRef.SetValues(newRels)
 	return deleted, nil
 }
@@ -727,8 +774,14 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 
 	r.setup()
 
+	tx, err := r.qs.GetOrCreateTransaction()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(r.qs.Context())
+
 	var throughModel = newThroughProxy(r.rel.Through())
-	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).WithContext(r.qs.Context()).ValuesList()
+	throughIdsResult, err := r.qs.Select(r.qs.Meta().PrimaryKey().Name()).WithContext(r.qs.Context()).ValuesList()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get through object IDs: %w", err)
 	}
@@ -757,6 +810,10 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	deleted, err := throughQs.Delete()
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete through objects: %w", err)
+	}
+
+	if err = tx.Commit(r.qs.Context()); err != nil {
+		return 0, err
 	}
 
 	r.backRef.SetValues([]Relation{}) // Clear the back reference values

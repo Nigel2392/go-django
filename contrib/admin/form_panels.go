@@ -815,19 +815,99 @@ var _ modelforms.ModelForm[attrs.Definer] = (*modelFormPanelForm[attrs.Definer, 
 type modelFormPanelForm[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]] struct {
 	modelforms.ModelForm[TARGET]
 	panel       *ModelFormPanel[TARGET, FORM]
+	formset     *formsets.BaseFormSet[modelforms.ModelForm[TARGET]]
+	seenTargets *map[any]struct{}
 	source      attrs.Definer
 	sourceField attrs.FieldDefinition
 	relation    attrs.Relation
 	isNew       bool
 }
 
+func (f *modelFormPanelForm[TARGET, FORM]) isThroughM2M() bool {
+	return f.relation != nil &&
+		f.relation.Type() == attrs.RelManyToMany &&
+		f.relation.Through() != nil &&
+		reflect.TypeOf(f.relation.Through().Model()) == reflect.TypeFor[TARGET]()
+}
+
+func targetPKKey(pk any) any {
+	if pk == nil {
+		return nil
+	}
+	if t := reflect.TypeOf(pk); t != nil && !t.Comparable() {
+		return fmt.Sprint(pk)
+	}
+	return pk
+}
+
+func extractThroughTarget(ctx context.Context, model attrs.Definer, raw any) (attrs.Definer, any) {
+	if versatile.IsZero(raw) {
+		return nil, nil
+	}
+	var tgt attrs.Definer
+	if d, ok := raw.(attrs.Definer); ok {
+		tgt = d
+	} else if !attrs.IsZero(raw) {
+		tgt = attrs.NewObject[attrs.Definer](ctx, model)
+		_ = attrs.Define(ctx, tgt).Primary().Scan(raw)
+	}
+	if tgt == nil {
+		return nil, nil
+	}
+	var pk = attrs.PrimaryKey(ctx, tgt)
+	if attrs.IsZero(pk) {
+		return nil, nil
+	}
+	return tgt, pk
+}
+
+func throughActiveTargetPKs[TARGET attrs.Definer](ctx context.Context, formset *formsets.BaseFormSet[modelforms.ModelForm[TARGET]], rel attrs.Relation) map[any]struct{} {
+	var pks = make(map[any]struct{})
+	if formset == nil || rel == nil || rel.Through() == nil {
+		return pks
+	}
+	var targetFieldName = rel.Through().TargetField()
+	for _, af := range formset.FormList {
+		var raw any
+		if c := af.CleanedData(); c != nil {
+			raw = c[targetFieldName]
+		} else if inst := af.Instance(); !versatile.IsZero(inst) {
+			if fld, ok := attrs.Define(ctx, inst).Field(targetFieldName); ok {
+				raw = fld.GetValue()
+			}
+		}
+		if _, pk := extractThroughTarget(ctx, rel.Model(), raw); !attrs.IsZero(pk) {
+			pks[targetPKKey(pk)] = struct{}{}
+		}
+	}
+	return pks
+}
+
 func (f *modelFormPanelForm[TARGET, FORM]) Clean(ctx context.Context, cleaned map[string]any) (map[string]any, []error) {
+	var errs []error
 	if cleaner, ok := f.ModelForm.(interface {
 		Clean(context.Context, map[string]any) (map[string]any, []error)
 	}); ok {
-		return cleaner.Clean(ctx, cleaned)
+		cleaned, errs = cleaner.Clean(ctx, cleaned)
 	}
-	return cleaned, nil
+	if f.isThroughM2M() && cleaned != nil {
+		var targetFieldName = f.relation.Through().TargetField()
+		if _, newPK := extractThroughTarget(ctx, f.relation.Model(), cleaned[targetFieldName]); !attrs.IsZero(newPK) && f.seenTargets != nil {
+			var key = targetPKKey(newPK)
+			if *f.seenTargets == nil {
+				*f.seenTargets = make(map[any]struct{})
+			}
+			if _, exists := (*f.seenTargets)[key]; exists {
+				f.ModelForm.AddError(
+					targetFieldName,
+					errors.ValueError.Wrapf(trans.T(ctx, "Duplicate %s is not allowed", targetFieldName)),
+				)
+			} else {
+				(*f.seenTargets)[key] = struct{}{}
+			}
+		}
+	}
+	return cleaned, errs
 }
 
 func (f *modelFormPanelForm[TARGET, FORM]) IsValid(ctx context.Context) bool {
@@ -895,7 +975,7 @@ func (f *modelFormPanelForm[TARGET, FORM]) Save() (map[string]any, error) {
 		relType = f.relation.Type()
 	)
 
-	if relType == attrs.RelManyToMany && f.relation.Through() != nil && reflect.TypeOf(f.relation.Through().Model()) == reflect.TypeFor[TARGET]() {
+	if f.isThroughM2M() {
 		var (
 			cleaned         = f.ModelForm.CleanedData()
 			targetFieldName = f.relation.Through().TargetField()
@@ -905,35 +985,60 @@ func (f *modelFormPanelForm[TARGET, FORM]) Save() (map[string]any, error) {
 			oldPK           any
 		)
 		if cleaned != nil {
-			if raw := cleaned[targetFieldName]; !versatile.IsZero(raw) {
-				if d, ok := raw.(attrs.Definer); ok {
-					newTarget = d
-				} else if !attrs.IsZero(raw) {
-					newTarget = attrs.NewObject[attrs.Definer](ctx, f.relation.Model())
-					_ = attrs.Define(ctx, newTarget).Primary().Scan(raw)
-				}
-				if newTarget != nil {
-					newPK = attrs.PrimaryKey(ctx, newTarget)
-				}
-			}
+			newTarget, newPK = extractThroughTarget(ctx, f.relation.Model(), cleaned[targetFieldName])
 		}
-
 		if initial := f.ModelForm.InitialData(); initial != nil {
-			if raw := initial[targetFieldName]; !versatile.IsZero(raw) {
-				if d, ok := raw.(attrs.Definer); ok {
-					oldTarget = d
-				} else if !attrs.IsZero(raw) {
-					oldTarget = attrs.NewObject[attrs.Definer](ctx, f.relation.Model())
-					_ = attrs.Define(ctx, oldTarget).Primary().Scan(raw)
-				}
-				if oldTarget != nil {
-					oldPK = attrs.PrimaryKey(ctx, oldTarget)
-				}
+			oldTarget, oldPK = extractThroughTarget(ctx, f.relation.Model(), initial[targetFieldName])
+		}
+
+		if f.panel != nil && f.panel.SaveInstance != nil {
+			var typedForm, _ = any(f.ModelForm).(FORM)
+			if err := f.panel.SaveInstance(ctx, typedForm, f.ModelForm.Instance()); err != nil {
+				return cleaned, err
 			}
 		}
 
-		if !attrs.IsZero(oldPK) && !attrs.IsZero(newPK) && reflect.DeepEqual(oldPK, newPK) {
+		if !attrs.IsZero(oldPK) && !attrs.IsZero(newPK) && reflect.DeepEqual(targetPKKey(oldPK), targetPKKey(newPK)) {
 			return cleaned, nil
+		}
+
+		var oldStillActive bool
+		var newWasInitial bool
+		if f.formset != nil {
+			if !attrs.IsZero(oldPK) {
+				var activeNewPKs = throughActiveTargetPKs(ctx, f.formset, f.relation)
+				_, oldStillActive = activeNewPKs[targetPKKey(oldPK)]
+			}
+			if !attrs.IsZero(newPK) {
+				var newKey = targetPKKey(newPK)
+				for _, af := range f.formset.FormList {
+					if init := af.InitialData(); init != nil {
+						if _, initPK := extractThroughTarget(ctx, f.relation.Model(), init[targetFieldName]); !attrs.IsZero(initPK) && reflect.DeepEqual(targetPKKey(initPK), newKey) {
+							newWasInitial = true
+							break
+						}
+					}
+				}
+				if !newWasInitial {
+					for _, af := range f.formset.DeletedFormsList {
+						var initRaw any
+						if init := af.InitialData(); init != nil {
+							initRaw = init[targetFieldName]
+						}
+						if versatile.IsZero(initRaw) {
+							if inst := af.Instance(); !versatile.IsZero(inst) {
+								if fld, ok := attrs.Define(ctx, inst).Field(targetFieldName); ok {
+									initRaw = fld.GetValue()
+								}
+							}
+						}
+						if _, initPK := extractThroughTarget(ctx, f.relation.Model(), initRaw); !attrs.IsZero(initPK) && reflect.DeepEqual(targetPKKey(initPK), newKey) {
+							newWasInitial = true
+							break
+						}
+					}
+				}
+			}
 		}
 
 		var backRef, err = getM2MBackRef(ctx, f.source, f.panel.FieldName)
@@ -941,12 +1046,12 @@ func (f *modelFormPanelForm[TARGET, FORM]) Save() (map[string]any, error) {
 			return cleaned, err
 		}
 		var qs = queries.ManyToManyQuerySet[attrs.Definer](backRef).WithContext(ctx)
-		if !attrs.IsZero(oldPK) {
+		if !attrs.IsZero(oldPK) && !oldStillActive {
 			if _, err := qs.RemoveTargets(oldTarget); err != nil && !errors.Is(err, errors.NoChanges) {
 				return cleaned, err
 			}
 		}
-		if !attrs.IsZero(newPK) {
+		if !attrs.IsZero(newPK) && !newWasInitial {
 			if _, err := qs.AddTargets(newTarget); err != nil {
 				return cleaned, err
 			}
@@ -1310,7 +1415,9 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 		targetFields = append(targetFields, relFld.Name())
 	}
 
-	var f = formsets.NewBaseFormSet(
+	var seenTargets = make(map[any]struct{})
+	var f *formsets.BaseFormSet[modelforms.ModelForm[TARGET]]
+	f = formsets.NewBaseFormSet(
 		ctx, formsets.FormsetOptions[modelforms.ModelForm[TARGET]]{
 			MinNum:     m.MinNum,
 			MaxNum:     m.MaxNum,
@@ -1319,8 +1426,16 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 			CanAdd:     !m.DisallowAdd,
 			CanOrder:   true,
 			HideDelete: true,
+			BeforeCheckValid: func(ctx context.Context, formObj any) error {
+				clear(seenTargets)
+				return nil
+			},
 			NewForm: func(c context.Context) modelforms.ModelForm[TARGET] {
 				var forms = m.GetForms(ctx, r, instance, 1, targetFields, nil)
+				if pf, ok := forms[0].(*modelFormPanelForm[TARGET, FORM]); ok {
+					pf.formset = f
+					pf.seenTargets = &seenTargets
+				}
 				return forms[0]
 			},
 			DefaultForms: func(ctx context.Context, max, min int) ([]modelforms.ModelForm[TARGET], error) {
@@ -1332,27 +1447,37 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 					targetList = targetList[:1]
 				}
 
-				return m.GetForms(ctx, r, instance, min, targetFields, targetList), nil
+				var forms = m.GetForms(ctx, r, instance, min, targetFields, targetList)
+				for _, form := range forms {
+					if pf, ok := form.(*modelFormPanelForm[TARGET, FORM]); ok {
+						pf.formset = f
+						pf.seenTargets = &seenTargets
+					}
+				}
+				return forms, nil
 			},
 			DeleteForms: func(ctx context.Context, forms []modelforms.ModelForm[TARGET]) error {
 				var rel = fld.Rel()
 				if rel.Type() == attrs.RelManyToMany && rel.Through() != nil && reflect.TypeOf(rel.Through().Model()) == reflect.TypeOf(m.TargetType) {
 					var targetFieldName = rel.Through().TargetField()
+					var activeNewPKs = throughActiveTargetPKs(ctx, f, rel)
 					var anyTargets = make([]any, 0, len(forms))
 					for _, form := range forms {
 						var tgt any
-						if inst := form.Instance(); !versatile.IsZero(inst) {
-							if f, ok := attrs.Define(ctx, inst).Field(targetFieldName); ok {
-								tgt = f.GetValue()
-							}
+						if init := form.InitialData(); init != nil {
+							tgt = init[targetFieldName]
 						}
 						if versatile.IsZero(tgt) {
-							if init := form.InitialData(); init != nil {
-								tgt = init[targetFieldName]
+							if inst := form.Instance(); !versatile.IsZero(inst) {
+								if fld, ok := attrs.Define(ctx, inst).Field(targetFieldName); ok {
+									tgt = fld.GetValue()
+								}
 							}
 						}
-						if !versatile.IsZero(tgt) {
-							anyTargets = append(anyTargets, tgt)
+						if def, pk := extractThroughTarget(ctx, rel.Model(), tgt); !attrs.IsZero(pk) {
+							if _, stillActive := activeNewPKs[targetPKKey(pk)]; !stillActive {
+								anyTargets = append(anyTargets, def)
+							}
 						}
 					}
 					if len(anyTargets) == 0 {

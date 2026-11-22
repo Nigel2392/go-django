@@ -21,23 +21,37 @@ func CreateAttempt(ctx context.Context, order attrs.Definer, accountID drivers.U
 	if order == nil {
 		return nil, errors.New("payment requires an order")
 	}
-	row, err := queries.GetQuerySet(&ProviderAccount{}).WithContext(ctx).
-		Filter("ID", accountID).Filter("Enabled", true).Get()
+
+	row, err := queries.
+		GetQuerySet(&ProviderAccount{}).
+		WithContext(ctx).
+		Filter("ID", accountID).
+		Filter("Enabled", true).
+		Get()
 	if err != nil {
 		return nil, err
 	}
+
 	quote, err := row.Object.Quote(subtotal)
 	if err != nil {
 		return nil, err
 	}
+
 	if !quote.Total.IsPositive() {
 		return nil, errors.New("payment total must be positive")
 	}
 
-	return queries.GetQuerySet(&Payment{}).WithContext(ctx).Create(&Payment{
-		Order: order, Account: row.Object, Provider: row.Object.Driver,
-		Amount: quote.Total, Fee: quote.Fee, Currency: quote.Currency, State: paystate.STATUS_INIT,
-	})
+	return queries.GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Create(&Payment{
+			Order:    order,
+			Account:  row.Object,
+			Provider: row.Object.Driver,
+			Amount:   quote.Total,
+			Fee:      quote.Fee,
+			Currency: quote.Currency,
+			State:    paystate.STATUS_INIT,
+		})
 }
 
 // Start opens checkout. Retry with the same attempt ID and URLs if the request fails.
@@ -46,37 +60,56 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 	if err != nil {
 		return Checkout{}, err
 	}
+
 	if payment.TransactionID.Valid {
 		return Checkout{PaymentStatus: payment.status(), URL: payment.CheckoutURL}, nil
 	}
 	if !payment.Account.Enabled {
 		return Checkout{}, errors.New("payment account is disabled")
 	}
+
 	provider, err := payment.Account.provider(ctx)
 	if err != nil {
 		return Checkout{}, err
 	}
+
 	checkout, err := provider.CreatePayment(ctx, CreatePaymentRequest{
-		AttemptID: id, Amount: Money{Amount: payment.Amount, Currency: payment.Currency},
-		ReturnURL: returnURL, WebhookURL: webhookURL,
+		AttemptID: id,
+		Amount: Money{
+			Amount:   payment.Amount,
+			Currency: payment.Currency,
+		},
+		ReturnURL:  returnURL,
+		WebhookURL: webhookURL,
 	})
 	if err != nil {
 		return Checkout{}, err
 	}
+
 	if err := payment.validateStatus(checkout.PaymentStatus); err != nil {
 		return Checkout{}, err
 	}
-	payment.TransactionID = sql.NullString{String: checkout.ProviderRef, Valid: true}
+
+	payment.TransactionID = sql.NullString{
+		String: checkout.ProviderRef,
+		Valid:  true,
+	}
+
 	payment.CheckoutURL, payment.State = checkout.URL, checkout.State
-	n, err := queries.GetQuerySet(&Payment{}).WithContext(ctx).
-		Filter("ID", id).Filter("TransactionID__isnull", true).
-		Select("TransactionID", "CheckoutURL", "State", "UpdatedAt").Update(payment)
+	n, err := queries.GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Select("TransactionID", "CheckoutURL", "State", "UpdatedAt").
+		Filter("ID", id).
+		Filter("TransactionID__isnull", true).
+		Update(payment)
+
 	if err == nil && n == 0 {
 		payment, err = getAttempt(ctx, id)
 		if err == nil {
 			return Checkout{PaymentStatus: payment.status(), URL: payment.CheckoutURL}, nil
 		}
 	}
+
 	return checkout, err
 }
 
@@ -101,8 +134,12 @@ func Refresh(ctx context.Context, id drivers.ULID) (*Payment, error) {
 }
 
 func getAttempt(ctx context.Context, id drivers.ULID) (*Payment, error) {
-	row, err := queries.GetQuerySet(&Payment{}).WithContext(ctx).
-		Select("*", "Account.*").Filter("ID", id).Get()
+	row, err := queries.
+		GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Select("*", "Account.*").
+		Filter("ID", id).
+		Get()
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +174,13 @@ func applyStatus(ctx context.Context, p *Payment, status PaymentStatus) (*Paymen
 	}
 	prior := p.State
 	p.State = status.State
-	n, err := queries.GetQuerySet(&Payment{}).WithContext(ctx).
-		Filter("ID", p.ID).Filter("State", prior).Select("State", "UpdatedAt").Update(p)
+	n, err := queries.
+		GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Select("State", "UpdatedAt").
+		Filter("ID", p.ID).
+		Filter("State", prior).
+		Update(p)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +216,12 @@ func ServeWebhook(w http.ResponseWriter, r *http.Request, accountID string) {
 		http.NotFound(w, r)
 		return
 	}
-	account, err := queries.GetQuerySet(&ProviderAccount{}).WithContext(ctx).Filter("ID", id).Get()
+
+	account, err := queries.
+		GetQuerySet(&ProviderAccount{}).
+		WithContext(ctx).
+		Filter("ID", id).
+		Get()
 	if dberrors.Is(err, dberrors.NoRows) {
 		http.NotFound(w, r)
 		return
@@ -183,16 +230,19 @@ func ServeWebhook(w http.ResponseWriter, r *http.Request, accountID string) {
 		http.Error(w, "payment account unavailable", http.StatusServiceUnavailable)
 		return
 	}
+
 	provider, err := account.Object.provider(ctx)
 	if err != nil {
 		http.Error(w, "payment provider unavailable", http.StatusServiceUnavailable)
 		return
 	}
+
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
 	if err != nil {
 		http.Error(w, "invalid webhook body", http.StatusBadRequest)
 		return
 	}
+
 	result, err := provider.HandleWebhook(ctx, WebhookRequest{
 		Method: r.Method, Header: r.Header, URL: r.URL, Body: body,
 	})
@@ -207,10 +257,12 @@ func ServeWebhook(w http.ResponseWriter, r *http.Request, accountID string) {
 		http.Error(w, "payment reconciliation failed", http.StatusServiceUnavailable)
 		return
 	}
+
 	if result.Acknowledge != nil {
 		result.Acknowledge(w)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -218,14 +270,20 @@ func reconcileWebhook(ctx context.Context, account *ProviderAccount, status Paym
 	if status.ProviderRef == "" {
 		return ErrInvalidWebhook
 	}
-	row, err := queries.GetQuerySet(&Payment{}).WithContext(ctx).
-		Filter("Account", account.ID).Filter("TransactionID", status.ProviderRef).Get()
+
+	row, err := queries.
+		GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Filter("Account", account.ID).
+		Filter("TransactionID", status.ProviderRef).
+		Get()
 	if err != nil {
 		return err
 	}
 	if row.Object.Provider != account.Driver {
 		return errors.New("payment account's driver has changed")
 	}
+
 	_, err = applyStatus(ctx, row.Object, status)
 	return err
 }

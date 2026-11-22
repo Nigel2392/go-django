@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -45,7 +46,12 @@ func (m *CouponProductThrough) FieldDefs(ctx context.Context) attrs.Definitions 
 					Column: "product_id",
 					FormField: func(opts ...func(fields.Field)) fields.Field {
 						var widget = chooser.NewChooserWidget(&products.Product{}, map[string]string{}, chooser.DEFAULT_KEY)
-						return fields.CharField(append(opts, fields.Widget(widget))...)
+						return &formfields.ForeignKeyFormField{
+							BaseRelationField: formfields.BaseRelationField{
+								BaseField: fields.NewField(append(opts, fields.Widget(widget))...),
+								Relation:  attrs.Relate(&products.Product{}, "", nil),
+							},
+						}
 					},
 					// ReadOnly:      true,
 					// Null:          true,
