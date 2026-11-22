@@ -18,13 +18,18 @@ type PaymentOption struct {
 	payments.Quote
 }
 
+type PaymentsAPI struct {
+	Currency string
+}
+
 // PaymentOptions quotes enabled accounts in the shop currency for the active cart.
-func (c CartAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
+func (c PaymentsAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
 	unit, err := currency.ParseISO(c.Currency)
 	if err != nil || unit.String() != c.Currency {
 		api.RespondError(w, http.StatusServiceUnavailable, "shop payment currency is unavailable")
 		return
 	}
+
 	ctx := r.Context()
 	cart, err := cartQuery(ctx, r, false).
 		CalcOne()
@@ -37,6 +42,7 @@ func (c CartAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
 		api.RespondError(w, http.StatusInternalServerError, "failed to calculate payment options")
 		return
 	}
+
 	accounts, err := queries.
 		GetQuerySet(&payments.ProviderAccount{}).
 		WithContext(ctx).
@@ -49,10 +55,12 @@ func (c CartAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
 		api.RespondError(w, http.StatusInternalServerError, "failed to load payment options")
 		return
 	}
+
 	subtotal := payments.Money{
 		Amount:   cart.Totals.Payable(),
 		Currency: c.Currency,
 	}
+
 	options := make([]PaymentOption, 0, len(accounts))
 	for _, row := range accounts {
 		account := row.Object

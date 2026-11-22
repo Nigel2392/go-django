@@ -522,21 +522,43 @@ func NewAppConfig() (django.AppConfig, error) {
 	SHOP.Ready = func() error {
 		baseApiRoute := django.Global.Mux.Get("/api", nil, "api")
 
-		c := public.CartAPI{Currency: django.ConfigGet(django.Global.Settings, APPVAR_SHOP_CURRENCY, "")}
+		/*
+			api:carts			  GET  							   -> [carts.CartRow]
+			api:carts:clear		  POST 							   -> [carts.CartRow]
+			api:carts:add_item	  POST -> [public.CartItemRequest] -> [public.CartItemResponse]
+			api:carts:remove_item POST -> [public.CartItemRequest] -> [public.CartItemResponse]
+		*/
+		c := public.CartAPI{}
 		cartBase := baseApiRoute.Get("/carts", http.HandlerFunc(c.GetOrCreateCart), "carts")
 		cartBase.Post("/clear", http.HandlerFunc(c.ClearCart), "clear")
 		cartBase.Post("/items/add", http.HandlerFunc(c.AddCartItem), "add_item")
 		cartBase.Post("/items/remove", http.HandlerFunc(c.RemoveCartItem), "remove_item")
-		cartBase.Get("/payment-options", http.HandlerFunc(c.PaymentOptions), "payment_options")
+
+		/*
+			api:coupons:redeem POST -> [RedemptionRequest] -> [carts.CartRow]
+		*/
 		redemption := public.RedemptionAPI{
 			ErrInvalid:            trans.S("Invalid coupon code"),
 			ErrNoMatchingProducts: trans.S("No products in your cart match this coupon"),
 			ErrRedeemed:           trans.S("This coupon has reached its usage limit"),
 		}
-		cartBase.Post("/coupons/redeem", http.HandlerFunc(redemption.RedeemCode), "redeem_coupon")
-		baseApiRoute.Post("/payments/webhook/<<account>>", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		coupons := baseApiRoute.Get("/coupons", nil, "coupons")
+		coupons.Post("/redeem", http.HandlerFunc(redemption.RedeemCode), "redeem")
+
+		/*
+			api:payments:options	   GET   	   -> [][public.PaymentOption]
+			api:payments:webhook, <ID> POST -> ??? -> [payments.Provider.HandleWebhook]
+		*/
+		var paymentsHandler = func(w http.ResponseWriter, r *http.Request) {
 			payments.ServeWebhook(w, r, mux.Vars(r).Get("account"))
-		}), "payment_webhook")
+		}
+
+		p := public.PaymentsAPI{}
+		pay := baseApiRoute.Get("/payments", nil, "payments")
+		pay.Get("/options", http.HandlerFunc(p.PaymentOptions), "options")
+		pay.Post("/webhook/<<account>>", http.HandlerFunc(paymentsHandler), "webhook")
+
 		goldcrest.Register(django.HOOK_SETUP_NOSURF, 0, django.NosurfSetupHook(func(_ *django.Application, h *nosurf.CSRFHandler) {
 			h.ExemptRegexp(`^/api/payments/webhook/[0-9A-HJKMNP-TV-Z]{26}/?$`)
 		}))

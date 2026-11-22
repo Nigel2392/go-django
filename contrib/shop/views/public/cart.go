@@ -34,9 +34,7 @@ type CartItemResponse struct {
 	Product *products.Product `json:"product"`
 }
 
-type CartAPI struct {
-	Currency string
-}
+type CartAPI struct{}
 
 func cartQuery(ctx context.Context, r *http.Request, preloads bool) *carts.CartQuery {
 	qs := carts.Query().
@@ -103,17 +101,13 @@ func ensureCartSession(r *http.Request) error {
 
 func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 
-	cart, created, err := c.getOrCreateCart(r, true)
+	cart, _, err := c.getOrCreateCart(r, true)
 	if err != nil {
 		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to encode the cart response: %v", err,
 		)
 		return
-	}
-
-	if !created {
-		// cartRow, err :=
 	}
 
 	err = api.Respond(w, cart)
