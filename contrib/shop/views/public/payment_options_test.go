@@ -64,7 +64,7 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 		t.Fatal(err)
 	}
 
-	optionsURL := django.Reverse("api:carts:payment_options")
+	optionsURL := django.Reverse("api:payments:options")
 	resp, err := d.Get(optionsURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
