@@ -426,8 +426,8 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 	}
 
 	var (
-		// relType    = preload.Rel.Type()
-		relThrough = preload.Rel.Through()
+		relThrough    = preload.Rel.Through()
+		parentObjects = seenObj.objects
 	)
 
 	var subQueryset = preload.QuerySet
@@ -510,11 +510,11 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			targetField = subQueryset.internals.Model.Primary
 		}
 
-		// If the relation is a forward o2o or m2o relation,
-		// the PK list is not actually the primary keys of the related objects,
-		// but the primary keys of the parent objects - change the pk list accordingly.
-		if preload.Rel.Type() == attrs.RelManyToOne || preload.Rel.Type() == attrs.RelOneToOne && preload.Rel.Through() == nil {
+		relType := preload.Rel.Type()
+		if relType == attrs.RelManyToOne || relType == attrs.RelOneToOne {
+			// Forward relations are queried and attached using the parent's foreign key.
 			pks = newOrderedSet[any](0)
+			parentObjects = make(map[any][]*object, len(seenObj.objects))
 
 			var zeroCount int
 			for _, objs := range seenObj.objects {
@@ -544,6 +544,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 					}
 
 					pks.set(val)
+					parentObjects[val] = append(parentObjects[val], obj)
 				}
 			}
 
@@ -632,7 +633,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 
 			sourceVal = attrs.PrimaryKey(ctx, sourceField)
 			primaryVal = attrs.PrimaryKey(ctx, rowDefs.Primary())
-			parentObjs, parentOk = seenObj.objects[sourceVal]
+			parentObjs, parentOk = parentObjects[sourceVal]
 
 		default:
 			var defs = attrs.Define(ctx, row.Through)
@@ -641,13 +642,13 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 
 			var targetField, _ = defs.Field(relThrough.TargetField())
 			primaryVal = attrs.PrimaryKey(ctx, targetField)
-			parentObjs, parentOk = seenObj.objects[sourceVal]
+			parentObjs, parentOk = parentObjects[sourceVal]
 		}
 
 		if !parentOk {
 			var pkList strings.Builder
 			var idx int
-			for k := range seenObj.objects {
+			for k := range parentObjects {
 				if idx != 0 {
 					pkList.WriteString(", ")
 				}

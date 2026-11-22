@@ -14,7 +14,6 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 type RedemptionRequest struct {
@@ -136,18 +135,20 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 		// coupon redemption can be created
 	}
 
-	var (
-		user  = authentication.Retrieve(r)
-		cartQ = cartQuery(r.Context(), r, user, true)
-	)
+	cartQ := cartQuery(ctx, r, true)
+	cartRow, err := cartQ.Get()
+	if err != nil {
+		if !errors.Is(err, errors.NoRows) {
+			logger.Warnf("error fetching cart for coupon request: %v", err)
+		}
+		api.RespondError(w, http.StatusNotFound, a.ErrInvalid(ctx))
+		return
+	}
 
 	// check if redemption exists for cart or not, i.e.
 	// if the user has already redeemed this code
 	exists, err := redemptionsQs.
-		Filter(
-			"Cart", cartQ.
-				Select("ID").
-				Limit(1)).
+		Filter("Cart", cartRow.Object.ID).
 		Exists()
 
 	switch {
@@ -175,23 +176,10 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// retrieve the currently active shopping cart to redeem the code for
-	cartRow, err := cartQ.Get()
-	if err != nil {
-		if !errors.Is(err, errors.NoRows) {
-			logger.Warnf("error fetching cart with coupon request code %q: %v", req.CouponCode, err)
-		}
-
-		api.RespondError(w,
-			http.StatusNotFound,
-			a.ErrInvalid(ctx),
-		)
-		return
-	}
-
 	redemption := &coupons.Redemption{
-		Coupon: coupon,
-		Cart:   cartRow.Object,
+		Coupon:     coupon,
+		Cart:       cartRow.Object,
+		RedeemedAt: time.Now(),
 	}
 
 	// validate if there are products bound to the coupon
@@ -206,6 +194,9 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 
 		// check if the cart has any products that matches a bound coupon product
 		for _, cartItem := range cartRow.Object.CartItems.AsList() {
+			if cartItem.Product == nil {
+				continue
+			}
 			_, ok := productsFromCoupon[cartItem.Product.ID.String()]
 			if ok {
 				goto createRedemption
@@ -226,6 +217,11 @@ createRedemption:
 		GetQuerySet(&coupons.Redemption{}).
 		WithContext(ctx).
 		Create(redemption)
+	if err != nil {
+		logger.Warnf("error creating coupon redemption: %v", err)
+		api.RespondError(w, http.StatusInternalServerError, "failed to redeem coupon")
+		return
+	}
 
 	cartsRow, err := cartQ.CalcOne()
 	if err != nil {
@@ -233,6 +229,11 @@ createRedemption:
 			http.StatusNotFound,
 			a.ErrInvalid(ctx),
 		)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		logger.Warnf("error committing coupon redemption: %v", err)
+		api.RespondError(w, http.StatusInternalServerError, "failed to redeem coupon")
 		return
 	}
 

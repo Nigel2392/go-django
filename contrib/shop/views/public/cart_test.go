@@ -201,9 +201,11 @@ func TestCartsAPI(t *testing.T) {
 				&carts.Cart{},
 				&carts.CartItem{},
 				&customers.Customer{},
-				&payments.Payment{},
+				&payments.ProviderAccount{},
 				&orders.Order{},
+				&payments.Payment{},
 				&coupons.Coupon{},
+				&coupons.CouponProductThrough{},
 				&coupons.Redemption{},
 			)
 			tables.IfNotExists = true
@@ -224,6 +226,7 @@ func TestCartsAPI(t *testing.T) {
 			django.APPVAR_DISABLE_NOSURF: true,
 			django.APPVAR_DEBUG:          true,
 			django.APPVAR_DATABASE:       db,
+			shop.APPVAR_SHOP_CURRENCY:    "EUR",
 		},
 		Flags: []django.AppFlag{
 			django.FlagSkipCmds,
@@ -690,6 +693,22 @@ func TestCartsAPI(t *testing.T) {
 					asserter.AssertNotNil(clearResp2.Cart)
 					asserter.Assert(clearResp2.Cart.Active, "Expected new active cart")
 					asserter.AssertEqual(0, len(clearedCarts))
+				},
+			},
+			&djester.BasicTest{
+				Label: "Redeem coupons and return updated cart totals",
+				Function: func(d *djester.Tester, t *testing.T) {
+					testCouponRedemption(d, t, prod1, prodNotInCart)
+				},
+			},
+			&djester.BasicTest{
+				Label:    "Quote fees for a payment account and reconcile checkout",
+				Function: testPaymentOptions,
+			},
+			&djester.BasicTest{
+				Label: "Coupon redemption cases",
+				Function: func(_ *djester.Tester, t *testing.T) {
+					testCouponRedemptionCases(t, prod1, prod2, prodNotInCart)
 				},
 			},
 		},

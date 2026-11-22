@@ -1,11 +1,84 @@
 package preload_test
 
 import (
+	"slices"
 	"testing"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
+
+func TestPreloadForwardForeignKey(t *testing.T) {
+	sharedBook, otherBook := author0Books[0], author1Books[0]
+	refs := []*PreloadBookReference{
+		{ID: "first-reference", Book: sharedBook},
+		{ID: "second-reference", Book: sharedBook},
+		{ID: "third-reference", Book: otherBook},
+	}
+	ctx, tx, err := queries.StartTransaction(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	qs := queries.GetQuerySet(&PreloadBookReference{}).WithContext(ctx)
+	if _, err := qs.BulkCreate(refs); err != nil {
+		t.Fatal(err)
+	}
+
+	expected := make(map[string]*PreloadBook, len(refs))
+	ids := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		expected[ref.ID] = ref.Book
+		ids = append(ids, ref.ID)
+	}
+
+	for _, tc := range []struct {
+		name string
+		path string
+		join bool
+	}{
+		{name: "direct relation", path: "Book"},
+		{name: "nested relation", path: "Book.Authors"},
+		{name: "selected relation with nested preload", path: "Book.Authors", join: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			query := qs.Filter("ID__in", ids)
+			if tc.join {
+				query = query.Select("*", "Book.*")
+			}
+			rows, err := query.Preload(tc.path).All()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != len(refs) {
+				t.Fatalf("got %d references, want %d", len(rows), len(refs))
+			}
+
+			for _, row := range rows {
+				ref := row.Object
+				want := expected[ref.ID]
+				if want == nil || ref.Book == nil || ref.Book.ID != want.ID || ref.Book.Title != want.Title {
+					t.Fatalf("reference %s has book %+v, want %+v", ref.ID, ref.Book, want)
+				}
+				if tc.path == "Book" {
+					continue
+				}
+				var gotIDs, wantIDs []uint64
+				for _, author := range ref.Book.Authors {
+					gotIDs = append(gotIDs, author.Model().(*PreloadAuthor).ID)
+				}
+				for _, author := range booksAuthorMap[want.ID] {
+					wantIDs = append(wantIDs, author.ID)
+				}
+				slices.Sort(gotIDs)
+				slices.Sort(wantIDs)
+				if !slices.Equal(gotIDs, wantIDs) {
+					t.Fatalf("reference %s has book authors %v, want %v", ref.ID, gotIDs, wantIDs)
+				}
+			}
+		})
+	}
+}
 
 func TestPreload(t *testing.T) {
 	t.Run("TestAuthorHasBooks", func(t *testing.T) {

@@ -2,6 +2,8 @@ package orders
 
 import (
 	"context"
+	"fmt"
+	"html/template"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
@@ -22,7 +24,7 @@ type Order struct {
 	// State      *OrderState
 	Customer   *customers.Customer
 	State      InternalOrderState
-	Payment    *payments.Payment
+	Payments   *queries.RelRevFK[*payments.Payment]
 	OrderItems *queries.RelRevFK[*OrderItem]
 	Completed  bool
 	Processed  bool
@@ -36,26 +38,6 @@ func (m *Order) BeforeCreate(ctx context.Context) error {
 func (m *Order) AddPanels(ctx context.Context) []admin.Panel {
 	return []admin.Panel{
 		admin.FieldPanel("State"),
-		&admin.ModelFormPanel[*payments.Payment, modelforms.ModelForm[*payments.Payment]]{
-			TargetType:     &payments.Payment{},
-			FieldName:      "Payment",
-			Classname:      "collapsible",
-			MinNum:         1,
-			DisallowAdd:    true,
-			DisallowRemove: true,
-			Panels: []admin.Panel{
-				admin.FieldPanel("Amount"),
-				// admin.FieldPanel("Provider"),
-				admin.FieldPanel("State"),
-				admin.FieldPanel("CreatedAt"),
-				admin.FieldPanel("UpdatedAt"),
-				//	Amount
-				//	Provider
-				//	State
-				//	CreatedAt
-				//	UpdatedAt
-			},
-		},
 		&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
 			TargetType: &OrderItem{},
 			FieldName:  "OrderItems",
@@ -73,29 +55,18 @@ func (m *Order) AddPanels(ctx context.Context) []admin.Panel {
 }
 
 func (m *Order) EditPanels(ctx context.Context) []admin.Panel {
-	return []admin.Panel{
+	panels := []admin.Panel{
 		admin.FieldPanel("ID"),
 		admin.FieldPanel("State"),
-		&admin.ModelFormPanel[*payments.Payment, modelforms.ModelForm[*payments.Payment]]{
-			TargetType:     &payments.Payment{},
-			FieldName:      "Payment",
-			Classname:      "collapsible",
-			MinNum:         1,
-			DisallowAdd:    true,
-			DisallowRemove: true,
-			Panels: []admin.Panel{
-				admin.FieldPanel("Amount"),
-				// admin.FieldPanel("Provider"),
-				admin.FieldPanel("State"),
-				admin.FieldPanel("CreatedAt"),
-				admin.FieldPanel("UpdatedAt"),
-				//	Amount
-				//	Provider
-				//	State
-				//	CreatedAt
-				//	UpdatedAt
-			},
-		},
+	}
+	for _, payment := range m.Payments.AsList() {
+		panels = append(panels, &admin.AlertPanel{
+			Label: "Payment " + payment.ID.String(),
+			HTML: template.HTMLEscapeString(fmt.Sprintf("%s · %s %s · %s",
+				payment.Provider, payment.Amount, payment.Currency, payment.State)),
+		})
+	}
+	return append(panels,
 		&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
 			TargetType: &OrderItem{},
 			FieldName:  "OrderItems",
@@ -109,7 +80,7 @@ func (m *Order) EditPanels(ctx context.Context) []admin.Panel {
 				admin.FieldPanel("Amount"),
 			},
 		},
-	}
+	)
 }
 
 func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
@@ -169,14 +140,9 @@ func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}),
-		fattrs.Field(m, "Payment", &m.Payment, func() fattrs.PtrFieldConfig[*Order, *payments.Payment] {
-			return fattrs.PtrFieldConfig[*Order, *payments.Payment]{
-				Config: attrs.Config{
-					Column:        "payment_id",
-					RelForeignKey: attrs.Relate(&payments.Payment{}, "", nil),
-					Null:          true,
-					Blank:         false,
-				},
+		fattrs.Field(m, "Payments", &m.Payments, func() fattrs.PtrFieldConfig[*Order, *queries.RelRevFK[*payments.Payment]] {
+			return fattrs.PtrFieldConfig[*Order, *queries.RelRevFK[*payments.Payment]]{
+				Flags: fattrs.F_IS_REVERSE_FLD,
 			}
 		}),
 		fattrs.Field(m, "OrderItems", &m.OrderItems, func() fattrs.PtrFieldConfig[*Order, *queries.RelRevFK[*OrderItem]] {

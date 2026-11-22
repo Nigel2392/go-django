@@ -34,17 +34,11 @@ type CartItemResponse struct {
 	Product *products.Product `json:"product"`
 }
 
-type CartAPI struct{}
+type CartAPI struct {
+	Currency string
+}
 
-func cartQuery(ctx context.Context, r *http.Request, u authentication.User, preloads bool) *carts.CartQuery {
-	var session = sessions.Retrieve(r)
-	var q expr.ClauseExpression = expr.Q("Session", session.Token())
-	if u.IsAuthenticated() {
-		q = q.Or(expr.Q("User", u))
-	}
-
-	q = q.And(expr.Q("Active", true))
-
+func cartQuery(ctx context.Context, r *http.Request, preloads bool) *carts.CartQuery {
 	qs := carts.Query().
 		WithContext(ctx).
 		CartForRequest(r)
@@ -65,7 +59,7 @@ func cartQuery(ctx context.Context, r *http.Request, u authentication.User, prel
 
 func (c CartAPI) getOrCreateCart(r *http.Request, preloads bool) (*carts.CartRow, bool, error) {
 	u := authentication.UserFromContext(r.Context())
-	q := cartQuery(r.Context(), r, u, preloads)
+	q := cartQuery(r.Context(), r, preloads)
 
 	newCart := &carts.Cart{
 		Active:  true,
@@ -179,7 +173,7 @@ func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// retrieve or create the users' cart
 	u := authentication.UserFromContext(r.Context())
-	q := cartQuery(ctx, r, u, false)
+	q := cartQuery(ctx, r, false)
 	cart := &carts.Cart{
 		Active:  true,
 		Session: sessions.Retrieve(r).Token(),
@@ -389,7 +383,7 @@ func (c CartAPI) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 
 	// retrieve or create the users' cart
 	u := authentication.UserFromContext(r.Context())
-	q := cartQuery(ctx, r, u, false)
+	q := cartQuery(ctx, r, false)
 	cart, err := q.Get()
 	if err != nil {
 		if errors.Is(err, errors.NoRows) {
@@ -512,7 +506,7 @@ returnCartResponse:
 func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 	var tx drivers.Transaction
 	var u = authentication.UserFromContext(r.Context())
-	var q = cartQuery(r.Context(), r, u, true)
+	var q = cartQuery(r.Context(), r, true)
 	var cartRow, err = q.Get()
 	switch {
 	case errors.Is(err, errors.NoRows):

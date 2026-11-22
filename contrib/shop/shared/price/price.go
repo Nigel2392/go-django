@@ -23,6 +23,11 @@ type Totals struct {
 	LeftOverDiscount decimal.Decimal `json:"left_over_discount"` // currency
 }
 
+// Payable returns the amount after discounts, including product fees and tax.
+func (t Totals) Payable() decimal.Decimal {
+	return t.TotalPrice.Add(t.TotalFee).Add(t.TotalTax)
+}
+
 type PriceCalculation struct {
 	ItemCount int
 	Discount  AmountValue

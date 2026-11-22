@@ -39,10 +39,13 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
+	"github.com/justinas/nosurf"
 )
 
 //go:embed assets/**
 var assetFilesystem embed.FS
+
+const APPVAR_SHOP_CURRENCY = "SHOP_CURRENCY"
 
 type ShopAppConfig struct {
 	*apps.DBRequiredAppConfig
@@ -138,6 +141,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		&orders.Order{},
 
 		// Payments
+		&payments.ProviderAccount{},
 		&payments.Payment{},
 
 		// Products
@@ -510,11 +514,24 @@ func NewAppConfig() (django.AppConfig, error) {
 	SHOP.Ready = func() error {
 		baseApiRoute := django.Global.Mux.Get("/api", nil, "api")
 
-		c := public.CartAPI{}
+		c := public.CartAPI{Currency: django.ConfigGet(django.Global.Settings, APPVAR_SHOP_CURRENCY, "")}
 		cartBase := baseApiRoute.Get("/carts", http.HandlerFunc(c.GetOrCreateCart), "carts")
 		cartBase.Post("/clear", http.HandlerFunc(c.ClearCart), "clear")
 		cartBase.Post("/items/add", http.HandlerFunc(c.AddCartItem), "add_item")
 		cartBase.Post("/items/remove", http.HandlerFunc(c.RemoveCartItem), "remove_item")
+		cartBase.Get("/payment-options", http.HandlerFunc(c.PaymentOptions), "payment_options")
+		redemption := public.RedemptionAPI{
+			ErrInvalid:            trans.S("Invalid coupon code"),
+			ErrNoMatchingProducts: trans.S("No products in your cart match this coupon"),
+			ErrRedeemed:           trans.S("This coupon has reached its usage limit"),
+		}
+		cartBase.Post("/coupons/redeem", http.HandlerFunc(redemption.RedeemCode), "redeem_coupon")
+		baseApiRoute.Post("/payments/webhook/<<account>>", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			payments.ServeWebhook(w, r, mux.Vars(r).Get("account"))
+		}), "payment_webhook")
+		goldcrest.Register(django.HOOK_SETUP_NOSURF, 0, django.NosurfSetupHook(func(_ *django.Application, h *nosurf.CSRFHandler) {
+			h.ExemptRegexp(`^/api/payments/webhook/[0-9A-HJKMNP-TV-Z]{26}/?$`)
+		}))
 
 		// always run the sync on startup
 		// /mostly/ handled in DB

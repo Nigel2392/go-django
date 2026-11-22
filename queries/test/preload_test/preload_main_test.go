@@ -84,6 +84,7 @@ func TestMain(m *testing.M) {
 		&PreloadAuthorBook{},
 		&PreloadAuthor{},
 		&PreloadAuthorProfile{},
+		&PreloadBookReference{},
 	)
 
 	attrs.ResetDefinitions.Send(context.Background(), nil)

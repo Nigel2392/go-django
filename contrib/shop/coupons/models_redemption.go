@@ -52,8 +52,8 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.Config{
 					Column:        "customer_id",
 					ReadOnly:      true,
-					Null:          false,
-					Blank:         false,
+					Null:          true,
+					Blank:         true,
 					RelForeignKey: attrs.Relate(&customers.Customer{}, "", nil),
 				},
 			}

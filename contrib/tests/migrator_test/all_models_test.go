@@ -152,6 +152,7 @@ func allContribAppGroups() []appModelGroup {
 				&carts.Cart{},
 				&carts.CartItem{},
 				&customers.Customer{},
+				&payments.ProviderAccount{},
 				&payments.Payment{},
 				&orders.OrderState{},
 				&orders.Order{},
@@ -237,8 +238,8 @@ func TestAllContribModels_TableAndDialectTypeMapping(t *testing.T) {
 	}
 
 	allModels := flattenGroupModels(groups)
-	if len(allModels) != 29 {
-		t.Fatalf("expected 28 contrib models + 1 richfields model = 29, got %d", len(allModels))
+	if len(allModels) != 30 {
+		t.Fatalf("expected 29 contrib models + 1 richfields model = 30, got %d", len(allModels))
 	}
 
 	for _, mdl := range allModels {

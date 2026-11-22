@@ -24,6 +24,21 @@ type PreloadBook struct {
 	Authors      []queries.Relation `json:"-"`
 }
 
+type PreloadBookReference struct {
+	models.Model `table:"preload_book_references"`
+	ID           string       `attrs:"primary;max_length:48"`
+	Book         *PreloadBook `attrs:"-"`
+}
+
+func (r *PreloadBookReference) FieldDefs(ctx context.Context) attrs.Definitions {
+	return r.Model.Define(ctx, r, attrs.AutoFieldList(ctx, r, "*",
+		attrs.Unbound("Book", &attrs.Config{
+			Column:        "book_id",
+			RelForeignKey: attrs.Relate(&PreloadBook{}, "", nil),
+		}),
+	))
+}
+
 func (pb *PreloadBook) FieldDefs(ctx context.Context) attrs.Definitions {
 	return pb.Model.Define(ctx, pb,
 		attrs.Unbound("ID", &attrs.Config{

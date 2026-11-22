@@ -137,7 +137,7 @@ func setupOrderTestEnv(t *testing.T) {
 				django.FlagSkipCmds,
 			),
 			django.Apps(func() django.AppConfig {
-				cfg := apps.NewDBAppConfig("order_test_app")
+				cfg := apps.NewDBAppConfig("shop")
 				cfg.ModelObjects = []attrs.Definer{
 					&OrderTestUser{},
 					&models.Category{},
@@ -146,9 +146,10 @@ func setupOrderTestEnv(t *testing.T) {
 					&products.Product{},
 					&carts.Cart{},
 					&carts.CartItem{},
-					&payments.Payment{},
+					&payments.ProviderAccount{},
 					&orders.OrderState{},
 					&orders.Order{},
+					&payments.Payment{},
 					&orders.OrderItem{},
 				}
 				return cfg
@@ -167,10 +168,11 @@ func setupOrderTestEnv(t *testing.T) {
 		&products.Product{},
 		&carts.Cart{},
 		&carts.CartItem{},
-		&payments.Payment{},
+		&payments.ProviderAccount{},
 		&customers.Customer{},
 		&orders.OrderState{},
 		&orders.Order{},
+		&payments.Payment{},
 		&orders.OrderItem{},
 	)
 	tables.IfNotExists = true
@@ -343,8 +345,8 @@ func TestCreateOrder(t *testing.T) {
 		if order.Processed {
 			t.Fatal("expected Order.Processed to be false")
 		}
-		if order.Payment != nil {
-			t.Fatalf("expected Order.Payment to be nil, got %+v", order.Payment)
+		if len(order.Payments.AsList()) != 0 {
+			t.Fatalf("expected Order.Payments to be empty, got %+v", order.Payments.AsList())
 		}
 
 		// Verify returned OrderItems
@@ -406,8 +408,8 @@ func TestCreateOrder(t *testing.T) {
 		if dbOrderRow.Object.Processed {
 			t.Fatal("expected persisted Order Processed to be false")
 		}
-		if dbOrderRow.Object.Payment != nil {
-			t.Fatalf("expected persisted Order Payment to be nil, got %+v", dbOrderRow.Object.Payment)
+		if len(dbOrderRow.Object.Payments.AsList()) != 0 {
+			t.Fatalf("expected persisted Order.Payments to be empty, got %+v", dbOrderRow.Object.Payments.AsList())
 		}
 		preloadedOrderItems := dbOrderRow.Object.OrderItems.AsList()
 		if len(preloadedOrderItems) != 2 {
@@ -1021,9 +1023,9 @@ func TestCreateOrder(t *testing.T) {
 			t.Fatalf("CreateOrder failed: %v", err)
 		}
 
-		if order.Completed || order.Processed || order.Payment != nil {
-			t.Fatalf("expected default order flags (Completed=false, Processed=false, Payment=nil), got Completed=%v Processed=%v Payment=%v",
-				order.Completed, order.Processed, order.Payment)
+		if order.Completed || order.Processed || len(order.Payments.AsList()) != 0 {
+			t.Fatalf("expected default order flags (Completed=false, Processed=false, Payments empty), got Completed=%v Processed=%v Payments=%v",
+				order.Completed, order.Processed, order.Payments.AsList())
 		}
 
 		orderField, ok := attrs.Define(t.Context(), order).Field("OrderItems")

@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews/generic"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -41,7 +43,7 @@ var ViewOrderList = generic.ListViewConfig[*orders.Order]{
 		return django.Reverse("admin:apps:model:edit", "shop", "orders", v.ID)
 	},
 	GetQuerySet: func(r *http.Request) *queries.QuerySet[*orders.Order] {
-		return queries.GetQuerySet(&orders.Order{}).Select("*", "Payment.*")
+		return queries.GetQuerySet(&orders.Order{}).Preload(queries.NoJoins("Payments"))
 	},
 	Filters: []filters.FilterSpec[*orders.Order]{
 		&filters.BaseFilterSpec[*queries.QuerySet[*orders.Order]]{
@@ -54,10 +56,13 @@ var ViewOrderList = generic.ListViewConfig[*orders.Order]{
 					return object, nil
 				}
 
+				paymentOrders := queries.GetQuerySet(&payments.Payment{}).
+					WithContext(req.Context()).
+					Filter(expr.Or(expr.Q("ID__icontains", value), expr.Q("Provider__icontains", value))).
+					Select("Order")
 				return object.Filter(expr.Or(
 					expr.Q("ID__icontains", value),
-					expr.Q("Payment.ID__icontains", value),
-					expr.Q("Payment.Provider__icontains", value),
+					expr.Q("ID__in", queries.Subquery(paymentOrders)),
 				)), nil
 			},
 		},
@@ -82,10 +87,14 @@ var ViewOrderList = generic.ListViewConfig[*orders.Order]{
 				trans.S("Order ID"),
 				"ID",
 			),
-			list.FieldColumn[*orders.Order](
-				trans.S("Payment ID"),
-				"Payment.ID",
-			),
+			list.FuncColumn(trans.S("Payment IDs"), func(_ *http.Request, _ attrs.Definitions, order *orders.Order) any {
+				attempts := order.Payments.AsList()
+				ids := make([]string, 0, len(attempts))
+				for _, attempt := range attempts {
+					ids = append(ids, attempt.ID.String())
+				}
+				return strings.Join(ids, ", ")
+			}),
 		}
 
 		return cols, nil
@@ -226,8 +235,8 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request) {
 
 	var vars = mux.Vars(r)
 	var orderRow, err = queries.GetQuerySet(&orders.Order{}).
-		Select("*", "Payment.*", "OrderItem.*").
-		Filter("ID", vars.GetInt("order_id")).
+		Preload(queries.NoJoins("Payments"), queries.NoJoins("OrderItems")).
+		Filter("ID", vars.Get("order_id")).
 		Get()
 
 	if errors.Is(err, errors.NoRows) {
