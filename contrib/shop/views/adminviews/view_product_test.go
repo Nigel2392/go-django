@@ -26,7 +26,9 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
@@ -260,8 +262,10 @@ func TestAdminProductViews(t *testing.T) {
 				&carts.Cart{},
 				&carts.CartItem{},
 				&coupons.Coupon{},
-				&coupons.Redemption{},
 				&coupons.CouponProductThrough{},
+				&customers.Customer{},
+				&orders.Order{},
+				&coupons.Redemption{},
 			)
 			tables.IfNotExists = true
 			tables.Create()

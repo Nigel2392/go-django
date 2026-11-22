@@ -7,16 +7,22 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
+	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/djester"
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/shopspring/decimal"
 )
 
 func extractAdminFormValues(doc *goquery.Document) map[string]any {
@@ -84,6 +90,51 @@ func adminCouponUITests() []djester.Test {
 	}
 
 	return []djester.Test{
+		&djester.BasicTest{
+			Label: "Coupon fixture supports a redemption linked to a customer, cart, and order",
+			Function: func(_ *djester.Tester, t *testing.T) {
+				ctx, tx, err := queries.StartTransaction(t.Context())
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer tx.Rollback(ctx)
+
+				customer, err := queries.GetQuerySet(&customers.Customer{}).WithContext(ctx).Create(&customers.Customer{
+					Email: drivers.MustParseEmail("coupon-fixture@example.test"), FirstName: "Coupon", LastName: "Customer",
+				})
+				if err != nil {
+					t.Fatalf("create coupon customer: %v", err)
+				}
+				cart, err := queries.GetQuerySet(&carts.Cart{}).WithContext(ctx).Create(&carts.Cart{Active: true})
+				if err != nil {
+					t.Fatalf("create coupon cart: %v", err)
+				}
+				order, err := queries.GetQuerySet(&orders.Order{}).WithContext(ctx).Create(&orders.Order{Customer: customer})
+				if err != nil {
+					t.Fatalf("create coupon order: %v", err)
+				}
+				now := time.Now()
+				coupon, err := queries.GetQuerySet(&coupons.Coupon{}).WithContext(ctx).Create(&coupons.Coupon{
+					Title: "Coupon fixture", Code: "REDEEMFIXTURE", MaxDiscount: decimal.NewFromInt(5),
+					ValidFrom: now.Add(-time.Hour), ValidUntil: now.Add(time.Hour),
+				})
+				if err != nil {
+					t.Fatalf("create coupon: %v", err)
+				}
+				redemptions := queries.GetQuerySet(&coupons.Redemption{}).WithContext(ctx)
+				redemption, err := redemptions.Create(&coupons.Redemption{
+					Coupon: coupon, Customer: customer, Cart: cart, Order: order, RedeemedAt: now,
+				})
+				if err != nil {
+					t.Fatalf("create linked redemption: %v", err)
+				}
+				exists, err := redemptions.Filter("ID", redemption.ID).Filter("Coupon", coupon.ID).
+					Filter("Customer", customer.ID).Filter("Cart", cart.ID).Filter("Order", order.ID).Exists()
+				if err != nil || !exists {
+					t.Fatalf("linked redemption %d was not persisted: %v", redemption.ID, err)
+				}
+			},
+		},
 		&djester.BasicTest{
 			Label: "Coupon Seed products for coupon admin UI tests",
 			Function: func(d *djester.Tester, t *testing.T) {
@@ -235,6 +286,9 @@ func adminCouponUITests() []djester.Test {
 				couponRow, err := queries.GetQuerySet(&coupons.Coupon{}).Filter("Code", "WINTER2026").Get()
 				asserter.Assert(err == nil, "failed to query saved coupon: %v", err)
 				savedCoupon := couponRow.Object
+				if !savedCoupon.ValidFrom.IsZero() || !savedCoupon.ValidUntil.IsZero() {
+					t.Fatalf("blank date inputs persisted as %v and %v", savedCoupon.ValidFrom, savedCoupon.ValidUntil)
+				}
 
 				wantTwo := []string{p1.ID.String(), p2.ID.String()}
 				slices.Sort(wantTwo)
