@@ -42,7 +42,7 @@ func testCouponRedemption(d *djester.Tester, t *testing.T, inCart, outsideCart *
 	if _, err := queries.GetQuerySet(&carts.Cart{}).Delete(); err != nil {
 		t.Fatal(err)
 	}
-	redeemURL := django.Reverse("api:carts:redeem_coupon")
+	redeemURL := django.Reverse("api:coupons:redeem")
 	seed := func(code string, limit uint64, target *products.Product) *coupons.Coupon {
 		t.Helper()
 		now := time.Now()

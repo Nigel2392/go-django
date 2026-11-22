@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
-import { CartRow, CartItemRequest, CartItemResponse, RedemptionRequest, PaymentOption } from "./api";
+import { CartRow, CartItemRequest, CartItemResponse, RedemptionRequest, PaymentOption, APIPromise } from "./api";
 
 type ShopElement = HTMLElement & {
     SHOP: ShopController
@@ -66,27 +66,27 @@ class ShopController extends Controller<ShopElement> {
         this.element.SHOP = this
     }
 
-    getCart(): CartRow {
+    async getCart(): APIPromise<CartRow> {
         return null
     }
 
-    clearCart(): CartRow {
+    async clearCart(): APIPromise<CartRow> {
         return null
     }
 
-    addCartItem(req: CartItemRequest): CartItemResponse {
+    async addCartItem(req: CartItemRequest): APIPromise<CartItemResponse> {
         return null
     }
 
-    removeCartItem(req: CartItemRequest): CartItemResponse {
+    async removeCartItem(req: CartItemRequest): APIPromise<CartItemResponse> {
         return null
     }
 
-    redeemCoupon(req: RedemptionRequest): CartRow {
+    async redeemCoupon(req: RedemptionRequest): APIPromise<CartRow> {
         return null
     }
 
-    paymentOptions(): PaymentOption[] {
+    async paymentOptions(): APIPromise<PaymentOption[]> {
         return null
     }
 }

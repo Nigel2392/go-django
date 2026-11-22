@@ -110,7 +110,7 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 		t.Fatalf("checkout amount differs from cart quote: %+v", attempt)
 	}
 	const returnURL = "https://merchant.example.test/return"
-	webhookPath := django.Reverse("api:payment_webhook", account.ID)
+	webhookPath := django.Reverse("api:payments:webhook", account.ID)
 	webhookURL := "https://merchant.example.test" + webhookPath
 	for range 2 {
 		checkout, err := payments.Start(ctx, attempt.ID, returnURL, webhookURL)

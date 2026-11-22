@@ -9,6 +9,8 @@ export interface ErrorResponse {
     message: string;
 }
 
+export type APIPromise<T> = Promise<T | ErrorResponse>
+
 export interface Totals {
     total_price: Decimal;
     total_fee: Decimal;
