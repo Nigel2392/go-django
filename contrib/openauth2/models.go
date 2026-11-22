@@ -155,6 +155,9 @@ func (o *User) BeforeCreate(ctx context.Context) error {
 	if o.CreatedAt.Time().IsZero() {
 		o.CreatedAt = drivers.CurrentDateTime()
 	}
+	if o.ExpiresAt.Time().IsZero() {
+		o.ExpiresAt = drivers.CurrentTimestamp()
+	}
 
 	return core.SIGNAL_BEFORE_USER_CREATE.Send(ctx, o)
 }
@@ -181,6 +184,9 @@ func (o *User) AfterDelete(ctx context.Context) error {
 
 func (o *User) BeforeSave(ctx context.Context) error {
 	o.UpdatedAt = drivers.CurrentDateTime()
+	if o.ExpiresAt.Time().IsZero() {
+		o.ExpiresAt = drivers.CurrentTimestamp()
+	}
 	return nil
 }
 
@@ -278,11 +284,12 @@ func (o *User) Fields(this attrs.Definer) []any {
 		),
 		attrs.NewField(
 			o, "CreatedAt", &attrs.Config{
-				Null:     false,
-				Blank:    true,
-				ReadOnly: true,
-				Label:    trans.S("Created At"),
-				Column:   "created_at",
+				Null:       false,
+				Blank:      true,
+				ReadOnly:   true,
+				AutoNowAdd: true,
+				Label:      trans.S("Created At"),
+				Column:     "created_at",
 			},
 		),
 		attrs.NewField(
@@ -290,6 +297,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
+				AutoNow:  true,
 				Label:    trans.S("Updated At"),
 				Column:   "updated_at",
 			},

@@ -54,7 +54,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			AccessToken:      "",
 			RefreshToken:     "",
 			TokenType:        "",
-			ExpiresAt:        drivers.Timestamp{},
+			ExpiresAt:        drivers.CurrentTimestamp(),
 			Base: users.Base{
 				IsAdministrator: stored.super,
 				IsActive:        !stored.inactive,
@@ -62,6 +62,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		})
 		if err != nil {
 			m.Logf("Error creating user: %s", err)
+			return err
 		}
 
 		m.Logf("Successfully created user with ID: %d", u.ID)
