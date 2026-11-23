@@ -6,6 +6,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"testing"
+
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/djester/quest"
@@ -16,7 +18,6 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/shopspring/decimal"
-	"testing"
 )
 
 type Order struct {
@@ -24,7 +25,8 @@ type Order struct {
 }
 
 func (o *Order) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.AutoDefinitions(ctx, o)
+	return attrs.AutoDefinitions(ctx, o).(*attrs.ObjectDefinitions).
+		WithTableName("payment_service_test_order")
 }
 
 type servicePSP struct {
@@ -83,16 +85,32 @@ func TestServiceOperations(t *testing.T) {
 	ctx := context.Background()
 	_, db := testdb.Open()
 	defer db.Close()
-	app := django.App(django.Configure(map[string]any{django.APPVAR_DATABASE: db}), django.Flag(django.FlagSkipDepsCheck, django.FlagSkipChecks, django.FlagSkipCmds), django.Apps(func() django.AppConfig {
-		cfg := apps.NewDBAppConfig("shop")
-		cfg.ModelObjects = []attrs.Definer{&Order{}, &ProviderAccount{}, &Payment{}}
-		return cfg
-	}))
+	app := django.App(
+		django.Configure(map[string]any{
+			django.APPVAR_DATABASE: db,
+		}),
+		django.Flag(django.FlagSkipDepsCheck, django.FlagSkipChecks, django.FlagSkipCmds),
+		django.Apps(
+			func() django.AppConfig {
+				cfg := apps.NewDBAppConfig("shop")
+				cfg.ModelObjects = []attrs.Definer{&Order{}}
+				return cfg
+			},
+			func() django.AppConfig {
+				cfg := apps.NewDBAppConfig("payment_service_test")
+				cfg.ModelObjects = []attrs.Definer{&ProviderAccount{}, &Payment{}}
+				return cfg
+			},
+		),
+	)
 	if err := app.Initialize(); err != nil {
 		t.Fatal(err)
 	}
 
-	quest.Table(t, &Order{}, &ProviderAccount{}, &Payment{}).Create()
+	tables := quest.Table(t, &Order{}, &ProviderAccount{}, &Payment{})
+	tables.Create()
+	defer tables.Drop()
+
 	psp := &servicePSP{result: OperationResult{ProviderRef: "receipt", Status: "COMPLETED", State: "succeeded"}}
 	RegisterProvider("service-test", func(context.Context, *ProviderAccount) (Provider, error) { return psp, nil })
 	RegisterProvider("basic-test", func(context.Context, *ProviderAccount) (Provider, error) { return basicPSP{psp}, nil })

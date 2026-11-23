@@ -6,15 +6,19 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
-	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
-	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/shopspring/decimal"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
+	"github.com/Nigel2392/go-django/djester/testdb"
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/shopspring/decimal"
 )
 
 func testServiceFailures(t *testing.T, ctx context.Context, psp *servicePSP, account *ProviderAccount, seed func(string) *Payment) {
@@ -527,7 +531,11 @@ func testServiceFailures(t *testing.T, ctx context.Context, psp *servicePSP, acc
 	})
 	t.Run("legacy nullable operation metadata", func(t *testing.T) {
 		p := seed(paystate.STATUS_PAID)
-		if _, err := dbExec(ctx, "UPDATE shop_payment SET operation_key=NULL,operation_version=NULL,operations=NULL WHERE id=?", p.ID); err != nil {
+		query := fmt.Sprintf(
+			"UPDATE %s SET operation_key=NULL,operation_version=NULL,operations=NULL WHERE id=?",
+			attrs.Define(ctx, p).TableName(),
+		)
+		if _, err := dbExec(ctx, query, p.ID); err != nil {
 			t.Fatal(err)
 		}
 
@@ -536,6 +544,11 @@ func testServiceFailures(t *testing.T, ctx context.Context, psp *servicePSP, acc
 		}
 	})
 	t.Run("simultaneous full refunds mutate provider once", func(t *testing.T) {
+		if testdb.ENGINE == "mysql_local" {
+			// go-mysql-server's memory sessions do not isolate concurrent transactions.
+			t.Skip("mysql_local does not support concurrent transaction isolation")
+		}
+
 		p := seed(paystate.STATUS_PAID)
 		before := psp.calls
 		gate := make(chan struct{})

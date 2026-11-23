@@ -20,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -249,6 +250,10 @@ func seedTestCartItem(t *testing.T, cart *carts.Cart, prod *products.Product, am
 
 func clearOrderAndCartTables(t *testing.T) {
 	t.Helper()
+	if _, err := queries.GetQuerySet(&payments.Payment{}).Delete(); err != nil {
+		t.Fatalf("failed to clear Payment table: %v", err)
+	}
+
 	if _, err := queries.GetQuerySet(&orders.OrderItem{}).Delete(); err != nil {
 		t.Fatalf("failed to clear OrderItem table: %v", err)
 	}
@@ -299,6 +304,35 @@ func TestCreateOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating customer: %v", err)
 	}
+
+	t.Run("Cleanup removes payments before their orders", func(t *testing.T) {
+		order, err := queries.GetQuerySet(&orders.Order{}).Create(&orders.Order{
+			Customer: customer,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = queries.GetQuerySet(&payments.Payment{}).Create(&payments.Payment{
+			Order:    order,
+			Provider: "cleanup-test",
+			State:    paystate.STATUS_INIT,
+			Amount:   decimal.NewFromInt(10),
+			Currency: "EUR",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		clearOrderAndCartTables(t)
+
+		for _, model := range []attrs.Definer{&payments.Payment{}, &orders.Order{}} {
+			count, err := queries.GetQuerySet(model).Count()
+			if err != nil || count != 0 {
+				t.Fatalf("cleanup left %d rows in %T: %v", count, model, err)
+			}
+		}
+	})
 
 	t.Run("Explicit variadic items creates Order and OrderItems without querying CartItems", func(t *testing.T) {
 		clearOrderAndCartTables(t)
