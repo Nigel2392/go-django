@@ -36,6 +36,8 @@ type (
 		Text string
 		Args []any
 	}
+
+	Translatable any // Lazy | TranslateFunc
 )
 
 func L(text string, args ...any) Lazy {

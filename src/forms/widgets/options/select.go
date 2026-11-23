@@ -3,13 +3,9 @@ package options
 import (
 	"context"
 	"io"
-	"net/url"
 
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
-	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
@@ -111,37 +107,6 @@ func (o *OptionsWidget) Validate(ctx context.Context, value interface{}) []error
 
 func (b *OptionsWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
 	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs, b.GetContextData(ctx, id, name, value, attrs))
-}
-
-type MultiSelectWidget struct {
-	*OptionsWidget
-}
-
-func NewMultiSelectInput(attrs map[string]string, choices func(ctx context.Context) []widgets.Option) widgets.Widget {
-	return &MultiSelectWidget{
-		OptionsWidget: NewOptionWidget("select", "forms/widgets/multi-select.html", attrs, choices),
-	}
-}
-
-func (m *MultiSelectWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	var values, ok = data[name]
-	if !ok {
-		return nil, nil
-	}
-	return values, nil
-}
-
-func (m *MultiSelectWidget) Media() media.Media {
-	var formMedia = media.NewMedia()
-	formMedia.AddCSS(media.CSS(django.Static(
-		"forms/css/multiple-select.css",
-	)))
-	formMedia.AddJS(&media.JSAsset{
-		URL: django.Static(
-			"forms/js/index.js",
-		),
-	})
-	return formMedia
 }
 
 func IncludeBlank(b bool) func(*OptionsWidget) {

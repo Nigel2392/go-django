@@ -5,21 +5,24 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"net/mail"
 	"reflect"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/shopspring/decimal"
 )
 
 type Option struct {
-	Label trans.Lazy
+	Label trans.Translatable
 	Val   any
 }
 
@@ -289,11 +292,62 @@ returnField:
 			f.WidgetAttrs,
 		)
 	}
+
+	_, isOpts := IsOptionsType(f.Options)
 	switch {
 	case f.FormWidget != nil:
 		formField.SetWidget(
 			f.FormWidget(*f),
 		)
+	case isOpts:
+		var widgetOpts []func(*options.OptionsWidget)
+
+		if f.Blank {
+			widgetOpts = append(
+				widgetOpts,
+				options.IncludeBlank(true),
+			)
+		}
+
+		getWidgetOptions := func(ctx context.Context) []widgets.Option {
+			opts, _, err := TryOptions(ctx, f.Options, field.Instance())
+			if err != nil {
+				logger.Errorf("could not retrieve options for %q in %T", field.Name(), field.Instance())
+				return []widgets.Option{}
+			}
+
+			wopts := make([]widgets.Option, 0, len(opts))
+			for _, opt := range opts {
+				var l any
+				var ok bool
+
+				l, ok = trans.GetText(ctx, opt.Label)
+				if !ok {
+					l = opt.Label
+				}
+
+				v, err := opt.Value()
+				if err != nil {
+					logger.Errorf(
+						"could not retrieve options raw value for %q in %T (%v)",
+						field.Name(), field.Instance(), l,
+					)
+					return []widgets.Option{}
+				}
+
+				wopts = append(wopts, &widgets.FormOption{
+					OptLabel: l,
+					OptValue: fmt.Sprint(v),
+				})
+			}
+
+			return wopts
+		}
+
+		formField.SetWidget(options.NewSelectInput(
+			nil, getWidgetOptions,
+			widgetOpts...,
+		))
 	}
 
 	return formField
