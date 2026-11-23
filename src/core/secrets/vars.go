@@ -2,6 +2,10 @@ package secrets
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
+	"math/rand"
+	"unsafe"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -30,12 +34,30 @@ const (
 
 var _ = checks.Register(checks.TagSettings, func(ctx context.Context, app any, settings Settings) (messages []checks.Message) {
 	if _, ok := settings.Get(APPVAR_SECRET_KEY); !ok {
+
+		var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_-+=[]{}\\|,.?;'\":")
+		var randString = func(n int) string {
+			b := make([]rune, n)
+			for i := range b {
+				b[i] = letterRunes[rand.Intn(len(letterRunes))]
+			}
+			return string(b)
+		}
+
+		keygen := sha256.New()
+		for i := 0; i < 2048; i++ {
+			keygen.Write([]byte(randString(16)))
+		}
+
 		messages = append(messages, checks.Message{
 			Type:   checks.CRITICAL,
 			Object: settings,
 			ID:     "secrets.missing.key",
 			Text:   "The APPVAR_SECRET_KEY option is not present in the settings",
-			Hint:   "You must set the APPVAR_SECRET_KEY setting to a unique, unpredictable value in the application's settings",
+			Hint: fmt.Sprintf(
+				"You must set the APPVAR_SECRET_KEY setting to a unique, unpredictable value in the application's settings. We generated one for you! [%v]",
+				fmt.Sprintf("%x", string(keygen.Sum(nil))),
+			),
 		})
 	}
 	return
@@ -99,9 +121,5 @@ func ENCRYPTION_BACKEND() (enc encryption.Encryption, err error) {
 }
 
 func keyBytes(fallbacks []SecretKey) [][]byte {
-	var keys = make([][]byte, 0, len(fallbacks))
-	for _, key := range fallbacks {
-		keys = append(keys, key.Bytes())
-	}
-	return keys
+	return *(*[][]byte)(unsafe.Pointer(&fallbacks))
 }
