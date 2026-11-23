@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"math/big"
 	"unsafe"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -34,10 +35,16 @@ const (
 var _ = checks.Register(checks.TagSettings, func(ctx context.Context, app any, settings Settings) (messages []checks.Message) {
 	if _, ok := settings.Get(APPVAR_SECRET_KEY); !ok {
 
-		keyBytes := make([]byte, 32)
-		_, err := rand.Read(keyBytes)
-		if err != nil {
-			panic("failed to generate secret key")
+		var letterRunes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_-+=[]{}|,.?;:"
+
+		b := make([]byte, 32)
+		max := big.NewInt(int64(len(letterRunes)))
+		for i := range b {
+			n, err := rand.Int(rand.Reader, max)
+			if err != nil {
+				panic("failed to generate secret key")
+			}
+			b[i] = letterRunes[n.Int64()]
 		}
 
 		messages = append(messages, checks.Message{
@@ -46,8 +53,8 @@ var _ = checks.Register(checks.TagSettings, func(ctx context.Context, app any, s
 			ID:     "secrets.missing.key",
 			Text:   "The APPVAR_SECRET_KEY option is not present in the settings",
 			Hint: fmt.Sprintf(
-				"You must set the APPVAR_SECRET_KEY setting to a unique, unpredictable value in the application's settings. We generated one for you! [%x]",
-				keyBytes[:16],
+				"You must set the APPVAR_SECRET_KEY setting to a unique, unpredictable value in the application's settings. We generated one for you! [%v]",
+				string(b),
 			),
 		})
 	}
