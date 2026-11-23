@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/expr/constraints"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -203,23 +204,37 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 		t.Constraint = cDef.Constraints()
 	}
 
-	//	for head := t.Fields.Front(); head != nil; head = head.Next() {
-	//		if head.Value.MinLength > 0 {
-	//			t.Constraint = append(t.Constraint, constraints.CheckConstraint(
-	//				fmt.Sprintf("constraint_%s_min_length", head.Value.Column),
-	//				fmt.Sprintf("Field %s must be longer than %d", head.Value.Name, head.Value.MinLength),
-	//				expr.Logical(expr.LENGTH(head.Value.Name)).GTE(expr.Value(head.Value.MinLength, true)),
-	//			))
-	//		}
-	//
-	//		if head.Value.MaxLength > 0 {
-	//			t.Constraint = append(t.Constraint, constraints.CheckConstraint(
-	//				fmt.Sprintf("constraint_%s_max_length", head.Value.Column),
-	//				fmt.Sprintf("Field %s must be shorter than %d", head.Value.Name, head.Value.MaxLength),
-	//				expr.Logical(expr.LENGTH(head.Value.Name)).GTE(expr.Value(head.Value.MaxLength, true)),
-	//			))
-	//		}
-	//	}
+	for head := t.Fields.Front(); head != nil; head = head.Next() {
+
+		if len(head.Value.Options) > 0 {
+			var vals = make([]expr.Expression, 0, len(head.Value.Options))
+			for _, opt := range head.Value.Options {
+				vals = append(vals, expr.V(opt.Val, true))
+			}
+
+			t.Constraint = append(t.Constraint, constraints.CheckConstraint(
+				fmt.Sprintf("constraint_%s_options", head.Value.Name),
+				fmt.Sprintf("Value of field %q is not in options", head.Value.Name),
+				expr.Q(fmt.Sprintf("%s__in", head.Value.Name), vals),
+			))
+		}
+
+		//		if head.Value.MinLength > 0 {
+		//			t.Constraint = append(t.Constraint, constraints.CheckConstraint(
+		//				fmt.Sprintf("constraint_%s_min_length", head.Value.Column),
+		//				fmt.Sprintf("Field %s must be longer than %d", head.Value.Name, head.Value.MinLength),
+		//				expr.Logical(expr.LENGTH(head.Value.Name)).GTE(expr.Value(head.Value.MinLength, true)),
+		//			))
+		//		}
+		//
+		//		if head.Value.MaxLength > 0 {
+		//			t.Constraint = append(t.Constraint, constraints.CheckConstraint(
+		//				fmt.Sprintf("constraint_%s_max_length", head.Value.Column),
+		//				fmt.Sprintf("Field %s must be shorter than %d", head.Value.Name, head.Value.MaxLength),
+		//				expr.Logical(expr.LENGTH(head.Value.Name)).GTE(expr.Value(head.Value.MaxLength, true)),
+		//			))
+		//		}
+	}
 
 	if uqDef, ok := obj.(UniqueTogetherDefiner); ok {
 		uqTogether := uqDef.UniqueTogether()

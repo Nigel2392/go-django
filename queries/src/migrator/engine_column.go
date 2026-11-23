@@ -5,7 +5,6 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"reflect"
-	"slices"
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -34,6 +33,7 @@ type Column struct {
 	Nullable     bool               `json:"nullable,omitempty"`
 	Primary      bool               `json:"primary,omitempty"`
 	Auto         bool               `json:"auto,omitempty"`
+	Options      []attrs.Option     `json:"options,omitzero"`
 	Default      drivers.Value[any] `json:"default,omitzero"`
 	ReverseAlias string             `json:"reverse_alias,omitempty"`
 	Rel          *MigrationRelation `json:"relation,omitempty"`
@@ -77,7 +77,6 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	attrMinLength, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrMinLengthKey)
 	attrMinValue, _ := attrs.GetFromAttributes[float64](atts, attrs.AttrMinValueKey)
 	attrMaxValue, _ := attrs.GetFromAttributes[float64](atts, attrs.AttrMaxValueKey)
-	attrAutoIncrement, _ := attrs.GetFromAttributes[bool](atts, attrs.AttrAutoIncrementKey)
 	attrUnique, _ := attrs.GetFromAttributes[bool](atts, attrs.AttrUniqueKey)
 	attrReverseAlias, _ := attrs.GetFromAttributes[string](atts, attrs.AttrReverseAliasKey)
 	attrPrecision, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrPrecisionKey)
@@ -172,6 +171,14 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	//	if d, ok := dflt.([]byte); ok {
 	//		dflt = string(d)
 	//	}
+	var opts []attrs.Option
+	if fld, ok := field.(attrs.OptionsField); ok {
+		o, err := fld.Options(context.Background())
+		if err != nil {
+			panic(fmt.Sprintf("failed to retrieve field options for %q in model %T", field.Name(), table.Model()))
+		}
+		opts = o
+	}
 
 	var nullable = field.AllowNull()
 	nullable = nullable || (rel != nil && rel.TargetField != nil && rel.TargetField.AllowNull())
@@ -199,9 +206,10 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		Unique:    attrUnique,
 		Precision: attrPrecision,
 		Scale:     attrScale,
-		Auto:      attrAutoIncrement || CanAutoIncrement(field),
+		Auto:      attrs.CanAutoIncrement(field),
 		Primary:   field.IsPrimary(),
 		Nullable:  nullable,
+		Options:   opts,
 		Default: drivers.Value[any]{
 			V: dflt,
 		},
@@ -238,16 +246,6 @@ func (c *Column) DBType() dbtype.Type {
 	}
 
 	return dbType
-}
-
-func CanAutoIncrement(field attrs.FieldDefinition) bool {
-	return field.IsPrimary() && !field.AllowNull() && slices.Contains(
-		[]reflect.Kind{
-			reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		},
-		field.Type().Kind(),
-	)
 }
 
 func (c *Column) FieldType() reflect.Type {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -161,6 +162,34 @@ const (
 type Definer interface {
 	// Retrieves the field definitions for the model.
 	FieldDefs(context.Context) Definitions
+}
+
+func CanAutoIncrement(field FieldDefinition) bool {
+
+	auto := field.IsPrimary() && !field.AllowNull() && slices.Contains(
+		[]reflect.Kind{
+			reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		},
+		field.Type().Kind(),
+	)
+
+	//	if !auto {
+	//		return false
+	//	}
+	//
+	//	attrs := field.Attrs()
+	//	val, ok := attrs[AttrAutoIncrementKey]
+	//	if !ok {
+	//		return auto
+	//	}
+	//
+	//	auto, ok = val.(bool)
+	//	if !ok {
+	//		return false
+	//	}
+
+	return auto
 }
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
@@ -321,6 +350,12 @@ func BindValueToModel(model Definer, field Field, value any) error {
 // This is only called when [NewField] is called.
 type Embedded interface {
 	BindToEmbedder(embedder Definer) error
+}
+
+// OptionsField is a field type that can define certain options to work on.
+// Examples of usage are in formfields, constraints or validators
+type OptionsField interface {
+	Options(ctx context.Context) ([]Option, error)
 }
 
 // Through is an interface for defining a relation between two models.

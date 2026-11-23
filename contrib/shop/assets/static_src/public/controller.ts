@@ -2,10 +2,10 @@ import { Controller } from "@hotwired/stimulus";
 import { CartRow, CartItemRequest, CartItemResponse, RedemptionRequest, PaymentOption, APIPromise } from "./api";
 
 type ShopElement = HTMLElement & {
-    SHOP: ShopController
-}
+    SHOP: ShopController;
+};
 
-class ShopController extends Controller<ShopElement> {
+export class ShopController extends Controller<ShopElement> {
     /*
         <div
             data-controller="shop"
@@ -27,6 +27,7 @@ class ShopController extends Controller<ShopElement> {
         removeCartItemUrl: {type: String, default: "/api/carts/items/remove"},
         redeemCouponUrl:   {type: String, default: "/api/coupons/redeem"},
         paymentOptionsUrl: {type: String, default: "/api/payments/options"},
+        csrfToken: String,
     };
 
     declare getCartUrlValue:        string;
@@ -35,6 +36,7 @@ class ShopController extends Controller<ShopElement> {
     declare removeCartItemUrlValue: string;
     declare redeemCouponUrlValue:   string;
     declare paymentOptionsUrlValue: string;
+    declare csrfTokenValue: string;
 
     declare hasGetCartUrlValue:        boolean;
     declare hasClearCartUrlValue:      boolean;
@@ -45,48 +47,90 @@ class ShopController extends Controller<ShopElement> {
 
     connect(): void {
         if (!this.hasGetCartUrlValue) {
-            throw new Error("element is missing `data-shop-get-cart-url-value`")
-        }
-        if (!this.hasClearCartUrlValue) {
-            throw new Error("element is missing `data-shop-clear-cart-url-value`")
-        }
-        if (!this.hasAddCartItemUrlValue) {
-            throw new Error("element is missing `data-shop-add-cart-item-url-value`")
-        }
-        if (!this.hasRemoveCartItemUrlValue) {
-            throw new Error("element is missing `data-shop-remove-cart-item-url-value`")
-        }
-        if (!this.hasRedeemCouponUrlValue) {
-            throw new Error("element is missing `data-shop-redeem-coupon-url-value`")
-        }
-        if (!this.hasPaymentOptionsUrlValue) {
-            throw new Error("element is missing `data-shop-payment-options-url-value`")
+            throw new Error("element is missing `data-shop-get-cart-url-value`");
         }
 
-        this.element.SHOP = this
+        if (!this.hasClearCartUrlValue) {
+            throw new Error("element is missing `data-shop-clear-cart-url-value`");
+        }
+
+        if (!this.hasAddCartItemUrlValue) {
+            throw new Error("element is missing `data-shop-add-cart-item-url-value`");
+        }
+
+        if (!this.hasRemoveCartItemUrlValue) {
+            throw new Error("element is missing `data-shop-remove-cart-item-url-value`");
+        }
+
+        if (!this.hasRedeemCouponUrlValue) {
+            throw new Error("element is missing `data-shop-redeem-coupon-url-value`");
+        }
+
+        if (!this.hasPaymentOptionsUrlValue) {
+            throw new Error("element is missing `data-shop-payment-options-url-value`");
+        }
+
+        this.element.SHOP = this;
     }
 
     async getCart(): APIPromise<CartRow> {
-        return null
+        return this.request<CartRow>(this.getCartUrlValue, "GET");
     }
 
     async clearCart(): APIPromise<CartRow> {
-        return null
+        return this.request<CartRow>(this.clearCartUrlValue, "POST");
     }
 
     async addCartItem(req: CartItemRequest): APIPromise<CartItemResponse> {
-        return null
+        return this.request<CartItemResponse>(this.addCartItemUrlValue, "POST", req);
     }
 
     async removeCartItem(req: CartItemRequest): APIPromise<CartItemResponse> {
-        return null
+        return this.request<CartItemResponse>(this.removeCartItemUrlValue, "POST", req);
     }
 
     async redeemCoupon(req: RedemptionRequest): APIPromise<CartRow> {
-        return null
+        return this.request<CartRow>(this.redeemCouponUrlValue, "POST", req);
     }
 
     async paymentOptions(): APIPromise<PaymentOption[]> {
-        return null
+        return this.request<PaymentOption[]>(this.paymentOptionsUrlValue, "GET");
+    }
+
+    private async request<T>(url: string, method: "GET" | "POST", body?: unknown): APIPromise<T> {
+        const headers = new Headers({ Accept: "application/json" });
+
+        if (method === "POST") {
+            const token = this.csrfTokenValue
+                || document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content
+                || document.querySelector<HTMLInputElement>('input[name="csrf_token"]')?.value;
+
+            if (token) {
+                headers.set("X-CSRF-Token", token);
+            }
+        }
+
+        if (body !== undefined) {
+            headers.set("Content-Type", "application/json");
+        }
+
+        const response = await fetch(url, {
+            method,
+            headers,
+            credentials: "same-origin",
+            body: body === undefined ? undefined : JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => null);
+
+            return {
+                message: typeof data?.message === "string"
+                    ? data.message
+                    : `Shop request failed (HTTP ${response.status})`,
+            };
+        }
+
+        return response.json() as Promise<T>;
     }
 }

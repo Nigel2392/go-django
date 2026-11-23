@@ -209,7 +209,9 @@ func collectFormSetBoundErrors(root any) (*orderedmap.OrderedMap[string, []error
 			}
 			return
 		}
-		if mgmtProvider, ok := node.(interface{ ManagementForm() *formsets.ManagementForm }); ok {
+		if mgmtProvider, ok := node.(interface {
+			ManagementForm() *formsets.ManagementForm
+		}); ok {
 			if mgmt := mgmtProvider.ManagementForm(); mgmt != nil {
 				walk(mgmt)
 			}

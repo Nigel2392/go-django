@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/contrib/settings"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
@@ -37,6 +38,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -219,6 +221,54 @@ func NewAppConfig() (django.AppConfig, error) {
 					return django.Reverse("admin:apps:model", "shop", "coupons")
 				},
 			},
+			&menu.Item{
+				ItemName: "customers",
+				Label:    trans.T(r.Context(), "Customers"),
+				Hidden:   !permissions.HasObjectPermission(r, &customers.Customer{}, "admin:list"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "customers")
+				},
+			},
+			&menu.Item{
+				ItemName: "provider_accounts",
+				Label:    trans.T(r.Context(), "Payment providers"),
+				Hidden:   !permissions.HasObjectPermission(r, &payments.ProviderAccount{}, "admin:list"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "provider_accounts")
+				},
+			},
+			&menu.Item{
+				ItemName: "payments",
+				Label:    trans.T(r.Context(), "Payments"),
+				Hidden:   !permissions.HasObjectPermission(r, &payments.Payment{}, "admin:list"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "payments")
+				},
+			},
+			&menu.Item{
+				ItemName: "carts",
+				Label:    trans.T(r.Context(), "Carts"),
+				Hidden:   !permissions.HasObjectPermission(r, &carts.Cart{}, "admin:list"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "carts")
+				},
+			},
+			&menu.Item{
+				ItemName: "redemptions",
+				Label:    trans.T(r.Context(), "Coupon redemptions"),
+				Hidden:   !permissions.HasObjectPermission(r, &coupons.Redemption{}, "admin:list"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "redemptions")
+				},
+			},
+			&menu.Item{
+				ItemName: "order_states",
+				Label:    trans.T(r.Context(), "Order states"),
+				Hidden:   !permissions.HasObjectPermission(r, &orders.OrderState{}, "admin:list"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "order_states")
+				},
+			},
 		}
 	}
 
@@ -243,7 +293,48 @@ func NewAppConfig() (django.AppConfig, error) {
 		},
 	})
 
-	SHOP.Init = func(settings django.Settings, db drivers.Database) error {
+	SHOP.Init = func(djangoSettings django.Settings, db drivers.Database) error {
+		createModel := func(ctx context.Context, instance attrs.Definer) error {
+			_, err := queries.
+				GetQuerySet(instance).
+				WithContext(ctx).
+				Create(instance)
+
+			return err
+		}
+
+		updateModel := func(ctx context.Context, instance attrs.Definer) error {
+			defs := attrs.Define(ctx, instance)
+			_, err := queries.
+				GetQuerySet(instance).
+				WithContext(ctx).
+				Select("*").
+				Filter(defs.Primary().Name(), defs.Primary().GetValue()).
+				Update(instance)
+
+			return err
+		}
+
+		deleteModels := func(ctx context.Context, instances []attrs.Definer) error {
+			ctx, tx, err := queries.StartTransaction(ctx)
+			if err != nil {
+				return err
+			}
+
+			defer tx.Rollback(ctx)
+
+			for _, instance := range instances {
+				_, err := queries.
+					GetQuerySet(instance).
+					WithContext(ctx).
+					Delete(instance)
+				if err != nil {
+					return err
+				}
+			}
+
+			return tx.Commit(ctx)
+		}
 
 		goldcrest.Register(admin.RegisterRouteHook, 0, admin.RegisterRouteHookFunc(func(adminSite *admin.AdminApplication, route mux.Multiplexer) {
 			sub := route.Any("commerce/", nil, "commerce")
@@ -506,7 +597,197 @@ func NewAppConfig() (django.AppConfig, error) {
 				},
 			},
 		)
-		// admin.RegisterSearchHook
+
+		app.Register(admin.ModelOptions{
+			Name:                "customers",
+			Model:               &customers.Customer{},
+			MenuOrder:           500,
+			MenuLabel:           trans.S("Customers"),
+			RegisterToAdminMenu: true,
+			ListView: admin.ListViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"Email", "FirstName", "LastName", "FirstSeen"},
+				},
+				Ordering: []string{"-FirstSeen"},
+				Search: &searches.SearchOptions{
+					Fields: []searches.SearchField{
+						{Name: "Email", Lookup: expr.LOOKUP_ICONTANS},
+						{Name: "FirstName", Lookup: expr.LOOKUP_ICONTANS},
+						{Name: "LastName", Lookup: expr.LOOKUP_ICONTANS},
+					},
+				},
+			},
+			AddView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"Email", "FirstName", "LastName"},
+				},
+				SaveInstance: createModel,
+				Panels: []admin.Panel{
+					admin.FieldPanel("Email"),
+					admin.RowPanel(admin.FieldPanel("FirstName"), admin.FieldPanel("LastName")),
+				},
+			},
+			EditView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"Email", "FirstName", "LastName"},
+				},
+				SaveInstance: updateModel,
+				Panels: []admin.Panel{
+					admin.FieldPanel("Email"),
+					admin.RowPanel(admin.FieldPanel("FirstName"), admin.FieldPanel("LastName")),
+				},
+			},
+			DeleteView: admin.DeleteViewOptions{DeleteInstances: deleteModels},
+		})
+
+		goldcrest.Register(settings.SettingsMenuHook, 0, settings.SettingsMenuHookFunc(func(r *http.Request) []menu.MenuItem {
+			if !permissions.HasPermission(r, "shop:payments:providers") {
+				return []menu.MenuItem{}
+			}
+
+			return []menu.MenuItem{&menu.Item{
+				ItemName: "payment_providers",
+				Label:    trans.T(r.Context(), "Payment Providers"),
+				Link: func() string {
+					return django.Reverse("admin:apps:model", "shop", "provider_accounts")
+				},
+			}}
+		}))
+
+		app.Register(admin.ModelOptions{
+			Name:                "provider_accounts",
+			Model:               &payments.ProviderAccount{},
+			MenuOrder:           600,
+			MenuLabel:           trans.S("Payment providers"),
+			RegisterToAdminMenu: false,
+			ListView: admin.ListViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"Label", "Driver", "Enabled", "Currency", "FixedFee", "PercentageFee"},
+				},
+				Ordering: []string{"Label"},
+				Search: &searches.SearchOptions{
+					Fields: []searches.SearchField{
+						{Name: "Label", Lookup: expr.LOOKUP_ICONTANS},
+						{Name: "Driver", Lookup: expr.LOOKUP_ICONTANS},
+					},
+				},
+			},
+			AddView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"Label", "Driver", "Enabled", "CredentialRef", "Currency", "FixedFee", "PercentageFee"},
+				},
+				SaveInstance: createModel,
+				Panels: []admin.Panel{
+					admin.TitlePanel(admin.FieldPanel("Label")),
+					admin.RowPanel(admin.FieldPanel("Driver"), admin.FieldPanel("Enabled")),
+					admin.FieldPanel("CredentialRef"),
+					admin.FieldPanel("Currency"),
+					admin.RowPanel(admin.FieldPanel("FixedFee"), admin.FieldPanel("PercentageFee")),
+				},
+			},
+			EditView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"Label", "Driver", "Enabled", "CredentialRef", "Currency", "FixedFee", "PercentageFee"},
+				},
+				SaveInstance: updateModel,
+				Panels: []admin.Panel{
+					admin.TitlePanel(admin.FieldPanel("Label")),
+					admin.RowPanel(admin.FieldPanel("Driver"), admin.FieldPanel("Enabled")),
+					admin.FieldPanel("CredentialRef"),
+					admin.FieldPanel("Currency"),
+					admin.RowPanel(admin.FieldPanel("FixedFee"), admin.FieldPanel("PercentageFee")),
+				},
+			},
+			DeleteView: admin.DeleteViewOptions{DeleteInstances: deleteModels},
+		})
+
+		app.Register(admin.ModelOptions{
+			Name:                "payments",
+			Model:               &payments.Payment{},
+			MenuOrder:           700,
+			MenuLabel:           trans.S("Payments"),
+			RegisterToAdminMenu: true,
+			DisallowCreate:      true,
+			DisallowEdit:        true,
+			DisallowDelete:      true,
+			ListView: admin.ListViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"ID", "Order", "Account", "Provider", "TransactionID", "Amount", "Fee", "Currency", "State", "CreatedAt"},
+				},
+				Ordering: []string{"-CreatedAt"},
+				Search: &searches.SearchOptions{
+					Fields: []searches.SearchField{
+						{Name: "ID", Lookup: expr.LOOKUP_ICONTANS},
+						{Name: "TransactionID", Lookup: expr.LOOKUP_ICONTANS},
+						{Name: "Provider", Lookup: expr.LOOKUP_ICONTANS},
+						{Name: "State", Lookup: expr.LOOKUP_ICONTANS},
+					},
+				},
+			},
+		})
+
+		app.Register(admin.ModelOptions{
+			Name:                "carts",
+			Model:               &carts.Cart{},
+			MenuOrder:           800,
+			MenuLabel:           trans.S("Carts"),
+			RegisterToAdminMenu: true,
+			DisallowCreate:      true,
+			DisallowEdit:        true,
+			DisallowDelete:      true,
+			ListView: admin.ListViewOptions{
+				ViewOptions: admin.ViewOptions{Fields: []string{"ID", "Active", "CreatedAt"}},
+				Ordering:    []string{"-CreatedAt"},
+			},
+		})
+
+		app.Register(admin.ModelOptions{
+			Name:                "redemptions",
+			Model:               &coupons.Redemption{},
+			MenuOrder:           900,
+			MenuLabel:           trans.S("Coupon redemptions"),
+			RegisterToAdminMenu: true,
+			DisallowCreate:      true,
+			DisallowEdit:        true,
+			DisallowDelete:      true,
+			ListView: admin.ListViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{"ID", "Coupon", "DiscountAmount", "Invalidated", "RedeemedAt"},
+				},
+				Ordering: []string{"-RedeemedAt"},
+			},
+		})
+
+		app.Register(admin.ModelOptions{
+			Name:                "order_states",
+			Model:               &orders.OrderState{},
+			MenuOrder:           1000,
+			MenuLabel:           trans.S("Order states"),
+			RegisterToAdminMenu: true,
+			ListView: admin.ListViewOptions{
+				ViewOptions: admin.ViewOptions{Fields: []string{"ID", "Label", "Action", "WorkflowID"}},
+			},
+			AddView: admin.FormViewOptions{
+				ViewOptions:  admin.ViewOptions{Fields: []string{"ID", "Label", "Action", "WorkflowID"}},
+				SaveInstance: createModel,
+				Panels: []admin.Panel{
+					admin.FieldPanel("ID"),
+					admin.FieldPanel("Label"),
+					admin.FieldPanel("Action"),
+					admin.FieldPanel("WorkflowID"),
+				},
+			},
+			EditView: admin.FormViewOptions{
+				ViewOptions:  admin.ViewOptions{Fields: []string{"Label", "Action", "WorkflowID"}},
+				SaveInstance: updateModel,
+				Panels: []admin.Panel{
+					admin.FieldPanel("Label"),
+					admin.FieldPanel("Action"),
+					admin.FieldPanel("WorkflowID"),
+				},
+			},
+			DeleteView: admin.DeleteViewOptions{DeleteInstances: deleteModels},
+		})
 
 		app.Routing = func(m mux.Multiplexer) {
 			// admin:ext:shop
@@ -554,7 +835,9 @@ func NewAppConfig() (django.AppConfig, error) {
 			payments.ServeWebhook(w, r, mux.Vars(r).Get("account"))
 		}
 
-		p := public.PaymentsAPI{}
+		p := public.PaymentsAPI{
+			Currency: django.ConfigGet(django.Global.Settings, APPVAR_SHOP_CURRENCY, ""),
+		}
 		pay := baseApiRoute.Get("/payments", nil, "payments")
 		pay.Get("/options", http.HandlerFunc(p.PaymentOptions), "options")
 		pay.Post("/webhook/<<account>>", http.HandlerFunc(paymentsHandler), "webhook")

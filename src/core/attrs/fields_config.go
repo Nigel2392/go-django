@@ -1,7 +1,9 @@
 package attrs
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"maps"
 	"net/mail"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
@@ -16,6 +19,96 @@ import (
 )
 
 type Option struct {
+	Label trans.Lazy
+	Val   any
+}
+
+func (o Option) Value() (driver.Value, error) {
+	if o.Val == nil {
+		return nil, nil
+	}
+
+	if val, ok := o.Val.(driver.Valuer); ok {
+		return val.Value()
+	}
+
+	return o.Val, nil
+}
+
+// []Option
+// func() []Option
+// func(MODEL Definer) []Option
+// func(context.Context) []Option
+// func(context.Context, MODEL Definer) []Option
+// func() ([]Option, error)
+// func(MODEL Definer) ([]Option, error)
+// func(context.Context) ([]Option, error)
+// func(context.Context, MODEL Definer) ([]Option, error)
+type OptionsType any
+
+func IsOptionsType(optVal any) (acceptsModel, isOptions bool) {
+	if optVal == nil {
+		return false, false
+	}
+
+	switch optVal.(type) {
+	case []Option,
+		func() []Option,
+		func(context.Context) []Option,
+		func() ([]Option, error),
+		func(context.Context) ([]Option, error):
+		return false, true
+
+	case func(Definer) []Option,
+		func(context.Context, Definer) []Option,
+		func(Definer) ([]Option, error),
+		func(context.Context, Definer) ([]Option, error):
+		return true, true
+	}
+
+	return false, false
+
+}
+
+func TryOptions(ctx context.Context, optVal any, modelType Definer) (opts []Option, ok bool, err error) {
+	if optVal == nil {
+		return []Option{}, false, nil
+	}
+
+	switch v := optVal.(type) {
+	case []Option:
+		return v, true, nil
+
+	case func() []Option:
+		return v(), true, nil
+
+	case func(Definer) []Option:
+		return v(modelType), true, nil
+
+	case func(context.Context) []Option:
+		return v(ctx), true, nil
+
+	case func(context.Context, Definer) []Option:
+		return v(ctx, modelType), true, nil
+
+	case func() ([]Option, error):
+		opts, err = v()
+		return opts, true, err
+
+	case func(Definer) ([]Option, error):
+		opts, err = v(modelType)
+		return opts, true, err
+
+	case func(context.Context) ([]Option, error):
+		opts, err = v(ctx)
+		return opts, true, err
+
+	case func(context.Context, Definer) ([]Option, error):
+		opts, err = v(ctx, modelType)
+		return opts, true, err
+	}
+
+	return []Option{}, false, nil
 }
 
 // Config is a configuration for a field.
@@ -47,6 +140,7 @@ type Config struct {
 	RelOneToOne          Relation                                      `json:"-"`                       // The related object for the field (one to one, not implemented)
 	RelForeignKeyReverse Relation                                      `json:"-"`                       // The reverse foreign key for the field (not implemented)
 	Default              any                                           `json:"default,omitempty"`       // The default value for the field (or a function that takes in the object type and returns the default value)
+	Options              OptionsType                                   `json:"-"`                       // options for the field
 	WidgetAttrs          map[string]string                             `json:"widgetAttrs,omitempty"`   // The attributes for the widget
 	Validators           []func(interface{}) error                     `json:"-"`                       // Validators for the field
 	FormField            func(opts ...func(fields.Field)) fields.Field `json:"-"`                       // The form field for the field

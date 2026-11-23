@@ -105,7 +105,11 @@ func NewAppConfig() django.AppConfig {
 		goldcrest.Register(
 			admin.RegisterMenuItemHook, 0,
 			admin.RegisterMenuItemHookFunc(func(r *http.Request, adminSite *admin.AdminApplication, items components.Items[menu.MenuItem]) {
-				var menuLogo = templ.ComponentFunc(icons.Component("toggles.svg"))
+				var menuLogo = icons.Icon("icon-toggles", map[string]string{
+					"width":  "16",
+					"height": "16",
+				})
+
 				var menuItems = make([]menu.MenuItem, 0)
 				var h = goldcrest.Get[SettingsMenuHookFunc](SettingsMenuHook)
 				for _, f := range h {
@@ -129,6 +133,7 @@ func NewAppConfig() django.AppConfig {
 				items.Append(&menu.SubmenuItem{
 					ItemName: "db_settings",
 					Label:    trans.T(r.Context(), "Settings"),
+					Ordering: 1000,
 					Logo:     menuLogo,
 					Menu: &menu.Menu{
 						Items: menuItems,

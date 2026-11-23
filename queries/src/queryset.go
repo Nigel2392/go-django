@@ -17,7 +17,6 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/resolver"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -3959,7 +3958,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				continue
 			}
 
-			if migrator.CanAutoIncrement(field) || !ForDBEdit(field) {
+			if attrs.CanAutoIncrement(field) || !ForDBEdit(field) {
 				continue
 			}
 
@@ -4086,7 +4085,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 		// No results are returned, we cannot set the primary key
 		// so we can return and commit the transaction
-		if qs.internals.Model.Primary == nil || !migrator.CanAutoIncrement(qs.internals.Model.Primary) {
+		if qs.internals.Model.Primary == nil || !attrs.CanAutoIncrement(qs.internals.Model.Primary) {
 			return objects, tx.Commit(ctx)
 		}
 
@@ -4363,7 +4362,7 @@ func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
 				continue
 			}
 
-			if migrator.CanAutoIncrement(field) || !ForDBEdit(field) {
+			if attrs.CanAutoIncrement(field) || !ForDBEdit(field) {
 				continue
 			}
 

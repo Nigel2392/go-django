@@ -5,7 +5,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -220,7 +219,7 @@ func (l *InLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any, erro
 		return []any{v.BuildExpression().Resolve(inf)}, nil
 	}
 
-	values = flattenList(values)
+	values = flattenList(inf, values)
 	if len(values) == 0 {
 		return nil, nil
 	}
@@ -242,18 +241,20 @@ func (l *InLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpre
 			return
 		}
 
-		switch v := values[0].(type) {
-		case Expression: // handle expression case (maybe subquery)
-			v.SQL(sb)
-		default:
-			var placeholders = make([]string, len(values))
-			for i := range values {
-				placeholders[i] = inf.Lookups.FormatLookupCol(
-					l.Identifier, inf.Placeholder,
-				)
+		for i, val := range values {
+			if i > 0 {
+				sb.WriteString(", ")
 			}
-			sb.WriteString(strings.Join(placeholders, ", "))
-			sb.AddVar(values...)
+
+			switch v := val.(type) {
+			case Expression:
+				v.SQL(sb)
+			default:
+				sb.WriteString(inf.Lookups.FormatLookupCol(
+					l.Identifier, inf.Placeholder,
+				))
+				sb.AddVar(v)
+			}
 		}
 
 		sb.WriteString(")")
@@ -294,7 +295,7 @@ func (l *RangeLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedEx
 	}
 }
 
-func flattenList(values []any) []any {
+func flattenList(inf *ExpressionInfo, values []any) []any {
 	var inList = make([]any, 0, len(values))
 	for _, v := range values {
 		var rV = reflect.ValueOf(v)
@@ -308,13 +309,17 @@ func flattenList(values []any) []any {
 			continue
 		}
 
+		if e, ok := v.(Expression); ok {
+			v = e.Resolve(inf)
+		}
+
 		if rV.Kind() == reflect.Slice || rV.Kind() == reflect.Array {
 			var inner = make([]any, 0, rV.Len())
 			for i := 0; i < rV.Len(); i++ {
 				var elem = rV.Index(i).Interface()
 				inner = append(inner, elem)
 			}
-			inList = append(inList, flattenList(inner)...)
+			inList = append(inList, flattenList(inf, inner)...)
 			continue
 		}
 

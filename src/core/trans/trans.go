@@ -38,6 +38,13 @@ type (
 	}
 )
 
+func L(text string, args ...any) Lazy {
+	return Lazy{
+		Text: text,
+		Args: args,
+	}
+}
+
 func (l Lazy) T(ctx context.Context) string {
 	return T(ctx, l.Text, l.Args...)
 }

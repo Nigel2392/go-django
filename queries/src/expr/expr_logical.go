@@ -204,7 +204,7 @@ func (e *ExprNode) Clone() Expression {
 		sql:    e.sql,
 		args:   e.args,
 		not:    e.not,
-		field:  e.field,
+		field:  e.field.Clone().(NamedExpression),
 		lookup: e.lookup,
 		used:   e.used,
 	}

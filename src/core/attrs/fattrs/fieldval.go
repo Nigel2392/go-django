@@ -463,6 +463,10 @@ func (r *ptrField[M, V]) IsPrimary() bool       { return r.useOpts().IsPrimary()
 func (r *ptrField[M, V]) AllowNull() bool       { return r.useOpts().AllowNull() }
 func (r *ptrField[M, V]) AllowBlank() bool      { return r.useOpts().AllowBlank() }
 func (r *ptrField[M, V]) AllowEdit() bool       { return r.useOpts().AllowEdit() }
+func (r *ptrField[M, V]) Options(ctx context.Context) ([]attrs.Option, error) {
+	opts, _, err := attrs.TryOptions(ctx, r.useOpts().Config.Options, r.obj)
+	return opts, err
+}
 
 // func (r *ptrField[M, V]) FormField() fields.Field { return r.useOpts().FormField() }
 

@@ -28,7 +28,7 @@ func (i InternalOrderState) Label(ctx context.Context) string {
 	if !ok {
 		return string(i)
 	}
-	return fn(ctx)
+	return fn.T(ctx)
 }
 
 const (
@@ -38,11 +38,11 @@ const (
 	orderStateWorkflow InternalOrderState = "order_workflow"
 )
 
-var orderStateLabels = map[InternalOrderState]func(context.Context) string{
-	orderStateAccepted: trans.S("Order Accepted"),
-	orderStatePending:  trans.S("Order Pending"),
-	orderStateRejected: trans.S("Order Rejected"),
-	orderStateWorkflow: trans.S("Order Workflow"),
+var orderStateLabels = map[InternalOrderState]trans.Lazy{
+	orderStateAccepted: trans.L("Order Accepted"),
+	orderStatePending:  trans.L("Order Pending"),
+	orderStateRejected: trans.L("Order Rejected"),
+	orderStateWorkflow: trans.L("Order Workflow"),
 }
 
 func stateActionOptions(ctx context.Context) []widgets.Option {
@@ -58,9 +58,8 @@ func (m *OrderState) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*OrderState, int64] {
 			return fattrs.PtrFieldConfig[*OrderState, int64]{
-				Config: attrs.Config{
-					Primary: true,
-				},
+				Primary:  true,
+				ReadOnly: true,
 			}
 		}),
 		fattrs.Field(m, "Label", &m.Label, func() fattrs.PtrFieldConfig[*OrderState, string] {
@@ -75,13 +74,16 @@ func (m *OrderState) FieldDefs(ctx context.Context) attrs.Definitions {
 		}),
 		fattrs.Field(m, "Action", &m.Action, func() fattrs.PtrFieldConfig[*OrderState, InternalOrderState] {
 			return fattrs.PtrFieldConfig[*OrderState, InternalOrderState]{
-				Config: attrs.Config{
-					FormWidget: func(fc attrs.Config) widgets.Widget {
-						return options.NewSelectInput(
-							fc.WidgetAttrs,
-							stateActionOptions,
-						)
-					},
+				Options: []attrs.Option{
+					{Label: orderStateLabels[orderStateAccepted], Val: string(orderStateAccepted)},
+					{Label: orderStateLabels[orderStatePending], Val: string(orderStatePending)},
+					{Label: orderStateLabels[orderStateRejected], Val: string(orderStateRejected)},
+				},
+				FormWidget: func(fc attrs.Config) widgets.Widget {
+					return options.NewSelectInput(
+						fc.WidgetAttrs,
+						stateActionOptions,
+					)
 				},
 			}
 		}),

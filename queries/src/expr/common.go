@@ -380,7 +380,26 @@ func (e *value) Resolve(inf *ExpressionInfo) Expression {
 	case nil:
 		nE.v = any("NULL")
 	default:
-		panic(fmt.Errorf("unsupported value type %T in expression", v))
+		rv := reflect.ValueOf(nE.v)
+		switch rv.Kind() {
+		case reflect.String:
+			nE.v = any(inf.Quote(rv.String()))
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			nE.v = any(fmt.Sprintf("%d", nE.v))
+		case reflect.Float32, reflect.Float64:
+			nE.v = any(fmt.Sprintf("%f", nE.v))
+		case reflect.Bool:
+			if rv.Bool() {
+				nE.v = any("1")
+			} else {
+				nE.v = any("0")
+			}
+		case reflect.Invalid:
+			nE.v = any("NULL")
+		default:
+			panic(fmt.Errorf("unsupported value type %T in expression", nE.v))
+		}
 	}
 
 	return nE

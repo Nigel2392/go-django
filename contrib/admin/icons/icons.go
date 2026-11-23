@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/components"
@@ -123,9 +122,9 @@ func Icon(name string, attrs map[string]string) components.Component {
 			continue
 		}
 
-		fmt.Fprintf(attrString,
-			` %s="%s"`,
-			strconv.Quote(k),
+		fmt.Fprintf(
+			attrString,
+			` %s="%s"`, k,
 			template.HTMLEscapeString(v),
 		)
 	}

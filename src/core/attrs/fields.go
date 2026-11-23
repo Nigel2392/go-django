@@ -29,7 +29,8 @@ var (
 	capCaser            = cases.Title(language.English)
 	ALLOW_METHOD_CHECKS = false // Whether to allow method checks for getters and setters
 
-	_ Field = (*FieldDef)(nil) // Ensure FieldDef implements the Field interface
+	_ Field        = (*FieldDef)(nil) // Ensure FieldDef implements the Field interface
+	_ OptionsField = (*FieldDef)(nil) // Ensure FieldDef implements the Field interface
 
 	_modelFields = make(map[reflect.Type]map[string][]func(*Config))
 )
@@ -507,6 +508,11 @@ func (f *FieldDef) Rel() Relation {
 	}
 
 	return rel
+}
+
+func (f *FieldDef) Options(ctx context.Context) ([]Option, error) {
+	opts, _, err := TryOptions(ctx, f.Config.Options, f.instance_v_ptr.Interface().(Definer))
+	return opts, err
 }
 
 func (f *FieldDef) Validate() error {
