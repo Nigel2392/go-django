@@ -1,6 +1,6 @@
 module github.com/Nigel2392/go-django
 
-go 1.27.1
+go 1.27.3
 
 require (
 	github.com/Nigel2392/cache v1.0.4

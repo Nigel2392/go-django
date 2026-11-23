@@ -297,24 +297,3 @@ func Time(ctx context.Context, t time.Time, format string) Translation {
 
 	return text.String()
 }
-
-type localeContextKey struct{}
-
-// ContextWithLocale returns a new context with the given locale set.
-func ContextWithLocale(ctx context.Context, locale language.Tag) context.Context {
-	return context.WithValue(ctx, localeContextKey{}, locale)
-}
-
-// LocaleFromContext retrieves the locale from the current context.
-// If the default backend is not set, it returns an empty string.
-func LocaleFromContext(ctx context.Context) language.Tag {
-	if locale, ok := ctx.Value(localeContextKey{}).(language.Tag); ok {
-		return locale
-	}
-
-	return TRANSLATIONS_DEFAULT_LOCALE
-}
-
-func DefaultLocale() language.Tag {
-	return TRANSLATIONS_DEFAULT_LOCALE
-}
