@@ -1,275 +1,220 @@
-# Model implementation details
+# Model Implementation Details (`queries/src/models`)
 
-The `Model` struct is an important, but not mandatory part of the queries package.  
-We will explain its purpose and how it can be used to enhance your models, as well as some caveats to be aware of.  
-The `Model` struct is designed to be embedded in your own `Definer` structs, either directly or indirectly through other structs (NEVER POINTERS!).  
-Do note that `Model` struct does not implement the [`attrs.Definer`](https://github.com/Nigel2392/go-django/blob/main/docs/attrs/attrs.md) interface itself.
+The `models.Model` struct provides optional but recommended infrastructure for `attrs.Definer` models in `queries`. Embed `models.Model` by value directly inside your model struct or inside a value-embedded base struct (never embed `*models.Model` as a pointer).
+
+Note that `models.Model` does not implement `attrs.Definer` itself; your outer struct implements `FieldDefs(ctx context.Context) attrs.Definitions` and delegates field setup to `m.Model.Define(ctx, m, ...)`.
 
 ---
 
-## Package interfaces
+## Extra Functionality Provided by `models.Model`
 
-The `models` package provides an interface for models to implement, which is used to provide extra functionality to the model.  
-It allows for custom save logic to be implemented, trying to call the embedder's `SaveObject()` method if it exists.  
-When the embedder of the `Model` struct implements the `SaveableObject` interface, it will automatically call the `SaveObject()` method of the embedder,
-the embedder should then call the `Model.SaveObject()` method to handle the actual saving of the model.
+- `Define(ctx, def, flds...)`: Sets up `m.Model`, binds `attrs.ObjectDefinitions`, resolves `table:"..."` struct tags, injects reverse relation fields, and registers proxy fields.
+- Annotation storage (`Annotations map[string]any`) and `DataStore() queries.ModelDataStore` (`MapDataStore`).
+- Embedded proxy model discovery, automatic setup, and cascade saving (see [Proxy Models](./proxy_models.md)).
+- Dirty-field state tracking via `*state.ModelState` (`queries/src/models/state`).
+- Instance persistence methods (`Save`, `Create`, `Update`, `Delete`, `Load`, `SaveObject`, `DeleteObject`).
+- Integration with `django/models.ContextSaver`, `ThroughModelSetter`, `attrs.CanSignalChanged`, and `attrs.CanCreateObject[attrs.Definer]`.
+
+Note that `models.Model` does **not** provide a `GetQuerySet()` method; query your model using `queries.GetQuerySet(m)` or `queries.QS(m)` (or implement `QuerySetDefiner` / `TypedQuerySetDefiner[T]` on your own struct).
+
+---
+
+## Basic Embedding and `Define`
 
 ```go
-type SaveableObject interface {
-    SaveObject(ctx context.Context, cnf SaveConfig) error
-}
-```
+package models
 
----
+import (
+	"context"
 
-## Extra Functionality
+	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+)
 
-It provides extra functionality for models, it will:
-
-- Setup reverse relation fields automatically
-- Store annotations on the model
-- Automatically setup proxy model relations (an embedded pointer to another model)
-- Provide a `GetQuerySet()` method to get a `QuerySet` for the model which automatically includes a join to the proxy model.
-- Provide a `table` on the model field to specify the table name
-- Keep track of the model's state, such as whether it has been saved or not
-- Automatically save the model adhering to the [models.ContextSaver](https://github.com/Nigel2392/go-django/blob/main/docs/models.md#saving-models) interface
-- Store through relations (many-to-many) when the model is part of the target- end of a many-to-many or one-to-one relation
-- Cache field definitions on the `Model` struct for faster access
-
----
-
-## Usage
-
-To use the `Model` struct, simply embed it in your own model struct.
-
-```go
 type BaseModel struct {
-    models.Model
+	models.Model
 }
 
 type MyModel struct {
-    // models.Model // Embedding Model struct is recommended
-    BaseModel       // This is also OK to directly embed the model struct.
-    // *BaseModel   // This is NOT OK.
-    ID   int
-    Name string
+	BaseModel // Valid: value-embedded struct containing models.Model
+	ID        int64
+	Name      string
 }
 
-func (m *MyModel) FieldDefs() attrs.Definitions {
-    // Use the model to define the fields instead of `attrs.Make`
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{
-            Primary: true,
-        }),
-        attrs.NewField(m, "Name"),
-    )
+func (m *MyModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{
+			Primary: true,
+		}),
+		attrs.NewField(m, "Name", nil),
+	)
 }
 ```
-
-This will give you access to all the extra functionality provided by the `Model` struct, such as reverse relations, annotations, and the `GetQuerySet()` method.
-To use the model directly in the code without having fetched it from the database, please look at the [Caveats](#caveats) section below.
-
-Noticing the above `FieldDefs` method, we are using the `Model.Define()` method to define the fields of the model.  
-This is a convenience method which will not only define the fields, but it also sets up the model's reverse relations, and a field to a possible proxy model.
 
 ---
 
 ## Retrieving Annotated Values
 
-Models can be directly annotated by the queryset, allowing you to retrieve additional computed values alongside the model's fields.
-
-For this example we will assume that the model has been saved to the database, and we want to retrieve an annotated value from it.
+When `models.Model` is embedded, annotations returned from queries are stored in `m.Annotations` (and pushed to matching model fields if present in `Defs()`):
 
 ```go
-func main() {
-    var myModelRow, err = queries.GetQuerySet(&MyModel{}).
-        Filter("ID", 1).
-        Select("ID", "Name").
-        Annotate("NameLower", expr.FuncLower("Name")).
-        First()
-    if err != nil {
-        panic(err)
-    }
-
-    var myModel = myModelRow.Object
-    fmt.Println("ID:", myModel.ID)
-    fmt.Println("Name:", myModel.Name)
-    fmt.Println("NameLower:", myModel.Annotations["NameLower"])
+row, err := queries.GetQuerySet(&MyModel{}).
+	WithContext(ctx).
+	Filter("ID", 1).
+	Select("ID", "Name").
+	Annotate("NameLower", expr.LOWER("Name")).
+	First()
+if err != nil {
+	return err
 }
+
+myModel := row.Object
+fmt.Println(myModel.ID, myModel.Name, myModel.Annotations["NameLower"])
 ```
 
 ---
 
-## Saving Models
+## Persistence: `Save`, `Create`, `Update`, `Delete`, `Load`, and `SaveConfig`
 
-To save models, you can implement either one of two interfaces,
-but we recommend you implement the `models.SaveableObject` interface, and then call up to the `Model` struct's `SaveObject()` method.
+### `SaveableObject` and `DeleteableObject`
+
+Implement `models.SaveableObject` or `models.DeleteableObject` on your outer struct to customize save or delete behavior, delegating back to `m.Model.SaveObject(ctx, cnf)` or `m.Model.DeleteObject(ctx)`:
+
+```go
+type SaveableObject interface {
+	SaveObject(ctx context.Context, cnf SaveConfig) error
+}
+
+type DeleteableObject interface {
+	DeleteObject(ctx context.Context) error
+}
+```
 
 ```go
 func (m *MyModel) SaveObject(ctx context.Context, cnf models.SaveConfig) error {
-    // Custom save logic here
-    m.Name = fmt.Sprintf("[Saved] %s", m.Name)
-
-    // Call the Model's SaveObject method to handle the actual saving
-    return m.Model.SaveObject(ctx, cnf)
+	m.Name = strings.TrimSpace(m.Name)
+	return m.Model.SaveObject(ctx, cnf)
 }
 ```
+
+### `SaveConfig` and Context Helpers
+
+```go
+type SaveConfig struct {
+	QuerySet      *queries.QuerySet[attrs.Definer]
+	Fields        []string
+	IncludeFields []string
+	ForceCreate   bool
+	ForceUpdate   bool
+}
+
+func NewSaveConfigContext(SaveConfig SaveConfig) context.Context
+func SaveConfigContext(ctx context.Context, cnf SaveConfig) context.Context
+```
+
+- `Fields`: Limits which fields are saved on DB-loaded models.
+- `IncludeFields`: Forces listed fields to be written even if `*state.ModelState` marks them unchanged.
+- `ForceCreate` / `ForceUpdate`: Forces `INSERT` or `UPDATE` regardless of `Saved()` / `flagFromDB`.
+- `QuerySet`: Custom `*queries.QuerySet[attrs.Definer]` to execute the write.
+
+Pass a `SaveConfig` to `m.Save(ctx)` using `models.SaveConfigContext(ctx, cnf)` (or `models.NewSaveConfigContext(cnf)`). Convenience methods `m.Create(ctx)` and `m.Update(ctx)` automatically set `ForceCreate: true` and `ForceUpdate: true` respectively.
+
+### `Delete(ctx)` and `DeleteObject(ctx)`
+
+`m.Delete(ctx)` dispatches to your model's `DeleteObject(ctx)` if it implements `DeleteableObject`, otherwise calling `m.Model.DeleteObject(ctx)`, which executes `BeforeDelete` -> `QuerySet.Filter(where).Delete()` -> resets state and `flagFromDB` -> `AfterDelete`.
+
+### `Load(ctx, loadOptions...)`
+
+`m.Load(ctx, opts...)` refreshes a bound model from the database in place (targeting it via `queries.GenerateObjectsWhereClause`) and re-synchronizes embedded `Model` internals, proxies, annotations, and `flagFromDB`:
+
+```go
+type ModelLoadConfig struct {
+	ExcludedFields []string
+	Setter         func(attrs.Definer) error
+	QuerySet       *queries.QuerySet[attrs.Definer]
+}
+
+func LoadSetter(setter func(attrs.Definer) error) func(*ModelLoadConfig)
+func LoadQS(load func(qs *queries.QuerySet[attrs.Definer]) *queries.QuerySet[attrs.Definer]) func(*ModelLoadConfig)
+func LoadExcl(fields ...string) func(*ModelLoadConfig)
+```
+
+```go
+err := myModel.Load(ctx,
+	models.LoadExcl("LocalOnlyField"),
+	models.LoadQS(func(qs *queries.QuerySet[attrs.Definer]) *queries.QuerySet[attrs.Definer] {
+		return qs.Select("*", "Profile.*")
+	}),
+)
+```
+
+---
+
+## Dirty-State Tracking (`queries/src/models/state`)
+
+`m.State()` returns `*state.ModelState` (`github.com/Nigel2392/go-django/queries/src/models/state`), initialized automatically after queries (`AfterQuery`) and reset after `SaveObject` / `DeleteObject`:
+
+```go
+type ModelState struct { ... }
+
+func New(model *attrs.ObjectDefinitions) *ModelState
+func (m *ModelState) Mark(fieldName string)
+func (m *ModelState) Changed(checkState bool) bool
+func (m *ModelState) FieldChanged(fieldName string) bool
+func (m *ModelState) InitialValue(fieldName string) (interface{}, bool)
+func (m *ModelState) Reset()
+func (m *ModelState) ResetFieldState(fieldName string)
+```
+
+- `Changed(true)` re-scans field values with `reflect.DeepEqual` against captured initial values and updates the changed set.
+- `Model.SignalChange(fa, value)` and `Model.SignalReset(fa)` emit `ModelChangeSignal` (`FlagFieldChanged`, `FlagFieldReset`, `FlagModelSetup`, `FlagModelReset`, `FlagProxySetup`, `FlagProxyChanged`) on the model's internal signal channel to keep `*state.ModelState` updated when values are modified via `attrs.Field`.
+- A `nil` `*state.ModelState` treats `Changed` and `FieldChanged` as `true`.
+
+---
+
+## Proxy Helper Interfaces, `ExtractModel`, and Signals
+
+- `CanTargetDefiner`: Implemented by polymorphic proxy targets to expose `TargetContentTypeField()` and `TargetPrimaryField()`.
+- `CanControlSaving`: Implemented by polymorphic proxy models (`ControlsEmbedderSaving() bool`) to suppress automatic cascade saving of the proxy field in `SaveObject`.
+- `models.ExtractModel(def attrs.Definer) (*Model, error)`: Walks the precomputed embedded chain on `def` and returns a pointer to its embedded `models.Model`.
+- `models.SIGNAL_MODEL_SETUP`: Emitted during `Model.Setup(ctx, def)` (`FlagModelSetup`, `FlagProxySetup`, `FlagModelReset`) and forwarded to `queries.SignalModelInit`.
+
+---
+
+## Model Methods Reference
+
+| Method | Signature | Description |
+|---|---|---|
+| `Setup` | `Setup(ctx context.Context, def attrs.Definer) error` | Initializes model internals, proxies, and signals |
+| `Define` | `Define(ctx context.Context, def attrs.Definer, flds ...any) *attrs.ObjectDefinitions` | Defines fields, `table` tag, reverse relations, and proxy fields |
+| `Defs` | `Defs() *attrs.ObjectDefinitions` | Returns cached `*attrs.ObjectDefinitions` (panics if not set up) |
+| `PK` | `PK() attrs.Field` | Returns the primary key `attrs.Field` (or `nil`) |
+| `Object` | `Object() attrs.Definer` | Returns the outer `attrs.Definer` instance |
+| `DataStore` | `DataStore() queries.ModelDataStore` | Returns the `MapDataStore` for annotations/relations |
+| `State` | `State() *state.ModelState` | Returns (and initializes if needed) the dirty-state tracker |
+| `Saved` | `Saved() bool` | Returns `true` if `flagFromDB` is set or `PK()` is non-zero |
+| `Save` | `Save(ctx context.Context) error` | Saves via `SaveableObject` or `SaveObject` |
+| `Create` | `Create(ctx context.Context) error` | Saves with `ForceCreate: true` |
+| `Update` | `Update(ctx context.Context) error` | Saves with `ForceUpdate: true` |
+| `Delete` | `Delete(ctx context.Context) error` | Deletes via `DeleteableObject` or `DeleteObject` |
+| `Load` | `Load(ctx context.Context, loadOptions ...func(*ModelLoadConfig)) error` | Reloads the model in place from the database |
+| `AfterQuery` | `AfterQuery(ctx context.Context) error` | Initializes state and marks `flagFromDB` |
+| `AfterSave` | `AfterSave(ctx context.Context) error` | Marks `flagFromDB` |
 
 ---
 
 ## Lifecycle Hooks (Actor Interfaces)
 
-The `queries` package defines a set of actor interfaces that your model can implement to hook into the ORM lifecycle. These hooks are called automatically by `QuerySet.Create`, `QuerySet.Update`, and `QuerySet.Delete`.
+`Model.SaveObject` and `Model.DeleteObject` execute the `queries` actor hooks (`BeforeCreate`, `AfterCreate`, `BeforeUpdate`, `AfterUpdate`, `BeforeSave`, `AfterSave`, `BeforeDelete`, `AfterDelete`, `AfterQuery`). If your outer struct overrides `AfterQuery` or `AfterSave`, remember to call `m.Model.AfterQuery(ctx)` / `m.Model.AfterSave(ctx)` so `flagFromDB` and state tracking remain accurate.
 
-When `BeforeCreate` or `BeforeUpdate` is called, `BeforeSave` is also triggered. Similarly, `AfterCreate` / `AfterUpdate` also trigger `AfterSave`.
-
-```go
-// Called after every query that returns the model from the database
-func (m *MyModel) AfterQuery(ctx context.Context) error {
-    m.FullName = m.FirstName + " " + m.LastName
-    return m.Model.AfterQuery(ctx)
-}
-
-// Called before any insert
-func (m *MyModel) BeforeCreate(ctx context.Context) error {
-    m.CreatedAt = time.Now()
-    return nil
-}
-
-// Called after a successful insert
-func (m *MyModel) AfterCreate(ctx context.Context) error {
-    // e.g. send a welcome email
-    return nil
-}
-
-// Called before any update
-func (m *MyModel) BeforeUpdate(ctx context.Context) error {
-    m.UpdatedAt = time.Now()
-    return nil
-}
-
-// Called before any delete
-func (m *MyModel) BeforeDelete(ctx context.Context) error {
-    // e.g. check for related records
-    return nil
-}
-```
-
-> **Important:** If your model embeds `models.Model`, make sure to call the corresponding method on the embedded struct (e.g. `m.Model.AfterQuery(ctx)`) to preserve the base model's behaviour.
-
-> **Important:** If you call `QuerySet.Create` or `QuerySet.Update` from inside these hooks (e.g., to save a related model), you **must** use `.ExplicitSave()` on the queryset to prevent infinite recursion. See [ExplicitSave](../queryset/writing_queries.md#explicitsave).
+If you call `QuerySet.Create` or `QuerySet.Update` from inside an actor hook, call `.ExplicitSave()` on the QuerySet to avoid recursive hook loops (see [Writing Queries](../queryset/writing_queries.md)).
 
 ---
 
 ## Caveats
 
-While the model struct does provide a lot of extra functionality, it requires some extra care when using it.
-
-For example, when using the model directly in the code without having fetched it from the database, the model's internals are not properly setup,  
-this should be done by calling either Setup on the object passing the eventual target model (the embedder of the model struct) to said Setup method,  
-or by using `models.Setup(modelObj)` to setup the model object properly.
-
-```go
-func main() {
-    // Create a new model object
-    myModel := models.Setup(&MyModel{
-        ID:   1,
-        Name: "Test Model",
-    })
-
-    // Now you can use the model's functionality
-    fmt.Println(myModel.Saved()) // false
-}
-```
-
----
-
-## Interfaces implemented by the model
-
-The `Model` struct implements the following interfaces:
-
-- `models.ContextSaver`
-  - Used internally to save the model using the context and database connection.
-- `queries.CanSetup`
-  - Allows the base model to be setup with the embedder model, this is a requirement  
-    for the model to work properly.
-- `queries.DataModel`
-  - Provides the model with the ability to be used as a data model in queries,  
-    this is useful for storing annotations and reverse relations.
-- `queries.Annotator`
-  - Allows the model to store annotations on itself.
-- `queries.ThroughModelSetter`
-  - Allows through relations to be set on the model itself (many-to-many) when it is part  
-    of the target end of a many-to-many or one-to-one relation.
-- `queries.ActsAfterSave`
-  - Used internally to signal that the model has been saved, this is used to trigger
-    any actions that need to be performed after the model has been saved.  
-    If a sub-model implements this method, it must also call the base model's `ActsAfterSave` method.
-- `queries.ActsAfterQuery`
-  - Used internally to signal that the model has been queried,  
-    this is used to trigger any actions that need to be performed after the model has been queried.  
-    If a sub-model implements this method, it must also call the base model's `ActsAfterQuery` method.
-- `attrs.CanSignalChanged`
-  - Used internally to signal changes to the model, such as when a field is changed.
-- `attrs.CanCreateObject[attrs.Definer]`
-  - Allows the model to create a new object from itself, skipping the setup requirement because
-    it is already setup.
-
----
-
-## Model Methods
-
-The `Model` struct provides methods for working with the model,  
-these methods give access to the model's functionality, such as it's state other items.
-
-### `Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions`
-
-Defines the fields of the model, and sets up the reverse relations and proxy model field if applicable.
-
-### `DataStore() queries.ModelDataStore`
-
-Returns the data store for the model, which is used to store annotations and reverse relations.
-
-### `ModelMeta() attrs.ModelMeta`
-
-Returns the model's metadata, which includes the model's name, table name, and field definitions.  
-See [attrs.ModelMeta](https://github.com/Nigel2392/go-django/blob/main/docs/attrs/model-meta.md) for more information.
-
-### `Object() attrs.Definer`
-
-Returns the model object itself, which can be used to access the model's fields and methods.
-
-### `PK() attrs.Field`
-
-Returns the primary key field of the model, which can be used to access the model's primary key value.  
-This field can be nil if the model does not have a primary key defined.
-
-### `Save(ctx context.Context) error`
-
-The base save method for the model, which will save the model to the database.  
-It will call the `SaveObject()` method of the model, which can be implemented to provide custom save logic.  
-If it is not implemented, this will automatically call the `SaveObject()` method of the `Model` struct itself.
-
-### `SaveObject(ctx context.Context, cnf SaveConfig) (err error)`
-
-The method to save the model object to the database, which can be implemented to provide custom save logic.
-It will automatically save all model fields if possible, as well as it's proxy model if applicable.
-
-### `Saved() bool`
-
-Returns whether the model has been saved to the database or not.
-It checks if the model has the `fromDB` flag set to true, or has a non-zero primary key value.
-
-### `Setup(def attrs.Definer) error`
-
-Sets up the model object with the given definer, which *must* be the embedder of the model struct.  
-This is used to properly initialize the model's internals, such as reverse relations and proxy models.
-
-### `State() *ModelState`
-
-Returns the model's state, providing information about wether direct fields have been set or changed,
-and providing access to the model's initial state.
-
----
-
-For more information about proxy models, refer to the [Proxy Models](./proxy_models.md) documentation.
+- **Dirty-check no-op on unchanged DB models:** In `SaveObject`, if the model was loaded or previously saved (`flagFromDB` is set), `SaveConfig.Force()` is `false`, `Fields` / `IncludeFields` are empty, and `State.Changed(true)` is `false` (or `State == nil`), `SaveObject` returns `nil` immediately without issuing an `UPDATE`. Pass `SaveConfig{ForceUpdate: true}` (or call `m.Update(ctx)` / specify `IncludeFields`) when you want an `UPDATE` regardless.
+- **Pre-generated primary keys (`UUID`, `ULID`, etc.):** `m.Saved()` returns `true` whenever `PK()` is non-zero, even if `flagFromDB` is `false`. If you instantiate a new struct with a pre-generated UUID/ULID primary key and call `m.Save(ctx)` (or `django/models.SaveObject`), `SaveObject` (and `MODEL_SAVE_HOOK`) will attempt an `UPDATE` instead of an `INSERT` and return `errors.NoChanges`. Use `m.Create(ctx)`, `SaveConfigContext(ctx, models.SaveConfig{ForceCreate: true})`, or `queries.CreateObject` / `QuerySet.Create` for new records with client-generated PKs.
+- **Value-embed order before proxy fields:** `models.Model` (or a value-embedded struct containing `models.Model`) **must** appear in struct field order *before* any proxy pointer fields. `buildModelChain` (`queries/src/models/chain.go`) only discovers proxies once `base != nil` (and panics inside embedded base structs if a proxy field precedes `models.Model`).
+- **`models.Saver` field panic:** Inside `SaveObject`, any field implementing the legacy non-context `django/models.Saver` interface causes a panic (`"Saver is not supported in Save(), a ContextSaver is required to maintain transaction integrity"`). Use `queries.SaveableField` or `queries.SaveableDependantField` instead.
+- **Always call `models.Setup(ctx, obj)` on struct literals:** Constructing `&MyModel{}` directly without `models.Setup(ctx, ...)` or `attrs.NewObject` leaves `Model.internals` nil; `Save`, `Create`, `Update`, `Delete`, and `Load` return `ErrModelInitialized`, and `Defs`/`PK`/`Object`/`State` panic.

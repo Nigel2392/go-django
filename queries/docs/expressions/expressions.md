@@ -1,387 +1,356 @@
 # Expressions
 
-Expressions are a powerful way to define complex queries and calculations in your application.
+Expressions allow you to build SQL clauses, arithmetic operations, type casts, database function calls, subqueries, and raw parameterized fragments directly inside queries. They live in `github.com/Nigel2392/go-django/queries/src/expr` and write SQL and bound parameters into a `builder.Builder` from `github.com/Nigel2392/go-django/queries/src/expr/builder`.
 
-The base expression interface is `expr.Expression`, which can be used to create custom expressions that can be used in queries.
+See the companion expression guides for specific expression families:
 
-It looks like so:
+- [Lookups and Transforms](./lookups.md)
+- [Case Expressions](./cases.md)
+- [Constraints](./constraints.md)
+
+---
+
+## Core Interfaces
 
 ```go
+package builder
+
+type Builder interface {
+	io.Writer
+	WriteString(string) error
+	WriteRune(rune) error
+	AddVar(...interface{})
+	AddError(...error)
+}
+```
+
+```go
+package expr
+
+type ExpressionBuilder interface {
+	BuildExpression() Expression
+}
+
+type ResolvedExpression interface {
+	SQL(builder.Builder)
+}
+
 type Expression interface {
-    SQL(sb *strings.Builder) []any
-    Clone() Expression
-    Resolve(inf *ExpressionInfo) Expression
+	ResolvedExpression
+	Clone() Expression
+	Resolve(inf *ExpressionInfo) Expression
+}
+
+type NamedExpression interface {
+	Expression
+	FieldName() string
+}
+
+type AnnotationExpression interface {
+	NamedExpression
+	Annotate() bool
 }
 ```
 
-Expressions must be resolved before they can be used in queries, which is done by calling the `Resolve` method.
+- `Expression.Resolve(inf *ExpressionInfo) Expression` binds field paths, driver dialects, table aliases, and placeholders onto a cloned copy of the expression before `SQL(sb)` is called.
+- `QuerySet` calls `Resolve` automatically during query compilation; you only need to call `Resolve` manually when writing custom composite expressions that wrap child expressions.
+- `NamedExpression` associates a result or target field name with an expression (`As`, `Field`, `OuterRef`, `Chain`, `Logical`, `F`, `Cast`, and SQL functions all implement `NamedExpression`).
+- `AnnotationExpression` marks expressions that represent named query annotations (`Annotate() bool`). See [Interfaces](../interfaces.md) for `VirtualField`, `AliasField`, `ExpressionInfo`, and `FieldResolver`.
 
-This is done automatically internally when the query is being built, so you don't have to worry about it in most cases  
-(except when creating custom expressions which embed other expressions).
+---
 
-## Using Expressions
+## Clause Expressions
 
-There are multiple ways to use expressions in your queries, and there are multiple types of expressions available.
-
-### Lookups
-
-Lookups are a type of expression that allows you to filter querysets based on specific conditions.
-
-For more information on lookups, see the [Lookups documentation](./lookups.md).
-
-### Case Expressions
-
-Case expressions allow you to create conditional expressions that can be used in queries.
-
-For more information on case expressions, see the [Case Expressions documentation](./cases.md).
-
-### `ClauseExpression`s
-
-The most common type of expression is the `ClauseExpression`, which is used to define a SQL clause in a query.
-
-These expressions are often joined together with `AND` or `OR` to create complex queries.
-
-You can use the `expr.Q` function to create a `ClauseExpression` that can be used in queries.
-
-It is also possible to use the `expr.Express` function to create a `ClauseExpression` that can be used in queries.
-
-`expr.Express` is a more powerful function which returns a slice of `ClauseExpression`s.
-
-The `ClauseExpression` interface looks the following:
+`ClauseExpression` represents boolean predicates used in `WHERE` and `HAVING` clauses and combined with `AND`, `OR`, or `NOT`.
 
 ```go
+type ExprOp string
+
+const (
+	OpAnd ExprOp = "AND"
+	OpOr  ExprOp = "OR"
+)
+
 type ClauseExpression interface {
-    Expression
-    IsNot() bool
-    Not(b bool) ClauseExpression
-    And(...Expression) ClauseExpression
-    Or(...Expression) ClauseExpression
+	Expression
+	IsNot() bool
+	Not(b bool) ClauseExpression
+	And(...Expression) ClauseExpression
+	Or(...Expression) ClauseExpression
 }
 ```
 
-### `LogicalExpression`s
+Common constructors:
 
-Logical expressions are used to define logical operations in queries, such as equality, inequality, and arithmetic operations.
+- `expr.Q(fieldLookup string, value ...any) *ExprNode`: splits `fieldLookup` on `"__"` (defaulting to `"exact"`) and creates a lookup node.
+- `expr.Expr(field any, operation string, value ...any) *ExprNode`: builds a lookup node for an explicit field name or `NamedExpression` and lookup operation name.
+- `expr.And[T any](exprs ...T) *ExprGroup`: groups expressions with `AND`.
+- `expr.Or[T any](exprs ...T) *ExprGroup`: groups expressions with `OR`.
+- `expr.Express(key any, vals ...any) []ClauseExpression`: converts a `"field__lookup"` string + values, an `Expression` / `[]Expression` / `[]ClauseExpression`, or a `map[string]any` into `[]ClauseExpression`.
 
-They provide a simple way to chain different types of expressions or values together to create complex queries.
+```go
+qs := queries.GetQuerySet(&Todo{}).
+	Filter(
+		expr.Q("Done", false).
+			And(expr.Q("Priority__gte", 2)).
+			Or(expr.Q("Title__icontains", "urgent")),
+	)
+```
 
-A `LogicalOp` is used to define the type of logical operation being performed, such as `=`, `!=`, `>`, `<`, etc.
+---
 
-By itself, it is also an expression - the SQL representation of the LogicalOp is `<space><op><space>`.
+## Logical Expressions and Operators
+
+`LogicalOp` and `LogicalExpression` let you chain SQL comparisons, arithmetic, and bitwise operations programmatically.
 
 ```go
 type LogicalOp string
 
 const (
-    EQ  LogicalOp = "="
-    NE  LogicalOp = "!="
-    GT  LogicalOp = ">"
-    LT  LogicalOp = "<"
-    GTE LogicalOp = ">="
-    LTE LogicalOp = "<="
+	EQ  LogicalOp = "="
+	NE  LogicalOp = "!="
+	GT  LogicalOp = ">"
+	LT  LogicalOp = "<"
+	GTE LogicalOp = ">="
+	LTE LogicalOp = "<="
+	IN  LogicalOp = "IN"
 
-    ADD LogicalOp = "+"
-    SUB LogicalOp = "-"
-    MUL LogicalOp = "*"
-    DIV LogicalOp = "/"
-    MOD LogicalOp = "%"
+	ADD LogicalOp = "+"
+	SUB LogicalOp = "-"
+	MUL LogicalOp = "*"
+	DIV LogicalOp = "/"
+	MOD LogicalOp = "%"
 
-    BITAND LogicalOp = "&"
-    BITOR  LogicalOp = "|"
-    BITXOR LogicalOp = "^"
-    BITLSH LogicalOp = "<<"
-    BITRSH LogicalOp = ">>"
-    BITNOT LogicalOp = "~"
+	BITAND LogicalOp = "&"
+	BITOR  LogicalOp = "|"
+	BITXOR LogicalOp = "^"
+	BITLSH LogicalOp = "<<"
+	BITRSH LogicalOp = ">>"
+	BITNOT LogicalOp = "~"
+)
+```
+
+```go
+type LogicalExpression interface {
+	Expression
+	Scope(LogicalOp, Expression) LogicalExpression
+	EQ(key interface{}, vals ...interface{}) LogicalExpression
+	NE(key interface{}, vals ...interface{}) LogicalExpression
+	GT(key interface{}, vals ...interface{}) LogicalExpression
+	LT(key interface{}, vals ...interface{}) LogicalExpression
+	GTE(key interface{}, vals ...interface{}) LogicalExpression
+	LTE(key interface{}, vals ...interface{}) LogicalExpression
+	ADD(key interface{}, vals ...interface{}) LogicalExpression
+	SUB(key interface{}, vals ...interface{}) LogicalExpression
+	MUL(key interface{}, vals ...interface{}) LogicalExpression
+	DIV(key interface{}, vals ...interface{}) LogicalExpression
+	MOD(key interface{}, vals ...interface{}) LogicalExpression
+	BITAND(key interface{}, vals ...interface{}) LogicalExpression
+	BITOR(key interface{}, vals ...interface{}) LogicalExpression
+	BITXOR(key interface{}, vals ...interface{}) LogicalExpression
+	BITLSH(key interface{}, vals ...interface{}) LogicalExpression
+	BITRSH(key interface{}, vals ...interface{}) LogicalExpression
+	BITNOT(key interface{}, vals ...interface{}) LogicalExpression
+}
+```
+
+Use `expr.Logical(expr ...any)` to start a logical chain, and `expr.Op(op any) (LogicalOp, bool)` to parse operator strings like `"="`, `"+"`, or `"<<"`:
+
+```go
+qs := queries.GetQuerySet(&Product{}).
+	Filter(expr.Logical("Price").MUL("Quantity").GTE(1000))
+```
+
+> **Note:** Methods on `LogicalExpression` (`EQ`, `NE`, `ADD`, etc.) treat plain `string` arguments as field names (`expr.Field`). When comparing against a string literal, wrap it in `expr.Value(...)`:
+>
+> ```go
+> expr.Logical("Status").EQ(expr.Value("published"))
+> ```
+
+---
+
+## Fields, Values, Aliases, and Chaining
+
+### `expr.Field(fld string) NamedExpression`
+
+References a model field by path (`"Name"` or dot-separated relation path `"Author.Name"`).
+
+Because Go struct field names always start with an uppercase letter, a lowercase first segment (such as `"p_t.Name"`) is treated as an explicit table alias in raw queries rather than a relation traversal.
+
+### `expr.As(name string, e Expression) NamedExpression`
+
+Attaches an output or target name to an expression and implements `AnnotationExpression`.
+
+```go
+// Annotate an aggregate onto each row:
+qs := queries.GetQuerySet(&Author{}).
+	Annotate("BookCount", expr.COUNT("Books.ID"))
+
+// Or pass As directly to Select / Update:
+_, err := queries.GetQuerySet(&Product{}).
+	Filter("Category", "books").
+	Update(&Product{}, expr.As("Price", expr.Logical("Price").MUL(1.1)))
+```
+
+### `expr.Value` / `expr.V` / `expr.Values`
+
+```go
+func Value(v any, unsafe ...bool) Expression
+func V(v any, unsafe ...bool) Expression
+func Values(vs ...any) Expression
+```
+
+- `Value` (and its shorthand `V`) binds a parameter placeholder unless `unsafe` is `true`, in which case the formatted literal is inlined directly into SQL (do not pass untrusted input with `unsafe=true`). If `v` already implements `Expression` or `ExpressionBuilder`, it is returned as an expression; if `v` is an `attrs.Definer`, it is normalized to its primary key value.
+- `Values` emits parenthesized parameter lists `(?, ?, ...)` for `IN` clauses or multi-value SQL constructs, and panics if called with zero arguments.
+
+> **Caveat on PostgreSQL:** On `*drivers.DriverPostgres`, `value.SQL` emits `::INT` for all signed integer kinds (`int` through `int64`) and rejects unsigned integers (`uint` through `uint64`) with `"unsupported value type ... in expression"`. `values.SQL` emits `::INT` for both signed and unsigned integer kinds. Avoid passing values exceeding 32-bit signed integer range through `expr.Value` / `expr.Values` on PostgreSQL unless explicitly cast via SQL/raw statements.
+
+### `expr.String(s string) Expression`
+
+Wraps a raw SQL fragment string with no parameter binding (`String("COUNT(*)")`).
+
+### `expr.Chain(expr ...any) NamedExpression`
+
+Concatenates expressions, `LogicalOp` operators, `ExpressionBuilder` values, or field name strings in sequence without extra separators (`LogicalOp` itself writes a leading and trailing space). Its `FieldName()` comes from the first `NamedExpression` or string field name.
+
+---
+
+## Subqueries and Outer References
+
+Use `expr.OuterRef(fld string) NamedExpression` inside a subquery to reference a field from its enclosing parent query:
+
+```go
+subq := queries.GetQuerySet(&Comment{}).
+	Filter("Post", expr.OuterRef("ID")).
+	Limit(1)
+
+posts, err := queries.GetQuerySet(&Post{}).
+	Filter(expr.EXISTS(subq.Select("ID"))).
+	All()
+```
+
+See [QuerySet](../queryset/queryset.md) for `Subquery` and `EXISTS` usage, and `expr.MakeSubqueryContext` / `expr.AddParentSubqueryContext` for custom subquery resolution.
+
+---
+
+## Raw Expressions and Statement Parser
+
+For database-specific SQL that still needs safe model/column resolution and parameter binding, use `expr.Raw` or `expr.F`:
+
+```go
+func Raw(statement string, value ...any) Expression
+func F(statement any, value ...any) NamedExpression
+```
+
+- `Raw` parses `statement` into an `*ExpressionStatement` with bound `value` arguments.
+- `F` does the same, or chains expressions when given a `NamedExpression` / `Expression`, and sets `FieldName()` to the first `![Field]` found (panicking if a raw string statement contains no `![...]` field placeholder).
+
+Supported placeholders in `ParseExprStatement` (`expr.PARSER`):
+
+| Syntax | Description | Example |
+| :--- | :--- | :--- |
+| `![FieldPath]` | Resolves a field (or `alias.Field`) on the current model | `![Price] * ?[1]` |
+| `#[pkg.Model.Field]` / `#[alias.pkg.Model.Field]` | Resolves a field on another registered content-type model | `#[auth.User.Email]` |
+| `'ident'` / `'table.col'` | Quotes identifier segments with `ExpressionInfo.QuoteIdentifier` | `'custom_col'` |
+| `TABLE(SELF)`, `TABLE(Rel)`, `TABLE(Rel as alias)`, `TABLE(pkg.Model)` | Emits quoted table name (and alias) | `TABLE(Author as a)` |
+| `?` | Positional bound parameter (or embedded `Expression`) | `?[1]` or `?` |
+| `?[1]` | 1-based indexed bound parameter (reusable multiple times; `?[0]` errors) | `![Age] BETWEEN ?[1] AND ?[2]` |
+| `EXPR(0)` / `EXPR(Name)` | Embeds an `expr.Expression` supplied via `expr.PARSER.Expressions(...)` | `EXPR(FilterCond)` |
+
+```go
+stmt := expr.F(
+	"COALESCE(![NickName], ![Name]) || ?[1]",
+	" (verified)",
 )
 
-type LogicalExpression interface {
-    Expression
-    Scope(LogicalOp, Expression) LogicalExpression
-    EQ(key interface{}, vals ...interface{}) LogicalExpression
-    NE(key interface{}, vals ...interface{}) LogicalExpression
-    GT(key interface{}, vals ...interface{}) LogicalExpression
-    LT(key interface{}, vals ...interface{}) LogicalExpression
-    GTE(key interface{}, vals ...interface{}) LogicalExpression
-    LTE(key interface{}, vals ...interface{}) LogicalExpression
-    ADD(key interface{}, vals ...interface{}) LogicalExpression
-    SUB(key interface{}, vals ...interface{}) LogicalExpression
-    MUL(key interface{}, vals ...interface{}) LogicalExpression
-    DIV(key interface{}, vals ...interface{}) LogicalExpression
-    MOD(key interface{}, vals ...interface{}) LogicalExpression
-    BITAND(key interface{}, vals ...interface{}) LogicalExpression
-    BITOR(key interface{}, vals ...interface{}) LogicalExpression
-    BITXOR(key interface{}, vals ...interface{}) LogicalExpression
-    BITLSH(key interface{}, vals ...interface{}) LogicalExpression
-    BITRSH(key interface{}, vals ...interface{}) LogicalExpression
-    BITNOT(key interface{}, vals ...interface{}) LogicalExpression
-}
+raw := expr.Raw(
+	"EXISTS (SELECT 1 FROM TABLE(Comments as c) WHERE ![c.Post] = ![ID] AND EXPR(ActiveOnly))",
+	expr.PARSER.Expressions(map[string]expr.Expression{
+		"ActiveOnly": expr.Q("c.Approved", true),
+	}),
+)
 ```
 
-An example of using a `LogicalExpression` to filter a queryset might look like this:
+---
+
+## Type Casting
+
+Use `expr.Cast` or its typed convenience constructors to emit driver-appropriate `CAST(...)` SQL:
+
+```go
+type CastType uint
+
+const (
+	CastTypeUnknown CastType = iota
+	CastTypeString
+	CastTypeText
+	CastTypeInt
+	CastTypeFloat
+	CastTypeBool
+	CastTypeDate
+	CastTypeTime
+	CastTypeBytes
+	CastTypeDecimal
+	CastTypeJSON
+	CastTypeUUID
+	CastTypeNull
+	CastTypeArray
+)
+
+func Cast(typ CastType, col any, value ...any) NamedExpression
+func RegisterCastType(castType CastType, entry CastFuncEntry, drivers ...driver.Driver)
+```
+
+Convenience functions (with required argument counts):
+
+- `CastString(col, length)` (strictly 1 extra argument — even on SQLite where SQL renders `CAST(%s AS TEXT)`)
+- `CastFloat(col, precision, scale)` (strictly 2 extra arguments — even on SQLite where SQL renders `CAST(%s AS REAL)`)
+- `CastDecimal(col, precision, scale)` (strictly 2 extra arguments)
+- Zero extra arguments: `CastText`, `CastInt`, `CastBool`, `CastDate`, `CastTime`, `CastBytes`, `CastJSON`, `CastUUID`, `CastNull`, `CastArray`
 
 ```go
 qs := queries.GetQuerySet(&Product{}).
-    Filter(expr.Logical("Price").MUL("Quantity").Eq(1000))
+	Annotate("PriceInt", expr.CastInt("Price"))
 ```
 
-### `NamedExpression`s
+---
 
-Named expressions are a type of expression that allows you to define an expression with a specific name, which can be used in queries.
+## Built-In SQL Functions
 
-These names might be useful in annotations, or to target a field on the model itself.
+All built-in SQL function constructors return `LogicalNamedExpressionFunc` (implementing both `NamedExpression` and `LogicalExpression`):
+
+| Constructor | SQL / Behavior |
+| :--- | :--- |
+| `expr.SUM(expr ...any)` | `SUM(...)` |
+| `expr.COUNT(expr ...any)` | `COUNT(...)` |
+| `expr.AVG(expr ...any)` | `AVG(...)` |
+| `expr.MAX(expr ...any)` | `MAX(...)` |
+| `expr.MIN(expr ...any)` | `MIN(...)` |
+| `expr.COALESCE(expr ...any)` | `COALESCE(a, b, ...)` (requires at least 2 expressions) |
+| `expr.CONCAT(expr ...any)` | `CONCAT(a, b, ...)` on MySQL/MariaDB/Postgres; `(a \|\| b ...)` on SQLite (requires at least 2) |
+| `expr.SUBSTR(expr any, start, length any)` | `SUBSTRING(x, start, len)` on MySQL/MariaDB, `SUBSTRING(x FROM start FOR len)` on Postgres, `SUBSTR(x, start, len)` on SQLite (pass `nil` for `length` to omit it) |
+| `expr.EXISTS(expr any)` | `EXISTS (<subquery>)` |
+| `expr.UPPER(expr any)` | `UPPER(...)` |
+| `expr.LOWER(expr any)` | `LOWER(...)` |
+| `expr.LENGTH(expr any)` | `LENGTH(...)` |
+| `expr.NOW()` | `NOW()` on MySQL/MariaDB; `CURRENT_TIMESTAMP` on Postgres/SQLite |
+| `expr.UTCNOW()` | `UTC_TIMESTAMP()` on MySQL/MariaDB; `CURRENT_TIMESTAMP AT TIME ZONE 'UTC'` on Postgres; `julianday('now')` on SQLite |
+| `expr.LOCALTIMESTAMP()` | `LOCALTIMESTAMP()` on MySQL/MariaDB; `LOCALTIMESTAMP` on Postgres; `CURRENT_TIMESTAMP` on SQLite |
+| `expr.DATE(expr any)` | `DATE(...)` |
+| `expr.DATE_FORMAT(expr any, format string)` | `DATE_FORMAT(x, 'fmt')` on MySQL/MariaDB; `TO_CHAR(x, 'fmt')` on Postgres; `STRFTIME('fmt', x)` on SQLite |
+
+Register custom SQL functions globally or per driver with `expr.RegisterFunc`:
 
 ```go
-type NamedExpression interface {
-    Expression
-    FieldName() string
-}
+expr.RegisterFunc("TRIM", func(d driver.Driver, value []expr.Expression, funcParams []any) (string, []any, error) {
+	// ...
+})
 ```
 
-An example of using a `NamedExpression` to annotate a queryset might look like this:
+*(Note: `"TRIM"` is registered internally in the function registry, though it does not currently have a top-level Go wrapper function in `expr`.)*
 
-```go
-qs := queries.GetQuerySet(&Product{}).
-    Select("ID", expr.LOWER("Name"), "Price")
-```
+---
 
-This will select the `ID` and `Price` fields, and also fetch the `Name` field as a lowercased value.
+## Deconstruction
 
-#### Special case
-
-Since GO's struct fields cannot start with a lowercase letter, we took advantage of that.
-
-Fieldpaths in expressions can as a matter of fact, start with lowercase letters. These would then indicate a table alias.
-
-Take the following examples.
-
-With an alias:
-
-```go
-var expr = expr.LOWER("Name") // translates to column `product`.`name`
-```
-
-Without an alias:
-
-```go
-var expr = expr.LOWER("p_t.Name") // translates to `p_t`.`name`
-```
-
-This is only really useful for raw expressions. The ORM will otherwise handle
-any table alias for the specified field.
-
-
-## Functions to create expressions
-
-### `Chain(expr ...any) NamedExpression`
-
-This will join the expressions together with no separator except for a space. It will return a `NamedExpression` that can be used in queries.
-
-The FieldName is derived from the first `NamedExpression` or fieldname in the chain.
-
-### `Q(fieldLookup string, value ...any) *ExprNode`
-
-This function creates a `ClauseExpression` that can be used to filter querysets based on specific conditions.
-
-It will retrieve the [`Lookup` expression](./lookups.md) for the given field lookup and apply it to the value(s) provided.
-
-### `And(exprs ...Expression) *ExprGroup`
-
-This function creates a group of expressions that are joined together with `AND`.
-
-It returns an `ExprGroup` (ClauseExpression) that can be used in queries.
-
-### `Or(exprs ...Expression) *ExprGroup`
-
-This function creates a group of expressions that are joined together with `OR`.
-
-It returns an `ExprGroup` (ClauseExpression) that can be used in queries.
-
-### `Expr(field any, lookupOperation string, value ...any) *ExprNode`
-
-This function creates a `ClauseExpression` that can be used to filter querysets based on specific conditions.
-
-It will retrieve the [`Lookup` expression](./lookups.md) for the given lookupOperation and apply it to the value(s) provided.
-
-### `Logical(expr ...any) LogicalExpression
-
-This function creates a `LogicalExpression` that can be used to perform logical operations in queries.
-
-See more about the [`LogicalExpression` interface](#logicalexpressions) above.
-
-### `Raw(statement string, value ...any) Expression`
-
-The Raw function creates a raw SQL expression that can be used in queries.
-
-It allows you to write custom SQL statements directly, which can be useful for complex queries or when you need to use database-specific features.
-
-Model fields can easily be referenced in the statement by using the `![field_name]` syntax, which will be replaced with the field's SQL representation.
-
-### `F(statement any, value ...any) NamedExpression`
-
-F creates a new RawNamedExpression or chainExpr with the given statement and values.
-
-It parses the statement to extract the fields and values, and returns a pointer to the new RawNamedExpression.
-
-The first field in the statement is used as the field name for the expression, and the rest of the fields are used as placeholders for the values.
-
-The statement should contain placeholders for the fields and values, which will be replaced with the actual values.
-
-The placeholders for fields should be in the format ![FieldName], and the placeholders for values should be in the format ?[Index],  
-or the values should use the regular SQL placeholder directly (database driver dependent).
-
-Example usage:
-
-#### sets the field name to the first field found in the statement, I.E. `![Age]`
-
-```go
-expr := F("![Age] + ?[1] + ![Height] + ?[2] * ?[1]", 3, 4)
-fmt.Println(expr.SQL()) // prints: "table.age + ? + table.height + ? * ?"
-fmt.Println(expr.Args()) // prints: [3, 4, 3]
-```
-
-#### sets the field name to the first field found in the statement, I.E. `![Height]`
-
-```go
-expr := F("? + ? + ![Height] + ? * ?", 4, 5, 6, 7)
-fmt.Println(expr.SQL()) // prints: "? + ? + table.height + ? * ?"
-fmt.Println(expr.Args()) // prints: [4, 5, 6, 7]
-```
-
-### `String(fld string) Expression`
-
-String creates a new `Expression` from the given string.
-
-The string is presumed to be the *raw* SQL statement, no further processing is done on it.
-
-### `Field(fld string) NamedExpression`
-
-Field creates a new `NamedExpression` from the given field name.
-
-It is a convenience function that returns a `NamedExpression` with the field name set to the given string.
-
-The SQL output of this expression will be the database reference for the field, such as `table.field_name`.
-
-### `Value(v any, unsafe ...bool) Expression`
-
-Value creates a new `Expression` from the given value.
-
-It allows for passing any value to SQL, using the database driver's placeholder syntax.
-
-If `unsafe` is set to true, the value will be used as a raw value in the SQL statement, without any escaping or quoting,
-the placeholder is unused.
-
-## Function Expressions
-
-The following functions can be used to create expressions that can be used in queries.
-
-These functions return a `NamedExpression` that can be used in queries, and they often represent common SQL functions or operations.
-
-### `Cast(typ CastType, col any, value ...any) NamedExpression`
-
-The `Cast` function creates a `NamedExpression` that casts the given column to a specific type.
-
-* `CastString(col any, value ...any) NamedExpression` (strictly 1 argument(s))
-* `CastText(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastInt(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastFloat(col any, value ...any) NamedExpression` (strictly 2 argument(s))
-* `CastBool(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastDate(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastTime(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastBytes(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastDecimal(col any, value ...any) NamedExpression` (strictly 2 argument(s))
-* `CastJSON(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastUUID(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastNull(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-* `CastArray(col any, value ...any) NamedExpression` (strictly 0 argument(s))
-
-The following `CastType` values are provided:
-
-```go
-CastTypeString
-CastTypeText
-CastTypeInt
-CastTypeFloat
-CastTypeBool
-CastTypeDate
-CastTypeTime
-CastTypeBytes
-CastTypeDecimal
-CastTypeJSON
-CastTypeUUID
-CastTypeNull
-CastTypeArray
-```
-
-### `FuncSum(expr ...any) *Function`
-
-The `FuncSum` function creates a `Function` expression that calculates the sum of the given expression(s).
-
-It compiles to the SQL `SUM` function, which is used to calculate the total sum of a numeric column.
-
-I.e. `FuncSum("Price")` will compile to `SUM(table.price)`.
-
-### `FuncCount(expr ...any) *Function`
-
-The `FuncCount` function creates a `Function` expression that counts the number of rows that match the given expression(s).
-
-It compiles to the SQL `COUNT` function, which is used to count the number of rows in a result set.
-
-### `FuncAvg(expr ...any) *Function`
-
-The `FuncAvg` function creates a `Function` expression that calculates the average of the given expression(s).
-
-It compiles to the SQL `AVG` function, which is used to calculate the average value of a numeric column.
-
-### `FuncMax(expr ...any) *Function`
-
-The `FuncMax` function creates a `Function` expression that calculates the maximum value of the given expression(s).
-
-It compiles to the SQL `MAX` function, which is used to find the maximum value in a result set.
-
-### `FuncMin(expr ...any) *Function`
-
-The `FuncMin` function creates a `Function` expression that calculates the minimum value of the given expression(s).
-
-It compiles to the SQL `MIN` function, which is used to find the minimum value in a result set.
-
-### `FuncCoalesce(expr ...any) *Function`
-
-The `FuncCoalesce` function creates a `Function` expression that returns the first non-null value from the given expression(s).
-
-It compiles to the SQL `COALESCE` function, which is used to return the first non-null value in a list of expressions.
-
-### `FuncConcat(expr ...any) *Function`
-
-The `FuncConcat` function creates a `Function` expression that concatenates the given expression(s) together.
-
-It compiles to the SQL `CONCAT` function, which is used to concatenate strings together.
-
-### `FuncSubstr(expr any, start, length any) *Function`
-
-The `FuncSubstr` function creates a `Function` expression that extracts a substring from the given expression.
-
-It compiles to the SQL `SUBSTRING` function, which is used to extract a substring from a string.
-
-### `FuncUpper(expr any) *Function`
-
-The `FuncUpper` function creates a `Function` expression that converts the given expression to uppercase.
-
-It compiles to the SQL `UPPER` function, which is used to convert a string to uppercase.
-
-### `FuncLower(expr any) *Function`
-
-The `FuncLower` function creates a `Function` expression that converts the given expression to lowercase.
-
-It compiles to the SQL `LOWER` function, which is used to convert a string to lowercase.
-
-### `FuncLength(expr any) *Function`
-
-The `FuncLength` function creates a `Function` expression that calculates the length of the given expression.
-
-It compiles to the SQL `LENGTH` function, which is used to calculate the length of a string.
-
-### `FuncNow() *Function`
-
-The `FuncNow` function creates a `Function` expression that returns the current date and time.
-
-It compiles to the SQL `NOW` function, which is used to get the current date and time from the database.
+Core `expr` types (`ExprNode`, `ExprGroup`, `logicalChainExpr`, `chainExpr`, `RawNamedExpression`, `ExpressionStatement`, `Function`, `CaseExpression`, `when`, `castExpr`, `String`, `field`, `value`, `values`, `namedExpression`, `outerRef`, `LogicalOp`) implement `deconstruct.Deconstructible` and register JSON constructors under `"queries.expr.*"`. See [Deconstruction](../../../docs/deconstruct.md) for serialization details.

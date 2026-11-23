@@ -1,183 +1,253 @@
 # Messages
 
-The messages app provides functionality akin to django.contrib.messages, allowing you to store messages inside of the session, or cookies, and retrieve them later.  
-This is particularly useful for displaying flash messages to users after a form submission or other actions.
+The `messages` app provides flash messaging akin to Django's `contrib.messages`, allowing you to store messages in the user's session or HTTP cookies and display them on a subsequent request.
 
-## Installing the messages app with go-django
+## Installation
 
-The messages app has to be included in your `django.Apps(...)` function.
-
-The app will then setup any required middleware, and add the messages context processor.
-
-Messages will only be available in templates when rendered with `tpl.Render()` or `tpl.FRender()`, and when the context's type adheres to `tpl.RequestContext`.
-
-Example setup of this can be done accordingly:
+Include `messages.NewAppConfig` in `django.Apps(...)` to install the messages middleware and template context processor:
 
 ```go
 package main
 
 import (
-    "github.com/Nigel2392/mux"
-    "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/src/apps"
-    "github.com/Nigel2392/go-django/contrib/messages"
-    "github.com/Nigel2392/go-django/contrib/session"
+	"net/http"
+
+	"github.com/Nigel2392/go-django/contrib/messages"
+	"github.com/Nigel2392/go-django/contrib/session"
+	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/mux"
 )
 
 func main() {
-    var settings = make(map[string]any)
-    settings[django.APPVAR_ALLOWED_HOSTS] = []string{"*"}
-    settings[django.APPVAR_DEBUG] = true
-   
-    // This does not nescessarily have to be setup explicity.
-    // If the session app is installed and no backend was explicitly configured; the session backend will be used automatically.
-    // If the session app is not installed and no backend was explicitly configured; the cookie backend will be used automatically.
-    messages.ConfigureBackend(
-        // Explicitly set the messages backend to use cookies
-        // messages.NewCookieBackend,
-   
-        // Explicitly set the messages backend to use sessions
-        messages.NewSessionBackend,
-    )
+	settings := map[string]any{
+		django.APPVAR_ALLOWED_HOSTS: []string{"*"},
+		django.APPVAR_DEBUG:         true,
+	}
 
-    app = django.App(
-        django.Configure(settings),
-        django.Apps(
-            session.NewAppConfig,
-            messages.NewAppConfig,
-            apps.NewAppConfigForHandler(
-                "myapp", 
-                mux.GET, "/myapp", 
-                mux.NewHandler(myView),
-            ),
-        ),
-    )
+	// Optional: if omitted, messages uses NewSessionBackend when the
+	// "session" app is installed, or NewCookieBackend otherwise.
+	messages.ConfigureBackend(
+		messages.NewSessionBackend,
+	)
 
-    if err := app.Serve(); err != nil {
-        panic(err)
-    }
+	app := django.App(
+		django.Configure(settings),
+		django.Apps(
+			session.NewAppConfig,
+			messages.NewAppConfig,
+			apps.NewAppConfigForHandler(
+				"myapp",
+				mux.GET, "/myapp",
+				mux.NewHandler(myView),
+			),
+		),
+	)
+
+	if err := app.Serve(); err != nil {
+		panic(err)
+	}
 }
 ```
 
-In the above example, the session app is included, and the messages app is configured to use the session backend.
+During initialization:
 
-If you want to use the cookie backend, it is not required to also include the session's app.
+- If `messages.ConfigureBackend` was not called, `messages` selects `NewSessionBackend` when the [`session`](./sessions.md) app is installed, or falls back to `NewCookieBackend` otherwise.
+- `MessagesMiddleware` is registered globally wrapped with `django.NonStaticMiddleware`, so static routes are skipped.
+- `RequestMessageContext` is registered as a template context processor and runs whenever templates are rendered using a context implementing [`ctx.ContextWithRequest`](../context.md) (such as `ctx.RequestContext(r)`).
 
-After setting up the app, you can use the messages app in your views and templates.
+## Message Interface and `BaseMessage`
 
-### Using the messages app in views
+In `contrib/messages`, `messages.Message` is an **interface**, and `*messages.BaseMessage` is the concrete struct stored by the built-in backends (pre-registered with `encoding/gob` in `init()`):
 
-The messages app provides a `messages` package that you can use to add messages to the session or cookies.
+```go
+type Message interface {
+	Tag() MessageTag
+	Message() string
+	ExtraTags() []MessageTag
+	Prepare() error
+}
 
-You can use the following functions to add messages:
+type BaseMessage struct {
+	Level       MessageTag   `json:"tag"`
+	Text        string       `json:"message"`
+	ExtraLevels []MessageTag `json:"extra"`
+}
+```
 
-- `messages.AddMessage(request, level, message)` - Adds a message to the session or cookies.
-- `messages.Debug(request, message)` - Adds a debug message to the session or cookies.
-- `messages.Success(request, message)` - Adds a success message to the session or cookies.
-- `messages.Info(request, message)` - Adds an info message to the session or cookies.
-- `messages.Warning(request, message)` - Adds a warning message to the session or cookies.
-- `messages.Error(request, message)` - Adds an error message to the session or cookies.
+`BaseMessage` also implements `String() string`, returning `m.Text`.
 
-Example usage:
+## Levels, Tags, and Configuration
+
+Message levels use the `MessageTag` string type and numeric severity levels:
+
+```go
+type MessageTag string
+
+const (
+	DEBUG   MessageTag = "debug"
+	INFO    MessageTag = "info"
+	SUCCESS MessageTag = "success"
+	WARNING MessageTag = "warning"
+	ERROR   MessageTag = "error"
+
+	LEVEL_DEBUG   uint = 10
+	LEVEL_INFO    uint = 20
+	LEVEL_SUCCESS uint = 30
+	LEVEL_WARNING uint = 40
+	LEVEL_ERROR   uint = 50
+)
+
+type MessageTags struct {
+	Debug   MessageTag
+	Info    MessageTag
+	Success MessageTag
+	Warning MessageTag
+	Error   MessageTag
+}
+```
+
+The package also exports `DefaultTags`, `TagLevels`, `LevelTags`, and the following helpers and sentinel errors:
+
+- `messages.Tags() *MessageTags`: Returns the configured `MessageTags`.
+- `(*MessageAppConfig).ConfigureTags(tags MessageTags)`: Customizes the tags exposed via `messages.Tags()` and the `DEFAULT_MESSAGE_LEVELS` template context variable.
+- `messages.GetLevel(r *http.Request) (MessageTag, error)`: Returns the minimum `MessageTag` level currently active for the request's backend.
+- `messages.SetLevel(r *http.Request, level MessageTag) error`: Sets the minimum `MessageTag` level stored by the backend; messages below this level are discarded by `Store`.
+- Sentinel errors: `ErrRequestRequired`, `ErrBackendNotConfigured`, `ErrMessagesNotInstalled`.
+
+## Adding and Reading Messages in Views
+
+Use the helper functions in `contrib/messages` to queue messages or inspect the backend for a request:
+
+```go
+func AddMessage(r *http.Request, tag MessageTag, message string, extraTags ...MessageTag) error
+func Debug(r *http.Request, message string, extraTags ...MessageTag) error
+func Info(r *http.Request, message string, extraTags ...MessageTag) error
+func Success(r *http.Request, message string, extraTags ...MessageTag) error
+func Warning(r *http.Request, message string, extraTags ...MessageTag) error
+func Error(r *http.Request, message string, extraTags ...MessageTag) error
+
+func Debugf(r *http.Request, message string, argsAndTags ...any) error
+func Infof(r *http.Request, message string, argsAndTags ...any) error
+func Successf(r *http.Request, message string, argsAndTags ...any) error
+func Warningf(r *http.Request, message string, argsAndTags ...any) error
+func Errorf(r *http.Request, message string, argsAndTags ...any) error
+
+func Messages(r *http.Request) (messages []Message, AllRetrieved bool)
+func Backend(r *http.Request) MessageBackend
+func BackendFromContext(r *http.Request) MessageBackend
+```
+
+Do note a quirk in `Debugf`, `Infof`, `Successf`, `Warningf`, and `Errorf`: `tagsFromArgs` consumes any leading `MessageTag` or `[]MessageTag` values from `argsAndTags` and passes everything starting at the first non-tag argument to `fmt.Sprintf`. Extra tags must therefore come **before** format arguments (e.g., `messages.Infof(r, "Saved %s", messages.MessageTag("bold"), name)`), and passing only tags with no format arguments leaves `lastIdx` at `0`, forwarding those tags into `fmt.Sprintf`.
+
+Example view rendering a template with queued messages:
 
 ```go
 package main
 
 import (
-    "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/contrib/messages"
-    "net/http"
+	"net/http"
+
+	"github.com/Nigel2392/go-django/contrib/messages"
+	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
 func myView(w http.ResponseWriter, r *http.Request) {
-    messages.Debug(r, "This is a debug message")
-    messages.Info(r, "This is an info message")
-    messages.Warning(r, "This is a warning message")
-    messages.Error(r, "This is an error message")
-    messages.Success(r, "This is a success message")
+	_ = messages.Debug(r, "This is a debug message")
+	_ = messages.Info(r, "This is an info message")
+	_ = messages.Warning(r, "This is a warning message")
+	_ = messages.Error(r, "This is an error message")
+	_ = messages.Success(r, "This is a success message")
 
-    var context = ctx.RequestContext(r)
-    if err := tpl.FRender(w, context, "my/template.tmpl"); err != nil {
-        http.Error(w, err.Error(), 500)
-        return
-    }
+	context := ctx.RequestContext(r)
+	if err := tpl.FRender(w, context, "myapp", "myapp/template.tmpl"); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 ```
 
-Do note that no templates were setup; you will have to do this yourself according to the [rendering docs](../rendering.md).
+See the [rendering](../rendering.md) and [context](../context.md) documentation for template registration details.
 
-### Showing messages in templates
+## Showing Messages in Templates
 
-As mentioned before; when using context which adheres to `tpl.RequestContext`, the messages will automatically be available in the template context due to the messages context processor.
+When rendering a template with a [`ctx.ContextWithRequest`](../context.md) context, `RequestMessageContext` populates two keys and immediately calls `backend.Clear()` so messages are consumed once:
 
-After the context processor has been executed, the messages will be available in the template as a slice of `messages.Message` structs and **all messages will be removed from the session or cookies**.
-
-These can then be rendered in the template using the `messages` variable.
+- `"messages"`: `[]messages.Message` retrieved from the backend.
+- `"DEFAULT_MESSAGE_LEVELS"`: `*messages.MessageTags` containing the configured tag constants.
 
 ```html
 <section class="messages">
-    {{ $ctx := . }}
-    {{range $msg := (.Get "messages")}}
-        {{ if eq $msg.Tag "success" }}
+    {{ $levels := (.Get "DEFAULT_MESSAGE_LEVELS") }}
+    {{ range $msg := (.Get "messages") }}
+        {{ if eq $msg.Tag $levels.Success }}
             <div class="message bg-success">
-                <div class="message-text">{{$msg.Message}}</div>
+                <div class="message-text">{{ $msg.Message }}</div>
             </div>
-        {{else if eq $msg.Tag "error" }}
+        {{ else if eq $msg.Tag $levels.Error }}
             <div class="message bg-danger">
-                <div class="message-text">{{$msg.Message}}</div>
+                <div class="message-text">{{ $msg.Message }}</div>
             </div>
-        {{else if eq $msg.Tag "warning" }}
+        {{ else if eq $msg.Tag $levels.Warning }}
             <div class="message bg-warning">
-                <div class="message-text">{{$msg.Message}}</div>
+                <div class="message-text">{{ $msg.Message }}</div>
             </div>
-        {{else if eq $msg.Tag "info" }}
+        {{ else if eq $msg.Tag $levels.Info }}
             <div class="message bg-info">
-                <div class="message-text">{{$msg.Message}}</div>
+                <div class="message-text">{{ $msg.Message }}</div>
             </div>
-        {{else if eq $msg.Tag "debug" }}
+        {{ else if eq $msg.Tag $levels.Debug }}
             <div class="message bg-debug">
-                <div class="message-text">{{$msg.Message}}</div>
+                <div class="message-text">{{ $msg.Message }}</div>
             </div>
-        {{end}}
-    {{end}}
+        {{ end }}
+    {{ end }}
 </section>
 ```
 
-## The cookie backend
+## Backends
 
-The cookie backend stores the messages in a cookie in the user's browser.
-
-This is useful for small messages, but has a limit of 4kb.
-
-If you are storing large messages, it is recommended to use the [session backend](#the-session-backend) instead.
-
-The cookie backend does allow for defining a custom cookie name, along with other settings like:
-
-- `MaxAge` - The maximum age of the cookie in seconds. Defaults to 7 days.
-- `Path` - The path of the cookie. Not set by default.
-- `Domain` - The domain of the cookie. Not set by default.
-- `Expires` - The expiration date of the cookie. Not set by default.
-- `HttpOnly` - Whether the cookie is HTTP only. Not set by default.
-- `SameSite` - The SameSite attribute of the cookie. Not set by default.
-
-This can be configured by setting the appropriate setting in the go-django settings.
+All storage backends implement the `MessageBackend` interface:
 
 ```go
-var settings = make(map[string]any)
-settings[django.APPVAR_ALLOWED_HOSTS] = []string{"*"}
-settings[django.APPVAR_DEBUG] = true
-settings[messages.APPVAR_COOKIE_KEY] = &http.Cookie{
-    Name:    "my_cookie_name", // Define a custom cookie name for your messages cookie backend.
-    MaxAge:  60 * 60 * 24 * 30, // Set the maximum age of the cookie to 30 days.
+type MessageBackend interface {
+	Get() (messages []Message, AllRetrieved bool)
+	Store(message Message) error
+	Level() MessageTag
+	SetLevel(level MessageTag) error
+	Finalize(w http.ResponseWriter, r *http.Request) error
+	Clear() error
 }
 ```
 
-## The session backend
+### The Cookie Backend
 
-The session backend stores the messages in the session.
+`NewCookieBackend` encodes messages with `encoding/gob` and base64 into an HTTP cookie (subject to the ~4KB browser cookie size limit). By default, it uses cookie name `"messages.cookieBackendKey"` with `MaxAge` set to 7 days (`60 * 60 * 24 * 7`), plus a `<Name>.level` cookie for `SetLevel`.
 
-This is useful for larger messages, and allows for more flexibility in terms of storage.
+> [!IMPORTANT]
+> `messages.APPVAR_COOKIE_KEY` MUST be set to an `http.Cookie{...}` **value**, NOT a `*http.Cookie` pointer (`&http.Cookie{...}`). `NewCookieBackend` calls `django.ConfigGet` with an `http.Cookie` value default; passing a pointer causes a runtime panic due to type mismatch.
 
-It also provides a more secure way of storing messages, as they are not exposed to the user.
+```go
+settings := map[string]any{
+	django.APPVAR_ALLOWED_HOSTS: []string{"*"},
+	django.APPVAR_DEBUG:         true,
+	messages.APPVAR_COOKIE_KEY: http.Cookie{
+		Name:     "my_cookie_name",
+		MaxAge:   60 * 60 * 24 * 30,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	},
+}
+```
 
-The session backend does not have any additional settings.
+### The Session Backend
+
+`NewSessionBackend` stores messages inside the user's session via [`sessions.Retrieve`](./sessions.md). It requires the `session` app to be installed (otherwise `NewSessionBackend` returns `ErrBackendNotConfigured`), supports larger payloads, and avoids exposing raw message payloads in client cookies.
+
+## Caveats
+
+- **`Finalize` and flushed headers in `CookieBackend`**: `MessagesMiddleware` calls `backend.Finalize(w, r)` *after* `next.ServeHTTP(w, r)` returns. `django.Application` wraps non-static routes in `middleware.BufferMiddleware` so writes are buffered until middleware unwinds, but if you bypass `BufferMiddleware` or flush the response body early (for example via `http.Flusher`) on a non-redirect response, headers are sent before `Finalize` runs and `Set-Cookie` updates are lost.
+- **`CookieBackend` `Secure` and clear-cookie attributes**: `CookieBackend.Finalize` copies `Path`, `Domain`, `Expires`, `MaxAge`, `HttpOnly`, and `SameSite` from `APPVAR_COOKIE_KEY`, **but does not copy `Secure`**. Additionally, when `Clear()` triggers cookie deletion, `Finalize` writes `&http.Cookie{Name: d.BaseCookie.Name, Value: "", MaxAge: -1}` **without** `Path`, `Domain`, `HttpOnly`, `SameSite`, or `Secure`—which can prevent browsers from deleting cookies scoped to a custom `Path` or `Domain`.
+- **`ConfigureTags` scope**: Calling `ConfigureTags` changes `app.Tags` (and `DEFAULT_MESSAGE_LEVELS`), while `TagLevels` and `LevelTags` remain keyed by the built-in `DEBUG`, `INFO`, `SUCCESS`, `WARNING`, and `ERROR` constants.

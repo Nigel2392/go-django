@@ -1,97 +1,242 @@
-# Auditlogs app
+# Auditlogs
 
-Auditlogs are a way to keep track of certain actions which have been performed by the user.
-This is implemented by logging these actions to a separate database table.
-The Auditlogs app provides a user interface to view these logs.
+The `auditlogs` app (`github.com/Nigel2392/go-django/contrib/reports/audit_logs`) records user and system actions in a dedicated database table and provides an admin report view for inspecting, filtering, and exporting entries.
 
-Some apps automatically log actions, for example - each action performed in the admin interface is logged.
+## Required Parent App: `contrib/reports`
 
-Auditlogs can be used anywhere and for various purposes, for example:
+`auditlogs` declares `"reports"` as a hard dependency (`Logs.Deps = []string{"reports"}`). The parent package `github.com/Nigel2392/go-django/contrib/reports` provides the top-level **Reports** submenu in the admin interface:
 
-- Tracking changes made to important data
-- Monitoring user activity for security purposes
-- Keeping a history of actions for auditing and compliance
+- `reports.NewAppConfig() django.AppConfig`: Registers the `"reports"` app and hooks into `admin.RegisterMenuItemHook` to add the `"Reports"` submenu.
+- `reports.ReportsMenuHook` (`"reports:register_to_menu"`): Goldcrest hook constant invoked when building items inside the **Reports** submenu.
+- `reports.ReportsMenuHookFunc`: Hook signature `func(r *http.Request) []menu.MenuItem`.
+- `reports.RegisterMenuItem(fn func(r *http.Request) []menu.MenuItem)`: Helper that registers menu items under the **Reports** submenu.
 
-## Viewing Auditlogs
+## Installation
 
-To view the auditlogs, navigate to the Auditlogs app in the main menu of the admin interface.
+Include `reports.NewAppConfig` alongside `auditlogs.NewAppConfig`, `admin.NewAppConfig`, and `django.APPVAR_DATABASE`:
 
-This URL would look something like this: `https://yourdomain.com/admin/auditlogs/`
+```go
+package main
 
-Here, you will see a list of all the auditlogs, along with details such as the user who performed the action, the action performed, the timestamp, and any additional information. You can filter and search through the logs to find specific entries.
+import (
+	"context"
 
-Auditlogs also allow custom links in the list of auditlogs to quickly navigate to or interact with the related object.
+	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/auth"
+	"github.com/Nigel2392/go-django/contrib/messages"
+	"github.com/Nigel2392/go-django/contrib/reports"
+	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/contrib/session"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	django "github.com/Nigel2392/go-django/src"
 
-## Customizing Auditlog Definitions
+	_ "github.com/mattn/go-sqlite3"
+)
 
-Auditlog definitions can be customized to log specific actions or data as needed.
+func main() {
+	db, err := drivers.Open(context.Background(), "sqlite3", "example.db")
+	if err != nil {
+		panic(err)
+	}
 
-These basically prepare the data to be shown in the admin interface, as well as what data to log in the first place.
+	app := django.App(
+		django.Configure(map[string]any{
+			django.APPVAR_ALLOWED_HOSTS: []string{"*"},
+			django.APPVAR_DATABASE:      db,
+		}),
+		django.Apps(
+			session.NewAppConfig,
+			messages.NewAppConfig,
+			auth.NewAppConfig,
+			admin.NewAppConfig,
+			reports.NewAppConfig,
+			auditlogs.NewAppConfig,
+		),
+	)
 
-These definitions also define what custom links are shown in the auditlog list for each log entry.
+	if err := app.Serve(); err != nil {
+		panic(err)
+	}
+}
+```
 
-Custom definitions can be created by adhering to the `auditlogs.Definition` interface.
+`auditlogs.NewAppConfig` returns a `*migrator.MigratorAppConfig` with migrations for `&auditlogs.Entry{}`. When `migrator` is not installed, `auditlogs` automatically creates the `Entry` table during initialization.
 
-An example of this interface and related interfaces can be seen below:
+## Viewing and Filtering Auditlogs
 
-```golang
+In the admin interface, open **Reports -> Audit Logs** (mounted at `/admin/auditlogs` and reversible as `"admin:auditlogs"`). Accessing `/admin/auditlogs` and viewing the admin home page events panel both require the `"auditlogs:list"` permission.
+
+The audit logs view provides:
+
+- **Structured sidebar filters**: `type` (log entry type), `level` (`Debug`, `Info`, `Warning`, `Error`), `user`, `content_type`, and `object_id`. There is no free-text search bar.
+- **Pagination**: Defaults to 25 rows per page with a per-page selector (`15`, `25`, `50`, `100`) controlled by `page` and `amount` query parameters.
+- **CSV export**: Appending `?_export=1` (via the **Download CSV** action button) exports the filtered queryset as CSV.
+
+## Automatic Logging
+
+Once installed, `auditlogs` automatically records:
+
+- **Admin model CRUD actions**: Registers hooks on `admin.AdminModelHookAdd`, `admin.AdminModelHookEdit` (`logger.INF`), and `admin.AdminModelHookDelete` (`logger.WRN`) once `Logs.IsReady()` is true, storing `model_name`, `instance_id`, and `content_type`.
+- **Failed logins**: Listens to `core.SIGNAL_LOGIN_FAILED` and logs `"auth.login_failed"` entries at `logger.ERR` containing `form` (masking sensitive fields via `safety.IsSecretField`), `host`, and `ip`, formatted by a built-in definition.
+
+## Models, Interfaces, and Errors
+
+Each stored audit log record uses `&auditlogs.Entry{}` (implementing `LogEntry` and `DBCreateLogEntry`):
+
+```go
+type LogEntry interface {
+	attrs.Definer
+	ID() uuid.UUID
+	Type() string
+	Level() logger.LogLevel
+	Timestamp() time.Time
+	User() users.User
+	ObjectID() interface{}
+	ContentType() contenttypes.ContentType
+	Data() map[string]interface{}
+}
+
+type DBCreateLogEntry interface {
+	LogEntry
+	Create(context.Context) error
+}
+
+type Entry struct {
+	models.Model
+	Id    drivers.UUID                         `db:"id" json:"id"`
+	Typ   drivers.String                       `db:"type" json:"type"`
+	Time  drivers.Timestamp                    `db:"timestamp" json:"timestamp"`
+	Usr   users.User                           `db:"user" json:"user"`
+	ObjID drivers.JSON[any]                    `db:"object_id" json:"object_id"`
+	CType *contenttypes.BaseContentType[any]   `db:"content_type" json:"content_type"`
+	Src   drivers.JSON[map[string]interface{}] `db:"data" json:"data"`
+	Lvl   logger.LogLevel                      `db:"level" json:"level"`
+
+	Obj interface{} `json:"-"`
+}
+```
+
+Package variables and sentinel errors:
+
+- `LogUnknownTypes` (`bool`, default `true`): When `false`, `auditlogs.Log(...)` returns an error if no `Definition` is registered for `entryType`.
+- `ErrLogsNotReady`: Returned by `Log(...)` if called before the `auditlogs` app is ready.
+- `ErrLogEntryNotFound`: Sentinel error indicating a log entry could not be found.
+
+## Customizing Definitions and Actions
+
+Definitions control how log entry types are labeled, formatted, and linked in the admin list view:
+
+```go
 type LogEntryAction interface {
-    Icon() string
-    Label() string
-    URL() string
+	Icon() string
+	Label() string
+	URL() string
+}
+
+type BaseAction struct {
+	DisplayLabel string
+	ActionIcon   string
+	ActionURL    string
 }
 
 type Definition interface {
-    TypeLabel(r *http.Request, typeName string) string
-    GetLabel(r *http.Request, logEntry LogEntry) string
-    FormatMessage(r *http.Request, logEntry LogEntry) any // string | template.HTML
-    GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
+	TypeLabel(r *http.Request, typeName string) string
+	GetLabel(r *http.Request, logEntry LogEntry) string
+	FormatMessage(r *http.Request, logEntry LogEntry) any // string | template.HTML
+	GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
+}
+
+type BoundDefinition struct {
+	Request    *http.Request
+	Definition Definition
+	LogEntry
 }
 ```
 
-These definitions can then be registered in the `init()` function of your app, like so:
+Register and resolve definitions using:
 
-```golang
+- `RegisterDefinition(typ string, definition Definition) Definition`: Associates `definition` with `typ`.
+- `DefinitionForType(typ string) Definition`: Looks up the registered `Definition` for `typ` (returns `nil` if unregistered).
+- `SimpleDefinition() Definition`: Returns the default fallback `Definition` used when no custom definition is registered.
+- `Define(r *http.Request, l LogEntry) *BoundDefinition`: Binds `l` to its registered `Definition` (or `SimpleDefinition()`). `BoundDefinition` exposes `Label()`, `Message()`, and `Actions()`, which appends quick-filter links (`?filters-type=...`, `?filters-content_type=...`, and `?filters-object_id=...&filters-content_type=...`) to any custom actions.
+
+```go
 func init() {
-    auditlogs.RegisterDefinition("example.delete_model", &YourCustomAuditlogDefinition{})
+	auditlogs.RegisterDefinition("example.delete_model", &YourCustomAuditlogDefinition{})
 }
 ```
 
-This will ensure that your custom auditlog definitions are used when logging and displaying auditlogs for your app.
+## Filtering and Transforming Log Entries
 
-These custom definitions can then be used when creating auditlog entries in your app.
+You can intercept entries before they are persisted by implementing `EntryFilter` or `EntryHandler`:
 
-## Logging to the Auditlogs app
+```go
+type EntryFilter interface {
+	Type() string
+	EntryFilter(message LogEntry) bool
+}
 
-For example, to log a message of type `example.delete_model`, you would do something like this:
-
-```golang
-import (
-    "context"
-    "github.com/Nigel2392/mux/middleware/authentication"
-    "github.com/Nigel2392/go-django/src/core/logger"
-    auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
-)
-
-var contextWithUser = authentication.ContextWithUser(
-    context.Background(),
-    myUserInstance,
-)
-
-logEntryId, err := auditlogs.Log(
-    contextWithUser,         // context for the operation, can include `User` object
-    "example.delete_model",  // type of the log entry
-    logger.INF,              // level of the log entry
-    myModelInstance,         // the related object (can be nil)
-    map[string]interface{}{  // additional data to log
-        "title":    myModelInstance.Title,
-    },
-)
+type EntryHandler interface {
+	Type() string
+	Handle(message DBCreateLogEntry) (DBCreateLogEntry, error)
+}
 ```
 
-An important fact to note about the above code is that the user performing the action is taken from the context.
+- `RegisterFilter(filter EntryFilter)` / `RegisterHandler(handler EntryHandler)`: Registers a filter or handler for all entries of `Type()`.
+- `RegisterFilterForObject(filter EntryFilter, contentType contenttypes.ContentType)` / `RegisterHandlerForObject(handler EntryHandler, contentType contenttypes.ContentType)`: Scopes a filter or handler to a specific object `contentType` package path as well as `Type()`.
 
-This makes it easy to log actions using just the request's context (`request.Context()`) in web handlers, but
-also means it requires an extra step to set the user in the context when logging outside of web handlers.
+If any matching `EntryFilter` returns `false`, `Log(...)` skips saving the entry and returns `uuid.Nil, nil`. Matching `EntryHandler`s execute sequentially and may modify or replace the `DBCreateLogEntry` before `Create(ctx)` runs.
 
-The auditlogs also uses the `queries` package to log the actions to the database, meaning any transactions present in the context will be honored.
+## Logging Custom Events
+
+Call `auditlogs.Log` with a context, entry type, log level, optional target `attrs.Definer`, and optional data map:
+
+```go
+package main
+
+import (
+	"context"
+
+	"github.com/Nigel2392/go-django/contrib/auth/users"
+	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/mux/middleware/authentication"
+)
+
+func logDelete(ctx context.Context, actor users.User, obj attrs.Definer, title string) error {
+	ctxWithUser := authentication.ContextWithUser(ctx, actor)
+
+	_, err := auditlogs.Log(
+		ctxWithUser,            // context (honors request/ORM transactions and user)
+		"example.delete_model", // log entry type
+		logger.INF,             // log level
+		obj,                    // related object (may be nil)
+		map[string]any{         // additional JSON payload
+			"title": title,
+		},
+	)
+	return err
+}
+```
+
+`Log` reads the acting user from `authentication.UserFromContext(ctx)` (ignoring unauthenticated users). Outside HTTP requests, attach the actor via `authentication.ContextWithUser(ctx, user)`. Because `Entry.Create(ctx)` uses the `queries` package, any active database transaction on `ctx` is respected.
+
+## Query Filter Helpers
+
+`contrib/reports/audit_logs` provides expression builders for querying `&auditlogs.Entry{}` with `queries`:
+
+- `FilterType(values ...string) expr.Expression`
+- `FilterLevel(values ...logger.LogLevel) expr.Expression`
+- `FilterLevelGT(value logger.LogLevel) expr.Expression`
+- `FilterLevelLT(value logger.LogLevel) expr.Expression`
+- `FilterTimestamp(values ...time.Time) expr.Expression`
+- `FilterUserID(values ...interface{}) expr.Expression`
+- `FilterObjectID(values ...interface{}) expr.Expression`
+- `FilterContentType(values ...contenttypes.ContentType) expr.Expression`
+- `FilterData(values ...interface{}) expr.Expression`
+
+### Caveats
+
+- **`FilterUserID` field-name mismatch**: `FilterUserID` builds `expr.Q("UserID", ...)` / `expr.Q("UserID__in", ...)`, whereas `Entry.Fields` registers its user foreign key under `NameOverride: "User"`. When querying `&auditlogs.Entry{}`, filter on `"User"` directly (for example `expr.Q("User", userID)`) instead of calling `FilterUserID`.
+- **Zero-argument panic**: All variadic `Filter*` helpers (`FilterType`, `FilterLevel`, `FilterTimestamp`, `FilterUserID`, `FilterObjectID`, `FilterContentType`, and `FilterData`) index `values[0]` / `v[0]` unconditionally when fewer than two arguments are passed, so calling any of them with 0 arguments panics.

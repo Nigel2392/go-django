@@ -1,57 +1,69 @@
-# Staticfiles
+# Static Files
 
-Staticfiles are files that are served directly to the client.
+Static files are assets—such as CSS, JavaScript, fonts, and images—served directly to clients by the `staticfiles` package (`github.com/Nigel2392/go-django/src/core/filesystem/staticfiles`).
 
-This can be anything from images, CSS, JavaScript, or other static files.
-
-Staticfiles will run through the middleware chain, so you can add custom middleware to serve static files.
-
-All staticfiles are served from the `static/` URL prefix by default.
-
-This can be changed by setting the [`APPVAR_STATIC_URL` setting](./configuring.md#pre-defined-settings).
+By default, Go-Django serves static files under the `/static/` URL prefix (`django.APPVAR_STATIC_URL`). Internally, `staticfiles` stores registered filesystems in a `filesystem.MultiFS`, so **the last registered matching filesystem wins** when multiple filesystems contain the same path.
 
 ## Configuration
 
-To configure staticfiles and learn more about matches, see the [filesystem documentation](./filesystem.md#matchfs).
+For details on `MatchFS` and matcher functions, see [Filesystem](./filesystem.md#matchfs).
 
-Staticfiles are configured using the global package- level functions:
+`staticfiles` exposes package-level helpers backed by `staticfiles.EntryHandler` (`*staticfiles.FileHandler`), or you can instantiate an isolated handler with `staticfiles.NewFileHandler()`.
 
 ### `AddFS(filesys fs.FS, matches func(path string) bool)`
 
-Add a filesystem to the list of filesystems that will be used to serve static files.
-
-The `matches` function is used to determine if a file should be served from this filesystem.
-
-This allows for more fine-grained but performant matching of file paths in multiple filesystems.
-
-### `Collect(fn func(path string, f fs.File) error) error`
-
-Collect all files from all filesystems and call the `fn` function with the path and file.
-
-This can be used to pre-load all files into memory, or to do other operations on the files, like hashing, minification, or other transformations.
-
-None of this functionality is built-in, but can be added by the user.
+Registers an `fs.FS` with `staticfiles.EntryHandler`. If `matches` is non-nil, `filesys` is wrapped in a `filesystem.MatchFS` to skip non-matching paths before touching the filesystem.
 
 ### `Open(name string) (fs.File, error)`
 
-Open a file by name.
+Opens `name` across the registered filesystems in reverse registration order (last registered wins).
 
-This will return the first file that matches the name in any of the filesystems.
+### `Collect(fn func(path string, f fs.File) error) error`
+
+Walks every filesystem registered in `FileHandler` and invokes `fn(path, f)` for each non-directory file. Use `Collect` to pre-hash, minify, copy, or inspect static assets at startup.
+
+> [!NOTE]
+> **Caveat on `Collect`:** `FileHandler.Collect` unwraps top-level `*filesystem.MatchFS` (`fs.FS()`) and `*filesystem.MultiFS` (`fs.FS()...`) wrappers before walking them with `fs.WalkDir`, which means matcher predicates on a top-level `MatchFS` are **not** enforced during `Collect`.
+
+---
+
+## Settings and Middleware Behavior
+
+Static file serving is configured in `app.Initialize()` using these settings (see [Configuring](./configuring.md#core-application-settings)):
+
+- `django.APPVAR_STATIC_URL` (`string`, default `"/static/"`): URL prefix where `staticfiles.EntryHandler` is mounted. Setting this to `""` falls back to `"/static/"`.
+- `django.APPVAR_STATIC_ROUTE_CACHING_MAXAGE` (`int`, default `3600`): Wraps `staticfiles.EntryHandler` with `middleware.Cache(maxAge)` when `maxAge > 0`. Set to `0` (or negative) to disable cache headers.
+- `django.APPVAR_STATIC_ROUTE_LOGGING_ENABLED` (`bool`, default `false`): Static requests only log (at `logger.DBG`) when **both** `django.APPVAR_DEBUG` and `django.APPVAR_STATIC_ROUTE_LOGGING_ENABLED` are `true`.
+
+The static route is registered with `route.Preprocess(django.MarkStaticRouteMiddleware)`. As a result:
+
+- Requests to static URLs return `true` from `django.IsStaticRouteRequest(r)`.
+- `middleware.BufferMiddleware` skips response buffering for static routes.
+- Any middleware wrapped in `django.NonStaticMiddleware(...)` (such as session middleware) is bypassed on static requests.
+
+---
+
+## Resolving Static URLs
+
+Use `django.Static(path)` (or `app.Static(path)`) in Go code and `{{ static "..." }}` in templates:
+
+- Relative paths (such as `"myapp/css/style.css"`) are prefixed with `APPVAR_STATIC_URL` (producing `"/static/myapp/css/style.css"`).
+- Paths already beginning with `"/"` or full URLs containing a scheme/host (`"https://..."`) are returned unchanged.
+
+---
 
 ## Example
-
-In this example, we add an embedded filesystem to the staticfiles, then we will pretend to collect all the files.
-
-You need to implement your own logic for this.
 
 ```go
 package main
 
 import (
-    "fmt"
     "embed"
+    "fmt"
     "io/fs"
-    "github.com/Nigel2392/go-django/src"
+
+    django "github.com/Nigel2392/go-django/src"
+    "github.com/Nigel2392/go-django/src/core/filesystem"
     "github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 )
 
@@ -59,27 +71,28 @@ import (
 var staticFS embed.FS
 
 func main() {
-    var app = django.App(
-        // ...
+    app := django.App(
+        django.Configure(map[string]interface{}{
+            django.APPVAR_ALLOWED_HOSTS: []string{"*"},
+            django.APPVAR_STATIC_URL:    "/static/",
+        }),
     )
 
-    staticfiles.AddFS(staticFS, nil)
+    subFS := filesystem.Sub(staticFS, "assets/static")
+    staticfiles.AddFS(subFS, filesystem.MatchPrefix("myapp/"))
 
-
-    var err = app.Initialize()
-    if err != nil {
+    if err := app.Initialize(); err != nil {
         panic(err)
     }
 
-    err = staticfiles.Collect(func(path string, f fs.File) error {
-        var stat, err = f.Stat()
+    err := staticfiles.Collect(func(path string, f fs.File) error {
+        stat, err := f.Stat()
         if err != nil {
             return err
         }
         fmt.Println("Collected", path, stat.Size())
         return nil
     })
-
     if err != nil {
         panic(err)
     }

@@ -1,220 +1,277 @@
-# Fields
+# Form Fields
 
-Fields are the basic building blocks of forms.  
-They are used to create form elements such as text inputs, checkboxes, radio buttons, etc.
+Fields (`github.com/Nigel2392/go-django/src/forms/fields`) are the core input units of a form. They wrap a [`widgets.Widget`](./widgets.md), convert values between Go types and HTML form values, clean input, and run validators.
 
-A field is a struct that implements the `Field` interface.
+---
 
-As with most of the forms- interfaces, the `Field` interface is quite extensive.
+## The `Field` Interface
 
-Fields are defined in their own `fields` package, which is a sub-package of the `forms` package.
-
-## The `Field` interface
-
-The `Field` interface is defined as follows:
+`fields.Field` is an alias for `internal/forms.Field`:
 
 ```go
 type Field interface {
-    Attrs() map[string]string
-    SetAttrs(attrs map[string]string)
-    Hide(hidden bool)
+	FormValueConverter
+	Attrs() map[string]string
+	SetAttrs(attrs map[string]string)
+	Hide(hidden bool)
 
-    SetName(name string)
-    SetLabel(label func(ctx context.Context) string)
-    SetHelpText(helpText func(ctx context.Context) string)
-    SetValidators(validators ...func(interface{}) error)
-    SetDefault(defaultValue func() interface{})
-    SetWidget(widget Widget)
+	SetName(name string)
+	SetLabel(label func(ctx context.Context) string)
+	SetHelpText(helpText func(ctx context.Context) string)
+	SetValidators(validators ...func(interface{}) error)
+	SetDefault(defaultValue func() interface{})
+	SetWidget(widget Widget)
 
-    Name() string
-    Label(ctx context.Context) string
-    HelpText(ctx context.Context) string
-    Validate(ctx context.Context, value interface{}) []error
-    Widget() Widget
-    Default() interface{}
-    HasChanged(initial, data interface{}) bool
+	Name() string
+	Label(ctx context.Context) string
+	HelpText(ctx context.Context) string
+	Validate(ctx context.Context, value interface{}) []error
+	Widget() Widget
+	Default() interface{}
+	HasChanged(initial, data interface{}) bool
 
-    Clean(ctx context.Context, value interface{}) (interface{}, error)
-    ValueToForm(value interface{}) interface{}
-    ValueToGo(value interface{}) (interface{}, error)
-    Required() bool
-    SetRequired(b bool)
-    ReadOnly() bool
-    SetReadOnly(b bool)
-    IsEmpty(value interface{}) bool
+	Clean(ctx context.Context, value interface{}) (interface{}, error)
+	Required() bool
+	SetRequired(b bool)
+	ReadOnly() bool
+	SetReadOnly(b bool)
+	IsEmpty(value interface{}) bool
 }
 ```
 
-* `Attrs` returns the attributes of the field.  
-  This is a map of attributes that will be rendered in the HTML form.
-* `SetAttrs` sets the attributes of the field.
-* `Hide` sets the field to be hidden.
-* `SetName` sets the name of the field.
-* `SetLabel` sets the label of the field.
-* `SetHelpText` sets the help text of the field.
-* `SetValidators` sets the validators of the field.
-* `SetWidget` sets the widget of the field.
-* `Name` returns the name of the field.
-* `Label` returns the label of the field.
-* `HelpText` returns the help text of the field.
-* `Validate` validates the value of the field.
-* `Widget` returns the widget of the field.
-* `HasChanged` checks if the value of the field has changed.
-* `Clean` cleans the value of the field.
-* `ValueToForm` converts the value to a form value.
-* `ValueToGo` converts the value to a Go value.
-* `Required` returns if the field is required.
-* `SetRequired` sets if the field is required.
-* `ReadOnly` returns if the field is read-only.
-* `SetReadOnly` sets if the field is read-only.
-* `IsEmpty` checks if the value passed is a zero value.
+- `ValueToForm` and `ValueToGo` (from `FormValueConverter`) convert between Go values and form/string representations.
+- `Attrs` / `SetAttrs` manage HTML attributes rendered on the field's widget.
+- `Hide` hides or unhides the widget.
+- `SetLabel` and `SetHelpText` accept `func(ctx context.Context) string` so labels and help text support request-scoped [translations](../translations.md).
+- `Clean` transforms raw converted values before `Validate` checks validators, widget validation, and `Required()`.
+- `HasChanged` compares initial and submitted values (supporting `driver.Valuer` and convertible types).
 
-As seen, some setters take a function which returns a string.
+### Saveable Fields
 
-This is to allow for dynamic values to be set, in practise this might help with translations.
-
-## Field types
-
-There are many different types of fields available in the `fields` package.
-
-Most fields use the base- fields implementation, but some fields have expanded on it.
-
-Fields are often adressd by their functions instead of instantiating the raw structs, this keeps the code uniform and allows for a more flexible API.
-
-Most field- initializers take a set of options, these are functions that set the field's properties.
-
-The following fields- functions are available by default:
-
-### `NewField(type_ func() string, opts ...func(fields.Field)) *BaseField`
-
-This is the base field, it is used to create new fields.
-
-The `type_` function should return the type of the field, this is used to identify the field in the form.
-
-The `opts` functions are used to set the field's properties.
-
-### `CharField(opts ...func(fields.Field))`
-
-A field for text input.
-
-### `EmailField(opts ...func(fields.Field))`
-
-A field for email input.
-
-Automatically validates the input to be a valid email address using `mail.ParseAddress`.
-
-### `BooleanField(opts ...func(fields.Field))`
-
-A field for boolean input.
-
-This field is rendered as a checkbox.
-
-Setting this to required is not recommended, as the checkbox cannot be unchecked.
-
-### `DateField(typ widgets.DateWidgetType, opts ...func(fields.Field))`
-
-A field for date input.
-
-The `typ` parameter is the type of the date widget to use.
-
-It can be one of the following:
-
-* `DateWidgetTypeDate`
-* `DateWidgetTypeDateTime`
-
-#### `DateWidgetTypeDate`
-
-The default html date input.
-
-#### `DateWidgetTypeDateTime`
-
-The default html datetime-local input.
-
-### `NumberField[T widgets.NumberType](opts ...func(fields.Field))`
-
-A field for number input.
-
-The `T` parameter is the type of the number widget to use.
-
-It can be any GO float, int or uint type and will automatically be validated.
-
-### `MarshallerField[T any](encoder func(io.Writer) fields.Encoder, decoder func(io.Reader) fields.Decoder, opts ...func(fields.Field)) *MarshallerFormField[T]`
-
-A field for marshalling data.
-
-The `encoder` function is used to encode the data to a writer.
-
-The `decoder` function is used to decode the data from a reader.
-
-### `JSONField[T any](opts ...func(fields.Field)) *JSONFormField[T]`
-
-A field for JSON input.
-
-This field will automatically marshal and unmarshal the data to and from JSON.
-
-If any errors occur during marshalling or unmarshalling, a validation error will be returned.
-
-### `Protect(w fields.Field, errFn func(err error) error) *ProtectedFormField`
-
-A field that protects another field by catching any errors which occur during validation.
-
-It will call the `errFn` function with the error that occurred.
-
-This way you can handle the error in a custom way, I.E. for password fields.
-
-## Example
-
-Example usage of initializing a formfield with some options set.
+Fields that persist or transform data when a form is validated/saved can implement `SaveableField` or `SaveableCtxField`:
 
 ```go
-var myField = fields.CharField(
-    // Sets the label of the field
-    Label(label any)
+type SaveableField interface {
+	Field
+	Save(value interface{}) (interface{}, error)
+}
 
-    // Sets the help text of the field
-    HelpText(helpText any)
+type SaveableCtxField interface {
+	Field
+	Save(ctx context.Context, value interface{}) (interface{}, error)
+}
+```
 
-    // Sets the name of the field (required for forms)
-    Name(name string)
+Note that `forms.IsValid` invokes `Save` on fields during `fullClean`, and `BaseForm.Save()` invokes `SaveableField.Save` again (see the [caveat in Forms](./readme.md#caveats)).
 
-    // Sets the field to be required or not
-    Required(b bool)
+---
 
-    // Sets the field to be read-only or not
-    ReadOnly(b bool)
+## Standard Field Constructors
 
-    // A regex pattern to validate the processed value of the field
-    Regex(regex string)
+Fields are normally constructed using functional option parameters (`opts ...func(Field)`).
 
-    // A minimum length for the processed value of the field
-    // 
-    // If the value is a string, this will be the length of the string
-    // 
-    // If the value is a number, this will be the number minimum value
-    MinLength(min int)
+### `NewField` and `CharField`
 
-    // A maximum length for the processed value of the field
-    //
-    // If the value is a string, this will be the length of the string
-    // 
-    // If the value is a number, this will be the number maximum value
-    MaxLength(max int)
+```go
+func NewField(opts ...func(Field)) *BaseField
+func CharField(opts ...func(Field)) Field
+```
 
-    // Sets the widget of the field
-    // 
-    // This is the widget that will be used to render the field in the form
-    // 
-    // This allows for the most off-the-shelf customization of fields
-    Widget(w widgets.Widget)
+`NewField` creates a `*BaseField` (defaulting to a `widgets.NewTextInput(nil)` widget and English title-cased field name fallback for labels). `CharField` wraps `NewField(opts...)` and returns `Field`.
 
-    // Sets the field to be hidden
-    // 
-    // This will hide the field in the form
-    Hide(b bool)
+### `EmailField`
 
-    // Sets more validators for the field
-    // 
-    // These validators will be executed with the processed value of the field
-    Validators(validators ...func(interface{}) error)
+```go
+func EmailField(opts ...func(Field)) Field
+```
+
+Defaults to `widgets.NewEmailInput(nil)`, which parses and validates email addresses using `net/mail.ParseAddress` and converts values to `*mail.Address`.
+
+### `BooleanField`
+
+```go
+func BooleanField(opts ...func(Field)) Field
+```
+
+Defaults to `widgets.NewBooleanInput(nil)` (checkbox input). Avoid setting `Required(true)` on optional boolean checkboxes because unchecked HTML checkboxes are omitted from form submissions and evaluate as `false`/empty.
+
+### `DateField`
+
+```go
+func DateField(typ widgets.DateWidgetType, opts ...func(Field)) Field
+```
+
+Defaults to `widgets.NewDateInput(nil, typ)`, where `typ` is either `widgets.DateWidgetTypeDate` (`"date"`) or `widgets.DateWidgetTypeDateTime` (`"datetime-local"`).
+
+### `NumberField`
+
+```go
+func NumberField[T widgets.NumberType](opts ...func(Field)) Field
+```
+
+Generic numeric input for any integer or floating-point constraint (`widgets.NumberType`), defaulting to `widgets.NewNumberInput[T](nil)` with a custom `IsEmptyFunc` treating `nil` and `""` (not `0`) as empty.
+
+### `DecimalField`
+
+```go
+func DecimalField(opts ...func(Field)) Field
+```
+
+Defaults to `widgets.NewDecimalInput(nil, 0)` (2 decimal places step, parsing to `github.com/shopspring/decimal.Decimal`).
+
+### `SQLNullField` (`NullableSQLField`)
+
+```go
+type NullableSQLField[SQLType any] struct {
+	*BaseField
+}
+
+func SQLNullField[SQLType any](opts ...func(Field)) *NullableSQLField[SQLType]
+```
+
+Wraps `database/sql` nullable types (`sql.NullBool`, `sql.NullInt16`, `sql.NullInt32`, `sql.NullInt64`, `sql.NullFloat64`, `sql.NullString`, `sql.NullTime`), unwrapping them in `ValueToForm`, converting submitted strings via the appropriate default widget in `ValueToGo`, and turning `nil` into the corresponding zero `sql.Null*` struct.
+
+**Caveat for `byte` (`sql.NullByte`)**: `NullableSQLField.ValueToGo` passes through an already-constructed `sql.NullByte`, but has no `byte` type case when converting raw `byte` or `nil` values (returning `errs.ErrInvalidType`), and `Widget()` falls back to a generic text input.
+
+### `MultiField`
+
+```go
+type MultiField struct {
+	*BaseField
+	Fields []Field
+}
+
+func NewMultiField(fields []Field, opts ...func(Field)) *MultiField
+```
+
+Groups multiple subfields into a single field backed by `map[string]interface{}` keyed by each child field's `Name()`. `MultiField` propagates `SetRequired`, `SetReadOnly`, `Hide`, `Clean`, `Validate`, and `HasChanged` across all child fields and defaults to `widgets.NewMultiWidget`.
+
+### `MarshallerField` and `JSONField`
+
+```go
+type Encoder interface {
+	Encode(interface{}) error
+}
+
+type Decoder interface {
+	Decode(interface{}) error
+}
+
+func EncFunc[T Encoder](f func(io.Writer) T) func(io.Writer) Encoder
+func DecFunc[T Decoder](f func(io.Reader) T) func(io.Reader) Decoder
+
+func MarshallerField[T any](
+	encoder func(io.Writer) Encoder,
+	decoder func(io.Reader) Decoder,
+	opts ...func(Field),
+) *MarshallerFormField[T]
+
+func JSONField[T any](opts ...func(Field)) *JSONFormField[T]
+```
+
+- `MarshallerField` encodes Go values to strings via `encoder` in `ValueToForm` and decodes submitted strings into `T` via `decoder` in `ValueToGo`. Use `EncFunc` / `DecFunc` to adapt typed factory functions such as `json.NewEncoder` and `json.NewDecoder`.
+- `JSONField` wraps `MarshallerField[T]` with `json.NewEncoder`/`json.NewDecoder`, defaults to `widgets.NewTextarea(nil)`, and translates `encoding/json` errors into user-friendly validation messages.
+
+### `Protect` (`ProtectedFormField`)
+
+```go
+type ProtectedFormField struct {
+	Field
+	ErrorMessage func(err error) error
+}
+
+func Protect(w Field, errFn func(err error) error) *ProtectedFormField
+```
+
+Wraps any `Field` and intercepts errors returned by `ValueToGo`, `Clean`, and `Validate`, passing them through `errFn` (for example, to avoid leaking sensitive details on credential fields). Note that in `ProtectedFormField.Validate`, `errFn` is called twice (`merged := pw.ErrorMessage(...)` and `pw.ErrorMessage(merged)`).
+
+---
+
+## Field Option Functions
+
+All option functions live in `github.com/Nigel2392/go-django/src/forms/fields` (`src/forms/fields/funcs.go`):
+
+- `Label(label any) func(Field)`: Accepts a `string`, `func(context.Context) string`, or `trans.Translatable` (resolved via `trans.GetTextFunc`).
+- `HelpText(helpText any) func(Field)`: Same translatable text types as `Label`.
+- `Name(name string) func(Field)`: Sets the field name.
+- `Required(b bool) func(Field)`: Adds HTML `required=""` and sets `Required` to `true` when `b` is `true`.
+- `ReadOnly(b bool) func(Field)`: Adds HTML `readonly=""` and sets `ReadOnly` to `true` when `b` is `true`.
+- `Placeholder(placeholder string) func(Field)`: Sets the HTML `placeholder` attribute.
+- `Attributes(attrs map[string]string) func(Field)`: Merges extra HTML attributes onto the field.
+- `Default(value interface{}) func(Field)`: Sets a static default value or a `func() interface{}` generator.
+- `Regex(regex string) func(Field)`: Compiles `regex` and validates `fmt.Sprintf("%v", value)` against it.
+- `MinLength(min int) func(Field)`: Sets HTML `minlength` and validates string length (`len(fmt.Sprintf("%v", value)) >= min`).
+- `MaxLength(max int) func(Field)`: Sets HTML `maxlength` and validates string length (`len(fmt.Sprintf("%v", value)) <= max`).
+- `MinValue(min int) func(Field)`: Sets HTML `min` and validates integer lower bound.
+- `MaxValue(max int) func(Field)`: Sets HTML `max` and validates integer upper bound.
+- `Widget(w widgets.Widget) func(Field)`: Overrides the default widget.
+- `Hide(b bool) func(Field)`: Hides or shows the field's widget.
+- `Validators(validators ...func(interface{}) error) func(Field)`: Appends custom value validators.
+
+### Option Caveats
+
+- **`Required(false)` and `ReadOnly(false)` are no-ops**: Both option helpers check `if b` / `if !b` and do nothing when `false` is passed. They will not clear an already-set `Required` or `ReadOnly` flag or remove `"required"`/`"readonly"` attributes; call `field.SetRequired(false)` or `field.SetReadOnly(false)` directly if unsetting.
+- **`MinLength` / `MaxLength` vs. `MinValue` / `MaxValue`**: `MinLength` and `MaxLength` always measure the string length of `fmt.Sprintf("%v", value)`, even on numeric fields. Use `MinValue` and `MaxValue` for numeric bounds.
+- **`MinValue` and `MaxValue` only support integers**: Both convert the value with `strconv.Atoi(fmt.Sprintf("%v", value))`, so they fail with a conversion error on floating-point or decimal strings such as `"3.14"`.
+
+### Field Configuration Example
+
+```go
+ageField := fields.NumberField[int](
+	fields.Name("age"),
+	fields.Label("Age"),
+	fields.HelpText("Must be between 18 and 120"),
+	fields.Placeholder("18"),
+	fields.Default(18),
+	fields.Required(true),
+	fields.MinValue(18),
+	fields.MaxValue(120),
+	fields.Attributes(map[string]string{"class": "number-input"}),
 )
+```
+
+---
+
+## `fields/filefield` Subpackage
+
+Import path: `github.com/Nigel2392/go-django/src/forms/fields/filefield`.
+
+The `filefield` subpackage provides file and image upload fields integrated with `mediafiles.Backend` storage engines:
+
+```go
+type FileStorageField struct {
+	*fields.BaseField
+	IsImageField   bool
+	DisallowClear  bool
+	StorageBackend mediafiles.Backend
+	StorageEngine  string
+	Extensions     []string
+	UploadTo       func(fileObject *widgets.FileObject) string
+	Validators     []func(filename string, file io.Reader) error
+}
+
+func FileField(engine string, opts ...func(fields.Field)) *FileStorageField
+func ImageFileField(engine string, opts ...func(fields.Field)) *FileStorageField
+func FileFieldWithExtensions(allowedExtensions []string) func(fields.Field)
+```
+
+- `FileField` and `ImageFileField` default to [`filewidget.NewFileInput`](./widgets.md#widgetsfilewidget-subpackage) and `filewidget.NewImageFileInput` respectively.
+- `Save(value interface{}) (interface{}, error)` takes a `*widgets.FileObject`, resolves `StorageBackend` (or `mediafiles.RetrieveBackend(StorageEngine)`), saves the uploaded buffer under `UploadTo(fileObject)` (defaulting to `images/<name>` for image fields), and returns `mediafiles.Open(path)`.
+
+### `mediafiles.SimpleStoredObject` Auto-Registration
+
+Importing `filefield` registers an `attrs.RegisterFormFieldGetter` for `mediafiles.SimpleStoredObject{}` in its `init()` function. Any `attrs` model field of type `mediafiles.SimpleStoredObject` automatically produces a `*FileStorageField` configured from `attrs.AttrUploadToKey` (`string`, `func() string`, or `func(*widgets.FileObject) string`).
+
+### `FileFieldWithExtensions` Caveat
+
+`FileField` and `ImageFileField` pass `opts` directly to `fields.NewField(opts...)`, which executes each option against `*fields.BaseField` rather than `*FileStorageField`. Passing `filefield.FileFieldWithExtensions(...)` inside `FileField(...)` or `ImageFileField(...)` panics with `"FileFieldWithExtensions requires a FileStorageField, got *fields.BaseField"`.
+
+Set `Extensions` on the returned field instead, or invoke `FileFieldWithExtensions` after creation:
+
+```go
+avatar := filefield.ImageFileField("default",
+	fields.Name("avatar"),
+	fields.Label("Avatar"),
+)
+filefield.FileFieldWithExtensions([]string{".png", ".jpg"})(avatar)
 ```

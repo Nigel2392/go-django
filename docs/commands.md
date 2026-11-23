@@ -1,78 +1,101 @@
 # Commands
 
-## Introduction
+Commands allow Go-Django applications to expose CLI subcommands through the application binary for tasks such as running checks, opening a SQL shell, creating users, or applying migrations.
 
-Commands are a way to add custom commands to your app.
+## Built-in Commands and Global Flags
 
-These commands can be run from the command line, and can be used to do things like database migrations, or other tasks that need to be run outside of the normal request/response cycle.
+Every `command.Registry` includes `help`, and `django.Application.Initialize()` registers two additional built-in commands:
 
-Some apps, like the `auth` app, will come with their own commands.
+- `help` (`help [command]`): Lists all registered commands or prints flag usage for a specific command. Passing `help`, `--help`, or `-h` as the first argument to your application binary automatically resolves to the `help` command.
+- `check`: Runs `TagSettings`, `TagSecurity`, `TagCommands`, and every app's `AppConfig.Check`, then returns `command.ErrShouldExit` (or an error if serious checks fail).
+- `sql`: Opens an interactive SQL shell against `django.APPVAR_DATABASE`, or executes a single query with `-q "<query>"`. Exits the process directly via `os.Exit`.
 
-Go-Django only provides a `help` command by default.
+Before dispatching the subcommand, `django.Initialize()` also parses a global `-v` boolean flag (`-v` before the command name) that sets `app.Log.SetLevel(logger.DBG)`.
 
-A command is any object which implements the `command.Command` interface.
+---
+
+## Core Interfaces and Types
+
+The `command` package (`github.com/Nigel2392/go-django/src/core/command`) defines the interfaces for commands, flag binding, execution context, and registries:
 
 ```go
-type Command interface {
-    // How the command should be called from the command line
-    Name() string
-
-    // Execute the command
-    // Any arguments not consumed by the flags will be passed here
-    Exec(m command.Manager, args []string) error
+type Manager interface {
+    Log(message string)
+    Logf(format string, args ...interface{})
+    Stdout() io.Writer
+    Stderr() io.Writer
+    Stdin() io.Reader
+    Input(question string) (string, error)
+    ProtectedInput(question string) (string, error)
+    Registry() Registry
+    Command() Command
 }
 
-type CommandAdder interface {
-    // Add optional flags to the flagset
-    AddFlags(m command.Manager, f *flag.FlagSet) error
+type Command interface {
+    Name() string
+    Exec(m Manager, args []string) error
 }
 
 type CommandDescriptor interface {
     Command
     Description() string
 }
+
+type CommandAdder interface {
+    AddFlags(m Manager, f *flag.FlagSet) error
+}
 ```
 
-Though if your command implements a `Description() string` method, it will be used in the help output (via the `CommandDescriptor` interface).
-And if it implements `AddFlags(m command.Manager, f *flag.FlagSet) error`, it can add flags to the command (via the `CommandAdder` interface).
+- `Command`: Required interface; `args` receives any positional CLI arguments not consumed by flags.
+- `CommandDescriptor`: Optional interface whose `Description()` text is displayed in `help` output.
+- `CommandAdder`: Optional interface allowing the command to attach flags to a `*flag.FlagSet`.
+- `Manager` (implemented by `*command.CommandManager` with `OUT`, `ERR`, `IN`, `Cmd`, `Reg`): Provides formatted output, interactive `Input(question)`, hidden terminal `ProtectedInput(question)` (via `golang.org/x/term.ReadPassword`), and access to the active `Registry`.
 
-## Creating a command
+### Sentinel Errors
 
-To create a command, you need to create a new struct that implements the `command.Command` interface.
+`src/core/command/errors.go` exports:
 
-A default interface implementation is already in place in the `command` package.
+- `command.ErrUnknownCommand`: Unknown command name.
+- `command.ErrTooManyArguments`: Excess arguments error.
+- `command.ErrShouldExit`: Indicates the command succeeded and the process should exit rather than continuing to start the web server (also returned when `flag.ErrHelp` is returned from a command).
+- `command.ErrNoCommand`: Returned when no command name was passed on the command line (so `Initialize()` proceeds normally with startup).
 
-The following example shows how to create a simple command that prints a message to the console.
+---
+
+## Creating a Command with `command.Cmd[T]`
+
+Use the generic `command.Cmd[T]` helper to implement `Command`, `CommandDescriptor`, and `CommandAdder` cleanly:
 
 ```go
 package myapp
 
 import (
-    "github.com/Nigel2392/go-django/src/core/command"
+    "errors"
     "flag"
     "fmt"
     "time"
-    "errors"
+
+    "github.com/Nigel2392/go-django/src/core/command"
 )
 
-type customCommandObj struct {
+type customCommandOpts struct {
     printTime bool
     printText string
 }
 
-var myCustomCommand = &command.Cmd[customCommandObj]{
+var myCustomCommand = &command.Cmd[customCommandOpts]{
     ID:   "mycommand",
     Desc: "Prints the provided text with an optional timestamp",
 
-    FlagFunc: func(m command.Manager, stored *customCommandObj, f *flag.FlagSet) error {
+    FlagFunc: func(m command.Manager, stored *customCommandOpts, f *flag.FlagSet) error {
         f.BoolVar(&stored.printTime, "t", false, "Print the current time")
         f.StringVar(&stored.printText, "text", "", "The text to print")
         return nil
     },
 
-    Execute: func(m command.Manager, stored customCommandObj, args []string) error {
+    Execute: func(m command.Manager, stored customCommandOpts, args []string) error {
         if stored.printText == "" {
-            return errors.New("No text provided")
+            return errors.New("no text provided")
         }
 
         if stored.printTime {
@@ -85,125 +108,59 @@ var myCustomCommand = &command.Cmd[customCommandObj]{
 }
 ```
 
-## Registering a command
+### Repeatable Flags (`flags.List`)
 
-Commands are required to be registered to an `apps.AppConfig` object for the command to be available when calling `Initialize()` on your django app.
+The `flags` subpackage (`github.com/Nigel2392/go-django/src/core/command/flags`) provides `flags.List` (implementing `flag.Value`) for flags that may be specified multiple times (for example `-app blog -app auth`):
 
-Let's say the appconfig is stored in a variable called `myCustomApp`.
+```go
+var apps flags.List
+f.Var(&apps, "app", "Apps to process (repeatable)")
+```
 
-Ideally, you would register the command in the `NewCustomAppConfig` function as is directed in [the apps documentation](./apps.md#methods).
+`flags.List` preserves insertion order, rejects duplicates, and exposes `Len()`, `List() []string`, `Lookup(name) (int, bool)`, and `String()`.
+
+### Command Checks (`checks.Checker`)
+
+If a command implements `checks.Checker` (`Check(ctx context.Context) []checks.Message`), `django.Initialize()` runs those checks via `checks.TagCommands` right before executing CLI commands (unless `django.FlagSkipChecks` is set), and `check` includes them in its report.
+
+---
+
+## Registering a Command
+
+Register commands on an `apps.AppConfig` via `AddCommand` (or the `Cmd` slice), or directly on `app.Commands` before `Initialize()` runs commands:
 
 ```go
 myCustomApp.AddCommand(myCustomCommand)
 ```
 
-## Running a command
+You can also create standalone command registries with `command.NewRegistry(name, errorHandling)` and run them via `ExecCommand(args)` or `ExecCommandOpts(args, opts...)`.
 
-After building your application, you can run the command from the command line.
+---
+
+## Execution Lifecycle and Configuration
+
+During `app.Initialize()`, commands execute at **step 12**:
+
+- **Already executed before commands run:** Logger setup, `TagSettings` & `TagSecurity` startup checks, `a.Mux` setup, global template helpers, app instantiation, model & `contenttypes` registration, App Loop 1 (`Dependencies()` & `AppConfig.Initialize(settings)`), and `TagCommands` checks.
+- **Not yet executed when commands run:** App Loop 2 (`AppConfig.BuildRouting`, app `Processors()`, app `Templates()`, `AppConfig.Check`) and App Loop 3 (`AppConfig.OnReady()`).
+
+> [!IMPORTANT]
+> Because routing, app templates, and `OnReady()` run **after** CLI commands in `app.Initialize()`, custom commands should not assume `app.OnReady()` has run or app routes have been registered.
+
+### Controlling Execution Behavior
+
+- **Stop vs. continue (`APPVAR_CONTINUE_AFTER_COMMANDS`):** By default, once a command runs, `app.Initialize()` returns `command.ErrShouldExit` so the server does not start (note: returning `ErrShouldExit` from `Execute` also exits `Initialize()` early regardless of this setting). Set `django.APPVAR_CONTINUE_AFTER_COMMANDS: true` in settings if you want `Initialize()` to finish App Loops 2–3 and continue starting the server after a command succeeds.
+- **Skip command parsing (`FlagSkipCmds`):** Pass `django.Flag(django.FlagSkipCmds)` to `django.App(...)` when embedding Go-Django in tests or tools where `os.Args` should not be parsed as management commands.
+
+---
+
+## Running a Command
 
 ```bash
-go build -o mywebapp .
+go build -o mywebapp ./src
 ./mywebapp mycommand -text "Hello, World!"
 # Output: Hello, World!
 
-./mywebapp mycommand -text "Hello, World!" -t
-# Output: <current-time> Hello, World!
+./mywebapp -v mycommand -text "Hello, World!" -t
+# Enables logger.DBG and prints timestamp + text
 ```
-
-## Scripted migrations
-
-Enable a scripting format with a blank import in your application. Each engine has its own Go module under `queries/src/migrator/pkg` and is listed in the repository's `go.work`.
-
-```go
-import _ "github.com/Nigel2392/go-django/queries/src/migrator/pkg/lua"
-// Or use JavaScript.
-import _ "github.com/Nigel2392/go-django/queries/src/migrator/pkg/javascript"
-```
-
-Set `migrator.APPVAR_MIGRATION_FORMAT` to `"lua"` or `"js"` to select the format generated by `makemigrations`. With a directly constructed engine, pass `migrator.EngineOptionMigrationOutput(".lua")` or `migrator.EngineOptionMigrationOutput(".js")`. JSON `.mig` files remain available through the core migrator.
-
-For the standalone `cmd/migrator` utility, build with `-tags migrator_lua` or `-tags migrator_javascript` and set `format: lua` or `format: js` under `migrate` in its YAML configuration.
-
-Place a `run` callback between schema actions to backfill data at the right point. A data-only migration can omit the `table` snapshot and inherit it from the previous migration.
-
-### Lua
-
-A Lua file returns the migration table.
-
-```lua
-return {
-    actions = {
-        run(function(db)
-            local rows = db:query("SELECT id, name FROM customer WHERE slug IS NULL")
-            for _, row in ipairs(rows) do
-                local slug = string.lower(row.name):gsub("%s+", "-")
-                db:exec("UPDATE customer SET slug = ? WHERE id = ?", slug, row.id)
-            end
-        end),
-    },
-}
-```
-
-`db.NULL` represents SQL `NULL` in Lua.
-
-### JavaScript
-
-A JavaScript schema migration defines a class named for the table. The first comment identifies its Go model. Each `// ->` comment names a dependency. Class properties describe columns, and `constraints()` and `indexes()` can declare the corresponding table metadata. Generated files omit zero-valued metadata while preserving explicit defaults such as `new Default("int64", 0)`.
-
-Calls in `execute()` declare schema operations in order. The optional `preMigrate(db)` and `postMigrate(db)` methods run before and after those operations, on the same instance and transaction. Use `run(callback)` inside `execute()` to place data work between operations.
-
-```js
-// "example.com/shop.Product"
-// -> "shop:Category:0001_create_table.js"
-class shop_product {
-  ID = { column: "id", db_type: "INT", primary: true, use_in_db: true };
-  Title = { column: "title", db_type: "STRING", use_in_db: true };
-  Category = {
-    column: "category_id",
-    db_type: "INT",
-    use_in_db: true,
-    relation: new ManyToOne({ model: "example.com/shop.Category", field: "ID" }),
-  };
-
-  constraints() {
-    return [
-      constraints.CheckConstraint(
-        "title_min_length", "Title is too short",
-        expr.Logical(expr.Func("LENGTH", expr.Field("Title"))).GTE(expr.V(2, true)),
-      ),
-    ];
-  }
-
-  execute() {
-    new CreateTable();
-    new AddConstraint(this.table.constraint("title_min_length"));
-  }
-}
-```
-
-A data-only JavaScript migration can use a `Migration` class with just `preMigrate` or `postMigrate`. It inherits the preceding table snapshot.
-
-JavaScript constraints use the migration registry. Registered paths are available as `expr.Name(args, kwargs)`, `constraints.Name(args, kwargs)`, or `construct("registered.package.Name", args, kwargs)`.
-
-`db.query` returns SQL `NULL` as `null` and integers outside JavaScript's safe integer range as `BigInt`. Callbacks run synchronously.
-
-Scripts can log with `console.log`, `console.info`, `console.debug`, `console.warn`, and `console.error`. Messages go to the application logger.
-
-Hooks and `run` callbacks receive the model's Go queryset as a second argument, bound to the migration transaction. Its methods use their Go names.
-
-```js
-postMigrate(db, qs) {
-  const products = qs.Filter("Status", "pending").Values("ID", "Title");
-  console.info("Pending products:", products.length);
-}
-```
-
-The queryset resolves fields using the current Go model and uses Goja's standard value conversion. Use physical SQL names with `db.query` or `db.exec` when replaying a migration that needs a field since removed or renamed. Use `db.query` for exact results outside JavaScript's safe integer range.
-
-Both engines use the queries compiler. Bind values with `?` and let the compiler translate the placeholders for the database driver. Use `TABLE(SELF)` and `![FieldName]` to resolve table and column names from the migration's model. Queries return rows keyed by column name, and database calls use the migration transaction. Use schema actions for changes that `makemigrations` needs to track, such as setting a column default.
-
-Keep migration filenames stable once applied because they are used in dependency references and migration history. Script files read from disk can be added without rebuilding after the engine is linked. Files bundled with `go:embed` are included at build time.
-
-Both engines use the migration constructor registry. `expr(name, args, kwargs)` resolves names under `queries.expr`, and `constraint(name, args, kwargs)` resolves names under `queries.expr.constraints`. Use `construct(path, args, kwargs)` for a fully qualified path registered by the application.
-
-To add a format, put the engine in its own module, add it to your Go workspace with `go work use`, and call `migrator.RegisterMigrationFormat(".custom", format)` from its `init` function. The format implements `migrator.MigrationDecoder` to populate a `MigrationFile` plan and can also implement `migrator.MigrationEncoder` for generation. Use `migrator.EngineOptionMigrationFormat` for registration on a single engine instance.

@@ -1,157 +1,202 @@
 # Routing
 
-Routing is the process of mapping URLs to views.
-This is done by defining URL patterns in the `Routing` attribute of your `AppConfig`.
+Routing maps HTTP methods and URL patterns to handlers and middleware using `github.com/Nigel2392/mux`. Routes for an app are typically registered inside its `Routing` function (`AppConfig.BuildRouting`).
 
-The `Routing` attribute is a function that takes a `mux.Multiplexer` object as an argument.
+## The `mux.Multiplexer` Interface
 
-The `mux.Multiplexer` object is used to register routes, the interface is defined as follows:
+Both `app.Mux` and the app-scoped multiplexer passed to `AppConfig.Routing` implement `mux.Multiplexer`:
 
 ```go
 type Multiplexer interface {
-    Use(middleware ...mux.Middleware)
-    Handle(method string, path string, handler mux.Handler, name ...string) *mux.Route
-    HandleFunc(method string, path string, handler func(w http.ResponseWriter, r *http.Request), name ...string) *mux.Route
-    AddRoute(route *mux.Route)
+    Use(middleware ...Middleware)
+    Handle(method string, path string, handler Handler, name ...string) *Route
+    HandleFunc(method string, path string, handler func(w http.ResponseWriter, r *http.Request), name ...string) *Route
+    AddRoute(route *Route)
 
-    Any(path string, handler mux.Handler, name ...string) *mux.Route
-    Get(path string, handler mux.Handler, name ...string) *mux.Route
-    Post(path string, handler mux.Handler, name ...string) *mux.Route
-    Put(path string, handler mux.Handler, name ...string) *mux.Route
-    Patch(path string, handler mux.Handler, name ...string) *mux.Route
-    Delete(path string, handler mux.Handler, name ...string) *mux.Route
+    Any(path string, handler Handler, name ...string) *Route
+    Get(path string, handler Handler, name ...string) *Route
+    Post(path string, handler Handler, name ...string) *Route
+    Put(path string, handler Handler, name ...string) *Route
+    Patch(path string, handler Handler, name ...string) *Route
+    Delete(path string, handler Handler, name ...string) *Route
 }
 ```
 
-Any `*mux.Route` returned from this interface will also adhere to the `mux.Multiplexer` interface.
+Any `*mux.Route` returned by `Handle`, `HandleFunc`, `Any`, `Get`, `Post`, `Put`, `Patch`, or `Delete` also implements `mux.Multiplexer` (plus `Head` and `Options`), allowing you to nest child routes and group middleware under a parent route.
+
+---
 
 ## URLs
 
-Routes are registered using the `Handle` method on the `mux.Multiplexer` object.
+### HTTP Method Helpers
 
-There are also convenience methods for the most common HTTP methods:
-
-- `Any`  
-    A route that matches any HTTP method.
-- `Get`  
-    Only matches `GET` requests.
-- `Post`  
-    Only matches `POST` requests.
-- `Put`  
-    Only matches `PUT` requests.
-- `Patch`  
-    Only matches `PATCH` requests.
-- `Delete`  
-    Only matches `DELETE` requests.
-
-### Example
+- `Any`: Matches any HTTP method (`mux.ANY`).
+- `Get`: Matches `GET` (`mux.GET`).
+- `Post`: Matches `POST` (`mux.POST`).
+- `Put`: Matches `PUT` (`mux.PUT`).
+- `Patch`: Matches `PATCH` (`mux.PATCH`).
+- `Delete`: Matches `DELETE` (`mux.DELETE`).
 
 ```go
 myCustomApp.Routing = func(m mux.Multiplexer) {
-    m.Handle(mux.GET, "/", mux.NewHandler(Index), "index"),
-    m.Handle(mux.GET, "/about", mux.NewHandler(About), "about"),
+    m.Handle(mux.GET, "/", mux.NewHandler(Index), "index")
+    m.Get("/about", mux.NewHandler(About), "about")
+    m.HandleFunc(mux.POST, "/contact", Contact, "contact")
 }
 ```
 
-### Variables
+### Path Variables
 
-Variables can be used in the URL pattern to capture parts of the URL.
+Use `<<name>>` segments in URL patterns to capture dynamic path parameters:
 
 ```go
-m.Handle(mux.GET, "/user/<<id>>", mux.NewHandler(User), "user"),
+m.Get("/user/<<id>>", mux.NewHandler(User), "user")
 ```
 
-In the above example, the `User` handler will be called for any URL that matches `/user/<<id>>`.
-
-The `<<id>>` part of the URL will be available as a named parameter in the request's path variable context.
-
-#### The Variables type
-
-This can be retrieved using the `mux.Vars` function on the request.
-
-The `mux.Vars` function takes the request and returns the following type to map the named parameters to their values:
+Retrieve captured path parameters with `mux.Vars(r)` (`mux.Variables`):
 
 ```go
 type Variables map[string][]string
-func (v Variables) Get(key string) string {...}
-func (v Variables) GetAll(key string) []string {...}
-func (v Variables) GetInt(key string) int {...}
+
+func (v Variables) Get(key string) string
+func (v Variables) GetAll(key string) []string
+func (v Variables) GetInt(key string) int
 ```
 
-#### Example usage
-
-This can then be used to get the value of the named parameter.
-
 ```go
-func User(r *http.Request, w http.ResponseWriter) {
-    var pathVars = mux.Vars(r)
-    var id = pathVars.Get("id")
+func User(w http.ResponseWriter, r *http.Request) {
+    pathVars := mux.Vars(r)
+    id := pathVars.Get("id")
+    // Or as an integer:
+    userID := pathVars.GetInt("id")
+    _, _ = id, userID
 }
 ```
 
 ### Wildcards
 
-Wildcards can be used in the URL pattern to capture parts of the URL.
+Use `*` in a URL pattern to capture trailing path segments under the `"*"` variable key:
 
 ```go
-m.Handle(mux.GET, "/static/*", mux.NewHandler(Static), "static"),
+m.Get("/files/*", mux.NewHandler(Files), "files")
 ```
 
-In the above example, the `Static` handler will be called for any URL that starts with `/static/`.
-
-We have already implemented a static file server, so this is just an example; refer to [configuring](./configuring.md#pre-defined-settings) for more information.
-
-Each wildcard part of the URL will be available as a named parameter in the request's path variable context.
-
-This can be retrieved using the `mux.Vars` function on the request.
-
 ```go
-func Static(r *http.Request, w http.ResponseWriter) {
-    var pathVars = mux.Vars(r)
-    var pathParts = pathVars.GetAll("*")
+func Files(w http.ResponseWriter, r *http.Request) {
+    pathVars := mux.Vars(r)
+    pathParts := pathVars.GetAll("*")
+    _ = pathParts
 }
 ```
 
+### Named Routes, Nesting, and URL Reversing
+
+Pass an optional route name as the final argument to `Handle` or method helpers. Adding routes onto a parent `*mux.Route` creates nested route names separated by `:` (`mux.NAME_SEPARATOR`):
+
+```go
+myCustomApp.Routing = func(m mux.Multiplexer) {
+    blog := m.Any("/blog", mux.NewHandler(BlogIndex), "blog")
+    blog.Get("/post/<<slug>>", mux.NewHandler(BlogPost), "detail")
+}
+```
+
+Resolve a named route back to a URL path using `django.Reverse(name, args...)` (or `app.Mux.Reverse(name, args...)` to handle errors manually):
+
+```go
+url := django.Reverse("blog:detail", "hello-world") // "/blog/post/hello-world"
+```
+
+In HTML templates, use the built-in `url` template function:
+
+```html
+<a href="{{ url "blog:detail" "hello-world" }}">Read post</a>
+```
+
+---
+
 ## Middleware
 
-Middleware can be registered using the `Use` method on the `mux.Multiplexer` object.
+Register middleware on a `mux.Multiplexer` or `*mux.Route` with `Use(...)`:
 
-It works the same way as the `http.Handler` middleware, but with a few differences.
-
-### Example
+```go
+type Handler = http.Handler
+type Middleware = func(Handler) Handler
+```
 
 ```go
 myCustomApp.Routing = func(m mux.Multiplexer) {
     m.Use(func(next mux.Handler) mux.Handler {
         return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
-
-            // Do stuff before the handler
-
+            // Logic before the handler
             next.ServeHTTP(w, req)
-
-            // Do stuff after the handler
+            // Logic after the handler
         })
     })
 }
 ```
 
-The `Use` method takes a list of middleware functions that return a `mux.Handler`.
+### Per-Route Preprocessing and Disabling Middleware
 
-The `mux.Handler` interface is defined as follows:
-
-```go
-type Handler = http.Handler
-```
-
-The `ServeHTTP` method is called with the `http.ResponseWriter` and `*http.Request` objects.
-
-The `ServeHTTP` method should call the next middleware in the chain, or the final handler if there are no more middleware functions.
-
-### Disabling Middleware
-
-Middleware can also be disabled for individual routes.
+- `route.Preprocess(middleware...)`: Registers `PreMiddleware` on a `*mux.Route` that executes **before** `app.Mux` global middleware (used internally by `MarkStaticRouteMiddleware` for static and media routes).
+- `route.RunsMiddleware(false)`: Sets `route.DisabledMiddleware = true` so `PreMiddleware`, `app.Mux` middleware, and `route.Middleware` are skipped for that route. (Outer server wrappers added in `app.Serve()`, such as `RequestSignalMiddleware` and `nosurf`, still wrap `a.Mux`.)
 
 ```go
-route := m.Handle(mux.GET, "/", mux.NewHandler(Index), "index")
+route := m.Get("/health", mux.NewHandler(Health), "health")
 route.RunsMiddleware(false)
 ```
+
+---
+
+## Default Middleware Stack
+
+Go-Django automatically wires built-in middleware during `app.Initialize()` and `app.Serve()`:
+
+1. **Outer wrappers applied in `app.Serve()` (`middlewareBuiltins()`):**
+   - `nosurf` CSRF protection (when `APPVAR_DISABLE_NOSURF` is `false`; exempts requests with a valid `X-CSRF-Token` header and runs `django.HOOK_SETUP_NOSURF` hooks).
+   - `django.RequestSignalMiddleware` (emits `core.SIGNAL_BEFORE_REQUEST` and `core.SIGNAL_AFTER_REQUEST`).
+   *(Note: `Serve()` loops over `[RequestSignalMiddleware, nosurf]` wrapping `a.Mux` forward, so `nosurf` is the outermost layer when enabled, followed by `RequestSignalMiddleware`.)*
+2. **Route preprocessing (`route.PreMiddleware`):**
+   - Runs before `a.Mux` global middleware (for example, `MarkStaticRouteMiddleware` on static and media routes).
+3. **Global `a.Mux` middleware registered in `app.Initialize()` (in execution order):**
+   - `middleware.AllowedHosts` (from `django.APPVAR_ALLOWED_HOSTS`)
+   - `loggerMiddleware` (logs `<method> <duration> <ip> <path>`; controlled by `APPVAR_ROUTE_LOGGING_ENABLED`, `APPVAR_DEBUG`, and `APPVAR_STATIC_ROUTE_LOGGING_ENABLED`)
+   - `django.ContextDataStoreMiddleware` (attaches a per-request datastore to `r.Context()`)
+   - `middleware.Recoverer(a.ServerError)` (when `django.APPVAR_RECOVERER` is `true`, the default)
+   - `middleware.BufferMiddleware` (buffers non-static responses; skips buffering when `django.IsStaticRouteRequest(r)` is `true`)
+4. **App namespace and per-route middleware (`route.Middleware`):**
+   - App routes registered via `AppConfig.BuildRouting` also attach the owning `AppConfig` to `r.Context()` (`django.AppFromContext(r.Context())`).
+
+---
+
+## Request Utilities and Signals
+
+### Client IP (`django.GetIP`)
+
+`django.GetIP(r *http.Request) string` returns the client IP using `mux.GetIP`, automatically passing `django.APPVAR_REQUESTS_PROXIED` from settings.
+
+### Per-Request Context Data Store
+
+`django.ContextDataStoreMiddleware` attaches a `map[any]interface{}` datastore to every request handled through `a.Mux`:
+
+- `django.ContextDataStoreGet(requestOrContext any, key any, defaultValue ...interface{}) interface{}`
+- `django.ContextDataStoreGetOK(requestOrContext any, key any) (interface{}, bool)`
+- `django.ContextDataStoreSet(requestOrContext any, key any, value interface{})`
+- `django.ContextDataStoreDelete(requestOrContext any, key string) bool`
+- `django.ContextDataStore(requestOrContext any) map[any]interface{}`
+
+> [!IMPORTANT]
+> `ContextDataStore*` helpers type-assert the stored `*datastore` from `r.Context()` and **will panic** if called on a request or `context.Context` that did not pass through `django.ContextDataStoreMiddleware` (for example, in unit tests invoking a handler directly without `app.Mux`).
+
+### Skipping Middleware for Static Routes
+
+Static and media routes run `django.MarkStaticRouteMiddleware` during `route.Preprocess(...)`:
+
+- `django.IsStaticRouteRequest(r *http.Request) bool`: Reports whether the request was marked as a static/media route.
+- `django.RequestWithStaticMark(r *http.Request, isStatic bool) *http.Request`: Sets or updates the static route mark on the request context.
+- `django.NonStaticMiddleware(middleware mux.Middleware) mux.Middleware`: Wraps a middleware so it is bypassed when `IsStaticRouteRequest(r)` is `true` (used by apps such as `session`).
+
+### Request Signals (`core.SIGNAL_BEFORE_REQUEST` / `core.SIGNAL_AFTER_REQUEST`)
+
+`django.RequestSignalMiddleware` sends `*core.HttpSignal{W, R, H}` to `core.SIGNAL_BEFORE_REQUEST` before invoking `a.Mux`, and sends `core.SIGNAL_AFTER_REQUEST` after the handler returns.
+
+If a `SIGNAL_BEFORE_REQUEST` listener writes a custom response and returns `django.ErrServeCanceled`, `RequestSignalMiddleware` immediately stops and skips calling the downstream handler and `SIGNAL_AFTER_REQUEST`. See [Hooks and Signals](./hooks.md) for usage examples.

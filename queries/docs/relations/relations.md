@@ -1,346 +1,304 @@
 # Model Relations
 
-Relations between models in the `queries` package are declared in `FieldDefs()` using either `attrs.FieldConfig` (for quick inline relations) or the typed shortcut constructors in the `fields` package.
+Relations between models in the `queries` package are declared in `FieldDefs(ctx context.Context)` using either `attrs.Config` (`RelForeignKey`, `RelOneToOne`) or the typed shortcut constructors in `queries/src/fields` (`fields.ForeignKey`, `fields.OneToOne`, `fields.ManyToMany`).
 
-> **Important:** Reverse relations are only automatically registered when the model is registered with `attrs.RegisterModel` — usually done via the app's `Models()` list. The field on the reverse side is injected into the model's metadata and is named after the forward model's type by default (e.g. `TodoSet`), or by the value of `attrs.AttrReverseAliasKey` in the field's `Attributes` map.
+> **Important:** Reverse relations are only injected into target model metadata when models are registered (via `attrs.RegisterModel` or app `Models()`).
 
 ---
 
-## Accepted struct field types
+## Struct Field Types and Relation Values
 
-The struct field type for a relational field must be a **pointer to the target model**. For reverse (one-to-many / many-to-many) fields that hold a collection, use `*queries.RelRevFK[attrs.Definer]`:
+| Relation | Struct Field Type | Underlying `queries` Value Type |
+|---|---|---|
+| ForeignKey (`M:1`) | `*TargetModel` or `*queries.RelFK[*TargetModel]` | `queries.RelationValue` |
+| OneToOne (direct) | `*TargetModel` | `attrs.Definer` |
+| OneToOne (through table) | `*queries.RelO2O[*TargetModel, *ThroughModel]` | `queries.ThroughRelationValue` |
+| ManyToMany (through table) | `*queries.RelM2M[*TargetModel, *ThroughModel]` | `queries.MultiThroughRelationValue` |
+| Reverse FK / O2M | `*queries.RelRevFK[attrs.Definer]` (or typed `*queries.RelRevFK[*SourceModel]`) | `queries.MultiRelationValue` |
 
-| Relation             | Struct field type       |
-|----------------------|-------------------------|
-| ForeignKey (M:1)     | `*TargetModel`          |
-| OneToOne             | `*TargetModel` (without through) or `*queries.RelO2O[*Target, *Through]` |
-| ManyToMany           | `*queries.RelM2M[*TargetModel, *ThroughModel]` |
-| Reverse FK / O2O     | `*queries.RelRevFK[attrs.Definer]` |
+If you instantiate a struct in Go (`user := &User{}`) and want to access `.Objects()` on a `*RelRevFK`, `*RelO2O`, or `*RelM2M` field before saving or querying it, initialize the struct with `models.Setup(ctx, user)` so those relation fields are bound and non-nil.
 
 ---
 
 ## 1. Foreign Key (Many-to-One)
 
-A ForeignKey is a many-to-one relation. The struct field is a pointer to the related model. Specify `RelForeignKey` and a `Column` name:
+A `ForeignKey` stores the target model's primary key (or specified `TargetField`) in a column on the source table:
 
 ```go
 type Todo struct {
-    models.Model `table:"queries-todos"`
-    ID           int
-    Title        string
-    User         *User
+	models.Model `table:"queries-todos"`
+	ID           int64
+	Title        string
+	User         *User
 }
 
-func (m *Todo) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-        attrs.NewField(m, "Title", nil),
-        attrs.NewField(m, "User", &attrs.FieldConfig{
-            Null:          true,
-            Column:        "user_id",
-            RelForeignKey: attrs.Relate(&User{}, "", nil),
-        }),
-    )
+func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Title", nil),
+		attrs.NewField(m, "User", &attrs.Config{
+			Null:          true,
+			Column:        "user_id",
+			RelForeignKey: attrs.Relate(&User{}, "", nil),
+		}),
+	)
 }
 ```
 
-Shortcut:
+Using the `fields.ForeignKey` shortcut:
 
 ```go
-fields.ForeignKey[*User]("User", "user_id")
+fields.ForeignKey[*User]("User", "user_id", &fields.FieldConfig{
+	Nullable: true,
+})
 ```
 
-### Creating ForeignKey Relations
-
-To create a ForeignKey relation, you typically set the related model pointer (or just its primary key) on the object and save it. If you want to use the reverse relation (the `TodoSet`) on the `User` *without* fetching it from the database first, you **must** use `models.Setup()`.
+Creating rows with a foreign key:
 
 ```go
-// 1. Create the parent object
-var user = &User{Name: "Alice"}
-queries.CreateObject(user)
+user := &User{Name: "Alice"}
+user, err := queries.CreateObject(user)
 
-// 2. Create the child object with the relation
-var todo = &Todo{
-    Title: "Buy milk",
-    User:  user, // Link the user directly
-}
-queries.CreateObject(todo)
+// Link the loaded/created parent directly:
+todo1, err := queries.CreateObject(&Todo{
+	Title: "Buy milk",
+	User:  user,
+})
 
-// 3. Alternatively, link by ID if you only have the ID
-var todo2 = &Todo{
-    Title: "Buy bread",
-    User:  &User{ID: user.ID},
-}
-queries.CreateObject(todo2)
+// Or link by primary key:
+todo2, err := queries.CreateObject(&Todo{
+	Title: "Buy bread",
+	User:  &User{ID: user.ID},
+})
 ```
-
-> **🚨 CRITICAL: `models.Setup()`**
-> When you instantiate a struct manually in Go (e.g., `user := &User{}`), its reverse relation fields (like `*queries.RelRevFK` or `*queries.RelM2M`) are `nil`.
->
-> If you want to interact with `user.TodoSet.Objects()` *before* or *without* saving the user via `CreateObject` (which sets it up for you), you **must** wrap it in `models.Setup(&User{})` to initialize those fields.
 
 ---
 
 ## 2. One-to-One
 
-A one-to-one relation is configured with `RelOneToOne`.
-
-### Without a Through Model
+### Direct One-to-One (No Through Model)
 
 ```go
 type User struct {
-    models.Model
-    ID      uint64
-    Name    string
-    Profile *Profile
+	models.Model
+	ID      uint64
+	Name    string
+	Profile *Profile
 }
 
-func (m *User) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true, ReadOnly: true}),
-        attrs.NewField(m, "Name", nil),
-        attrs.NewField(m, "Profile", &attrs.FieldConfig{
-            Null:        true,
-            RelOneToOne: attrs.Relate(&Profile{}, "", nil),
-            Column:      "profile_id",
-        }),
-    ).WithTableName("queries-users")
+func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true, ReadOnly: true}),
+		attrs.NewField(m, "Name", nil),
+		fields.OneToOne[*Profile]("Profile", &fields.FieldConfig{
+			Nullable:   true,
+			ColumnName: "profile_id",
+			AllowEdit:  true, // OneToOneField defaults AllowEdit to false
+		}),
+	).WithTableName("queries-users")
 }
 ```
 
-Shortcut:
+Note that `fields.OneToOne` uses `RelationField.AllowEdit()` / `AllowDBEdit()`, which default to `false` unless `AllowEdit: true` is set in `FieldConfig`. Alternatively, `attrs.NewField(m, "Profile", &attrs.Config{Null: true, Column: "profile_id", RelOneToOne: attrs.Relate(&Profile{}, "", nil)})` defaults `AllowEdit` to `true`.
 
-```go
-fields.OneToOne[*Profile]("Profile", &fields.FieldConfig{
-    ColumnName: "profile_id",
-})
-```
+### One-to-One with a Through Model (`RelO2O`)
 
-### With a Through Model
-
-A One-to-One relation can also use a junction/through table. The struct field type must be `*queries.RelO2O[*Target, *Through]`:
+Use `*queries.RelO2O[*Target, *Through]` when a One-to-One link goes through an intermediate junction table:
 
 ```go
 type Document struct {
-    models.Model
-    ID      int64
-    Target  *queries.RelO2O[*TargetDoc, *DocLink]
+	models.Model
+	ID     int64
+	Target *queries.RelO2O[*TargetDoc, *DocLink]
 }
 
-func (d *Document) FieldDefs() attrs.Definitions {
-    return d.Model.Define(d,
-        attrs.NewField(d, "ID", &attrs.FieldConfig{Primary: true}),
-        fields.OneToOne[*queries.RelO2O[*TargetDoc, *DocLink]]("Target", &fields.FieldConfig{
-            Rel: attrs.Relate(
-                &TargetDoc{},
-                "", &attrs.ThroughModel{
-                    This:   &DocLink{},
-                    Source: "SourceModel", // matches DocLink.SourceModel
-                    Target: "TargetModel", // matches DocLink.TargetModel
-                },
-            ),
-        }),
-    )
+func (d *Document) FieldDefs(ctx context.Context) attrs.Definitions {
+	return d.Model.Define(ctx, d,
+		attrs.NewField(d, "ID", &attrs.Config{Primary: true}),
+		fields.OneToOne[*queries.RelO2O[*TargetDoc, *DocLink]]("Target", &fields.FieldConfig{
+			Rel: attrs.Relate(
+				&TargetDoc{},
+				"",
+				&attrs.ThroughModel{
+					This:   &DocLink{},
+					Source: "SourceModel",
+					Target: "TargetModel",
+				},
+			),
+		}),
+	)
 }
 
-// The through model itself
 type DocLink struct {
-    models.Model
-    SourceModel *Document    // source
-    TargetModel *TargetDoc   // target
+	models.Model
+	SourceModel *Document
+	TargetModel *TargetDoc
 }
 
-func (d *DocLink) FieldDefs() attrs.Definitions {
-    return d.Model.Define(d,
-        attrs.NewField(d, "SourceModel", &attrs.FieldConfig{Column: "source_id"}),
-        attrs.NewField(d, "TargetModel", &attrs.FieldConfig{Column: "target_id"}),
-    )
+func (d *DocLink) FieldDefs(ctx context.Context) attrs.Definitions {
+	return d.Model.Define(ctx, d,
+		attrs.NewField(d, "SourceModel", &attrs.Config{Column: "source_id"}),
+		attrs.NewField(d, "TargetModel", &attrs.Config{Column: "target_id"}),
+	)
 }
 ```
 
-### Creating Through Model Relations
+`*queries.RelO2O` exposes `.Objects() *queries.RelOneToOneQuerySet[TargetModel]`:
 
-When a relation uses a through model (like this OneToOne, or a manual ManyToMany), you must explicitly save a new instance of the through model to establish the link:
-
-```go
-// 1. Create the target
-var target = &TargetDoc{Name: "Intro"}
-queries.CreateObject(target)
-
-// 2. Create the main object
-var doc = &Document{}
-queries.CreateObject(doc)
-
-// 3. Manually link the objects using the through model
-var link = &DocLink{
-    SourceModel: doc,
-    TargetModel: target,
-}
-queries.CreateObject(link)
-
-// Querying the object will now include the through relation
-var result, _ = queries.GetQuerySet(&Document{}).
-    Select("ID", "Target.*").
-    Filter("ID", doc.ID).
-    First()
-
-fmt.Println(result.Object.Target.GetValue()) // returns (targetObj, throughObj)
-```
+- `Load(ctx context.Context) error`: Loads the target and through object via `Get()` and populates `Object` and `ThroughObject`.
+- `SetTarget(target T) (created bool, deleted bool, err error)`: Clears any existing link, inserts `target` if its primary key is zero, and inserts the through row.
+- `Clear(ctx context.Context) (bool, error)`: Deletes the through row and clears `Object` / `ThroughObject`.
+- Query helpers: `WithContext(ctx)`, `Select(...)`, `Filter(...)`, `OrderBy(...)`, `Limit(...)`, `Offset(...)`, `Exists()`, `Get()`, `All()`, `IterAll()`.
 
 ---
 
-## 3. Many-to-Many
+## 3. Many-to-Many (`RelM2M`)
 
-A many-to-many relation **always** requires a `Through` table. The struct field type must be `*queries.RelM2M[*TargetModel, *ThroughModel]`.
-
-Pass the through model via `attrs.Relate` or via the `fields.FieldConfig`:
+Many-to-Many relations always require a `ThroughModel`. The struct field must be `*queries.RelM2M[*TargetModel, *ThroughModel]`:
 
 ```go
 type Post struct {
-    models.Model
-    ID   int
-    Tags *queries.RelM2M[*Tag, *PostTag] // Uses RelM2M for ManyToMany
+	models.Model
+	ID   int64
+	Tags *queries.RelM2M[*Tag, *PostTag]
 }
 
-func (m *Post) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        fields.ManyToMany[*queries.RelM2M[*Tag, *PostTag]]("Tags", &fields.FieldConfig{
-            Rel: attrs.Relate(
-                &Tag{},
-                "", &attrs.ThroughModel{
-                    This:   &PostTag{},
-                    Source: "PostRef", // maps to PostTag.PostRef
-                    Target: "TagRef",  // maps to PostTag.TagRef
-                },
-            ),
-        }),
-    )
+func (m *Post) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "ID", &attrs.Config{Primary: true}),
+		fields.ManyToMany[*queries.RelM2M[*Tag, *PostTag]]("Tags", &fields.FieldConfig{
+			Rel: attrs.Relate(
+				&Tag{},
+				"",
+				&attrs.ThroughModel{
+					This:   &PostTag{},
+					Source: "PostRef",
+					Target: "TagRef",
+				},
+			),
+		}),
+	)
 }
 
-// The through model
 type PostTag struct {
-    models.Model
-    PostRef *Post
-    TagRef  *Tag
+	models.Model
+	PostRef *Post
+	TagRef  *Tag
 }
 
-func (m *PostTag) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "PostRef", &attrs.FieldConfig{Column: "post_id"}),
-        attrs.NewField(m, "TagRef", &attrs.FieldConfig{Column: "tag_id"}),
-    )
+func (m *PostTag) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
+		attrs.NewField(m, "PostRef", &attrs.Config{Column: "post_id"}),
+		attrs.NewField(m, "TagRef", &attrs.Config{Column: "tag_id"}),
+	)
 }
 ```
 
-> **Note:** A ManyToMany relation will panic during setup if no `Through` relation is defined.
-
-### Creating Many-to-Many Relations
-
-You can create ManyToMany relations either by explicitly creating the junction table struct (as shown in the OneToOne section), or by using the helper methods on the relation's `Objects()` queryset.
-
-Because `Tags` is a `*queries.RelM2M` field, it must be initialized before you can call `.Objects()` on it. If the object was fetched from the DB or just saved via `CreateObject`, it is ready to use. If it is a fresh struct in memory, you must use `models.Setup()`:
+`*queries.RelM2M` exposes `.Objects() *queries.RelManyToManyQuerySet[TargetModel]`:
 
 ```go
-// models.Setup initializes the Tags RelM2M field so it is not nil!
-var post = models.Setup(&Post{})
-queries.CreateObject(post)
+post := models.Setup(ctx, &Post{})
+post, err := queries.CreateObject(post)
 
-var tag = &Tag{Name: "Golang"}
-queries.CreateObject(tag)
+tag1 := &Tag{Name: "Golang"} // Zero PK -> auto-inserted by AddTarget/AddTargets/SetTargets
+tag2, _ := queries.CreateObject(&Tag{Name: "ORM"})
 
-// AddTarget creates the through object automatically
-created, err := post.Tags.Objects().AddTarget(tag)
+created, err := post.Tags.Objects().WithContext(ctx).AddTarget(tag1)
+addedCount, err := post.Tags.Objects().WithContext(ctx).AddTargets(tag2)
+addedCount, err = post.Tags.Objects().WithContext(ctx).SetTargets([]*Tag{tag1, tag2})
 
-// Or add multiple existing targets
-post.Tags.Objects().AddTargets(tag1, tag2, tag3)
+removedCount, err := post.Tags.Objects().WithContext(ctx).RemoveTargets(tag1)
+clearedCount, err := post.Tags.Objects().WithContext(ctx).ClearTargets()
 
-// You can also sync the entire list (clears existing, adds new)
-post.Tags.Objects().SetTargets([]*Tag{tag1, tag2})
-
-// Remove relations
-post.Tags.Objects().RemoveTargets(tag1)
-post.Tags.Objects().ClearTargets()
-
-// Querying the targets
-var tags, _ = post.Tags.Objects().All()
+rows, err := post.Tags.Objects().WithContext(ctx).OrderBy("Name").All()
 ```
+
+### `ManyToManyQuerySet` Caveats
+
+- **Automatic target creation:** `AddTarget`, `AddTargets`, `SetTargets`, and `RelOneToOneQuerySet.SetTarget` inspect each target's primary key. Any target with a zero primary key is automatically created via `BulkCreate` in the same transaction before creating the through-table rows.
+- **`errors.NoChanges`:** `RemoveTargets` returns `errors.NoChanges` if 0 through rows were deleted, and `ClearTargets` returns `errors.NoChanges` if there were no linked through rows to clear. (`SetTargets` ignores `errors.NoChanges` from its internal `ClearTargets` call.)
 
 ---
 
-## 4. Reverse Relations (auto-generated)
+## 4. Reverse Relations (`RelRevFK`)
 
-When a model is registered with `attrs.RegisterModel`, the `queries` package automatically injects a reverse relation field on the related model.
+When a forward relation model is registered, `queries` (via `attrs` and `fields.RelationField`) registers a reverse field on the target model unless `NoReverseRelation: true` is set:
 
-- ForeignKey `Todo → User` produces a `TodoSet` reverse field on `User` (type `*queries.RelRevFK[attrs.Definer]`)
-- OneToOne `User → Profile` produces a `User` reverse field on `Profile`
+| Forward Relation | Default Reverse Field Name | Override |
+|---|---|---|
+| `ForeignKey` (`RelManyToOne`) from `Todo` -> `User` | `TodoSet` (`<ModelName>Set`) | `FieldConfig.ReverseName` or `attrs.Config.ReverseAlias` |
+| `ManyToMany` (`RelManyToMany`) from `Post` -> `Tag` | `PostSet` (`<ModelName>Set`) | `FieldConfig.ReverseName` |
+| `OneToOne` (`RelOneToOne`) from `User` -> `Profile` | `UserReverse` (`<ModelName>Reverse`) | `FieldConfig.ReverseName` or `attrs.Config.ReverseAlias` |
 
-To hold the reverse relation value on the struct, declare the field with `*queries.RelRevFK[attrs.Definer]`:
+Declare `*queries.RelRevFK[attrs.Definer]` on the target struct to hold reverse objects and query them with `.Objects() *queries.RelOneToManyQuerySet[T]`:
 
 ```go
 type User struct {
-    models.Model
-    ID                 uint64
-    Name               string
-    TodoSet            *queries.RelRevFK[attrs.Definer]
-}
-```
-
-### Working with Reverse Relations
-
-Reverse sets can be queried using `.Objects()` to retrieve the related objects dynamically from the database.
-
-Just like M2M fields, reverse sets must be initialized via `models.Setup()` if you are instantiating the struct manually and want to use the relation before saving.
-
-```go
-// Fetch the user from the database (relation is auto-initialized)
-var row, _ = queries.GetQuerySet(&User{}).
-    Select("ID", "Name", "TodoSet.*"). // eager load the relation
-    Filter("ID", 1).
-    Get()
-var user = row.Object
-
-// Access already eager-loaded models
-for _, todo := range user.TodoSet.AsList() {
-    fmt.Println(todo)
+	models.Model
+	ID      uint64
+	Name    string
+	TodoSet *queries.RelRevFK[attrs.Definer]
 }
 
-// Or query the reverse relation dynamically using its related queryset
-var allTodos, _ = user.TodoSet.Objects().OrderBy("ID").All()
+// Eager-loaded reverse access:
+row, err := queries.GetQuerySet(&User{}).
+	WithContext(ctx).
+	Select("ID", "Name", "TodoSet.*").
+	Filter("ID", 1).
+	Get()
+for _, todo := range row.Object.TodoSet.AsList() {
+	fmt.Println(todo)
+}
+
+// Lazy/dynamic reverse query:
+user := models.Setup(ctx, &User{ID: 1})
+todos, err := user.TodoSet.Objects().WithContext(ctx).OrderBy("ID").All()
 ```
 
 ---
 
 ## Querying Across Relations
 
-Use double-underscore (`__`) notation to filter across related models:
+### Dot Notation for Relation Traversal
+
+Related fields always use **dot notation** (`.`), with `__` reserved for lookups and transforms on the final field:
 
 ```go
-// Fetch all todos where the related user's name starts with "Alice"
-var todos, err = queries.GetQuerySet(&Todo{}).
-    WithContext(ctx).
-    Filter("User__Name__startswith", "Alice").
-    All()
+todos, err := queries.GetQuerySet(&Todo{}).
+	WithContext(ctx).
+	Filter("User.Name__startswith", "Alice").
+	All()
 ```
 
-To eagerly load a related object in the same query, use `Select`:
+Using `"User__Name__startswith"` will fail field resolution because `__` separates lookups/transforms rather than relation hops.
 
-```go
-// Fetch todos and also load the full User object
-var todos, err = queries.GetQuerySet(&Todo{}).
-    WithContext(ctx).
-    Select("*", "User.*").
-    All()
+### Eager Loading: `Select`, `SelectRelated`, and `Preload`
 
-// Access the loaded relation
-fmt.Println(todos[0].Object.User.Name)
-```
+1. **`Select`:** Loads specific columns or whole related models inline via `JOIN`s (for `ForeignKey` / `OneToOne`), or registers a preload for multi-valued relations:
 
-To also load nested relations:
+   ```go
+   todos, err := queries.GetQuerySet(&Todo{}).
+   	WithContext(ctx).
+   	Select("*", "User.*", "User.Profile.*").
+   	All()
+   ```
 
-```go
-// Load Todo → User → Profile
-queries.GetQuerySet(&Todo{}).
-    Select("*", "User.*", "User.Profile.*").
-    All()
-```
+2. **`SelectRelated(fields ...string)`:** Adds `JOIN`s and selects all `ForSelectAll` columns for single-valued (`ForeignKey` and `OneToOne`) relation paths. Note that `SelectRelated` panics on `RelOneToMany` or `RelManyToMany` relations and modifies the `QuerySet` in place without cloning.
+
+3. **`Preload(fields ...any)`:** Loads related objects via separate queries (required for custom query configuration on `OneToMany` / `ManyToMany`, and useful to avoid wide `JOIN`s). Accepts:
+   - `string`: relation path such as `"TodoSet"` or `"Tags"`
+   - `queries.NoJoins("TodoSet")`: ensures no parent `JOIN` is added for the preload
+   - `queries.Preload{Path: "TodoSet", NoJoins: true, QuerySet: customQS}`: attaches a custom `*QuerySet[attrs.Definer]` to filter, order, or `SelectRelated` inside the preloaded query:
+
+   ```go
+   users, err := queries.GetQuerySet(&User{}).
+   	WithContext(ctx).
+   	Preload(queries.Preload{
+   		Path:     "TodoSet",
+   		NoJoins:  true,
+   		QuerySet: queries.Objects[attrs.Definer](&Todo{}).Filter("Done", false).OrderBy("-ID"),
+   	}).
+   	All()
+   ```
+
+See [The QuerySet API](../queryset/queryset.md) and [Fields](../fields.md) for more details.

@@ -1,16 +1,16 @@
 # Virtual Fields
 
-Virtual fields are fields that appear in your model's `FieldDefs()` definition but map to a **computed SQL expression** rather than a plain database column.
+Virtual fields appear in your model's `FieldDefs(ctx context.Context)` definition but map to a **computed SQL expression** rather than a physical table column.
 
-They are backed by `fields.ExpressionField[T]`, created with `fields.NewVirtualField[T]()`, and implement the `queries.VirtualField` interface so the ORM knows to render them as SQL expressions in `SELECT` rather than as column references.
+They are backed by `*fields.ExpressionField[T]`, constructed with `fields.NewVirtualField[T]`, and implement `queries.VirtualField` (`SQL(chain []string, inf *expr.ExpressionInfo) (string, []any)`) and `queries.AliasField` (`Alias() string`).
 
 ---
 
-## When to use Virtual Fields
+## When to Use Virtual Fields
 
-- Concatenated string columns (e.g. `CONCAT(first_name, ' ', last_name)`)
-- Lowercased / uppercased search columns
-- Computed aggregations inside a row (e.g. `COALESCE(price, 0)`)
+- Concatenated display columns (such as `CONCAT(first_name, ' ', last_name)`)
+- Normalized search columns (such as `LOWER(name)` or `UPPER(name)`)
+- Per-row fallback or conditional values (such as `COALESCE(discount, 0)`)
 
 ---
 
@@ -20,91 +20,104 @@ They are backed by `fields.ExpressionField[T]`, created with `fields.NewVirtualF
 func NewVirtualField[T any](forModel attrs.Definer, dst any, name string, expr expr.Expression) *ExpressionField[T]
 ```
 
-- `T` — the Go type the result should be scanned into (e.g. `string`, `int`)
-- `forModel` — the model instance this field belongs to (`t` in `FieldDefs`)
-- `dst` — where the scanned value is stored; **two forms** are shown below
-- `name` — the alias used in the query and in `Annotations`
-- `expr` — any `expr.Expression` value (see `expr.CONCAT`, `expr.LOWER`, `expr.UPPER`, etc.)
+- `T`: The Go type the result maps to (for example `string`, `int64`).
+- `forModel`: The model instance (`t` in `FieldDefs(ctx)`).
+- `dst`: Storage destination for scanned values — either the model itself (when embedding `models.Model`) or a pointer to a struct field.
+- `name`: Field name and SQL column alias (`Alias()`).
+- `expr`: Any `expr.Expression` (such as `expr.CONCAT`, `expr.LOWER`, `expr.UPPER`, `expr.COALESCE`).
 
 ---
 
 ## Two Usage Patterns
 
-### 1. Model embeds `models.Model` — use the model as `dst`
+### 1. Model Embeds `models.Model` (model as `dst`)
 
-When the outer struct embeds `models.Model`, the result is stored in `model.Annotations` and can be read from there:
+When the struct embeds `models.Model` (which implements `queries.DataModel`), passing the model pointer as `dst` stores scanned virtual field values in `t.Annotations` (and its `DataStore()`):
 
 ```go
 type TestStruct struct {
-    models.Model
-    ID   int64
-    Name string
-    Text string
+	models.Model
+	ID   int64
+	Name string
+	Text string
 }
 
-func (t *TestStruct) FieldDefs() attrs.Definitions {
-    return t.Model.Define(t,
-        attrs.NewField(t, "ID", &attrs.FieldConfig{
-            Column:  "id",
-            Primary: true,
-        }),
-        attrs.NewField(t, "Name", &attrs.FieldConfig{Column: "name"}),
-        attrs.NewField(t, "Text", &attrs.FieldConfig{Column: "text"}),
-        // Pass 't' as dst: values land in t.Annotations["TestNameText"]
-        fields.NewVirtualField[string](t, t, "TestNameText", expr.CONCAT(
-            "Name", expr.Value(" ", true), "Text",
-        )),
-        fields.NewVirtualField[string](t, t, "TestNameLower", expr.LOWER("Name")),
-        fields.NewVirtualField[string](t, t, "TestNameUpper", expr.UPPER("Name")),
-    ).WithTableName("test_struct")
+func (t *TestStruct) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
+		attrs.NewField(t, "ID", &attrs.Config{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(t, "Name", &attrs.Config{Column: "name"}),
+		attrs.NewField(t, "Text", &attrs.Config{Column: "text"}),
+		fields.NewVirtualField[string](t, t, "TestNameText", expr.CONCAT(
+			"Name", expr.Value(" ", true), "Text",
+		)),
+		fields.NewVirtualField[string](t, t, "TestNameLower", expr.LOWER("Name")),
+		fields.NewVirtualField[string](t, t, "TestNameUpper", expr.UPPER("Name")),
+	).WithTableName("test_struct")
 }
 ```
 
-Accessing the result:
+Reading the computed value:
 
 ```go
-row, _ := queries.GetQuerySet(&TestStruct{}).WithContext(ctx).Filter("ID", 1).First()
-fmt.Println(row.Object.Annotations["TestNameLower"]) // "john doe"
+row, err := queries.GetQuerySet(&TestStruct{}).
+	WithContext(ctx).
+	Filter("ID", 1).
+	First()
+if err != nil {
+	return err
+}
+fmt.Println(row.Object.Annotations["TestNameLower"])
 ```
 
-### 2. Struct does NOT embed `models.Model` — use a field pointer as `dst`
+### 2. Struct Does Not Embed `models.Model` (field pointer as `dst`)
 
-When `models.Model` is not embedded, pass a pointer to the struct field that should receive the value:
+When `models.Model` is not embedded, pass a pointer to the struct field that should receive the computed value:
 
 ```go
 type TestStructNoObject struct {
-    ID            int64
-    Name          string
-    Text          string
-    TestNameText  string
-    TestNameLower string
-    TestNameUpper string
+	ID            int64
+	Name          string
+	Text          string
+	TestNameText  string
+	TestNameLower string
+	TestNameUpper string
 }
 
-func (t *TestStructNoObject) FieldDefs() attrs.Definitions {
-    return attrs.Make[*TestStructNoObject, any](t,
-        attrs.NewField(t, "ID", &attrs.FieldConfig{Column: "id", Primary: true}),
-        attrs.NewField(t, "Name", &attrs.FieldConfig{Column: "name"}),
-        attrs.NewField(t, "Text", &attrs.FieldConfig{Column: "text"}),
-        // Pass &t.TestNameText as dst: value is scanned directly into the field
-        fields.NewVirtualField[string](t, &t.TestNameText,  "TestNameText",  expr.CONCAT("Name", expr.Value(" ", true), "Text")),
-        fields.NewVirtualField[string](t, &t.TestNameLower, "TestNameLower", expr.LOWER("Name")),
-        fields.NewVirtualField[string](t, &t.TestNameUpper, "TestNameUpper", expr.UPPER("Name")),
-    ).WithTableName("test_struct_no_object")
+func (t *TestStructNoObject) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[*TestStructNoObject, any](ctx, t,
+		attrs.NewField(t, "ID", &attrs.Config{Column: "id", Primary: true}),
+		attrs.NewField(t, "Name", &attrs.Config{Column: "name"}),
+		attrs.NewField(t, "Text", &attrs.Config{Column: "text"}),
+		fields.NewVirtualField[string](t, &t.TestNameText, "TestNameText", expr.CONCAT("Name", expr.Value(" ", true), "Text")),
+		fields.NewVirtualField[string](t, &t.TestNameLower, "TestNameLower", expr.LOWER("Name")),
+		fields.NewVirtualField[string](t, &t.TestNameUpper, "TestNameUpper", expr.UPPER("Name")),
+	).WithTableName("test_struct_no_object")
 }
 ```
 
-Accessing the result:
+Reading the computed value:
 
 ```go
-row, _ := queries.GetQuerySet(&TestStructNoObject{}).WithContext(ctx).Filter("ID", 1).First()
-fmt.Println(row.Object.TestNameLower) // "john doe"
+row, err := queries.GetQuerySet(&TestStructNoObject{}).
+	WithContext(ctx).
+	Filter("ID", 1).
+	First()
+if err != nil {
+	return err
+}
+fmt.Println(row.Object.TestNameLower)
 ```
 
 ---
 
-## Important Notes
+## `SELECT` Behavior and Notes
 
-- Virtual fields are **always included** in every `SELECT` query — they cannot be opted out of.
-- The `expr` package provides many built-in functions: `expr.CONCAT`, `expr.LOWER`, `expr.UPPER`, `expr.Value`, `expr.FuncCoalesce`, etc. See the [expressions documentation](../expressions/expressions.md) for the full list.
-- Virtual fields are **read-only** — they are never written back to the database.
+- **Included when `*` is selected:** Because `ExpressionField` implements `AliasField`, `queries.ForSelectAll(f)` returns `true` for virtual fields. Whenever a query selects all fields (default `.All()`/`.First()`/`.Get()` or `.Select("*")`), virtual fields are automatically included.
+- **Excluded when omitting `*` in `.Select(...)`:** Calling `.Select("ID", "Name")` without `"*"` and without naming the virtual field **excludes** virtual fields from the generated `SELECT` list. You can still select a specific virtual field explicitly by name (for example `.Select("ID", "TestNameLower")`).
+- **Read-only (`AllowDBEdit() == false`):** Virtual fields have `ColumnName() == ""` and are never written on `INSERT` or `UPDATE`.
+- **Usable across relations:** `ExpressionField.SQL(chain []string, inf *expr.ExpressionInfo)` resolves the inner expression with `inf.ForExpressionChain(chain)`, so virtual fields on related models work in `Select("User.*")` and `Filter(...)` as well.
+
+See [Expressions](./expressions/expressions.md) for all built-in functions such as `expr.CONCAT`, `expr.LOWER`, `expr.UPPER`, and `expr.COALESCE`.

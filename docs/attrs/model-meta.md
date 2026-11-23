@@ -1,214 +1,273 @@
 # Model Meta Information
 
-The `attrs` package provides a way to store meta information about models.
-
-This meta information is retrieved from the actual fields themselves.
-
-The meta information contains the following information:
-
-- The model itself
-- The primary field
-- The [`FieldDefinitions`](./interfaces.md#fielddefinition) of the model fields
-- The forward relations of the model
-- The reverse relations of the model
-- Any extra information that a model wants to store
-
-## Model Meta- related functions
-
-Functions retrieve, work with or change the model meta information.
-
-### RegisterModel
-
-`RegisterModel(model Definer)`
-
-RegisterModel registers a model to be used for any ORM- type operations.
-
-Models are registered automatically in [django.Initialize](../configuring.md#initializing-the-app) when made available
-with the `django.AppConfig.Models()` function, but you can also register them manually if needed.
-
-This function will do a single map lookup to check if the model is already registered.
-
-If the model is already registered, this function will do nothing.
+The `attrs` package maintains a global metadata registry for registered models so callers, forms, and ORM backends can inspect fields, primary keys, content types, and forward/reverse relationships without rebuilding runtime field definitions on every access.
 
 ---
 
-### GetModelMeta
+## Registration and Lookup Functions
 
-`GetModelMeta(model Definer) ModelMeta`
+### `RegisterModel`
 
-Retrieve the model meta information for the given model.
+Registers a model in the global `attrs` registry.
 
-This function will panic if the model is not registered - you can use `IsModelRegistered` to check if the model is registered.
+```go
+func RegisterModel(model Definer)
+```
+
+Models returned from `django.AppConfig.Models()` are registered automatically during `django.Initialize`, followed by [`attrs.ResetDefinitions`](./hooks_signals.md#available-signals) to finalize reverse relations and static definitions. If the model type is already in the registry, `RegisterModel` returns immediately.
+
+### `GetModelMeta`
+
+Retrieves the [`ModelMeta`](#modelmeta) for a registered model.
+
+```go
+func GetModelMeta(model any) ModelMeta
+```
+
+`model` may be a `Definer`, a `reflect.Type` (value or pointer), or a `reflect.Value`. `GetModelMeta` panics if the model has not been registered with `RegisterModel`.
+
+### `IsModelRegistered`
+
+Reports whether a model has completed registration.
+
+```go
+func IsModelRegistered(model any) bool
+```
+
+`model` accepts a `Definer`, `reflect.Type`, `reflect.Value`, or `*reflect.Value`.
+
+**Caveat**: `IsModelRegistered` checks `ok && meta.setup`. `meta.setup` is set to `true` only during the final pass triggered by [`attrs.ResetDefinitions`](./hooks_signals.md#available-signals), **not** by `attrs.RegisterModel` alone. If you register models manually outside `django.Initialize`, send `attrs.ResetDefinitions.Send(ctx, nil)` before checking `IsModelRegistered`.
+
+### `IterModelMeta`
+
+Returns an iterator over all registered `(Definer, ModelMeta)` pairs ordered topologically by forward dependencies and through models.
+
+```go
+func IterModelMeta() (iter.Seq2[Definer, ModelMeta], error)
+```
+
+Dependencies (target models and through models) appear before the models that reference them. Cyclic dependencies are tolerated rather than returning an error.
+
+### `GetRelationMeta`
+
+Looks up a relationship field on a registered model by field name (or reverse alias).
+
+```go
+func GetRelationMeta(m Definer, name string) (rel Relation, fwd bool, present bool)
+```
+
+- `rel`: The matching [`Relation`](./interfaces.md#relationtarget-relation-and-lazyrelation), or `nil` if not found.
+- `fwd`: `true` if `name` is a forward relation, `false` if it is a reverse relation (or absent).
+- `present`: `true` if the model is registered and has a relation under `name`.
+
+This function never panics if the model or relation is missing.
+
+### `StoreOnMeta` and `FieldAttribute`
+
+Store arbitrary metadata on a registered model's `ModelMeta`, or retrieve cached field attributes (`MetaStorageKeyAttrs`).
+
+```go
+const MetaStorageKeyAttrs = "fields.attributes"
+
+func StoreOnMeta(m Definer, key string, value any)
+func FieldAttribute[T any](ctx context.Context, model Definer, fieldName string, attrName string) (context.Context, T, bool)
+```
+
+`StoreOnMeta` panics if `m` has not been registered. `FieldAttribute` reads the model's `MetaStorageKeyAttrs` map and stores it inside the returned `context.Context` so repeated lookups avoid hitting the global registry.
 
 ---
 
-### IsModelRegistered
+## `ModelMeta` and `CanModelInfo`
 
-`IsModelRegistered(model Definer) bool`
-
-Returns true if the model is registered, false otherwise.
-
----
-
-### GetRelationMeta
-
-`GetRelationMeta(m Definer, name string) (Relation, bool)`
-
-Return meta information about the model's relations.
-
-This function will not panic if the model or relation is not found.
-
-If either of them are not found, this function will return nil and false.
-
----
-
-### StoreOnMeta
-
-`StoreOnMeta(m Definer, key string, value any)`
-
-Store a value on the model meta.
-
-This function will panic if the model is not registered - you can use `IsModelRegistered` to check if the model is registered.
-
-## Model Meta Interfaces
-
-### ModelMeta
-
-The `ModelMeta` interface is used to retrieve meta information about a model.
-
-It is used to retrieve meta information about the model, such as its relations, and other information that is not part of the model itself.
-
-Models which implement the `Definer` interface can be registered with the `RegisterModel` function.
-
-This will store the model in a global registry, and allow for fast and easy access to the model's meta and field information  
-without the model's `FieldDefs` method having to be called.
+### `ModelMeta`
 
 ```go
 type ModelMeta interface {
-    // Model returns the model for this meta
-    Model() Definer
-
-    // Forward returns the forward relations for this model
-    // which belong to the field with the given name.
-    Forward(relField string) (Relation, bool)
-
-    // Reverse returns the reverse relations for this model
-    // which belong to the field with the given name.
-    Reverse(relField string) (Relation, bool)
-
-    // ForwardMap returns a copy the forward relations map for this model
-    ForwardMap() *orderedmap.OrderedMap[string, Relation]
-
-    // ReverseMap returns a copy of the reverse relations map for this model
-    ReverseMap() *orderedmap.OrderedMap[string, Relation]
-
-    // Storage returns a value stored on the model meta.
-    //
-    // This is used to store values that are not part of the model itself,
-    // but are needed for the model or possible third party libraries to function.
-    //
-    // Values can be stored on the model meta using the `attrs.StoreOnMeta` helper function.
-    //
-    // A model can also implement the `CanModelInfo` interface to store values on the model meta.
-    Storage(key string) (any, bool)
-
-    // Definitions returns the field definitions for the model.
-    //
-    // This is used to retrieve meta information about fields, such as their type,
-    // and other information that is not part of the model itself.
-    Definitions() StaticDefinitions
+	Model() Definer
+	Forward(relField string) (Relation, bool)
+	Reverse(relField string) (Relation, bool)
+	ForwardMap() *orderedmap.OrderedMap[string, Relation]
+	ReverseMap() *orderedmap.OrderedMap[string, Relation]
+	ContentType() contenttypes.ContentType
+	Storage(key string) (any, bool)
+	Definitions() StaticDefinitions
+	Primary() FieldDefinition
 }
 ```
 
-### CanModelInfo
+- `Model`: Returns the registered prototype `Definer` instance.
+- `Forward` / `Reverse`: Look up forward or reverse relations by field/alias name.
+- `ForwardMap` / `ReverseMap`: Return the ordered maps of forward and reverse relations.
+- `ContentType`: Returns the `contenttypes.ContentType` for the model.
+- `Storage`: Retrieves values saved via `StoreOnMeta`, `CanModelInfo`, or internal registration keys such as `MetaStorageKeyAttrs` and `"through.model"`.
+- `Definitions`: Returns the model's cached [`StaticDefinitions`](./interfaces.md#staticdefinitions).
+- `Primary`: Returns the model's primary [`FieldDefinition`](./interfaces.md#fielddefinition).
 
-A model can implement the `CanModelInfo` interface.
+### `CanModelInfo`
 
-This interface is used to store extra information about the model.
-
-This will only be called once, when registering the model.
-
-### Relations
-
-Relations are used to define relations between models.
-
-#### RelationType
-
-There are currently four relation types:
-
-- `RelManyToOne`  -> This is a many to one relationship, also known as a foreign key relationship.
-- `RelOneToOne`   -> This is a one to one relationship.
-- `RelManyToMany` -> This is a many to many relationship.
-- `RelOneToMany`  -> This is a one to many relationship, also known as a reverse foreign key relationship.
-
-#### Relation
-
-The `Relation` interface is used to define relations between models.
-
-This provides a very abstract way of defining relations between models, which can be used to define relations in a more generic way.
-
-It supports defining a through model for a relationship, which can be used to define one to one relations or many to many relations.
-
-One to one relations can also be defined without a through model.
+Models can implement [`CanModelInfo`](./interfaces.md#canmodelinfo) to populate `ModelMeta.Storage(...)` automatically when registered:
 
 ```go
-type Relation interface {
-    RelationTarget
-
-    Type() RelationType
-
-    // A through model for the relationship.
-    //
-    // This can be nil, but does not have to be.
-    // It can support a one to one relationship with or without a through model,
-    // or a many to many relationship with a through model.
-    Through() Through
+func (m *MyModel) ModelMetaInfo(object attrs.Definer) map[string]any {
+	return map[string]any{
+		"ordering": []string{"-created_at"},
+	}
 }
 ```
 
-#### RelationTarget
+---
 
-The `RelationTarget` interface is used to define a relation target.
+## Relations and Through Models
 
-This contains information about the target model for the relation, which can be used to define the relation in a more generic way.
+### `RelationType`
 
 ```go
-type RelationTarget interface {
-    // From represents the source model for the relationship.
-    //
-    // If this is nil then the current interface value is the source model.
-    From() RelationTarget
+type RelationType int
 
-    // The target model for the relationship.
-    Model() Definer
+const (
+	RelNone RelationType = iota
+	RelManyToOne
+	RelOneToOne
+	RelManyToMany
+	RelOneToMany
+)
+```
 
-    // Field retrieves the field in the target model for the relationship.
-    //
-    // This can be nil, in such cases the relationship should use the primary field of the target model.
-    //
-    // If a through model is used, the target field should still target the actual target model,
-    // the through model should then use this field to link to the target model.
-    Field() FieldDefinition
+`RelationType` implements `String() string`, `json.Marshaler` (`MarshalJSON`), and `json.Unmarshaler` (`UnmarshalJSON`), mapping between the constants and `"None"`, `"ManyToOne"`, `"OneToOne"`, `"ManyToMany"`, and `"OneToMany"`.
+
+### `Relate` and `ReverseRelation`
+
+```go
+func Relate(target Definer, targetField string, through Through) Relation
+func ReverseRelation(fromModel Definer, fromField Field, forward Relation) Relation
+```
+
+`Relate` constructs a forward relation target for [`attrs.Config`](./implementation.md#attrsconfig-reference) (`RelForeignKey`, `RelOneToOne`, `RelManyToMany`, or `RelForeignKeyReverse`). Pass `""` for `targetField` to target the related model's primary key. `ReverseRelation` constructs the inverse `Relation` used during reverse relation registration.
+
+### `ThroughModel`
+
+A concrete implementation of [`Through`](./interfaces.md#through-and-lazythrough):
+
+```go
+type ThroughModel struct {
+	This   Definer
+	Source string
+	Target string
 }
 ```
 
-#### Through
+- `This`: The intermediary model instance.
+- `Source`: Field name on `This` pointing to the source model.
+- `Target`: Field name on `This` pointing to the target model.
 
-The `Through` interface is used to define a relation between two models.
+### `ThroughDeferred` and `RelatedDeferred`
 
-This provides a very abstract way of defining relations between models, which can be used to define one to one relations or many to many relations.
-
-It acts as an intermediary model which contains a link to the source and target models.
+Create lazy relations and through models resolved on demand by `contenttypes.LoadModel(modelKey)` (using `<appName>.<ModelName>` or a `contenttypes.LazyRegistry` key):
 
 ```go
-type Through interface {
-    // The through model itself.
-    Model() Definer
+func ThroughDeferred(modelKey string, sourceField string, targetField string) Through
+func RelatedDeferred(typ RelationType, modelKey string, targetField string, through Through) LazyRelation
+```
 
-    // The source field for the relation - this is a field in the through model linking to the source model.
-    SourceField() string
+### `ThroughMeta` and `ThroughModelMeta`
 
-    // The target field for the relation - this is a field in the through model linking to the target model.
-    TargetField() string
+When a model is referenced as a `Through` model on a forward relation, `registerModel` stores a `ThroughMeta` under `meta.Storage("through.model")`:
+
+```go
+type ThroughMeta struct {
+	IsThroughModel bool
+	Source         Definer
+	Target         Definer
+	SourceField    string
+	TargetField    string
 }
+
+func (t ThroughMeta) GetSourceField(targetModel Definer, throughDefs Definitions) Field
+func (t ThroughMeta) GetTargetField(targetModel Definer, throughDefs Definitions) Field
+
+func ThroughModelMeta(m Definer) ThroughMeta
+```
+
+`ThroughModelMeta(m)` returns the `ThroughMeta` for `m`, or a zero-value `ThroughMeta{}` if `m` is not a through model.
+
+---
+
+## Path and Relation Chain Walking
+
+The `attrs` package provides utilities in `src/core/attrs/meta_walk.go` to traverse dot-separated field paths (passed as `[]string`) across registered model relations.
+
+### `WalkMetaFieldsFunc`
+
+Walks each segment in `path` starting from `m`, looking up fields and forward/reverse relations (forward relations take priority when both exist under the same name):
+
+```go
+type WalkFieldsFunc func(
+	source Relation,
+	meta ModelMeta,
+	object Definer,
+	field FieldDefinition,
+	fieldRel Relation,
+	part string,
+	parts []string,
+	idx int,
+) (stop bool, err error)
+
+func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error
+```
+
+Returns `errors.FieldNotFound` if a segment does not exist on the current model, or `errors.AmbiguousColumn` if an intermediate segment is not a relation.
+
+### `WalkMetaFields` and `PathMetaChain`
+
+Builds a slice of `*pathMeta` entries representing every hop along `path`:
+
+```go
+type PathMetaChain []*pathMeta
+
+func (c PathMetaChain) First() *pathMeta
+func (c PathMetaChain) Last() *pathMeta
+
+type pathMeta struct {
+	Object      Definer
+	Definitions StaticDefinitions
+	Field       FieldDefinition
+	Relation    Relation
+	// ...
+}
+
+func (m *pathMeta) String() string
+func (m *pathMeta) Parent() *pathMeta
+func (m *pathMeta) Child() *pathMeta
+func (m *pathMeta) CutAt() []*pathMeta
+
+func WalkMetaFields(m Definer, path []string) (PathMetaChain, error)
+```
+
+### `WalkRelationChain` and `RelationChain`
+
+Builds a doubly-linked chain of `RelationChainPart` nodes (suitable for SQL join planning), optionally appending the target model's primary/target field node when `includeFinalRel` is `true` and the final field is a relation:
+
+```go
+type RelationChainPart struct {
+	Next      *RelationChainPart
+	Prev      *RelationChainPart
+	ChainPart string
+	FieldRel  Relation
+	Model     Definer
+	Through   Through
+	Field     FieldDefinition
+	Depth     int
+	// ...
+}
+
+func (p *RelationChainPart) Chain() []string
+
+type RelationChain struct {
+	Root   *RelationChainPart
+	Final  *RelationChainPart
+	Fields []FieldDefinition
+	Chain  []string
+}
+
+func WalkRelationChain(m Definer, includeFinalRel bool, path []string) (*RelationChain, error)
 ```

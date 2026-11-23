@@ -1,581 +1,615 @@
-# Interface Documentation
+# Interfaces Reference
 
-This document describes **all interfaces** used in the query system. The docstrings have been preserved where applicable. Interfaces are grouped by purpose.
+This reference documents the interfaces, actors, signals, hooks, and compiler/resolver internals defined in `queries/src`, `queries/src/drivers`, `queries/src/resolver`, and `queries/src/alias`.
+
+For core attribute and field interfaces (`attrs.Definer`, `attrs.Field`, `attrs.FieldDefinition`, `attrs.Binder`, `attrs.RelationValue`, etc.), see [Attrs Interfaces](../../docs/attrs/interfaces.md).
 
 ---
 
-## 🔌 Field Interfaces
+## Field Interfaces
 
 ### `AliasField`
 
-Used to alias a field in SQL (e.g., annotations).
+Used to alias a field in SQL (for example, query annotations). Aliased from `expr.AliasField`.
 
 ```go
 type AliasField interface {
-    attrs.Field
-    Alias() string
+	attrs.Field
+	Alias() string
 }
 ```
 
 ### `VirtualField`
 
-Field is rendered as SQL (e.g., expression fields, internal annotations).
+Marks a field whose SQL expression is generated dynamically rather than mapping directly to a table column. Aliased from `expr.VirtualField`.
 
 ```go
 type VirtualField interface {
-    SQL(inf *expr.ExpressionInfo) (string, []any)
+	attrs.FieldDefinition
+	SQL(chain []string, inf *expr.ExpressionInfo) (string, []any)
 }
 ```
 
 ### `RelatedField`
 
-Marks a field as related to another model.
-
-This allows for easily defining a reverse name or target field of the end-model.
+Marks a field as pointing to another model, exposing its target field and optional reverse name.
 
 ```go
 type RelatedField interface {
-    attrs.Field
-    GetTargetField() attrs.Field
-    RelatedName() string
+	attrs.Field
+	GetTargetField() attrs.Field
+	RelatedName() string
 }
 ```
 
 ### `ForUseInQueriesField`
 
-Controls inclusion in `SELECT *` queries.
-
-The field will not be automatically included in `SELECT *` queries unless explicitly set to true.
+Controls whether a field is automatically included in `SELECT *` queries (`ForSelectAll(f)`). Fields without a column name (unless they implement `AliasField`) and embedded fields are already excluded by `ForSelectAll`.
 
 ```go
 type ForUseInQueriesField interface {
-    attrs.Field
-    ForSelectAll() bool
+	attrs.Field
+	ForSelectAll() bool
+}
+```
+
+### `ForDBEditableField`
+
+Controls whether a field with a column name is included in `INSERT` and `UPDATE` column lists (`ForDBEdit(f)`).
+
+```go
+type ForDBEditableField interface {
+	attrs.Field
+	AllowDBEdit() bool
 }
 ```
 
 ### `SaveableField`
 
-Field that can persist its value to the database.
-
-This type of field will be saved before the model is saved, allowing it to persist its value  
-and for the parent model to access it during the save operation.
+Field whose value must be persisted before the parent model is saved (allowing the parent model to reference its primary key or updated state).
 
 ```go
 type SaveableField interface {
-    attrs.Field
-    Save(ctx context.Context) error
+	attrs.Field
+	Save(ctx context.Context) error
 }
 ```
 
 ### `SaveableDependantField`
 
-Field that saves with access to the parent model.
-
-The parent model will be saved before this field, allowing it to access the parent model's state,
-such as its primary key or other fields.
+Field that must be persisted after the parent model is saved so it can read the parent's primary key or state.
 
 ```go
 type SaveableDependantField interface {
-    attrs.Field
-    Save(ctx context.Context, parent attrs.Definer) error
+	attrs.Field
+	Save(ctx context.Context, parent attrs.Definer) error
 }
 ```
 
-### `ProxyField`
+### `TargetClauseField` and `TargetClauseThroughField`
 
-Proxy to another field in queries.
-
-If `IsProxy()` returns true, this field will be used to generate a JOIN clause in queries.
-
-The join will always be automatically included in the query, even if the field is not selected.
-
-Read more about [Proxy Models](./models/proxy_models.md).
-
-```go
-type ProxyField interface {
-    attrs.FieldDefinition
-    TargetClauseField
-    IsProxy() bool
-}
-```
-
-### `ProxyThroughField`
-
-Proxy using a through model.
-
-If `IsProxy()` returns true, this field will be used to generate JOIN clauses using a through model.
-
-The join will always be automatically included in the query, even if the field is not selected.
-
-Read more about [Proxy Models](./models/proxy_models.md).
-
-```go
-type ProxyThroughField interface {
-    attrs.FieldDefinition
-    TargetClauseThroughField
-    IsProxy() bool
-}
-```
-
-### `TargetClauseField`
-
-A `TargetClauseField` is used to generate JOIN clauses for related fields in queries.
-
-This allows for custom JOIN logic based on the field's definition and the target model, for example
-if you need a content type to join to a model that has a polymorphic relation.
+Custom JOIN clause generators used by relation and proxy fields:
 
 ```go
 type TargetClauseField interface {
-    GenerateTargetClause(qs QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, rhs ClauseTarget) JoinDef
+	GenerateTargetClause(qs expr.FieldResolver, lhs ClauseTarget, rhs ClauseTarget) JoinDef
+}
+
+type TargetClauseThroughField interface {
+	GenerateTargetThroughClause(qs expr.FieldResolver, lhs ClauseTarget, through ThroughClauseTarget, rhs ClauseTarget) (JoinDef, JoinDef)
 }
 ```
 
-### `TargetClauseThroughField`
+### `ProxyField` and `ProxyThroughField`
 
-Generates JOINs using a through table.
-
-A `TargetClauseThroughField` is used to generate JOIN clauses for fields that use a through model.
-
-This is useful for many-to-many relations or one-to-one relations with a through table, and allows
-for custom JOIN logic based on the field's definition and the through model.
+Marks a field as a proxy relation whose JOIN is automatically added to queries even when the field is not explicitly selected. See [Proxy Models](./models/proxy_models.md).
 
 ```go
-type TargetClauseThroughField interface {
-    GenerateTargetThroughClause(qs QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, through ThroughClauseTarget, rhs ClauseTarget) (JoinDef, JoinDef)
+type ProxyField interface {
+	attrs.FieldDefinition
+	TargetClauseField
+	IsProxy() bool
+}
+
+type ProxyThroughField interface {
+	attrs.FieldDefinition
+	TargetClauseThroughField
+	IsProxy() bool
 }
 ```
 
 ---
 
-## 📦 Model Interfaces
+## Model Interfaces
 
-### `DataModel`
+### `CanSetup`
 
-Stores annotations and relations.
+Implemented by models (such as `models.Model`) that initialize embedded fields or internal state when constructed or prepared for queries.
 
 ```go
-type DataModel interface {
-    DataStore() ModelDataStore
+type CanSetup interface {
+	Setup(ctx context.Context, value attrs.Definer) error
 }
 ```
 
-### `ModelDataStore`
+### `ContextValidator`
 
-The underlying data store object itself for the model.
+Implemented by models or fields that perform validation before database writes (`queries.Validate(ctx, validate)`).
+
+```go
+type ContextValidator interface {
+	Validate(ctx context.Context) error
+}
+```
+
+### `DataModel` and `ModelDataStore`
+
+Stores non-struct annotations and cached relation objects on a model instance:
 
 ```go
 type ModelDataStore interface {
-    HasValue(key string) bool
-    GetValue(key string) (any, bool)
-    SetValue(key string, value any) error
-    DeleteValue(key string) error
+	HasValue(key string) bool
+	GetValue(key string) (any, bool)
+	SetValue(key string, value any) error
+	DeleteValue(key string) error
+}
+
+type DataModel interface {
+	DataStore() ModelDataStore
 }
 ```
 
 ### `Annotator`
 
-Receives annotations directly.
-
-The annotations will be collected for the current row and then passed to the `Annotate` method.
+Receives computed annotation columns scanned from a query row:
 
 ```go
 type Annotator interface {
-    Annotate(annotations map[string]any)
+	Annotate(annotations map[string]any)
 }
 ```
 
 ### `ThroughModelSetter`
 
-Sets a through model on the target model.
-
-This is used for many-to-many relations or one-to-one relations with a through table, allowing the target
-model to set the through model relation directly.
+Receives the through-table model instance when loading a `OneToOne` or `ManyToMany` relation with a through model:
 
 ```go
 type ThroughModelSetter interface {
-    SetThroughModel(throughModel attrs.Definer)
+	SetThroughModel(throughModel attrs.Definer)
 }
 ```
 
 ### `ForUseInQueries`
 
-A model can adhere to this interface to indicate that the queries package  
-should not automatically save or delete the model to/from the database when  
-`django/models.SaveObject()` or `django/models.DeleteObject()` is called.
+Allows a model to opt out of automatic `models.SaveObject` and `models.DeleteObject` goldcrest hooks when `ForUseInQueries()` returns `false`:
 
 ```go
 type ForUseInQueries interface {
-    attrs.Definer
-    ForUseInQueries() bool
+	attrs.Definer
+	ForUseInQueries() bool
 }
 ```
 
 ### `UniqueTogetherDefiner`
 
-Returns groups of fields that must be unique together.
-
-These can in turn be used to generate a unique where clause in queries,
-to target this specific model, might the primary key not be available.
+Aliased from `migrator.UniqueTogetherDefiner`. Declares multi-column unique constraints and allows models without a primary key to generate `WHERE` clauses and unique cache keys:
 
 ```go
 type UniqueTogetherDefiner interface {
-    attrs.Definer
-    UniqueTogether() [][]string
+	attrs.Definer
+	UniqueTogether() [][]string
 }
 ```
 
-### `QuerySetDefiner`
+### `OrderByDefiner`
 
-Overrides the queryset returned when using `GetQuerySet()`.
+Aliased from `resolver.OrderByDefiner`. Overrides default ordering (`[pk]` if a primary key exists) on new `QuerySet` instances:
+
+```go
+type OrderByDefiner interface {
+	attrs.Definer
+	OrderBy() []string
+}
+```
+
+### `QuerySetDefiner`, `TypedQuerySetDefiner[T]`, `QuerySetChanger`, and `QuerySetDatabaseDefiner`
+
+Customize which `*QuerySet` or database connection a model uses:
 
 ```go
 type QuerySetDefiner interface {
-    attrs.Definer
-    GetQuerySet() QuerySet[attrs.Definer]
+	attrs.Definer
+	GetQuerySet() *QuerySet[attrs.Definer]
 }
-```
 
-### `QuerySetChanger`
+type TypedQuerySetDefiner[T attrs.Definer] interface {
+	attrs.Definer
+	GetQuerySet() *QuerySet[T]
+}
 
-Dynamically alters queryset behavior when it is first set up.
-
-Basically the `GetQuerySet`, but the queryset is already passed in and should be returned with modifications.
-
-```go
 type QuerySetChanger interface {
-    attrs.Definer
-    ChangeQuerySet(qs QuerySet[attrs.Definer]) QuerySet[attrs.Definer]
+	attrs.Definer
+	ChangeQuerySet(qs *QuerySet[attrs.Definer]) *QuerySet[attrs.Definer]
 }
-```
 
-### `QuerySetDatabaseDefiner`
-
-Specifies which DB to use for queries - this is the database that the compiler should target from `django.Global.settings`.
-
-```go
 type QuerySetDatabaseDefiner interface {
-    attrs.Definer
-    QuerySetDatabase() string
+	attrs.Definer
+	QuerySetDatabase() string
 }
 ```
 
 ---
 
-## 📈 Relation Interfaces
+## Relation Interfaces
 
-The following interfaces are used to represent relations between models, either directly or through a through model.
-
-The interfaces are designed to work with the `QuerySet` to allow the `QuerySet` to easily set and retrieve related model values.
-
-### `Relation`
-
-Represents a model-to-model relation with a through model.
-
-These will contain the instances of the models involved in the relation, and can be used to access the related models.
+These interfaces bridge relation field values (`RelFK`, `RelRevFK`, `RelO2O`, `RelM2M`) and the `QuerySet` scanner/saver:
 
 ```go
-type Relation interface {
-    Model() attrs.Definer
-    Through() attrs.Definer
+type Relation = attrs.ValueRelation
+
+type ParentInfo struct {
+	Object attrs.Definer
+	Field  attrs.Field
 }
-```
 
-### `RelationValue`
-
-For fields that reference a single object (e.g., ForeignKey, OneToOne without a through table).
-
-```go
 type RelationValue interface {
-    attrs.Binder
-    ParentInfo() *ParentInfo
-    GetValue() attrs.Definer
-    SetValue(attrs.Definer)
+	attrs.Binder
+	attrs.RelationValue
+	ParentInfo() *ParentInfo
 }
-```
 
-### `MultiRelationValue`
-
-For fields that reference multiple objects (e.g., OneToMany, ManyToMany where the through table is not important).
-
-```go
 type MultiRelationValue interface {
-    attrs.Binder
-    ParentInfo() *ParentInfo
-    GetValues() []attrs.Definer
-    SetValues([]attrs.Definer)
+	attrs.Binder
+	attrs.MultiRelationValue
+	ParentInfo() *ParentInfo
 }
-```
 
-### `ThroughRelationValue`
-
-Represents a one-to-one relationship with a through model.
-
-```go
 type ThroughRelationValue interface {
-    attrs.Binder
-    ParentInfo() *ParentInfo
-    GetValue() (attrs.Definer, attrs.Definer)
-    SetValue(attrs.Definer, attrs.Definer)
+	attrs.Binder
+	attrs.ThroughRelationValue
+	ParentInfo() *ParentInfo
 }
-```
 
-### `MultiThroughRelationValue`
-
-Represents a many-to-many relationship with a through model.
-
-```go
 type MultiThroughRelationValue interface {
-    attrs.Binder
-    ParentInfo() *ParentInfo
-    GetValues() []Relation
-    SetValues([]Relation)
+	attrs.Binder
+	attrs.MultiThroughRelationValue
+	ParentInfo() *ParentInfo
 }
 ```
 
 ---
 
-## 🧠 Query Interfaces
+## QuerySet and Query Execution Interfaces
 
-### `QueryInfo`
+### `AbstractQuerySet` and Base QuerySet Interfaces
 
-Describes a compiled query.
+While `*queries.QuerySet[T]` is a concrete generic struct pointer, generic wrappers and custom QuerySets (such as `WrappedQuerySet` or `SpecificQuerySet`) compose the following interfaces:
+
+```go
+type AbstractQuerySet[MODEL any, QS AbstractQuerySet[MODEL, QS]] interface {
+	expr.ExpressionBuilder
+	expr.FieldResolver
+	Peek() expr.QueryInformation
+
+	Clone() QS
+	Distinct() QS
+	Select(fields ...any) QS
+	Preload(fields ...any) QS
+	Filter(key interface{}, vals ...interface{}) QS
+	GroupBy(fields ...any) QS
+	Limit(n int) QS
+	Offset(n int) QS
+	OrderBy(fields ...string) QS
+	Reverse() QS
+	ExplicitSave() QS
+	Annotate(aliasOrAliasMap interface{}, exprs ...expr.Expression) QS
+
+	GetOrCreateTransaction() (tx drivers.Transaction, err error)
+	StartTransaction(ctx context.Context) (drivers.Transaction, error)
+	WithTransaction(tx drivers.Transaction) (drivers.Transaction, error)
+
+	ForUpdate() QS
+	Prefix(prefix string) QS
+	DB() drivers.DB
+	Meta() expr.ModelMeta
+	Compiler() QueryCompiler
+	Having(key interface{}, vals ...interface{}) QS
+	LatestQuery() QueryInfo
+	WithContext(ctx context.Context) QS
+
+	QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}]
+	QueryAggregate() CompiledRowsQuery[[][]interface{}]
+	QueryCount() CompiledRowQuery[int64]
+}
+```
+
+Specialized capability interfaces extend `AbstractQuerySet[T, QS]`:
+
+- `BaseReadQuerySet[T, QS]`: `All()`, `IterAll()`, `Exists()`, `Count()`, `First()`, `Last()`, `Get()`
+- `BaseValuesQuerySet[T, QS]`: `Values(fields ...any)`, `ValuesList(fields ...any)`, `Aggregate(annotations map[string]expr.Expression)`
+- `BaseBulkQuerySet[T, QS]`: `BulkCreate(objects []T)`, `BatchCreate(objects []T)`, `BulkUpdate(params ...any)`, `BatchUpdate(params ...any)`
+- `BaseWriteQuerySet[T, QS]`: `Create(value T)`, `Update(value T, expressions ...any)`, `GetOrCreate(value T)`, `Delete(objects ...T)`
+- `BaseRawQuerySet[T, QS]`: `Row(sqlStr string, args ...interface{})`, `Rows(sqlStr string, args ...interface{})`, `Exec(sqlStr string, args ...interface{})`
+- `BaseQuerySet[T, QS]`: Embeds all five interfaces above.
+
+### `PushClauseExpression` and `BulkUpdateQuerySetParam`
+
+```go
+type PushClauseExpression interface {
+	Operator() expr.ExprOp
+	Unwrap() expr.ClauseExpression
+}
+
+type BulkUpdateQuerySetParam interface {
+	BuildUpdateInfo() ([]UpdateInfo, error)
+}
+```
+
+- `PushClauseExpression`: Passed as the sole key argument to `Filter(PushFilterOR(clause))` or `Filter(PushFilterAND(clause))` to combine `clause` with existing `WHERE` conditions using `OR` or `AND`.
+- `BulkUpdateQuerySetParam`: Returned by `BulkUpdateQuerySet(qs, params...)` when combining multiple QuerySets into a single `BulkUpdate` or `BatchUpdate` call.
+
+### `QueryInfo` and Compiled Query Interfaces
 
 ```go
 type QueryInfo interface {
-    SQL() string
-    Args() []any
-    Model() attrs.Definer
-    Compiler() QueryCompiler
+	SQL() string
+	Args() []any
+	Model() attrs.Definer
+	Compiler() QueryCompiler
 }
-```
 
-### `CompiledQuery[T]`
-
-Executes a query.
-
-```go
-type CompiledQuery[T any] interface {
-    QueryInfo
-    Exec() (T, error)
+type CompiledQuery[T1 any] interface {
+	QueryInfo
+	Exec() (T1, error)
 }
-```
 
-#### Aliases
+type CompiledRowQuery[T1 any] interface {
+	CompiledQuery[T1]
+	drivers.SQLRow
+}
 
-```go
-type CompiledCountQuery      = CompiledQuery[int64]
-type CompiledExistsQuery     = CompiledQuery[bool]
-type CompiledValuesListQuery = CompiledQuery[[][]any]
+type CompiledRowsQuery[T1 any] interface {
+	Reset()
+	CompiledQuery[T1]
+	drivers.SQLRows
+}
+
+type IterableQuery[RESULT any] interface {
+	CompiledQuery[[]RESULT]
+	Iter() iter.Seq2[RESULT, error]
+}
 ```
 
 ---
 
-## 🔧 DB + Compiler Interfaces
+## DB and Compiler Interfaces
 
-### `DB`
+### `drivers.DB`, `Unwrapper`, `Transaction`, and `DatabaseSpecificTransaction`
 
-The base interface for all database interactions within the query system. Implemented by both `drivers.Database` (a live connection) and `drivers.Transaction`.
-
-> **Note:** This is `drivers.DB`, not `*sql.DB`. The interface returns `drivers.SQLRows` and `drivers.SQLRow` instead of `*sql.Rows`/`*sql.Row`.
+See [Drivers](./drivers.md) for full details on connection management. Summary:
 
 ```go
+type Unwrapper interface {
+	Unwrap() any
+}
+
 type DB interface {
-    Unwrap() any
-    QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error)
-    QueryRowContext(ctx context.Context, query string, args ...any) SQLRow
-    ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	Unwrap() any
+	Driver() driver.Driver
+	QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) SQLRow
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
-```
 
-### `Transaction`
-
-Transaction wrapper for `DB`.
-
-```go
 type Transaction interface {
-    DB
-    Finished() bool
-    Commit(context.Context) error
-    Rollback(context.Context) error
+	DB
+	Finished() bool
+	Commit(context.Context) error
+	Rollback(context.Context) error
+}
+
+type DatabaseSpecificTransaction interface {
+	Transaction
+	DatabaseName() string
 }
 ```
 
-### `DatabaseSpecificTransaction`
+### `QueryCompiler` and `RebindCompiler`
 
-Transaction that tracks its DB name. This interface is satisfied by transactions that are aware of which named database they were started on.
+`QueryCompiler` compiles `QuerySetInternals` and `expr.FieldResolver` state into database-specific SQL statements:
 
 ```go
-type DatabaseSpecificTransaction interface {
-    Transaction
-    DatabaseName() string
+type QueryCompiler interface {
+	resolver.ExpressionCompiler
+
+	DatabaseName() string
+	DB() drivers.DB
+	Driver() driver.Driver
+
+	QuoteString(s string) string
+	QuoteIdentifier(s string) string
+	PrepForLikeQuery(any) string
+	FormatLookupCol(string, string) string
+	LogicalOpRHS() map[expr.LogicalOp]func(rhs string, value []any) (string, []any)
+	LookupOperatorsRHS() map[string]string
+	LookupPatternOperatorsRHS() map[string]string
+	Quote() (front string, back string)
+	PrepareValue(field attrs.Field, value any) any
+	Placeholder() string
+	FormatColumn(aliasGen *alias.Generator, tableColumn *expr.TableColumn) (string, []any)
+
+	SupportsReturning() drivers.SupportsReturningType
+	SupportsUnionOrderByTableAlias() bool
+
+	StartTransaction(ctx context.Context) (drivers.Transaction, error)
+	WithTransaction(tx drivers.Transaction) (drivers.Transaction, error)
+	Transaction() drivers.Transaction
+	InTransaction() bool
+
+	BuildSelectQuery(ctx context.Context, resolver expr.FieldResolver, internals *QuerySetInternals) CompiledRowsQuery[[][]interface{}]
+	BuildCountQuery(ctx context.Context, resolver expr.FieldResolver, internals *QuerySetInternals) CompiledRowQuery[int64]
+	BuildCreateQuery(ctx context.Context, resolver expr.FieldResolver, internals *QuerySetInternals, objects []UpdateInfo) CompiledQuery[[][]interface{}]
+	BuildUpdateQuery(ctx context.Context, resolver expr.FieldResolver, internals *QuerySetInternals, objects []UpdateInfo) CompiledQuery[int64]
+	BuildDeleteQuery(ctx context.Context, resolver expr.FieldResolver, internals *QuerySetInternals) CompiledQuery[int64]
+}
+
+type RebindCompiler interface {
+	QueryCompiler
+	Rebind(ctx context.Context, s string) string
 }
 ```
+
+`RebindCompiler` adapts `?` placeholders to backend-specific bind markers (such as `$1`, `$2` for Postgres).
 
 ---
 
-## 🔔 Lifecycle / Actor Interfaces
+## Lifecycle Actors, Signals, and Hooks
 
-These interfaces allow models to hook into the ORM's save/query lifecycle.
+### Actor Interfaces (`Acts*`)
 
-When `BeforeCreate` or `BeforeUpdate` is called, `BeforeSave` is also automatically invoked. Similarly, `AfterCreate` / `AfterUpdate` also trigger `AfterSave`.
+Models can implement any of the 9 lifecycle actor interfaces:
 
 ```go
 type ActsAfterQuery interface {
-    AfterQuery(ctx context.Context) error
+	AfterQuery(ctx context.Context) error
 }
 
 type ActsBeforeSave interface {
-    BeforeSave(ctx context.Context) error
+	BeforeSave(ctx context.Context) error
 }
 
 type ActsAfterSave interface {
-    AfterSave(ctx context.Context) error
+	AfterSave(ctx context.Context) error
 }
 
 type ActsBeforeCreate interface {
-    BeforeCreate(ctx context.Context) error
+	BeforeCreate(ctx context.Context) error
 }
 
 type ActsAfterCreate interface {
-    AfterCreate(ctx context.Context) error
+	AfterCreate(ctx context.Context) error
 }
 
 type ActsBeforeUpdate interface {
-    BeforeUpdate(ctx context.Context) error
+	BeforeUpdate(ctx context.Context) error
 }
 
 type ActsAfterUpdate interface {
-    AfterUpdate(ctx context.Context) error
+	AfterUpdate(ctx context.Context) error
 }
 
 type ActsBeforeDelete interface {
-    BeforeDelete(ctx context.Context) error
+	BeforeDelete(ctx context.Context) error
 }
 
 type ActsAfterDelete interface {
-    AfterDelete(ctx context.Context) error
+	AfterDelete(ctx context.Context) error
 }
 ```
 
-See [Writing Queries – ExplicitSave](./queryset/writing_queries.md#explicitsave) for important notes on using these hooks with `QuerySet.Create` / `QuerySet.Update`.
+Return `errors.NotImplemented` from an actor method to log a warning and skip it without aborting the operation.
+
+### `ObjectActor` and `Actor`
+
+`queries.Actor(obj attrs.Definer) *ObjectActor` inspects which actor interfaces `obj` implements and exposes helper methods:
+
+- `BeforeSave(ctx)`, `AfterSave(ctx)`
+- `BeforeCreate(ctx)`, `AfterCreate(ctx)`
+- `BeforeUpdate(ctx)`, `AfterUpdate(ctx)`
+- `BeforeDelete(ctx)`, `AfterDelete(ctx)`
+- `AfterQuery(ctx)`
+- `Fake(ctx, flags ...actorFlag)`: Marks actor flags (`FlagActsBeforeSave`, `FlagActsAfterSave`, `FlagActsBeforeCreate`, `FlagActsAfterCreate`, `FlagActsBeforeUpdate`, `FlagActsAfterUpdate`, `FlagActsBeforeDelete`, `FlagActsAfterDelete`, `FlagActsAfterQuery`) as already seen in `ctx` so duplicate calls are skipped.
+
+Running `BeforeCreate`/`BeforeUpdate` automatically chains to `BeforeSave`, and `AfterCreate`/`AfterUpdate` automatically chains to `AfterSave`.
+
+### Signals
+
+`queries` exposes seven signals using `ModelSignal` (`type SignalSave = ModelSignal` is a deprecated alias):
+
+```go
+type ModelSignal struct {
+	Context  context.Context
+	Instance attrs.Definer
+	Using    QueryCompiler
+}
+
+var (
+	SignalModelInit       = signals.Get[ModelSignal]("queries.model.init")
+	SignalPreModelSave    = signals.Get[ModelSignal]("queries.model.pre_save")
+	SignalPostModelSave   = signals.Get[ModelSignal]("queries.model.post_save")
+	SignalPreModelCreate  = signals.Get[ModelSignal]("queries.model.pre_create")
+	SignalPostModelCreate = signals.Get[ModelSignal]("queries.model.post_create")
+	SignalPreModelDelete  = signals.Get[ModelSignal]("queries.model.pre_delete")
+	SignalPostModelDelete = signals.Get[ModelSignal]("queries.model.post_delete")
+)
+```
+
+`queries` also connects `SignalPreModelSave` and `SignalPostModelSave` to `embedder.PreSave.Bind` and `embedder.PostSave.Bind`, and `models.SIGNAL_MODEL_SETUP` forwards model setup events to `SignalModelInit`.
+
+### Actor and Signal Caveats
+
+- **Signals are skipped when the corresponding `Acts*` interface is implemented:** In `ObjectActor.execute` (`queries/src/queryset_actors.go`), each save/create/delete case checks `if _, ok := s.obj.(Acts...); ok { return ... }` and only calls `s.sendSig(...)` if the model does **not** implement that actor interface.
+- **`actsAfterSave` currently emits `SignalPreModelSave` instead of `SignalPostModelSave`:** In `queryset_actors.go`, the fallback branch for `actsAfterSave` calls `s.sendSig(SignalPreModelSave, ctx)` rather than `SignalPostModelSave`. Consequently, `SignalPostModelSave` is currently never emitted by `ObjectActor` during creates or updates.
+- **No signals for `Update` or `AfterQuery`:** `actsBeforeUpdate`, `actsAfterUpdate`, and `actsAfterQuery` invoke only `ActsBeforeUpdate`, `ActsAfterUpdate`, and `ActsAfterQuery` respectively and do not emit any signal (though update still chains into `actsBeforeSave` / `actsAfterSave`).
+
+### Package Hooks (`queries_init.go`)
+
+Importing `queries/src` installs four global hooks (see [Hooks](../../docs/hooks.md)):
+
+- `models.MODEL_SAVE_HOOK` (priority `0`): When `django/models.SaveObject(ctx, m)` is called (and `ForUseInQueries()` is not `false`), decides whether to `Create` or `Update` by checking `Saved() bool` (if implemented) or whether the primary key is nil/zero, then executes `GetQuerySetWithContext(ctx, m).ExplicitSave()...`.
+- `models.MODEL_DELETE_HOOK` (priority `0`): When `django/models.DeleteObject(ctx, m)` is called (and `ForUseInQueries()` is not `false`), deletes by primary key if the primary key is non-nil and non-zero.
+- `attrs.OnBeforeModelRegister`: Automatically populates `contenttypes.ContentTypeDefinition` (`GetInstance`, `GetInstances`, `GetInstancesByIDs`) using `CT_GetObject`, `CT_ListObjects`, and `CT_ListObjectsByIDs`.
+- `attrs.OnModelRegister`: Stores `UniqueTogetherDefiner.UniqueTogether()` under `MetaUniqueTogetherKey`. If the model has no primary key, it verifies that at least one unique field or `UniqueTogether` group exists (returning `errors.FieldNotFound` otherwise) and stores the generated `WHERE`-clause builder on model metadata. (`attrs.OnThroughModelRegister` performs an analogous check and composite key builder for through models without primary keys.)
 
 ---
 
-### `QueryCompiler`
+## Compiler and Resolver Internals
 
-Compiles queries into SQL.
+Two internal helper packages power query compilation and field path resolution:
+
+### `queries/src/resolver`
 
 ```go
-// A QueryCompiler interface is used to compile a query.
-//
-// It should be able to generate SQL queries and execute them.
-//
-// It does not need to know about the model nor its field types.
-type QueryCompiler interface {
-    // DatabaseName returns the name of the database connection used by the query compiler.
-    //
-    // This is the name of the database connection as defined in the django.Global.Settings object.
-    DatabaseName() string
-
-    // DB returns the database connection used by the query compiler.
-    //
-    // If a transaction was started, it will return the transaction instead of the database connection.
-    DB() drivers.DB
-
-    // ExpressionInfo returns a usable [expr.ExpressionInfo] for the compiler.
-    //
-    // This is used to parse raw queries inside of [QuerySet.Rows], [QuerySet.Row] and [QuerySet.Exec].
-    //
-    // Allowing for the use of GO field names in a raw SQL query.
-    ExpressionInfo(qs *QuerySet[attrs.Definer], internals *QuerySetInternals) *expr.ExpressionInfo
-
-    // Quote returns the quotes used by the database.
-    //
-    // This is used to quote table and field names.
-    // For example, MySQL uses backticks (`) and PostgreSQL uses double quotes (").
-    Quote() (front string, back string)
-
-    // PrepareValue prepares a value for the database.
-    //
-    // It should return the prepared value, which may include
-    // any necessary type conversions or formatting.
-    PrepareValue(field attrs.Field, value any) any
-
-    // Placeholder returns the placeholder used by the database for query parameters.
-    // This is used to format query parameters in the SQL query.
-    // For example, MySQL uses `?` and PostgreSQL uses `$1`, `$2` (but can support `?` as well).
-    Placeholder() string
-
-    // FormatColumn formats the given field column to be used in a query.
-    // It should return the column name with the quotes applied.
-    // Expressions should use this method to format the column name.
-    FormatColumn(aliasGen *alias.Generator, tableColumn *expr.TableColumn) (string, []any)
-
-    // SupportsReturning returns the type of returning supported by the database.
-    // It can be one of the following:
-    //
-    // - SupportsReturningNone: no returning supported
-    // - SupportsReturningLastInsertId: last insert id supported
-    // - SupportsReturningColumns: returning columns supported
-    SupportsReturning() drivers.SupportsReturningType
-
-    // SupportsUnionOrderByTableAlias returns true if the database supports
-    // ordering the main union query by a table alias.
-    SupportsUnionOrderByTableAlias() bool
-
-    // StartTransaction starts a new transaction.
-    StartTransaction(ctx context.Context) (drivers.Transaction, error)
-
-    // WithTransaction wraps the transaction and binds it to the compiler.
-    WithTransaction(tx drivers.Transaction) (drivers.Transaction, error)
-
-    // Transaction returns the current transaction if one is active.
-    Transaction() drivers.Transaction
-
-    // InTransaction returns true if the current query compiler is in a transaction.
-    InTransaction() bool
-
-    // PrepForLikeQuery prepares a value for a LIKE query.
-    //
-    // It should return the value as a string, with values like `%` and `_` escaped
-    // according to the database's LIKE syntax.
-    PrepForLikeQuery(v any) string
-
-    // BuildSelectQuery builds a select query with the given parameters.
-    BuildSelectQuery(
-        ctx context.Context,
-        qs *QuerySet[attrs.Definer],
-        internals *QuerySetInternals,
-    ) CompiledQuery[[][]interface{}]
-
-    // BuildCountQuery builds a count query with the given parameters.
-    BuildCountQuery(
-        ctx context.Context,
-        qs *QuerySet[attrs.Definer],
-        internals *QuerySetInternals,
-    ) CompiledQuery[int64]
-
-    // BuildCreateQuery builds a create query with the given parameters.
-    BuildCreateQuery(
-        ctx context.Context,
-        qs *QuerySet[attrs.Definer],
-        internals *QuerySetInternals,
-        objects []UpdateInfo,
-    ) CompiledQuery[[][]interface{}]
-
-    BuildUpdateQuery(
-        ctx context.Context,
-        qs *GenericQuerySet,
-        internals *QuerySetInternals,
-        objects []UpdateInfo,
-    ) CompiledQuery[int64]
-
-    // BuildUpdateQuery builds an update query with the given parameters.
-    BuildDeleteQuery(
-        ctx context.Context,
-        qs *QuerySet[attrs.Definer],
-        internals *QuerySetInternals,
-    ) CompiledQuery[int64]
+type OrderByDefiner interface {
+	attrs.Definer
+	OrderBy() []string
 }
+
+type ExpressionCompiler interface {
+	ExpressionInfo(resolver expr.FieldResolver) *expr.ExpressionInfo
+}
+
+type ModelInfo struct {
+	Primary  attrs.FieldDefinition
+	Object   attrs.Definer
+	Fields   []attrs.FieldDefinition
+	Table    string
+	Ordering []string
+}
+
+func NewModelInfo(model attrs.Definer) (ModelInfo, error)
+func New(ctx context.Context, model attrs.Definer, compiler ExpressionCompiler) *Resolver
 ```
+
+- `ModelInfo` implements `expr.ModelMeta` (`Model()`, `TableName()`, `PrimaryKey()`, `OrderBy()`). `NewModelInfo` extracts table/field metadata, reads `OrderByDefiner` (defaulting to `[primary.Name()]` if `OrderBy` is `nil` and a primary key exists), and calls `attrs.Setup`.
+- `Resolver` implements `expr.FieldResolver`. `New(ctx, model, compiler)` constructs a `Resolver` bound to a model, context, `ExpressionCompiler`, and `*alias.Generator`.
+- `(*Resolver).Resolve(fieldName string, inf *expr.ExpressionInfo)` splits dot-separated relation paths (for example, `"Author.Profile.Bio"`), calls `attrs.WalkRelationChain`, generates table aliases per hop via `alias.Generator`, and returns `(finalModel, finalField, *expr.TableColumn, err)`.
+- `(*Resolver).ResolveExpression(e expr.Expression)` and `(*Resolver).ExpressionSQL(w io.Writer, e expr.Expression)` resolve and render expressions outside a full `QuerySet` (for example, during constraint compilation in `migrator`).
+
+### `queries/src/alias`
+
+```go
+type Generator struct {
+	Prefix string
+}
+
+func NewGenerator() *Generator
+func (a *Generator) Clone() *Generator
+func (a *Generator) GetTableAlias(currentTable string, chainorKey any) string
+func (a *Generator) GetFieldAlias(tableAlias, alias string) string
+func (a *Generator) Set(chainOrKey any, val string)
+func (a *Generator) Mapping() map[string]string
+```
+
+- `GetTableAlias(currentTable, chainOrKey)` returns the unprefixed table name when `chainOrKey` is empty (the root model) and assigns deterministic `T_<tableName>`, `T1_<tableName>`, `T2_<tableName>`, ... aliases (prefixed with `Prefix + "_"` for subqueries/prefixed QuerySets) for joined relation chains.
+- `GetFieldAlias(tableAlias, alias)` prevents column alias collisions across tables by qualifying duplicate aliases with `<tableAlias>_<alias>`.

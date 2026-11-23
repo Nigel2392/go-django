@@ -1,457 +1,208 @@
-# Pages Example Documentation
+# Blog Application Example
 
-Go-Django has provided pre-defined page models for MySQL and SQLite databases.
+The `blogapp` example (`examples/blogapp`) shows how to build a full CMS-style blog using Go-Django's `pages` app, proxy page models (`models.Model` + `*pages.PageNode`), rich-text `editor` fields, structured `blocks`, admin `chooser` widgets, inline `ModelFormPanel` relations (`BlogImage` with `OrderableMixin`), `images`, `documents`, `search`, `translations`, and `migrator`.
 
-These can then be extended to create your own custom page model with fields for your specific needs.
+## Table of Contents
 
-## Introduction
+- [Project Structure](#project-structure)
+- [Running the Example](#running-the-example)
+- [Models (`blog/models.go`)](#models-blogmodelsgo)
+  - [`BlogPage` and Proxy `PageNode`](#blogpage-and-proxy-pagenode)
+  - [`BlogImage` and `OrderableMixin`](#blogimage-and-orderablemixin)
+- [App Configuration, Admin Panels, and `pages.Register` (`blog/apps.go`)](#app-configuration-admin-panels-and-pagesregister-blogappsgo)
+- [Application Entrypoint (`main.go`)](#application-entrypoint-maingo)
+- [Templates and Static Files](#templates-and-static-files)
 
-Pages are http-handler- like models, but they have to explicitly be registered to the `pages` application, along with their respective [content type](../../contenttypes.md)
+---
 
-This is best done in your [AppConfig's ready function](../../apps.md#creating-a-new-app).
+## Project Structure
 
-This allows for the custom admin- area and the rest of the pages application to work with your custom page model.
-
-### Creating a custom page model
-
-As mentioned before, the `*pages.PageNode` (the model used in the pages app, in a separate package to easily work with multiple databases and prevent import cycles) can be extended to create your own custom page model.
-
-#### Page model interfaces
-
-The custom `Page` model must adhere to the `pages.Page` interface, defined as following (along with other interfaces):
-
-```go
-type Page interface {
-    // Returns the ID of the page
-    ID() int64
-
-    // Return the reference to the underlying generic page node.
-    Reference() *pages.PageNode
-}
-
-type SaveablePage interface {
-    Page
-
-    // Allows the page to save itself to the database when performing database operations in the admin area.
-    // 
-    // Otherwise, only the reference to the page is saved.
-    Save(ctx context.Context) error
-}
-
-type DeletablePage interface {
-    Page
-
-    // Allows the page to delete itself from the database when performing database operations in the admin area.
-    // 
-    // Otherwise, only the reference to the page is deleted.
-    Delete(ctx context.Context) error
-}
+```text
+examples/blogapp/
+├── go.mod
+├── main.go
+└── blog/
+    ├── apps.go
+    ├── models.go
+    └── assets/
+        ├── static/
+        │   └── blog/
+        │       └── css/
+        │           └── blog.css
+        └── templates/
+            └── blog/
+                ├── base.tmpl
+                ├── page.tmpl
+                └── blocks/
+                    └── heading.tmpl
 ```
 
-Now that we know what interfaces our custom page model has to adhere to, it is time to create the model itself.
+---
 
-We will extend the [`*page_models.PageNode`](./pages_models.md#pagenode) model, and add a [richtext editor field](../editor/editor.md) to it.
+## Running the Example
 
-Following that, we will add the required methods to adhere to the `pages.Page` interface.
+Create the local state directory if needed, generate and apply migrations, optionally create a superuser, and run the server from the repository root:
 
-It is also required for pages to adhere to the [attrs.Definer](../attrs/interfaces.md#definer) interface.
+```bash
+mkdir -p .private/blogapp
+go run ./examples/blogapp makemigrations
+go run ./examples/blogapp migrate
+go run ./examples/blogapp createuser -s
+go run ./examples/blogapp
+```
+
+On startup, `main.go` also creates a default demo admin account (`admin@localhost` / `Administrator123!`) if it does not already exist.
+
+- **Admin interface**: Open `http://127.0.0.1:8080/admin/login/` to manage pages, upload images/documents, and edit `BlogPage` entries.
+- **Published pages**: Pages created under the root site are served under `/pages/...` (configured via `pages.SetRoutePrefix("/pages")`).
+
+See [CLI](../cli.md) and [Pages](../apps/pages/readme.md) for managing migrations and the page tree.
+
+---
+
+## Models (`blog/models.go`)
+
+### `BlogPage` and Proxy `PageNode`
+
+`BlogPage` embeds `models.Model` (`table:"blog_pages"`) and embeds `*pages.PageNode` with the `proxy:"true"` struct tag rather than inheriting from legacy `page_models` or database-specific backends:
 
 ```go
-// blog/page.go
-package blog
-
-import (
-    "github.com/Nigel2392/go-django/contrib/editor"
-    "github.com/Nigel2392/go-django/contrib/pages/page_models"
-    "github.com/Nigel2392/go-django/src/core/attrs"
-
-    // Import the required package for working with SQLite3
-    _ "github.com/Nigel2392/go-django/contrib/pages/backend-sqlite"
-)
-
 type BlogPage struct {
-    *page_models.PageNode
-    Editor *editor.EditorJSBlockData
+	models.Model `table:"blog_pages"`
+	Page         *pages.PageNode `proxy:"true"`
+	Image        *mediafiles.SimpleStoredObject
+	Editor       *editor.EditorJSBlockData
+	Content      *blocks.StreamBlockValue
+	Thumbnail    *images.Image
+	Document     *documents.Document
+	User         users.User
 }
 
-// Adhere to the pages.Page interface
 func (b *BlogPage) ID() int64 {
-    return b.PageNode.PageID
+	return b.Page.PageID
 }
 
-// Adhere to the pages.Page interface
-func (b *BlogPage) Reference() *page_models.PageNode {
-    return b.PageNode
-}
-
-// Adhere to the attrs.Definer interface
-func (n *BlogPage) FieldDefs() attrs.Definitions {
-    if n.PageNode == nil {
-        n.PageNode = &page_models.PageNode{}
-    }
-    return attrs.Make(n,
-        attrs.NewField(n.PageNode, "PageID", &attrs.FieldConfig{
-            Primary:  true,
-            ReadOnly: true,
-        }),
-        attrs.NewField(n.PageNode, "Title", &attrs.FieldConfig{
-            Label:    "Title",
-            HelpText: "How do you want your post to be remembered?",
-        }),
-        attrs.NewField(n.PageNode, "UrlPath", &attrs.FieldConfig{
-            ReadOnly: true,
-            Label:    "URL Path",
-            HelpText: "The URL path for this blog post.",
-        }),
-        attrs.NewField(n.PageNode, "Slug", &attrs.FieldConfig{
-            Label:    "Slug",
-            HelpText: "The slug for this blog post.",
-            Blank:    true,
-        }),
-        attrs.NewField(n, "Editor", &attrs.FieldConfig{
-            Default:  &editor.EditorJSBlockData{},
-            Label:    "Rich Text Editor",
-            HelpText: "This is a rich text editor. You can add images, videos, and other media to your blog post.",
-        }),
-        attrs.NewField(n.PageNode, "CreatedAt", &attrs.FieldConfig{
-            ReadOnly: true,
-            Label:    "Created At",
-            HelpText: "The date and time this blog post was created.",
-        }),
-        attrs.NewField(n.PageNode, "UpdatedAt", &attrs.FieldConfig{
-            ReadOnly: true,
-            Label:    "Updated At",
-            HelpText: "The date and time this blog post was last updated.",
-        }),
-    )
+func (b *BlogPage) Reference() *pages.PageNode {
+	return b.Page
 }
 ```
 
-To display your pages to users the page, much like a `http.Handler` must provide a `ServeHTTP` method.
+Key integrations on `BlogPage`:
 
-This method is called when the page is being served to the user.
+- **Proxy node fields**: `FieldDefs(ctx)` initializes `n.Page` when `nil`, binds `PageID` (`Primary: true, Column: "id"`), and exposes embedded fields (`Title`, `UrlPath`, `Slug`, `CreatedAt`, `UpdatedAt`) using `IsEmbedded: true`.
+- **Rich text (`editor.NewField`)**: `Editor` is defined using `editor.NewField(n, "Editor", editor.FieldConfig{...})`. See [Editor](../apps/editor/editor.md).
+- **StreamBlock (`blocks.StreamBlockValue`)**: `Content` is paired with `GetContentBlock() *blocks.StreamBlock`, combining a custom-templated `heading` `StructBlock` (`blog/blocks/heading.tmpl`) and an EditorJS-backed `text` block (`blocks.FormFieldBlock(editor.EditorJSField(nil), &editor.EditorJSBlockData{}, ...)`). See [Blocks](../apps/blocks.md).
+- **Admin Chooser widgets**: `Thumbnail`, `Document`, and `User` (`attrs.RelatedDeferred(attrs.RelManyToOne, users.MODEL_KEY, "", nil)`) use `github.com/Nigel2392/go-django/contrib/admin/chooser`'s `chooser.NewChooserWidget(fc.RelForeignKey.Model(), fc.WidgetAttrs)`.
+- **Search integration**: Implements `search.SearchableModel` via `SearchableFields()`:
+
+  ```go
+  func (n *BlogPage) SearchableFields() []search.SearchField {
+  	return []search.SearchField{
+  		search.NewSearchField(4, "Editor", expr.LOOKUP_ICONTANS),
+  	}
+  }
+  ```
+
+  See [Search](../apps/search.md) and [Model Page](../apps/pages/model_page.md).
+- **HTTP rendering**: `ServeHTTP(w, r)` wraps the request context in `BlogContext`, sets `"blog_page"`, and renders `"blog/page.tmpl"` via `tpl.FRender`.
+
+### `BlogImage` and `OrderableMixin`
+
+`blog/models.go` also defines a reusable `OrderableMixin[T attrs.Definer]` (`attrs.Embedded`) that injects an `Ordering` column, and applies it to `BlogImage`:
 
 ```go
-// blog/page.go
-func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintln(w, "<html><head><title>Blog Page</title></head><body>")
-    // Serve the blog page here.
-    fmt.Fprintf(w, "<h1>%s</h1>\n", b.Title)
-    var rendered, err = b.Editor.Render()
-    if err != nil {
-        logger.Errorf("Error rendering blog page: %v\n", err)
-        return
-    }
-    fmt.Fprintf(w, "%s\n", rendered)
-    fmt.Fprintln(w, "</body></html>")
+type BlogImage struct {
+	models.Model `table:"blog_images"`
+	OrderableMixin[*BlogImage]
+	ID       int64
+	Image    *images.Image
+	BlogPage *BlogPage
+	Content  *blocks.ListBlockValue
+}
+
+func (b *BlogImage) UniqueTogether() [][]string {
+	return [][]string{
+		{"BlogPage", "Image"},
+	}
 }
 ```
 
-### Defining the database queries
+`BlogImage.GetContentBlock()` returns a `*blocks.ListBlock` (with `Min: 1`, `Max: 9`) whose items are `StructBlock`s containing `Caption`, `Attribution`, and a nested `StreamBlock` (`"Stream"`) with `paragraph` and `Data` blocks.
 
-As mentioned before, we must also provide `Save` and `Delete` methods to our custom page model.
+---
 
-These methods are used to save and delete the page from the database, respectively, otherwise only the reference to the page is saved or deleted.
+## App Configuration, Admin Panels, and `pages.Register` (`blog/apps.go`)
 
-```go
-// blog/page.go
-func (b *BlogPage) Save(ctx context.Context) error {
-    if b.ID() == 0 {
-        var _, err = queries.GetQuerySet(b).WithContext(ctx).ExplicitSave().Create(b)
-        return err
-    }
-    var _, err = queries.GetQuerySet(b).WithContext(ctx).ExplicitSave().Update(b)
-    return err
-}
+`blog.NewAppConfig()` registers both `&BlogPage{}` and `&BlogImage{}` in `ModelObjects`:
 
-func getBlogPage(ctx context.Context, parentNode page_models.PageNode, id int64) (*BlogPage, error) {
-    var qs = queries.GetQuerySet(&BlogPage{}).WithContext(ctx)
-    var page, err = qs.Filter("PageID", id).Get()
-    if err != nil {
-        return nil, err
-    }
-    
-    // Set the reference to the parent node
-    page.PageNode = &parentNode
-    return page, nil
-}
+- In `Init`: mounts embedded static assets (`blog/` CSS/JS/images), embedded templates (`AppName: "blog"`, base `"blog/base.tmpl"`), and registers `blog` models in `admin.RegisterApp` (`RegisterToAdminMenu: false` so pages are managed primarily through the `pages` tree).
+- In `Ready`: calls `pages.Register(&pages.PageDefinition{...})` to configure:
+  - `Prefetch`: `SelectRelated` (`"User"`, `"Thumbnail"`, `"Document"`) and `PrefetchRelated` (`"BlogImageSet"`).
+  - `ContentTypeDefinition`: label, description, `&BlogPage{}`, and historical alias `"github.com/Nigel2392/go-django/example/blogapp/core.BlogPage"`.
+  - `AddPanels`: `TitlePanel` (slug auto-synced via `.WithOutputFields("Slug")`), `RowPanel`, `LabeledRowPanel` with `AlertPanel` and `PanelGroup`, `FieldPanel`s, and `&admin.ModelFormPanel[*BlogImage, modelforms.ModelForm[*BlogImage]]` for editing inline `BlogImageSet` items (`MinNum: 3`, `MaxNum: 9`).
+  - `EditPanels`: organizes editing into `TabbedPanel` / `PanelTab` tabs (`"Content"` and `"Media"` with nested chooser tabs) plus read-only `CreatedAt` and `UpdatedAt` panels.
+  - `ParentPageTypes`: restricts valid parent page types (`"github.com/Nigel2392/go-django/examples/blogapp/blog.BlogPage"`).
+
+See [Page Content Types](../apps/pages/contenttypes.md) and [Admin Models](../apps/admin/models.md).
+
+---
+
+## Application Entrypoint (`main.go`)
+
+`examples/blogapp/main.go` ties together the database, media storage, search backend, page route prefix, and all required contrib apps:
+
+- Blank-imports editor features (`contrib/editor/features/...`) and the ORM search backend `_ "github.com/Nigel2392/go-django/contrib/search/backends/searchqueries"`.
+- Registers a filesystem media backend (`mediafs.NewBackend("./.private/blogapp/media", 0)`) as the `"filesystem"` default and passes it to `images.NewAppConfig` and `documents.NewAppConfig`.
+- Installs **`contrib/pages/settings`** (`"github.com/Nigel2392/go-django/contrib/pages/settings"`), which `pages` requires for its `"settings"` app dependency and `Site` configuration (do **not** install `contrib/settings` alongside `pages`).
+- Installs `session`, `auth`, `admin`, `messages`, `pages`, `pages/settings`, `revisions`, `auditlogs`, `reports`, `editor`, `blocks`, `blog`, `images`, `documents`, `migrator`, and `translations`.
+- Calls `pages.SetRoutePrefix("/pages")` so all published blog pages are routed under `/pages`.
+- Demonstrates querying pages with `pages.NewPageQuerySet().WithContext(ctx).Select("*").Specific().Search("test").Types(&blog.BlogPage{}).All()`.
+
+See [Pages Queries](../apps/pages/queries.md), [Images](../apps/images.md), and [Documents](../apps/documents.md).
+
+---
+
+## Templates and Static Files
+
+`blog/assets/templates/blog/page.tmpl` renders the page title, thumbnail URL, author email, and block stream:
+
+```html
+{{ define "title" }}{{ .Page.Page.Title }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "blog/css/blog.css" }}">
+{{ end }}
+
+{{ define "content" }}
+    <div class="blog-wrapper">
+        <h1>{{ .Data.blog_page.Page.Title }}</h1>
+        <h2>Hello, {{ user.Username }}!</h2>
+
+        {{ if .Data.blog_page.Thumbnail }}
+        <img src="{{ url "images:serve" .Data.blog_page.Thumbnail.Path }}" alt="{{ .Data.blog_page.Thumbnail.Title }}">
+        {{ end }}
+
+        {{ if and .Data.blog_page.User .Data.blog_page.User.Email }}
+        <p>By {{ .Data.blog_page.User.Email | toString }}</p>
+        {{ end }}
+
+        {{ render_block . .Data.blog_page.Content }}
+
+        {{ $ctx := . }}
+        {{ range $value := .Data.blog_page.Content.V }}
+            {{ render_block $ctx $value.Data }}
+        {{ end }}
+    </div>
+{{ end }}
 ```
 
-### The `NewBlogPageConfig` function
+`blog/assets/templates/blog/blocks/heading.tmpl` renders the `heading` `StructBlock` using `block_value`:
 
-Most of the work for the blog app itself is now done.
-
-We only need to define the `django.AppConfig` object to properly be able to register it to Go-Django.
-
-First we will handle all imports.
-
-```go
-// blog/app.go
-package blog
-
-import (
-    "context"
-    "net/http"
-
-    "github.com/Nigel2392/go-django/queries/src/drivers"
-    django "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/src/apps"
-    "github.com/Nigel2392/go-django/contrib/admin"
-    "github.com/Nigel2392/go-django/contrib/pages"
-    "github.com/Nigel2392/go-django/contrib/pages/page_models"
-    "github.com/Nigel2392/go-django/src/core/contenttypes"
-    "github.com/Nigel2392/go-django/src/core/trans"
-)
-
+```html
+{{ define "heading" }}
+    <h1>{{ block_value . "title" }}</h1>
+    <h2>{{ block_value . "subtitle" }}</h2>
+{{ end }}
 ```
 
-We can now create a stub for the blog AppConfig.
-
-<pre>
-var blog *apps.DBRequiredAppConfig
-
-func NewAppConfig() *apps.DBRequiredAppConfig {
-    var appconfig = apps.NewDBAppConfig("blog")
-    appconfig.Init = func(settings django.Settings, db drivers.Database) error {
-        var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
-        if err != nil {
-            return err
-        }
-        return schemaEditor.CreateTable(context.Background(), migrator.NewModelTable(&BlogPage{}), true)
-    }
-    appconfig.Ready = func() error {
-        // ...<a href="#registering-the-blog-page-model">Registering the blog page model</a>
-        blog = appconfig
-        return nil
-    }
-    return appconfig
-}
-</pre>
-
-### Registering the blog page model
-
-The blog page model must be registered to the pages app.
-
-This is done by calling the `pages.Register` function with a [`*pages.PageDefinition`](./contenttypes.md#page-definitions-and-registration) object.
-
-This is an extension of the [`contenttypes.ContentTypeDefinition`](../../contenttypes.md#content-type-definition) object.
-
-It also provides the panels which are shown on page creation, or when updating a page, as well as setting specific parent page types by providing their content type aliases.
-
-```go
-// The underlying content type definition for the blog page model
-var definition = &contenttypes.ContentTypeDefinition{
-    GetLabel:       trans.S("Blog Page"),
-    GetDescription: trans.S("A blog page with a rich text editor."),
-    ContentObject:  &BlogPage{},
-}
-
-// Panels for the blog page model when creating a new page
-// 
-// This contains fields from the blog page model, as well as the underlying page node model.
-var addPanels = func(r *http.Request, page pages.Page) []admin.Panel {
-    return []admin.Panel{
-        admin.TitlePanel(
-            admin.FieldPanel("Title"),
-        ),
-        admin.MultiPanel(
-            admin.FieldPanel("UrlPath"),
-            admin.FieldPanel("Slug"),
-        ),
-        admin.FieldPanel("Editor"),
-    }
-}
-
-// Panels for the blog page model when editing a page
-//
-// This contains fields from the blog page model, as well as the underlying page node model.
-var editPanels = func(r *http.Request, page pages.Page) []admin.Panel {
-    return []admin.Panel{
-        admin.TitlePanel(
-            admin.FieldPanel("Title"),
-        ),
-        admin.MultiPanel(
-            admin.FieldPanel("UrlPath"),
-            admin.FieldPanel("Slug"),
-        ),
-        admin.FieldPanel("Editor"),
-        admin.FieldPanel("CreatedAt"),
-        admin.FieldPanel("UpdatedAt"),
-    }
-}
-
-// The allowed parent page types for the blog page model
-var allowedParentPageTypes = []string{
-    // "github.com/yourname/yourproject/custom.Page",
-}
-
-// The allowed child page types for the blog page model
-var allowedChildPageTypes = []string{
-    // "github.com/yourname/yourproject/custom.Page",
-}
-
-// Disallow creation of this model
-var disallowCreate = false
-
-// Disallow this page type to be a root page
-var disallowRoot = false
-
-// Serve the page with this view instead
-var servePage func(p pages.Page) pages.PageView = nil
-
-pages.Register(&pages.PageDefinition{
-    ContentTypeDefinition: definition,
-    AddPanels: addPanels,
-    EditPanels: editPanels,
-    ParentPageTypes: allowedParentPageTypes,
-    ChildPageTypes: allowedChildPageTypes,
-    DisallowCreate: disallowCreate,
-    DisallowRoot: disallowRoot,
-    ServePage: servePage,
-    GetForID: func(ctx context.Context, ref page_models.PageNode, id int64) (pages.Page, error) {
-        return getBlogPage(ctx, ref, id)
-    },
-})
-```
-
-### Creating your Go-Django web application
-
-Now that we have our blog app set up, we can create a new Go-Django web application.
-
-The page app does not know from which URL it should be served, [this has to be explicitly configured](./readme.md#routing-and-url-handling).
-
-First we will handle all imports.
-
-```go
-// main.go
-package main
-
-import (
-    "context"
-
-    "github.com/yourname/yourproject/blog"
-    "github.com/Nigel2392/go-django/queries/src/drivers"
-    django "github.com/Nigel2392/go-django/src"
-    "github.com/Nigel2392/go-django/contrib/admin"
-    "github.com/Nigel2392/go-django/contrib/auth"
-    "github.com/Nigel2392/go-django/contrib/editor"
-    "github.com/Nigel2392/go-django/contrib/pages"
-
-    "github.com/Nigel2392/go-django/contrib/session"
-
-    _ "github.com/Nigel2392/go-django/contrib/pages/backend-sqlite"
-    _ "github.com/mattn/go-sqlite3"
-)
-```
-
-<pre>
-func main() {
-    // ...<a href="#defining-the-go-django-webapplication">Defining the Go-Django webapplication</a>
-    // ...<a href="#setup-the-page-apps-route">Setup the page app's route</a>
-    // ...<a href="#initialize-the-go-django-webapplication">Initialize the Go-Django webapplication</a>
-    // ...<a href="#serve-the-go-django-webapplication">Serve the Go-Django webapplication</a>
-}
-</pre>
-
-#### Define the Go-Django webapplication
-
-The Go-Django app is easily initialized.
-
-We will have to add a few other apps to the app list, such as `sessions`, `auth`, `admin`, `pages`, and `blog`, as well as initialize the database connection.
-
-```go
-var app = django.App(
-    django.Configure(map[string]interface{}{
-        django.APPVAR_ALLOWED_HOSTS: []string{"*"},
-        django.APPVAR_DEBUG:         false,
-        django.APPVAR_HOST:          "127.0.0.1",
-        django.APPVAR_PORT:          "8080",
-        django.APPVAR_DATABASE: func() drivers.Database {
-            var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.sqlite3")
-            if err != nil {
-                panic(err)
-            }
-            return db
-        }(),
-    }),
-    django.Apps(
-        session.NewAppConfig,
-        auth.NewAppConfig,
-        admin.NewAppConfig,
-        pages.NewAppConfig,
-        editor.NewAppConfig,
-        blog.NewAppConfig,
-    ),
-)
-```
-
-#### Setup the page app's route
-
-The page app has to be served from a specific URL.
-
-Calling the `pages.SetRoutePrefix` will set the URL prefix for the page app, as well as providing any required functionality to link back to live pages.
-
-```go
-pages.SetRoutePrefix("/blog")
-```
-
-#### Initialize the Go-Django webapplication
-
-The Go-Django webapplication is initialized by calling the `app.Initialize` method.
-
-```go
-var err = app.Initialize()
-if err != nil {
-    panic(err)
-}
-```
-
-#### Serve the Go-Django webapplication
-
-The Go-Django webapplication is served by calling the `app.Serve` method.
-
-```go
-err = app.Serve()
-if err != nil {
-    panic(err)
-}
-```
-
-### Create a superuser for the admin area
-
-To access the admin area, a superuser has to be created.
-
-This can be done by executing main.go with the `createuser` argument, and the `-s` flag set.
-
-```sh
-go run main.go createuser -s
-```
-
-This will prompt you to enter a username, email, and password for the superuser.
-
-### Running the application
-
-After running the application, you should be able to create new blog pages from the Go-Django admin area.
-
-These pages can then be accessed from `http://127.0.0.1:8080/blog`.
-
-You can serve the app by executing the following command:
-
-```sh
-go run main.go
-```
-
-#### The resulting project structure
-
-The resulting project structure should look like this:
-
-```sh
-github.com/yourname/yourproject
-|-- .private
-|   `-- db.sqlite3
-|-- blog
-|   |-- app.go
-|   `-- page.go
-|-- main.go
-`-- go.mod
-```
+See [Rendering](../rendering.md) and [Static Files](../staticfiles.md) for template inheritance and static asset serving.

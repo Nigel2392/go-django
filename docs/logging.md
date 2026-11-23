@@ -1,180 +1,146 @@
 # Logging
 
-Logging is done with the `logger` package.
+Logging in Go-Django is handled by the `logger` package (`github.com/Nigel2392/go-django/src/core/logger`), which provides a `Log` interface, a leveled `*logger.Logger` implementation, `io.Writer` adapters, namespaced sub-loggers, and ANSI color helpers.
 
-The logger package provides a relatively extensive interface, and provides a default implementation of said interface.
+## Log Levels
 
-## Loglevels
+Available log levels (`logger.LogLevel`):
 
-A default logger will be set with loglevel INFO.
+- `logger.DBG`: Debug messages (`"DEBUG"`).
+- `logger.INF`: Informational messages (`"INFO"`, default log level).
+- `logger.WRN`: Warning messages (`"WARN"`).
+- `logger.ERR`: Error messages (`"ERROR"`).
+- `logger.CRIT`: Critical messages (`100`, `"CRITICAL"`), used by `Fatal` / `Fatalf` before calling `os.Exit(errorcode)`.
+- `logger.OutputAll`: Special level (`-1`) accepted by `SetOutput` to direct all standard log outputs (`DBG`, `INF`, `WRN`, `ERR`) to the same writer.
 
-Allowed log levels are:
+Parse a level name case-insensitively with `logger.ParseLogLevel(s string) (LogLevel, error)`.
 
-* `logger.DBG` - Loglevel DEBUG
-* `logger.INF` - Loglevel INFO
-* `logger.WRN` - Loglevel WARNING
-* `logger.ERR` - Loglevel ERROR
+---
 
-A special case exists for `logger.Fatal` and `logger.Fatalf`.
+## The `Log` Interface
 
-These will log the message and then call `os.Exit()` with the provided exit code.
-
-## The `Log` interface
-
-The `Log` interface is the main interface for the logger.
-
-For a logger to be used with the global `logger.*` package functions, it must implement this interface.
+Any logger passed to `logger.Setup(...)` or `django.AppLogger(...)` must implement `logger.Log`:
 
 ```go
-type Log interface { // size=16 (0x10)
-
-    // Writer returns a new io.Writer that writes to the log output for the given log level.
+type Log interface {
+    // Getters
     Writer(level LogLevel) io.Writer
-
-    // PWriter returns a new io.Writer that writes to the log output for the given log level with a prefix.
     PWriter(label string, level LogLevel) io.Writer
-
-    // NameSpace returns a new Log with the given label as the prefix.
     NameSpace(label string) Log
+    GetLevel() LogLevel
 
-    // SetOutput sets the output for the given log level.
+    // Setters
     SetOutput(level LogLevel, w io.Writer)
-
-    // SetLevel sets the current log level.
-    //
-    // Log messages with a log level lower than the current log level will not be written.
     SetLevel(level LogLevel)
 
-    // Log a debug message.
+    // Logging
     Debug(args ...interface{})
-
-    // Log an info message.
     Info(args ...interface{})
-
-    // Log a warning message.
     Warn(args ...interface{})
-
-    // Log an error message.
     Error(args ...interface{})
-
-    // Log a message and exit the program with the given error code.
     Fatal(errorcode int, args ...interface{})
-
-    // Log a format- and args-based debug message.
     Debugf(format string, args ...interface{})
-
-    // Log a format- and args-based info message.
     Infof(format string, args ...interface{})
-
-    // Log a format- and args-based warning message.
     Warnf(format string, args ...interface{})
-
-    // Log a format- and args-based error message.
     Errorf(format string, args ...interface{})
-
-    // Log a format- and args-based message and exit the program with the given error code.
     Fatalf(errorcode int, format string, args ...interface{})
-
-    // Log a message at the given log level.
     Log(level LogLevel, args ...interface{})
-
-    // Log a format string at the given log level.
     Logf(level LogLevel, format string, args ...interface{})
-
-    // WriteString writes a string to the log output.
     WriteString(s string) (n int, err error)
 }
 ```
 
-## Outputs
+---
 
-The logger will output to `io.Discard` by default.
+## Configuring the Logger (`Setup`, `Logger`, and `django.AppLogger`)
 
-This can be changed by calling `logger.SetOutput(loglevel, io.Writer)`.
+### The `Logger` Struct
 
-It is possible to set different outputs for different loglevels.
+```go
+type Logger struct {
+    Level       LogLevel
+    Prefix      string
+    Suffix      string
+    OutputTime  bool
+    OutputDebug io.Writer
+    OutputInfo  io.Writer
+    OutputWarn  io.Writer
+    OutputError io.Writer
+    WrapPrefix  func(context.Context, LogLevel, string) string
+    Context     context.Context
+}
+```
 
-Example:
+- When an output writer is `nil`, `Logger` chains outputs upward from lowest to highest severity: `OutputDebug` defaults to `io.Discard`, `OutputInfo` defaults to `OutputDebug`, `OutputWarn` defaults to `OutputInfo`, and `OutputError` defaults to `OutputWarn`.
+- `logger.Setup(logInstance)` binds the global package-level functions (`logger.Info`, `logger.Errorf`, `logger.Logf`, `logger.SetOutput`, `logger.SetLevel`, `logger.GetLevel`, `logger.Writer`, `logger.PWriter`, `logger.NameSpace`, etc.) to `logInstance`.
+
+### Configuring with `django.AppLogger`
+
+Pass `django.AppLogger(...)` when creating the application to configure the logger before `Initialize()` runs:
+
+```go
+app := django.App(
+    django.AppLogger(&logger.Logger{
+        Level:       logger.DBG,
+        OutputTime:  true,
+        Prefix:      "myapp",
+        OutputDebug: os.Stdout,
+        WrapPrefix:  logger.ColoredLogWrapper,
+    }),
+    // ...
+)
+```
+
+If `django.AppLogger` is not used, `app.Initialize()` automatically creates a `*logger.Logger` at `logger.GetLevel()`, with `Prefix: "django"`, `OutputTime: true`, `WrapPrefix: logger.ColoredLogWrapper`, and `OutputAll` pointing to `os.Stdout`, then calls `logger.Setup(a.Log)`.
+
+### Setting Per-Level Outputs
 
 ```go
 logger.SetOutput(logger.OutputAll, os.Stdout)
 
-var file, err = os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 if err != nil {
- panic(err)
+    panic(err)
 }
-
 logger.SetOutput(logger.INF, file)
 ```
 
-In this example, all log messages will be written to `os.Stdout`, but INFO messages will instead be written to `log.txt`.
+---
 
-Using the logger is relatively simple.
+## Using the Global Logger
 
-### Basic usage of the Log interface
+Package `logger` exports package-level functions (`Debug`, `Debugf`, `Info`, `Infof`, `Warn`, `Warnf`, `Error`, `Errorf`, `Fatal`, `Fatalf`, `Logf`, `Writer`, `PWriter`, `NameSpace`, `SetOutput`, `SetLevel`, `GetLevel`).
 
-#### Logging a message
+> [!NOTE]
+> There is **no** package-level `logger.Log(...)` function because `Log` is the interface name. Use `logger.Logf(level, format, args...)`, level-specific helpers such as `logger.Info(...)`, or call `.Log(level, args...)` on a `logger.Log` instance (such as `app.Log` or a namespace).
 
 ```go
-logger.Log(logger.INF, "This is an info message")
+logger.Info("Application started")
+logger.Infof("Listening on port %d", 8080)
+logger.Debug("Debug details")
+logger.Warn("Warning message")
+logger.Error("Something went wrong")
+logger.Logf(logger.INF, "Meaning of life: %d", 42)
+logger.Fatal(1, "Unrecoverable error") // logs at CRIT and calls os.Exit(1)
 ```
 
-#### Logging a message with formatting
+---
+
+## `LogWriter`, `PWriter`, and `NameSpace`
+
+### `Writer` and `PWriter`
+
+`Writer(level)` and `PWriter(label, level)` return a `*logger.LogWriter` (`io.Writer`) that forwards writes to the logger if `level >= Logger.Level`:
 
 ```go
-logger.Logf(logger.INF, "This is an info message with a number: %d", 42)
-```
-
-#### Logging a debug message
-
-```go
-logger.Debug("This is a debug message")
-```
-
-#### Logging a warning message
-
-```go
-
-logger.Warn("This is a warning message")
-```
-
-#### Logging an error message
-
-```go
-logger.Error("This is an error message")
-```
-
-#### Logging a fatal message
-
-A fatal message will log the message and then call `os.Exit()` with the provided exit code.
-
-```go
-logger.Fatal(1, "This is a fatal message")
-```
-
-### Advanced usage of the Log interface
-
-#### `Writer`
-
-The logger provides a `Writer` function that returns an `io.Writer` that writes to the log output for the given log level.
-
-This can be used to redirect the output of a function to the logger.
-
-*Be mindful that your log messages can get scrambled, or split apart if say, an `io.Copy` is used and the copy buffer is too small.*
-
-```go
-var writer = logger.Writer(logger.INF)
+writer := logger.Writer(logger.INF)
 writer.Write([]byte("This is an info message\n"))
 ```
 
-#### `PWriter`
-
-The logger provides some more advanced functions for logging.
-
-For say, an `exec.Command`, you can use the `PWriter` function to prefix the log messages.
+Use `PWriter` to capture `exec.Command` output with a namespace prefix:
 
 ```go
-var cmd = exec.Command("ls", "-l")
+cmd := exec.Command("ls", "-l")
 cmd.Stdout = logger.PWriter("ls", logger.INF)
 cmd.Stderr = logger.PWriter("ls", logger.ERR)
 
@@ -183,25 +149,33 @@ if err := cmd.Run(); err != nil {
 }
 ```
 
-This will prefix all log messages with the logger's formatting and the provided prefix.
+*Note: Writing arbitrary byte chunks (such as via `io.Copy` with small buffers) can split a single line across multiple prefixed writes.*
 
-*Be mindful that your log messages can get scrambled, or split apart if say, an `io.Copy` is used and the copy buffer is too small.*
+### `NameSpace`
 
-#### `NameSpace`
-
-The logger provides a `NameSpace` function that returns a new `Log` interface with the given label as the prefix.
-
-This can be used to create a new logger with a specific prefix.
+`NameSpace(label)` returns a copy of the logger with `label` appended to its prefix (nested namespaces join with `" / "`):
 
 ```go
-var myCustomNamespace = logger.NameSpace("myCustomNamespace")
-myCustomNamespace.Info("This is an info message")
+ns := logger.NameSpace("auth")
+sub := ns.NameSpace("oauth")
+sub.Info("Token refreshed")
 ```
 
-As a fun side- effect, namespaces can be nested.
+---
 
-```go
-var myCustomNamespace = logger.NameSpace("myCustomNamespace")
-var myCustomNamespace2 = myCustomNamespace.NameSpace("myCustomNamespace2")
-myCustomNamespace2.Info("This is an info message")
-```
+## Color Helpers
+
+`src/core/logger/wrappers.go` provides ANSI terminal coloring utilities:
+
+- Constants: `CMD_Green`, `CMD_Cyan`, `CMD_Yellow`, `CMD_Red`, `CMD_Bold`, `CMD_Reset`
+- `ColoredLogWrapper(ctx context.Context, l LogLevel, s string) string`: Default `WrapPrefix` coloring `DBG` green, `INF` cyan, `WRN` yellow, and `ERR`/`CRIT` bold red.
+- `Colorize(ctx context.Context, color, s any) string` and `FColorize(ctx context.Context, w io.Writer, color, s any) (int, error)`
+- `WithSupportsColors(ctx context.Context, supports bool) context.Context` and `SupportsColors(ctx context.Context) bool` (defaults to `logger.SUPPORTS_COLORS_DEFAULT`, which is `true`).
+
+---
+
+## Caveats
+
+1. **No-op before `logger.Setup`:** Before `logger.Setup(...)` is called (either directly, via `django.AppLogger(...)`, or by `app.Initialize()`), the default package-level `Debug`/`Info`/`Warn`/`Error`/`Fatal`/`Logf` functions do nothing (`printArgs` has an empty body), `SetOutput` is a no-op, and `logger.NameSpace` returns `nil`.
+2. **`(*Logger).Debugf` level check:** `Debugf` checks `DBG.LT(l.Level)` (`DBG <= l.Level`, always true for `DBG`..`CRIT`) instead of `l.Level.LT(DBG)`. If `OutputDebug` is set to a non-discard writer (for example via `SetOutput(OutputAll, os.Stdout)`), `Debugf` will emit output even when `Level` is `INF` or higher.
+3. **`(*Logger).Log` and `(*Logger).Logf` bypass level filtering:** Calling `Log` or `Logf` writes straight to `l.Output(level)` without checking `l.Level`.

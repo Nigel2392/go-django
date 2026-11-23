@@ -1,101 +1,103 @@
 # Queries Documentation
 
-Welcome to the documentation for the `queries` package.
+Welcome to the documentation for the `queries` package (`github.com/Nigel2392/go-django/queries`).
 
-While [Go-Django](https://github.com/Nigel2392/go-django) tries to do as little as possible with the database, sometimes helper functions make working with models easier.
+While [Go-Django](https://github.com/Nigel2392/go-django) does not force any database layer on you, `queries` provides a Django-style ORM for Go-Django when you want structured models, query composition, expressions, and migrations.
 
-This library brings Django-style ORM queries to Go-Django, allowing you to:
+Do note that `queries` does not wrap `*sql.DB` directly; it defines its own `drivers.DB` interface and must be opened with `drivers.Open(ctx, driverName, dsn, opts...)`.
 
-* Define models with relationships
-* Compose queries with filters, ordering, limits
-* Use select expressions and annotations
+---
 
-Do note that the queries package is not compatible with the default `*sql.DB` struct, but rather implements it's own `Database` interface.
-Databases must always be opened using `drivers.Open(ctx, driverName, dsn)`.
+## Getting Started and Drivers
 
+* [Getting Started](./getting_started.md) - Installing, configuring a database, wiring `migrator.NewAppConfig`, and running queries.
+* [Interfaces](./interfaces.md) - Core ORM, query compiler, resolver, alias, actor, signal, and hook interfaces.
+* [Drivers](./drivers.md) - Supported SQL drivers, ORM types, query logging, `dbtype`, and `securedb`.
+* [Errors](./errors.md) - Driver-normalized sentinel errors (`NoRows`, `MultipleRows`, `UniqueViolation`, etc.) and error wrapping.
 
-## Getting Started
+## Models, Fields, and Relations
 
-* [Getting Started](./getting_started.md) - A quick introduction to connecting and using the ORM.
-* [Interfaces](./interfaces.md) - Overview of the core interfaces that power the ORM.
-* [Drivers](./drivers.md) - Supported database drivers and how to register them.
-
-## Models and Fields
-
-* [Defining Models](./models/models.md) - How to structure your structs and implement `FieldDefs`.
-* [The `models.Model` Base](./models/model.md) - Using the embedded base model and its lifecycle hooks.
-* [Proxy Models](./models/proxy_models.md) - How to inherit and extend models without creating new tables.
-* [Fields](./fields.md) - Using the `fields` package to declare column types and constraints.
-* [Virtual Fields](./virtual_fields.md) - Adding non-database, computed properties to your models.
-* [Relations](./relations/relations.md) - Working with Foreign Keys, One-to-One, Many-to-Many, and Reverse relations.
+* [Defining Models](./models/models.md) - Struct definitions, `FieldDefs(ctx)`, indexes, constraints, and validation.
+* [The `models.Model` Base](./models/model.md) - Embedded base model, `Create`/`Update`/`Delete`/`Load`, dirty tracking, and lifecycle hooks.
+* [Proxy Models](./models/proxy_models.md) - Extending or projecting models without creating new tables.
+* [Specific Models](./models/specific_models.md) - Polymorphic base-to-concrete subtype loading (`queries/src/specific`).
+* [Fields](./fields.md) - Using `fields` and `fields/formfields` for custom column types, relations, and forms.
+* [Virtual Fields](./virtual_fields.md) - Computed SQL fields excluded from storage and writes.
+* [Relations](./relations/relations.md) - Foreign keys, one-to-one, many-to-many, and dot-notation traversal.
 
 ## Querying the Database
 
-* [Basic Querying](./querying.md) - An overview of common ORM methods (`CreateObject`, `DeleteObject`, etc.).
-* [The QuerySet API](./queryset/queryset.md) - Chaining methods like `Filter`, `Exclude`, `Select`, and `OrderBy`.
-* [Writing Complex Queries](./queryset/writing_queries.md) - Using Q objects and nested conditions.
+* [Basic Querying](./querying.md) - Top-level helpers (`GetObject`, `CreateObject`, `CT_GetObject`, raw queries, compilers).
+* [The QuerySet API](./queryset/queryset.md) - Concrete `*queries.QuerySet[T]`, `Filter`, `Select`, `SelectRelated`, `Preload`, transactions, subqueries, and raw queries.
+* [Writing Complex Queries](./queryset/writing_queries.md) - End-to-end patterns for `expr.Q`, joins, preloading, subqueries, iterators, and transactions.
 
-## Expressions and Lookups
+## Expressions, Lookups, and Constraints
 
-* [Expressions](./expressions/expressions.md) - Using `F()` expressions and aggregate functions.
-* [Cases](./expressions/cases.md) - Implementing `CASE WHEN` logic in your queries.
-* [Lookups](./expressions/lookups.md) - Field lookups (e.g., `__gt`, `__in`, `__icontains`) for filtering data.
+* [Expressions](./expressions/expressions.md) - `Logical`, `F`/`Raw`, `As`, `Cast`, `OuterRef`, and SQL functions (`expr.COUNT`, `LOWER`, `COALESCE`, etc.).
+* [Case Expressions](./expressions/cases.md) - Building SQL `CASE WHEN ... THEN ... ELSE ... END` expressions.
+* [Lookups and Transforms](./expressions/lookups.md) - Filtering with `__lookup` suffixes, chained transforms (`__lower`), and custom registrations.
+* [Constraints](./expressions/constraints.md) - Declarative `CheckConstraint`, `UniqueConstraint`, and `ForeignKeyConstraint` definitions.
 
-## 🔧 Quick Example
+## Migrations and HTTP Integration
+
+* [Migrations](./migrations.md) - Schema snapshots, `.mig` generation, `migrator.AutoMigrate`, `migrator.NewAppConfig`, and `cmd/migrator`.
+* [HTTP Integration](./http_integration.md) - Request transaction middleware (`TransactionMiddleware`) and generic detail views (`ObjectView[T]`).
+
+---
+
+## Quick Example
 
 ```go
-// Query forward foreign key relation
-var todos, err := queries.GetQuerySet(&Todo{}).
-    Select("*", "User.*").
-    Filter("Done", false).
-    OrderBy("-ID").
-    All()
+// Query forward foreign key relation (Filter supports negation via .Not(true))
+todos, err := queries.GetQuerySet(&Todo{}).
+	Select("*", "User.*").
+	Filter("Done", false).
+	OrderBy("-ID").
+	All()
+
+// Negate a condition with .Not(true) (QuerySet has no Exclude method)
+activeTodos, err := queries.GetQuerySet(&Todo{}).
+	Filter(expr.Q("Done", true).Not(true)).
+	All()
 
 // Query reverse foreign key relation
-var todos, err := queries.GetQuerySet(&User{}).
-    Select("*", "TodoSet.*").
-    Filter("TodoSet.Done", false).
-    OrderBy("-ID").
-    All()
+users, err := queries.GetQuerySet(&User{}).
+	Select("*", "TodoSet.*").
+	Filter("TodoSet.Done", false).
+	OrderBy("-ID").
+	All()
 ```
 
 ### Tested Databases
 
-But more tests / databases will be added over time.
-
-* SQLite through [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)
-* MySQL through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql)
-* Local MYSQL with [dolthub/go-mysql-server](https://github.com/dolthub/go-mysql-server) through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) (used internally for testing)
-* MariaDB through [a custom driver](https://github.com/Nigel2392/go-django/queries/blob/main/src/drivers/drivers.go#L38) (with returning support, custom driver - use "mariadb" in `drivers.Open(...)`)
-* Postgres through [jackc/pgx](https://github.com/jackc/pgx)
+* SQLite via [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)
+* MySQL via [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) (tested against [dolthub/go-mysql-server](https://github.com/dolthub/go-mysql-server))
+* MariaDB via [a custom driver](../src/drivers/drivers_mardiadb.go) wrapping `go-sql-driver/mysql` (use `"mariadb"` in `drivers.Open(...)`)
+* PostgreSQL via [jackc/pgx](https://github.com/jackc/pgx) (use `"postgres"` in `drivers.Open(...)`)
 
 #### Caveats
 
-* MySQL and MariaDB requires both `multiStatements` and `interpolateParams` to be `true`. This is because
-  the driver cannot [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) otherwise return multiple result id's in a single query.
-  **Without this it is impossible to bulk update or bulk insert.**
+* MySQL and MariaDB require both `multiStatements=true` and `interpolateParams=true` in the DSN so batched statements and multi-row inserts can return multiple IDs. **Without these parameters, bulk inserts and bulk updates cannot work reliably.**
 
-* The `mariadb` driver is a custom driver that supports returning all columns upon creation of an object.
-  It is a wrapper around the [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) driver.
-  It can be used by passing `mariadb` as the driver name to `drivers.Open(...)`, example:
+* The `"mariadb"` driver wraps [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) and adds `RETURNING` column support when creating records:
 
-  ```go
-  db, err := drivers.Open("mariadb", "user:password@tcp(localhost:3306)/dbname?multiStatements=true&interpolateParams=true")
-  if err != nil {
-      log.Fatal(err)
-  }
-  ```
+```go
+db, err := drivers.Open(
+	context.Background(),
+	"mariadb",
+	"user:password@tcp(localhost:3306)/dbname?multiStatements=true&interpolateParams=true",
+)
+if err != nil {
+	log.Fatal(err)
+}
+```
 
-### The following features are currently supported
+### Supported Features
 
-* Selecting fields
-* Selecting forward and reverse relations
-* Filtering
-* Lookups
-* Ordering
-* Limiting
-* Expressions
-* Annotations
-* Aggregates
-* Virtual fields
-* Proxy models
+* Field selection, forward joins (`SelectRelated`), and batched relation preloading (`Preload`)
+* Filtering with lookups, transforms, `Q` groups, `Logical` expressions, and `Subquery` / `EXISTS`
+* Ordering, limiting, offsets, unions, distinct queries, and `SELECT ... FOR UPDATE`
+* Annotations, aggregates, `CASE WHEN` expressions, and type casting
+* Virtual fields, proxy models, and polymorphic specific models
+* Table constraints (`CHECK`, `UNIQUE`, `FOREIGN KEY`) and schema migrations
+* Transaction management, HTTP transaction middleware, and `ObjectView[T]`
