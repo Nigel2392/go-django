@@ -136,6 +136,7 @@ module.exports = [
         ...baseConfig(),
     },
     {
+        name: 'shop-public',
         entry: './contrib/shop/assets/static_src/public/index.ts',
         output: {
             'path': path.resolve(__dirname, 'contrib/shop/assets/static/shop/public/js/'),

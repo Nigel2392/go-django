@@ -10,6 +10,7 @@
       "esModuleInterop": true,
     },
     "include": [
+      "assets/public/**/*.ts",
       "src/forms/assets_static_src/**/*.js",
       "src/forms/assets_static_src/**/*.ts",
       "src/forms/assets_static_src/**/*.tsx",
