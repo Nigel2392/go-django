@@ -1,0 +1,23 @@
+{
+  "table": {
+    "table": "translations_locale",
+    "model": "github.com/Nigel2392/go-django/contrib/translations.Locale",
+    "fields": [
+      {
+        "name": "LanguageTag",
+        "column": "language_id",
+        "use_in_db": true,
+        "primary": true,
+        "max_length": 255,
+        "db_type": "STRING"
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

@@ -22,6 +22,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
+	"github.com/Nigel2392/go-django/contrib/translations"
 	"github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -87,6 +88,7 @@ func main() {
 			session.NewAppConfig,
 			messages.NewAppConfig,
 			// openauth2.NewAppConfig(openauth2.Config{}),
+			translations.NewAppConfig,
 			auth.NewAppConfig,
 			admin.NewAppConfig,
 			auditlogs.NewAppConfig,

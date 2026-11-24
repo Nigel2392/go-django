@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -169,10 +170,22 @@ func NewAppConfig() django.AppConfig {
 }
 
 func (a *SettingsApp) Check(ctx context.Context, djangosettings django.Settings) []checks.Message {
+
 	var (
 		messages    = a.AppConfig.Check(ctx, djangosettings)
 		groups, err = groupedSettings(ctx)
 	)
+
+	if errors.Is(err, errors.TableNotFound) {
+		messages = append(messages, checks.Critical(
+			"contrib.settings.TableNotExists",
+			"migrations are required",
+			(Setting)(nil),
+			"Please run 'go run ./... [makemigrations | migrate]'",
+		))
+		return messages
+	}
+
 	if err != nil {
 		panic(fmt.Errorf("error while retrieving registered settings: %w", err))
 	}

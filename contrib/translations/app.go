@@ -13,8 +13,10 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
@@ -23,6 +25,9 @@ import (
 
 //go:embed translations.yml
 var translationsFileFS embed.FS
+
+//go:embed migrations/translations
+var translationsMigrationFS embed.FS
 
 type Finder interface {
 	Find(fSys fs.FS, isExcluded func(filename string) bool) ([]Translation, error)
@@ -41,6 +46,10 @@ type TranslationsAppConfig struct {
 
 var translatorApp *TranslationsAppConfig
 
+func (c *TranslationsAppConfig) GetMigrationFS() fs.FS {
+	return filesystem.Sub(translationsMigrationFS, "migrations/translations")
+}
+
 func NewAppConfig() django.AppConfig {
 
 	if translatorApp != nil {
@@ -54,6 +63,7 @@ func NewAppConfig() django.AppConfig {
 
 	cfg.Cmd = []command.Command{
 		makeTranslationsCommand,
+		syncLocalesCommand,
 	}
 
 	cfg.Routing = func(m mux.Multiplexer) {
@@ -64,6 +74,10 @@ func NewAppConfig() django.AppConfig {
 			http.HandlerFunc(translationCatalog),
 			"translations.js",
 		)
+	}
+
+	cfg.ModelObjects = []attrs.Definer{
+		&Locale{},
 	}
 
 	cfg.Init = func(settings django.Settings) error {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -156,18 +157,24 @@ func TestTranslationsAppCatalogRoute(t *testing.T) {
 	if NewAppConfig() != cfg || cfg.Name() != "translations" {
 		t.Fatalf("unexpected app config: %+v", cfg)
 	}
-	if commands := cfg.Commands(); len(commands) != 1 || commands[0].Name() != "make-translations" {
-		t.Errorf("commands = %v, want make-translations", commands)
+	var commands []string
+	for _, command := range cfg.Commands() {
+		commands = append(commands, command.Name())
 	}
-	if messages := cfg.Check(t.Context(), django.Global.Settings); len(messages) != 1 ||
-		messages[0].ID != "translations.no_translations" || messages[0].Type != checks.WARNING {
+	if !slices.Equal(commands, []string{"make-translations", "sync-locales"}) {
+		t.Errorf("commands = %v, want [make-translations sync-locales]", commands)
+	}
+	isCatalogWarning := func(message checks.Message) bool {
+		return message.ID == "translations.no_translations" && message.Type == checks.WARNING
+	}
+	if messages := cfg.Check(t.Context(), django.Global.Settings); !slices.ContainsFunc(messages, isCatalogWarning) {
 		t.Errorf("empty catalog checks = %+v", messages)
 	}
 
 	dutch := TranslationHeaderLocale{2, "n != 1", "%d-%m-%Y", "%A %B"}
 	cfg.translationHeader = newTranslationHeader(testHeader(map[string]TranslationHeaderLocale{"nl": dutch}))
 	cfg.translations = map[string]map[string][]string{"nl": {"Hello": {"Hallo"}, "<tag>": {"\"tekst\""}}}
-	if messages := cfg.Check(t.Context(), django.Global.Settings); len(messages) != 0 {
+	if messages := cfg.Check(t.Context(), django.Global.Settings); slices.ContainsFunc(messages, isCatalogWarning) {
 		t.Errorf("populated catalog checks = %+v", messages)
 	}
 

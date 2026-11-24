@@ -34,7 +34,11 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 	Desc: "Search for translation strings in the project files",
 	FlagFunc: func(m command.Manager, stored *translationsCommandContext, f *flag.FlagSet) error {
 		stored.dir = flags.NewList(django.ConfigGet(django.Global.Settings, APPVAR_TRANSLATIONS_DIR, []string{})...)
-		stored.locs = flags.NewList(django.ConfigGet[[]string](django.Global.Settings, APPVAR_TRANSLATIONS_LOCALES)...)
+		locales, err := configuredLocaleNames(django.Global.Settings)
+		if err != nil {
+			return err
+		}
+		stored.locs = flags.NewList(locales...)
 
 		f.Var(&stored.dir, "dir", "The directory to search for translation strings")
 		f.Var(&stored.locs, "locales", "Generate the following locales for the translation strings")

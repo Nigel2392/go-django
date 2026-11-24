@@ -8,858 +8,721 @@ locales:
     rule: '(n != 1) ? 1 : 0'
     long_time_format: '%A %-d %B %Y om %H:%M:%S'
     short_time_format: '%H:%M:%S %d-%m-%Y'
+  de:
+    nplural: 2
+    rule: '(n != 1) ? 1 : 0'
+    long_time_format: '%A, %-d. %B %Y um %H:%M:%S'
+    short_time_format: '%H:%M:%S %-d.%m.%Y'
+  fr:
+    nplural: 2
+    rule: '(n > 1) ? 1 : 0'
+    long_time_format: '%A %-d %B %Y à %H:%M:%S'
+    short_time_format: '%H:%M:%S %-d/%-m/%Y'
 
 ---
 
-# [ModelFinder]:	audit_logs.Entry .models/auditlogs/Entry:8:1
+# [ModelFinder]:	audit_logs.Entry .models/auditlogs/Entry:6:1
 text: Entry
 locales:
+  de: ""
+  fr: ""
   nl: ""
 
 ---
 
-# [ModelFinder.Field]: audit_logs.Entry.ID   .models/auditlogs/Entry/fields:1:0
-# [ModelFinder.Field]: users.Group.ID        .models/auth/Group/fields:2:0
-# [ModelFinder.Field]: users.Permission.ID   .models/auth/Permission/fields:3:0
-# [ModelFinder.Field]: auth.User.ID          .models/auth/User/fields:1:0
-# [ModelFinder.Field]: documents.Document.ID .models/documents/Document/fields:1:0
-# [ModelFinder.Field]: images.Image.ID       .models/images/Image/fields:1:0
-# [ModelFinder.Field]: pages.Site.ID         .models/pages/Site/fields:1:0
-# [ModelFinder.Field]: revisions.Revision.ID .models/revisions/Revision/fields:1:0
-# [GoFileFinder]:      NewAppConfig          examples/todoapp/todos/todo.go:101:29
-# [GoFileFinder]:      NewAppConfig          contrib/auth/app.go:186:33
-# [GoFileFinder]:      *User.Fields          contrib/auth/user.go:120:22
-# [GoFileFinder]:      *Document.FieldDefs   contrib/documents/models.go:101:22
-# [GoFileFinder]:      *Image.FieldDefs      contrib/images/models.go:93:22
-# [GoFileFinder]:      *User.Fields          contrib/openauth2/models.go:207:23
-# [GoFileFinder]:                            contrib/pages/django_admin.go:51:26
-# [GoFileFinder]:      *Revision.FieldDefs   contrib/revisions/models.go:101:22
-text: ID
-locales:
-  nl: ID
-
----
-
-# [ModelFinder.Field]:	audit_logs.Entry.Type .models/auditlogs/Entry/fields:1:1
-text: Typ
-locales:
-  nl: Type
-
----
-
-# [ModelFinder.Field]:	audit_logs.Entry.Level .models/auditlogs/Entry/fields:1:2
-text: Lvl
-locales:
-  nl: Niveau
-
----
-
-# [ModelFinder.Field]:	audit_logs.Entry.Timestamp .models/auditlogs/Entry/fields:1:3
-text: Time
-locales:
-  nl: Tijd
-
----
-
-# [ModelFinder.Field]:	audit_logs.Entry.User .models/auditlogs/Entry/fields:1:4
-text: Usr
-locales:
-  nl: Gebruiker
-
----
-
-# [ModelFinder.Field]:	audit_logs.Entry.Object .models/auditlogs/Entry/fields:1:5
-text: Obj
-locales:
-  nl: Object
-
----
-
-# [ModelFinder.Field]:	audit_logs.Entry.ObjectID .models/auditlogs/Entry/fields:1:6
-text: Obj ID
-locales:
-  nl: Object-ID
-
----
-
-# [ModelFinder.Field]:	audit_logs.Entry.ContentType .models/auditlogs/Entry/fields:1:7
+# [ModelFinder.Field]:	audit_logs.Entry.ContentType .models/auditlogs/Entry/fields/ContentType:1:7
 text: C Type
 locales:
+  de: ""
+  fr: ""
   nl: Inhoudstype
 
 ---
 
-# [ModelFinder.Field]:	audit_logs.Entry.Data .models/auditlogs/Entry/fields:1:8
+# [ModelFinder.Field]:	audit_logs.Entry.Data .models/auditlogs/Entry/fields/Data:1:8
 text: Src
 locales:
+  de: ""
+  fr: ""
   nl: Bron
 
 ---
 
-# [ModelFinder]:	users.Group .models/auth/Group:2:2
-text: Group
+# [ModelFinder.Field]: audit_logs.Entry.ID           .models/auditlogs/Entry/fields/ID:1:0
+# [ModelFinder.Field]: users.Group.ID                .models/auth/Group/fields/ID:2:0
+# [ModelFinder.Field]: users.Permission.ID           .models/auth/Permission/fields/ID:3:0
+# [ModelFinder.Field]: auth.User.ID                  .models/auth/User/fields/ID:1:0
+# [ModelFinder.Field]: dbsupplier.Product.ID         .models/dbsupplier/Product/fields/ID:1:0
+# [ModelFinder.Field]: revisions.Revision.ID         .models/revisions/Revision/fields/ID:1:0
+# [ModelFinder.Field]: settings.RegisteredSetting.ID .models/settings/RegisteredSetting/fields/ID:1:0
+# [GoFileFinder]:      NewAppConfig                  contrib/auth/app.go:197:33
+# [GoFileFinder]:      *User.Fields                  contrib/auth/user.go:120:22
+# [GoFileFinder]:      *Document.FieldDefs           contrib/documents/models.go:95:22
+# [GoFileFinder]:      *Image.FieldDefs              contrib/images/models.go:93:22
+# [GoFileFinder]:      *User.Fields                  contrib/openauth2/models.go:213:23
+# [GoFileFinder]:                                    contrib/pages/django_admin.go:52:26
+# [GoFileFinder]:      *Revision.FieldDefs           contrib/revisions/models.go:101:22
+text: ID
 locales:
-  nl: Groep
+  de: ""
+  fr: ""
+  nl: ID
 
 ---
 
-# [ModelFinder.Field]:	users.Group.Name .models/auth/Group/fields:2:1
-text: Group Name
+# [ModelFinder.Field]:	audit_logs.Entry.Level .models/auditlogs/Entry/fields/Level:1:2
+text: Lvl
 locales:
-  nl: Groepsnaam
+  de: ""
+  fr: ""
+  nl: Niveau
 
 ---
 
-# [ModelFinder.Field]: users.Group.Description      .models/auth/Group/fields:2:2
-# [ModelFinder.Field]: users.Permission.Description .models/auth/Permission/fields:3:2
-# [GoFileFinder]:      *ChocolateListPage.FieldDefs examples/chocolaterie/src/chocolaterie/models.go:105:22
-text: Description
+# [ModelFinder.Field]:	audit_logs.Entry.Object .models/auditlogs/Entry/fields/Object:1:5
+text: Obj
 locales:
-  nl: Beschrijving
+  de: ""
+  fr: ""
+  nl: Object
 
 ---
 
-# [ModelFinder.Field]: users.Group.Permissions .models/auth/Group/fields:2:3
-# [ModelFinder.Field]: auth.User.Permissions   .models/auth/User/fields:1:12
-# [GoFileFinder]:      NewAppConfig            contrib/auth/app.go:328:34
-# [GoFileFinder]:      *Base.Fields            contrib/auth/users/baseuser.go:110:24
-# [GoFileFinder]:      *Group.FieldDefs        contrib/auth/users/group.go:43:24
-# [GoFileFinder]:      NewAppConfig            contrib/openauth2/openauth2.go:393:35
-text: Permissions
+# [ModelFinder.Field]:	audit_logs.Entry.ObjectID .models/auditlogs/Entry/fields/ObjectID:1:6
+text: Obj ID
 locales:
-  nl: Rechten
-
----
-
-# [ModelFinder]:	users.GroupPermission .models/auth/GroupPermission:2:5
-text: GroupPermission
-locales:
-  nl: GroepRecht
-
----
-
-# [ModelFinder.Field]: users.GroupPermission.GroupID .models/auth/GroupPermission/fields:5:0
-# [ModelFinder.Field]: users.UserGroup.GroupID       .models/auth/UserGroup/fields:4:1
-text: Group ID
-locales:
-  nl: Groep-ID
-
----
-
-# [ModelFinder.Field]: users.GroupPermission.PermissionID .models/auth/GroupPermission/fields:5:1
-# [ModelFinder.Field]: users.UserPermission.PermissionID  .models/auth/UserPermission/fields:6:1
-text: Permission ID
-locales:
-  nl: Recht-ID
-
----
-
-# [ModelFinder]:	users.Permission .models/auth/Permission:2:3
-text: Permission
-locales:
-  nl: Recht
-
----
-
-# [ModelFinder.Field]:	users.Permission.Name .models/auth/Permission/fields:3:1
-text: Permission Name
-locales:
-  nl: Naam van het recht
-
----
-
-# [ModelFinder.Field]:	users.Permission.GroupPermissions .models/auth/Permission/fields:3:3
-text: Group Permissions
-locales:
-  nl: Groepsrechten
-
----
-
-# [ModelFinder]:       auth.User               .models/auth/User:2:1
-# [ModelFinder.Field]: blog.BlogPage.User      .models/blog/BlogPage/fields:1:8
-# [ModelFinder.Field]: revisions.Revision.User .models/revisions/Revision/fields:1:4
-# [GoFileFinder]:      NewAppConfig            examples/blogapp/blog/apps.go:170:19
-# [GoFileFinder]:      *BlogPage.FieldDefs     examples/blogapp/blog/models.go:170:22
-# [GoFileFinder]:      NewAppConfig            contrib/auth/app.go:154:28
-# [GoFileFinder]:      NewAppConfig            contrib/openauth2/openauth2.go:488:27
-# [GoFileFinder]:      listRevisionHandler     contrib/pages/django_admin_views_revisions.go:83:12
-# [GoFileFinder]:      *Revision.FieldDefs     contrib/revisions/models.go:130:23
-text: User
-locales:
-  nl: Gebruiker
-
----
-
-# [ModelFinder.Field]: auth.User.Email  .models/auth/User/fields:1:1
-# [GoFileFinder]:      main             examples/openauth2app/main.go:169:35
-# [GoFileFinder]:      NewAppConfig     contrib/auth/app.go:187:33
-# [GoFileFinder]:      NewAppConfig     contrib/auth/app.go:288:16
-# [GoFileFinder]:      UserLoginForm    contrib/auth/forms.go:64:26
-# [GoFileFinder]:      UserRegisterForm contrib/auth/forms.go:116:26
-# [GoFileFinder]:      *User.Fields     contrib/auth/user.go:128:23
-text: Email
-locales:
-  nl: E-mail
-
----
-
-# [ModelFinder.Field]: auth.User.Username .models/auth/User/fields:1:2
-# [GoFileFinder]:      NewAppConfig       contrib/auth/app.go:188:33
-# [GoFileFinder]:      UserLoginForm      contrib/auth/forms.go:75:26
-# [GoFileFinder]:      UserRegisterForm   contrib/auth/forms.go:130:6
-# [GoFileFinder]:      *User.Fields       contrib/auth/user.go:135:23
-text: Username
-locales:
-  nl: Gebruikersnaam
-
----
-
-# [ModelFinder.Field]: auth.User.FirstName .models/auth/User/fields:1:3
-# [GoFileFinder]:      main                examples/openauth2app/main.go:170:35
-# [GoFileFinder]:      UserRegisterForm    contrib/auth/forms.go:148:6
-# [GoFileFinder]:      *User.Fields        contrib/auth/user.go:141:23
-text: First Name
-locales:
-  nl: Voornaam
-
----
-
-# [ModelFinder.Field]: auth.User.LastName .models/auth/User/fields:1:4
-# [GoFileFinder]:      main               examples/openauth2app/main.go:171:35
-# [GoFileFinder]:      UserRegisterForm   contrib/auth/forms.go:163:6
-# [GoFileFinder]:      *User.Fields       contrib/auth/user.go:147:23
-text: Last Name
-locales:
-  nl: Achternaam
-
----
-
-# [ModelFinder.Field]: auth.User.Password .models/auth/User/fields:1:5
-# [GoFileFinder]:      NewAppConfig       contrib/auth/app.go:191:33
-# [GoFileFinder]:      UserLoginForm      contrib/auth/forms.go:92:25
-# [GoFileFinder]:      UserRegisterForm   contrib/auth/forms.go:183:5
-# [GoFileFinder]:      *User.Fields       contrib/auth/user.go:153:23
-text: Password
-locales:
-  nl: Wachtwoord
-
----
-
-# [ModelFinder.Field]: auth.User.CreatedAt          .models/auth/User/fields:1:6
-# [ModelFinder.Field]: blog.BlogPage.CreatedAt      .models/blog/BlogPage/fields:1:9
-# [ModelFinder.Field]: documents.Document.CreatedAt .models/documents/Document/fields:1:3
-# [ModelFinder.Field]: images.Image.CreatedAt       .models/images/Image/fields:1:3
-# [ModelFinder.Field]: pages.PageNode.CreatedAt     .models/pages/PageNode/fields:2:12
-# [ModelFinder.Field]: revisions.Revision.CreatedAt .models/revisions/Revision/fields:1:5
-# [GoFileFinder]:      NewAppConfig                 contrib/auth/app.go:308:16
-# [GoFileFinder]:      *User.Fields                 contrib/auth/user.go:157:22
-# [GoFileFinder]:      *Document.FieldDefs          contrib/documents/models.go:123:22
-# [GoFileFinder]:      *Image.FieldDefs             contrib/images/models.go:115:22
-# [GoFileFinder]:      *User.Fields                 contrib/openauth2/models.go:284:23
-# [GoFileFinder]:                                   contrib/pages/django_admin.go:61:26
-# [GoFileFinder]:      *Revision.FieldDefs          contrib/revisions/models.go:136:22
-text: Created At
-locales:
-  nl: Aangemaakt op
-
----
-
-# [ModelFinder.Field]: auth.User.UpdatedAt      .models/auth/User/fields:1:7
-# [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:10
-# [ModelFinder.Field]: pages.PageNode.UpdatedAt .models/pages/PageNode/fields:2:13
-# [GoFileFinder]:      NewAppConfig             contrib/auth/app.go:313:16
-# [GoFileFinder]:      *User.Fields             contrib/auth/user.go:162:22
-# [GoFileFinder]:      *User.Fields             contrib/openauth2/models.go:293:23
-# [GoFileFinder]:                               contrib/pages/django_admin.go:62:26
-text: Updated At
-locales:
-  nl: Bijgewerkt op
-
----
-
-# [ModelFinder.Field]: auth.User.IsAdministrator .models/auth/User/fields:1:8
-# [GoFileFinder]:      *Base.Fields              contrib/auth/users/baseuser.go:66:22
-text: Is Administrator
-locales:
-  nl: Is Beheerder
-
----
-
-# [ModelFinder.Field]: auth.User.IsActive .models/auth/User/fields:1:9
-# [GoFileFinder]:      *Base.Fields       contrib/auth/users/baseuser.go:72:22
-# [GoFileFinder]:      NewAppConfig       contrib/openauth2/openauth2.go:341:17
-text: Is Active
-locales:
-  nl: Is Actief
-
----
-
-# [ModelFinder.Field]: auth.User.LastLogin .models/auth/User/fields:1:10
-# [GoFileFinder]:      NewAppConfig        contrib/auth/app.go:303:16
-# [GoFileFinder]:      *Base.Fields        contrib/auth/users/baseuser.go:83:22
-text: Last Login
-locales:
-  nl: Laatste Aanmelding
-
----
-
-# [ModelFinder.Field]: auth.User.Groups .models/auth/User/fields:1:11
-# [GoFileFinder]:      NewAppConfig     contrib/auth/app.go:321:34
-# [GoFileFinder]:      *Base.Fields     contrib/auth/users/baseuser.go:91:24
-# [GoFileFinder]:      NewAppConfig     contrib/openauth2/openauth2.go:386:35
-text: Groups
-locales:
-  nl: Groepen
-
----
-
-# [ModelFinder.Field]: auth.User.Revisions    .models/auth/User/fields:1:13
-# [GoFileFinder]:      listRevisionHandler    contrib/pages/django_admin_views_revisions.go:200:33
-# [GoFileFinder]:      revisionDetailHandler  contrib/pages/django_admin_views_revisions.go:397:35
-# [GoFileFinder]:      revisionCompareHandler contrib/pages/django_admin_views_revisions.go:563:36
-# [GoFileFinder]:      getPageActions         contrib/pages/django_admin_views_utils.go:152:33
-text: Revisions
-locales:
-  nl: "Revisies"
-
----
-
-# [ModelFinder.Field]:	auth.User.EntrySet .models/auth/User/fields:1:14
-text: Entry Set
-locales:
-  nl: Invoerset
-
----
-
-# [ModelFinder.Field]: auth.User.BlogPageSet          .models/auth/User/fields:1:15
-# [ModelFinder.Field]: documents.Document.BlogPageSet .models/documents/Document/fields:1:6
-# [ModelFinder.Field]: images.Image.BlogPageSet       .models/images/Image/fields:1:6
-text: Blog Page Set
-locales:
-  nl: Blogpagina-set
-
----
-
-# [ModelFinder]:	users.UserGroup .models/auth/UserGroup:2:4
-text: UserGroup
-locales:
-  nl: Gebruikersgroep
-
----
-
-# [ModelFinder.Field]: users.UserGroup.UserID      .models/auth/UserGroup/fields:4:0
-# [ModelFinder.Field]: users.UserPermission.UserID .models/auth/UserPermission/fields:6:0
-text: User ID
-locales:
-  nl: Gebruiker-ID
-
----
-
-# [ModelFinder]:	users.UserPermission .models/auth/UserPermission:2:6
-text: UserPermission
-locales:
-  nl: GebruikerRecht
-
----
-
-# [ModelFinder]:	blog.BlogPage .models/blog/BlogPage:11:1
-text: BlogPage
-locales:
-  nl: BlogPagina
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.PageID  .models/blog/BlogPage/fields:1:0
-# [ModelFinder.Field]: pages.PageNode.PageID .models/pages/PageNode/fields:2:8
-# [GoFileFinder]:                            contrib/pages/django_admin.go:59:26
-text: Page ID
-locales:
-  nl: Pagina-ID
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.Title      .models/blog/BlogPage/fields:1:1
-# [ModelFinder.Field]: documents.Document.Title .models/documents/Document/fields:1:1
-# [ModelFinder.Field]: images.Image.Title       .models/images/Image/fields:1:1
-# [ModelFinder.Field]: pages.PageNode.Title     .models/pages/PageNode/fields:2:1
-# [GoFileFinder]:      NewAppConfig             examples/todoapp/todos/todo.go:156:16
-# [GoFileFinder]:      *Document.FieldDefs      contrib/documents/models.go:108:19
-# [GoFileFinder]:      *Image.FieldDefs         contrib/images/models.go:100:19
-# [GoFileFinder]:                               contrib/pages/django_admin.go:52:26
-# [GoFileFinder]:      listRevisionHandler      contrib/pages/django_admin_views_revisions.go:66:12
-text: Title
-locales:
-  nl: Titel
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.UrlPath  .models/blog/BlogPage/fields:1:2
-# [ModelFinder.Field]: pages.PageNode.UrlPath .models/pages/PageNode/fields:2:5
-# [GoFileFinder]:                             contrib/pages/django_admin.go:56:26
-# [GoFileFinder]:                             contrib/pages/django_admin.go:170:13
-text: URL Path
-locales:
-  nl: URL-pad
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.Slug  .models/blog/BlogPage/fields:1:3
-# [ModelFinder.Field]: pages.PageNode.Slug .models/pages/PageNode/fields:2:6
-# [GoFileFinder]:                          contrib/pages/django_admin.go:57:26
-# [GoFileFinder]:      listRevisionHandler contrib/pages/django_admin_views_revisions.go:79:12
-text: Slug
-locales:
-  nl: Slug
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.Image .models/blog/BlogPage/fields:1:4
-# [ModelFinder]:       images.Image        .models/images/Image:12:1
-# [GoFileFinder]:                          contrib/images/admin.go:31:26
-text: Image
-locales:
-  nl: Afbeelding
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.Thumbnail .models/blog/BlogPage/fields:1:5
-# [GoFileFinder]:      NewAppConfig            examples/blogapp/blog/apps.go:178:19
-# [GoFileFinder]:      *BlogPage.FieldDefs     examples/blogapp/blog/models.go:136:22
-text: Thumbnail
-locales:
-  nl: Miniatuur
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.Document .models/blog/BlogPage/fields:1:6
-# [ModelFinder]:       documents.Document     .models/documents/Document:13:1
-# [GoFileFinder]:      NewAppConfig           examples/blogapp/blog/apps.go:174:19
-# [GoFileFinder]:      *BlogPage.FieldDefs    examples/blogapp/blog/models.go:149:22
-# [GoFileFinder]:                             contrib/documents/admin.go:29:26
-text: Document
-locales:
-  nl: Document
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.Editor .models/blog/BlogPage/fields:1:7
-# [GoFileFinder]:      *BlogPage.FieldDefs  examples/blogapp/blog/models.go:161:22
-text: Editor
-locales:
-  nl: Editor
-
----
-
-# [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:11
-# [GoFileFinder]:      NewAppConfig       contrib/pages/django_app.go:192:29
-text: Page
-locales:
-  nl: Pagina
-
----
-
-# [ModelFinder.Field]: documents.Document.Path   .models/documents/Document/fields:1:2
-# [ModelFinder.Field]: images.Image.Path         .models/images/Image/fields:1:2
-# [ModelFinder.Field]: pages.PageNode.Path       .models/pages/PageNode/fields:2:2
-# [GoFileFinder]:      AdminDocumentModelOptions contrib/documents/admin.go:228:14
-# [GoFileFinder]:      *Document.FieldDefs       contrib/documents/models.go:115:19
-# [GoFileFinder]:      *Image.FieldDefs          contrib/images/models.go:107:19
-text: Path
-locales:
-  nl: Pad
-
----
-
-# [ModelFinder.Field]: documents.Document.FileSize .models/documents/Document/fields:1:4
-# [ModelFinder.Field]: images.Image.FileSize       .models/images/Image/fields:1:4
-# [GoFileFinder]:      *Document.FieldDefs         contrib/documents/models.go:128:22
-# [GoFileFinder]:      *Image.FieldDefs            contrib/images/models.go:121:19
-text: File Size
-locales:
-  nl: Bestandsgrootte
-
----
-
-# [ModelFinder.Field]: documents.Document.FileHash .models/documents/Document/fields:1:5
-# [ModelFinder.Field]: images.Image.FileHash       .models/images/Image/fields:1:5
-# [GoFileFinder]:      *Document.FieldDefs         contrib/documents/models.go:137:22
-# [GoFileFinder]:      *Image.FieldDefs            contrib/images/models.go:129:22
-text: File Hash
-locales:
-  nl: Bestandshash
-
----
-
-# [ModelFinder]:	pages.PageNode .models/pages/PageNode:5:2
-text: PageNode
-locales:
-  nl: Basis- Pagina
-
----
-
-# [ModelFinder.Field]:	pages.PageNode.PK .models/pages/PageNode/fields:2:0
-text: PK
-locales:
-  nl: PK
-
----
-
-# [ModelFinder.Field]:	pages.PageNode.Depth .models/pages/PageNode/fields:2:3
-text: Depth
-locales:
-  nl: Diepte
-
----
-
-# [ModelFinder.Field]:	pages.PageNode.Numchild .models/pages/PageNode/fields:2:4
-text: Numchild
-locales:
-  nl: Aantal kinderen
-
----
-
-# [ModelFinder.Field]: pages.PageNode.StatusFlags .models/pages/PageNode/fields:2:7
-# [GoFileFinder]:                                 contrib/pages/django_admin.go:58:26
-text: Status Flags
-locales:
-  nl: Statusvlaggen
-
----
-
-# [ModelFinder.Field]: pages.PageNode.ContentType     .models/pages/PageNode/fields:2:9
-# [ModelFinder.Field]: revisions.Revision.ContentType .models/revisions/Revision/fields:1:2
-# [GoFileFinder]:                                     contrib/pages/django_admin.go:60:26
-# [GoFileFinder]:                                     contrib/pages/django_admin.go:154:13
-# [GoFileFinder]:      *Revision.FieldDefs            contrib/revisions/models.go:111:22
-text: Content Type
-locales:
-  nl: Inhoudstype
-
----
-
-# [ModelFinder.Field]:	pages.PageNode.PublishedAt .models/pages/PageNode/fields:2:10
-text: Published At
-locales:
-  nl: "Gepubliceerd op"
-
----
-
-# [ModelFinder.Field]:	pages.PageNode.LatestRevisionCreatedAt .models/pages/PageNode/fields:2:11
-text: Latest Revision Created At
-locales:
-  nl: "Laatste revisie aangemaakt op"
-
----
-
-# [ModelFinder.Field]:	pages.PageNode.SiteSet .models/pages/PageNode/fields:2:14
-text: Site Set
-locales:
-  nl: Site Set
-
----
-
-# [ModelFinder]:	pages.Site .models/pages/Site:5:1
-text: Site
-locales:
-  nl: Site
-
----
-
-# [ModelFinder.Field]: pages.Site.Name .models/pages/Site/fields:1:1
-# [GoFileFinder]:      main            examples/openauth2app/main.go:175:35
-text: Name
-locales:
-  nl: Naam
-
----
-
-# [ModelFinder.Field]: pages.Site.Domain .models/pages/Site/fields:1:2
-# [GoFileFinder]:      NewAppConfig      contrib/settings/app.go:100:25
-text: Domain
-locales:
-  nl: Domein
-
----
-
-# [ModelFinder.Field]: pages.Site.Port .models/pages/Site/fields:1:3
-# [GoFileFinder]:      NewAppConfig    contrib/settings/app.go:101:25
-text: Port
-locales:
-  nl: Poort
-
----
-
-# [ModelFinder.Field]:	pages.Site.Default .models/pages/Site/fields:1:4
-text: Default
-locales:
-  nl: Standaard
-
----
-
-# [ModelFinder.Field]:	pages.Site.Root .models/pages/Site/fields:1:5
-text: Root
-locales:
-  nl: Hoofdpagina
-
----
-
-# [ModelFinder]:	revisions.Revision .models/revisions/Revision:7:1
-text: Revision
-locales:
-  nl: Revisie
-
----
-
-# [ModelFinder.Field]: revisions.Revision.ObjectID .models/revisions/Revision/fields:1:1
-# [GoFileFinder]:      *Revision.FieldDefs         contrib/revisions/models.go:106:22
-text: Object ID
-locales:
+  de: ""
+  fr: ""
   nl: Object-ID
 
 ---
 
-# [ModelFinder.Field]: revisions.Revision.Data .models/revisions/Revision/fields:1:3
-# [ModelFinder.Field]: session.Session.Data    .models/session/Session/fields:1:1
-# [GoFileFinder]:      *User.Fields            contrib/openauth2/models.go:237:23
-# [GoFileFinder]:      *Revision.FieldDefs     contrib/revisions/models.go:116:22
+# [ModelFinder.Field]:	audit_logs.Entry.Timestamp .models/auditlogs/Entry/fields/Timestamp:1:3
+text: Time
+locales:
+  de: ""
+  fr: ""
+  nl: Tijd
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.Type .models/auditlogs/Entry/fields/Type:1:1
+text: Typ
+locales:
+  de: ""
+  fr: ""
+  nl: Type
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.User .models/auditlogs/Entry/fields/User:1:4
+text: Usr
+locales:
+  de: ""
+  fr: ""
+  nl: Gebruiker
+
+---
+
+# [ModelFinder]:	users.Group .models/auth/Group:4:2
+text: Group
+locales:
+  de: ""
+  fr: ""
+  nl: Groep
+
+---
+
+# [ModelFinder.Field]: users.Group.Description      .models/auth/Group/fields/Description:2:2
+# [ModelFinder.Field]: users.Permission.Description .models/auth/Permission/fields/Description:3:2
+# [ModelFinder.Field]: dbsupplier.Product.Editor    .models/dbsupplier/Product/fields/Editor:1:4
+text: Description
+locales:
+  de: ""
+  fr: ""
+  nl: Beschrijving
+
+---
+
+# [ModelFinder.Field]:	users.Group.Name .models/auth/Group/fields/Name:2:1
+text: Group Name
+locales:
+  de: ""
+  fr: ""
+  nl: Groepsnaam
+
+---
+
+# [ModelFinder.Field]: users.Group.Permissions .models/auth/Group/fields/Permissions:2:3
+# [ModelFinder.Field]: auth.User.Permissions   .models/auth/User/fields/Permissions:1:12
+# [GoFileFinder]:      NewAppConfig            contrib/auth/app.go:339:34
+# [GoFileFinder]:      *Base.Fields            contrib/auth/users/baseuser.go:111:24
+# [GoFileFinder]:      *Group.FieldDefs        contrib/auth/users/group.go:46:24
+# [GoFileFinder]:      NewAppConfig            contrib/openauth2/openauth2.go:394:35
+text: Permissions
+locales:
+  de: ""
+  fr: ""
+  nl: Rechten
+
+---
+
+# [ModelFinder.Field]: users.Group.UserGroups           .models/auth/Group/fields/UserGroups:2:4
+# [ModelFinder.Field]: users.Permission.UserPermissions .models/auth/Permission/fields/UserPermissions:3:4
+# [GoFileFinder]:      NewAppConfig                     contrib/auth/app.go:166:28
+# [GoFileFinder]:      NewAppConfig                     contrib/auth/app.go:194:34
+# [GoFileFinder]:      *Group.FieldDefs                 contrib/auth/users/group.go:65:24
+# [GoFileFinder]:      *Permission.FieldDefs            contrib/auth/users/permission.go:128:24
+# [GoFileFinder]:      NewAppConfig                     contrib/openauth2/openauth2.go:197:35
+# [GoFileFinder]:      NewAppConfig                     contrib/openauth2/openauth2.go:490:27
+text: Users
+locales:
+  de: ""
+  fr: ""
+  nl: Gebruikers
+
+---
+
+# [ModelFinder]:	users.GroupPermission .models/auth/GroupPermission:4:5
+text: GroupPermission
+locales:
+  de: ""
+  fr: ""
+  nl: GroepRecht
+
+---
+
+# [ModelFinder.Field]: users.GroupPermission.GroupID .models/auth/GroupPermission/fields/GroupID:5:0
+# [ModelFinder.Field]: users.UserGroup.GroupID       .models/auth/UserGroup/fields/GroupID:4:1
+text: Group ID
+locales:
+  de: ""
+  fr: ""
+  nl: Groep-ID
+
+---
+
+# [ModelFinder.Field]: users.GroupPermission.PermissionID .models/auth/GroupPermission/fields/PermissionID:5:1
+# [ModelFinder.Field]: users.UserPermission.PermissionID  .models/auth/UserPermission/fields/PermissionID:6:1
+text: Permission ID
+locales:
+  de: ""
+  fr: ""
+  nl: Recht-ID
+
+---
+
+# [ModelFinder]:	users.Permission .models/auth/Permission:4:3
+text: Permission
+locales:
+  de: ""
+  fr: ""
+  nl: Recht
+
+---
+
+# [ModelFinder.Field]: users.Permission.GroupPermissions .models/auth/Permission/fields/GroupPermissions:3:3
+# [ModelFinder.Field]: auth.User.Groups                  .models/auth/User/fields/Groups:1:11
+# [GoFileFinder]:      NewAppConfig                      contrib/auth/app.go:332:34
+# [GoFileFinder]:      *Base.Fields                      contrib/auth/users/baseuser.go:92:24
+# [GoFileFinder]:      *Permission.FieldDefs             contrib/auth/users/permission.go:109:24
+# [GoFileFinder]:      NewAppConfig                      contrib/openauth2/openauth2.go:387:35
+text: Groups
+locales:
+  de: ""
+  fr: ""
+  nl: Groepen
+
+---
+
+# [ModelFinder.Field]:	users.Permission.Name .models/auth/Permission/fields/Name:3:1
+text: Permission Name
+locales:
+  de: ""
+  fr: ""
+  nl: Naam van het recht
+
+---
+
+# [ModelFinder]:       auth.User               .models/auth/User:4:1
+# [ModelFinder.Field]: revisions.Revision.User .models/revisions/Revision/fields/User:1:4
+# [GoFileFinder]:      NewAppConfig            contrib/auth/app.go:165:28
+# [GoFileFinder]:      NewAppConfig            contrib/openauth2/openauth2.go:489:27
+# [GoFileFinder]:      listRevisionHandler     contrib/pages/django_admin_views_revisions.go:90:12
+# [GoFileFinder]:      *Revision.FieldDefs     contrib/revisions/models.go:130:23
+text: User
+locales:
+  de: ""
+  fr: ""
+  nl: Gebruiker
+
+---
+
+# [ModelFinder.Field]:	auth.User.CartSet .models/auth/User/fields/CartSet:1:14
+text: Cart Set
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]:	auth.User.CouponSet .models/auth/User/fields/CouponSet:1:16
+text: Coupon Set
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]: auth.User.CreatedAt          .models/auth/User/fields/CreatedAt:1:6
+# [ModelFinder.Field]: revisions.Revision.CreatedAt .models/revisions/Revision/fields/CreatedAt:1:5
+# [GoFileFinder]:      NewAppConfig                 contrib/auth/app.go:319:16
+# [GoFileFinder]:      *User.Fields                 contrib/auth/user.go:157:22
+# [GoFileFinder]:      *Document.FieldDefs          contrib/documents/models.go:117:22
+# [GoFileFinder]:      *Image.FieldDefs             contrib/images/models.go:115:22
+# [GoFileFinder]:      *User.Fields                 contrib/openauth2/models.go:291:25
+# [GoFileFinder]:                                   contrib/pages/django_admin.go:62:26
+# [GoFileFinder]:      *Revision.FieldDefs          contrib/revisions/models.go:136:22
+text: Created At
+locales:
+  de: ""
+  fr: ""
+  nl: Aangemaakt op
+
+---
+
+# [ModelFinder.Field]:	auth.User.CustomerSet .models/auth/User/fields/CustomerSet:1:15
+text: Customer Set
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]: auth.User.Email  .models/auth/User/fields/Email:1:1
+# [GoFileFinder]:      NewAppConfig     contrib/auth/app.go:198:33
+# [GoFileFinder]:      NewAppConfig     contrib/auth/app.go:299:16
+# [GoFileFinder]:      UserLoginForm    contrib/auth/forms.go:80:26
+# [GoFileFinder]:      UserRegisterForm contrib/auth/forms.go:132:26
+# [GoFileFinder]:      *User.Fields     contrib/auth/user.go:128:23
+text: Email
+locales:
+  de: ""
+  fr: ""
+  nl: E-mail
+
+---
+
+# [ModelFinder.Field]:	auth.User.EntrySet .models/auth/User/fields/EntrySet:1:13
+text: Entry Set
+locales:
+  de: ""
+  fr: ""
+  nl: Invoerset
+
+---
+
+# [ModelFinder.Field]: auth.User.FirstName .models/auth/User/fields/FirstName:1:3
+# [GoFileFinder]:      UserRegisterForm    contrib/auth/forms.go:164:6
+# [GoFileFinder]:      *User.Fields        contrib/auth/user.go:141:23
+text: First Name
+locales:
+  de: ""
+  fr: ""
+  nl: Voornaam
+
+---
+
+# [ModelFinder.Field]: auth.User.IsActive .models/auth/User/fields/IsActive:1:9
+# [GoFileFinder]:      *Base.Fields       contrib/auth/users/baseuser.go:72:22
+# [GoFileFinder]:      NewAppConfig       contrib/openauth2/openauth2.go:342:17
+text: Is Active
+locales:
+  de: ""
+  fr: ""
+  nl: Is Actief
+
+---
+
+# [ModelFinder.Field]: auth.User.IsAdministrator .models/auth/User/fields/IsAdministrator:1:8
+# [GoFileFinder]:      *Base.Fields              contrib/auth/users/baseuser.go:66:22
+text: Is Administrator
+locales:
+  de: ""
+  fr: ""
+  nl: Is Beheerder
+
+---
+
+# [ModelFinder.Field]: auth.User.LastLogin .models/auth/User/fields/LastLogin:1:10
+# [GoFileFinder]:      NewAppConfig        contrib/auth/app.go:314:16
+# [GoFileFinder]:      *Base.Fields        contrib/auth/users/baseuser.go:83:22
+text: Last Login
+locales:
+  de: ""
+  fr: ""
+  nl: Laatste Aanmelding
+
+---
+
+# [ModelFinder.Field]: auth.User.LastName .models/auth/User/fields/LastName:1:4
+# [GoFileFinder]:      UserRegisterForm   contrib/auth/forms.go:179:6
+# [GoFileFinder]:      *User.Fields       contrib/auth/user.go:147:23
+text: Last Name
+locales:
+  de: ""
+  fr: ""
+  nl: Achternaam
+
+---
+
+# [ModelFinder.Field]: auth.User.Password .models/auth/User/fields/Password:1:5
+# [GoFileFinder]:      NewAppConfig       contrib/auth/app.go:202:33
+# [GoFileFinder]:      UserLoginForm      contrib/auth/forms.go:108:25
+# [GoFileFinder]:      UserRegisterForm   contrib/auth/forms.go:199:5
+# [GoFileFinder]:      *User.Fields       contrib/auth/user.go:153:23
+text: Password
+locales:
+  de: ""
+  fr: ""
+  nl: Wachtwoord
+
+---
+
+# [ModelFinder.Field]: auth.User.Revisions    .models/auth/User/fields/Revisions:1:17
+# [GoFileFinder]:      listRevisionHandler    contrib/pages/django_admin_views_revisions.go:221:33
+# [GoFileFinder]:      revisionDetailHandler  contrib/pages/django_admin_views_revisions.go:400:35
+# [GoFileFinder]:      revisionCompareHandler contrib/pages/django_admin_views_revisions.go:567:36
+# [GoFileFinder]:      getPageActions         contrib/pages/django_admin_views_utils.go:153:33
+text: Revisions
+locales:
+  de: ""
+  fr: ""
+  nl: Revisies
+
+---
+
+# [ModelFinder.Field]: auth.User.UpdatedAt .models/auth/User/fields/UpdatedAt:1:7
+# [GoFileFinder]:      NewAppConfig        contrib/auth/app.go:324:16
+# [GoFileFinder]:      *User.Fields        contrib/auth/user.go:162:22
+# [GoFileFinder]:      *User.Fields        contrib/openauth2/models.go:301:23
+# [GoFileFinder]:                          contrib/pages/django_admin.go:63:26
+text: Updated At
+locales:
+  de: ""
+  fr: ""
+  nl: Bijgewerkt op
+
+---
+
+# [ModelFinder.Field]: auth.User.Username .models/auth/User/fields/Username:1:2
+# [GoFileFinder]:      NewAppConfig       contrib/auth/app.go:199:33
+# [GoFileFinder]:      UserLoginForm      contrib/auth/forms.go:91:26
+# [GoFileFinder]:      UserRegisterForm   contrib/auth/forms.go:146:6
+# [GoFileFinder]:      *User.Fields       contrib/auth/user.go:135:23
+text: Username
+locales:
+  de: ""
+  fr: ""
+  nl: Gebruikersnaam
+
+---
+
+# [ModelFinder]:	users.UserGroup .models/auth/UserGroup:4:4
+text: UserGroup
+locales:
+  de: ""
+  fr: ""
+  nl: Gebruikersgroep
+
+---
+
+# [ModelFinder.Field]: users.UserGroup.UserID      .models/auth/UserGroup/fields/UserID:4:0
+# [ModelFinder.Field]: users.UserPermission.UserID .models/auth/UserPermission/fields/UserID:6:0
+text: User ID
+locales:
+  de: ""
+  fr: ""
+  nl: Gebruiker-ID
+
+---
+
+# [ModelFinder]:	users.UserPermission .models/auth/UserPermission:4:6
+text: UserPermission
+locales:
+  de: ""
+  fr: ""
+  nl: GebruikerRecht
+
+---
+
+# [ModelFinder]:	dbsupplier.Product .models/dbsupplier/Product:13:1
+text: Product
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.Category .models/dbsupplier/Product/fields/Category:1:5
+text: Category
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.DiscountPrice .models/dbsupplier/Product/fields/DiscountPrice:1:9
+text: Discount Price
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]: dbsupplier.Product.Image .models/dbsupplier/Product/fields/Image:1:1
+# [GoFileFinder]:                               contrib/images/admin.go:33:26
+text: Image
+locales:
+  de: ""
+  fr: ""
+  nl: Afbeelding
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.Price .models/dbsupplier/Product/fields/Price:1:7
+text: Price
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.Ranking .models/dbsupplier/Product/fields/Ranking:1:10
+text: Ranking
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]: dbsupplier.Product.Slug .models/dbsupplier/Product/fields/Slug:1:3
+# [GoFileFinder]:                              contrib/pages/django_admin.go:58:26
+# [GoFileFinder]:      listRevisionHandler     contrib/pages/django_admin_views_revisions.go:86:12
+text: Slug
+locales:
+  de: ""
+  fr: ""
+  nl: Slug
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.Supplier .models/dbsupplier/Product/fields/Supplier:1:6
+text: Supplier
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.SupplierID .models/dbsupplier/Product/fields/SupplierID:1:11
+text: Supplier ID
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.TaxRate .models/dbsupplier/Product/fields/TaxRate:1:8
+text: Tax Rate
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [ModelFinder.Field]: dbsupplier.Product.Title .models/dbsupplier/Product/fields/Title:1:2
+# [GoFileFinder]:      *Document.FieldDefs      contrib/documents/models.go:102:19
+# [GoFileFinder]:      *Image.FieldDefs         contrib/images/models.go:100:19
+# [GoFileFinder]:                               contrib/pages/django_admin.go:53:26
+# [GoFileFinder]:      listRevisionHandler      contrib/pages/django_admin_views_revisions.go:73:12
+text: Title
+locales:
+  de: ""
+  fr: ""
+  nl: Titel
+
+---
+
+# [ModelFinder]:	revisions.Revision .models/revisions/Revision:12:1
+text: Revision
+locales:
+  de: ""
+  fr: ""
+  nl: Revisie
+
+---
+
+# [ModelFinder.Field]: revisions.Revision.ContentType .models/revisions/Revision/fields/ContentType:1:2
+# [GoFileFinder]:                                     contrib/pages/django_admin.go:61:26
+# [GoFileFinder]:                                     contrib/pages/django_admin.go:155:13
+# [GoFileFinder]:      *Revision.FieldDefs            contrib/revisions/models.go:111:22
+text: Content Type
+locales:
+  de: ""
+  fr: ""
+  nl: Inhoudstype
+
+---
+
+# [ModelFinder.Field]: revisions.Revision.Data         .models/revisions/Revision/fields/Data:1:3
+# [ModelFinder.Field]: session.Session.Data            .models/session/Session/fields/Data:1:1
+# [ModelFinder.Field]: settings.RegisteredSetting.Data .models/settings/RegisteredSetting/fields/Data:1:2
+# [GoFileFinder]:      *User.Fields                    contrib/openauth2/models.go:243:23
+# [GoFileFinder]:      *Revision.FieldDefs             contrib/revisions/models.go:116:22
 text: Data
 locales:
+  de: ""
+  fr: ""
   nl: Data
+
+---
+
+# [ModelFinder.Field]: revisions.Revision.ObjectID .models/revisions/Revision/fields/ObjectID:1:1
+# [GoFileFinder]:      *Revision.FieldDefs         contrib/revisions/models.go:106:22
+text: Object ID
+locales:
+  de: ""
+  fr: ""
+  nl: Object-ID
 
 ---
 
 # [ModelFinder]:	session.Session .models/session/Session:1:1
 text: Session
 locales:
+  de: ""
+  fr: ""
   nl: Sessie
 
 ---
 
-# [ModelFinder.Field]:	session.Session.Token .models/session/Session/fields:1:0
-text: Token
-locales:
-  nl: Token
-
----
-
-# [ModelFinder.Field]:	session.Session.Expiry .models/session/Session/fields:1:2
+# [ModelFinder.Field]:	session.Session.Expiry .models/session/Session/fields/Expiry:1:2
 text: Expiry
 locales:
+  de: ""
+  fr: ""
   nl: Verloopdatum
 
 ---
 
-# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:112:29
-text: Blog Page
+# [ModelFinder.Field]:	session.Session.Token .models/session/Session/fields/Token:1:0
+text: Token
 locales:
-  nl: Blogpagina
+  de: ""
+  fr: ""
+  nl: Token
 
 ---
 
-# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:113:29
-text: A blog page with a rich text editor.
+# [ModelFinder]:	settings.RegisteredSetting .models/settings/RegisteredSetting:14:1
+text: RegisteredSetting
 locales:
-  nl: Een blogpagina met een rijke teksteditor.
+  de: ""
+  fr: ""
+  nl: ""
 
 ---
 
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:129:15
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:164:16
-text: Media
+# [ModelFinder.Field]:	settings.RegisteredSetting.InternalName .models/settings/RegisteredSetting/fields/InternalName:1:1
+text: Internal Name
 locales:
-  nl: Media
+  de: ""
+  fr: ""
+  nl: ""
 
 ---
 
-# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:130:15
-text: Media files associated with this blog post.
+# [ModelFinder]:	translations.Locale .models/translations/Locale:3:1
+text: Locale
 locales:
-  nl: Media-bestanden die aan dit blogbericht zijn gekoppeld.
+  de: ""
+  fr: ""
+  nl: Taal
 
 ---
 
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:139:24
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:182:28
-text: Cover Image
+# [ModelFinder.Field]:	translations.Locale.LanguageTag .models/translations/Locale/fields/LanguageTag:1:0
+text: Language Tag
 locales:
-  nl: Omslagafbeelding
+  de: ""
+  fr: ""
+  nl: ""
 
 ---
 
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:140:24
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:183:28
-text: <p>Choose a cover image for your blog post.</p>
+# [GoFileFinder]:   NewAppConfig                   contrib/admin/admin.go:144:40
+# [TemplateFinder]: {{ T "Search..." }}            contrib/admin/assets/templates/admin/views/search.tmpl:28:101
+# [GoFileFinder]:   *ChooserListPage[T].GetContext contrib/admin/chooser/chooser_list.go:305:96
+# [GoFileFinder]:   *ChooserListPage[T].GetContext contrib/chooser/chooser_list.go:299:96
+text: Search...
 locales:
-  nl: <p>Kies een omslagafbeelding voor je blogbericht.</p>
+  de: ""
+  fr: ""
+  nl: Zoeken...
 
 ---
 
-# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:152:16
-text: Content
+# [GoFileFinder]:	NewAppConfig contrib/admin/admin.go:163:38
+text: Edit Account
 locales:
-  nl: Inhoud
+  de: ""
+  fr: ""
+  nl: Bewerk account
 
 ---
 
-# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:166:17
-text: Choosers
+# [GoFileFinder]:	NewAppConfig contrib/admin/admin.go:180:37
+text: Logout
 locales:
-  nl: Kiezers
+  de: ""
+  fr: ""
+  nl: Uitloggen
 
 ---
 
-# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:167:17
-text: Choosers for media files
+# [GoFileFinder]:	NewAppConfig contrib/admin/admin.go:194:37
+text: Account Details
 locales:
-  nl: Kiezers voor media-bestanden
+  de: ""
+  fr: ""
+  nl: Accountgegevens
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:114:22
-text: How do you want your post to be remembered?
+# [TemplateFinder]:	{{ T "Toggle sidebar" }} contrib/admin/assets/templates/admin/base.tmpl:10:100
+text: Toggle sidebar
 locales:
-  nl: Hoe wil je dat je bericht wordt herinnerd?
+  de: ""
+  fr: ""
+  nl: Zijbalk In/Uitklappen
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:120:22
-text: The URL path for this blog post.
-locales:
-  nl: Het URL-pad voor dit blogbericht.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:125:22
-text: The slug for this blog post.
-locales:
-  nl: De slug voor dit blogbericht.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:130:22
-text: The image for this blog post.
-locales:
-  nl: De afbeelding voor dit blogbericht.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:137:22
-text: The thumbnail for this blog post.
-locales:
-  nl: Het miniatuur voor dit blogbericht.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:150:22
-text: The document for this blog post.
-locales:
-  nl: Het document voor dit blogbericht.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:162:22
-text: This is a rich text editor. You can add images, videos, and other media to your blog post.
-locales:
-  nl: Dit is een rijke teksteditor. Je kunt afbeeldingen, video's en andere media toevoegen aan je blogbericht.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:171:22
-text: The user who created this blog post.
-locales:
-  nl: De gebruiker die dit blogbericht heeft aangemaakt.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:188:22
-text: The date and time this blog post was created.
-locales:
-  nl: De datum en tijd waarop dit blogbericht is aangemaakt.
-
----
-
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:194:22
-text: The date and time this blog post was last updated.
-locales:
-  nl: De datum en tijd waarop dit blogbericht voor het laatst is bijgewerkt.
-
----
-
-# [GoFileFinder]: NewAppConfig examples/chocolaterie/src/chocolaterie/core.go:80:24
-# [GoFileFinder]: NewAppConfig examples/chocolaterie/src/chocolaterie/core.go:81:24
-text: Chocolaterie
-locales:
-  nl: Chocolaterie
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/chocolaterie/src/chocolaterie/core.go:95:24
-text: Chocolates
-locales:
-  nl: Chocolaatjes
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/chocolaterie/src/chocolaterie/core.go:103:29
-text: Chocolate List Page
-locales:
-  nl: Chocolade-lijstpagina
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/chocolaterie/src/chocolaterie/core.go:104:29
-text: A chocolate list page with a rich text editor.
-locales:
-  nl: Een chocolade-lijstpagina met een rijke teksteditor.
-
----
-
-# [GoFileFinder]:	*ChocolateListPage.FieldDefs examples/chocolaterie/src/chocolaterie/models.go:90:22
-text: How do you want your page to be remembered?
-locales:
-  nl: Hoe wil je dat je pagina wordt herinnerd?
-
----
-
-# [GoFileFinder]:	*ChocolateListPage.FieldDefs examples/chocolaterie/src/chocolaterie/models.go:96:22
-text: The URL path for this chocolate list page.
-locales:
-  nl: Het URL-pad voor deze chocolade-lijstpagina.
-
----
-
-# [GoFileFinder]:	*ChocolateListPage.FieldDefs examples/chocolaterie/src/chocolaterie/models.go:101:22
-text: The slug for this chocolate list page.
-locales:
-  nl: De slug voor deze chocolade-lijstpagina.
-
----
-
-# [GoFileFinder]:	*ChocolateListPage.FieldDefs examples/chocolaterie/src/chocolaterie/models.go:106:22
-text: This is a rich text editor. You can add images, videos, and other media to your chocolate list page.
-locales:
-  nl: Dit is een rijke teksteditor. Je kunt afbeeldingen, video's en andere media toevoegen aan je chocolade-lijstpagina.
-
----
-
-# [GoFileFinder]:	*ChocolateListPage.FieldDefs examples/chocolaterie/src/chocolaterie/models.go:117:22
-text: The date and time this chocolate list page was created.
-locales:
-  nl: De datum en tijd waarop deze chocolade-lijstpagina is aangemaakt.
-
----
-
-# [GoFileFinder]:	*ChocolateListPage.FieldDefs examples/chocolaterie/src/chocolaterie/models.go:123:22
-text: The date and time this chocolate list page was last updated.
-locales:
-  nl: De datum en tijd waarop deze chocolade-lijstpagina voor het laatst is bijgewerkt.
-
----
-
-# [TemplateFinder]: {{ T "Submit" }} examples/formsapp/src/formsapp/assets/templates/formsapp/contact.tmpl:84:49
-# [TemplateFinder]: {{ T "Submit" }} contrib/admin/assets/templates/admin/shared/side_panels/filter_panel.tmpl:26:84
+# [TemplateFinder]: {{ T "Submit" }} contrib/admin/assets/templates/admin/shared/side_panels/filter_panel.tmpl:31:84
 # [TemplateFinder]: {{ T "Submit" }} contrib/admin/assets/templates/admin/views/auth/login.tmpl:27:72
-# [TemplateFinder]: {{ T "Submit" }} contrib/admin/assets/templates/admin/views/models/add.tmpl:20:70
+# [TemplateFinder]: {{ T "Submit" }} contrib/admin/assets/templates/admin/views/models/add.tmpl:21:70
 # [TemplateFinder]: {{ T "Submit" }} contrib/admin/assets/templates/admin/views/models/delete.tmpl:33:67
 # [TemplateFinder]: {{ T "Submit" }} contrib/admin/assets/templates/admin/views/models/edit.tmpl:23:70
 # [TemplateFinder]: {{ T "Submit" }} contrib/documents/assets/templates/documents/documents_delete.tmpl:55:67
@@ -871,176 +734,17 @@ locales:
 # [TemplateFinder]: {{ T "Submit" }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:23:71
 text: Submit
 locales:
+  de: ""
+  fr: ""
   nl: Verzenden
 
 ---
 
-# [GoFileFinder]:	main examples/openauth2app/main.go:172:35
-text: Family Name
-locales:
-  nl: Familienaam
-
----
-
-# [GoFileFinder]:	main examples/openauth2app/main.go:173:35
-text: Profile Picture
-locales:
-  nl: Profielafbeelding
-
----
-
-# [GoFileFinder]:	main examples/openauth2app/main.go:174:35
-text: Locale
-locales:
-  nl: Taal
-
----
-
-# [GoFileFinder]:	main examples/openauth2app/main.go:176:35
-text: Subject
-locales:
-  nl: Onderwerp
-
----
-
-# [GoFileFinder]:	main examples/openauth2app/main.go:177:35
-text: Given Name
-locales:
-  nl: Gegeven naam
-
----
-
-# [GoFileFinder]:	main examples/openauth2app/main.go:178:35
-text: Email (Verified)
-locales:
-  nl: E-mail (Geverifieerd)
-
----
-
-# [GoFileFinder]:	*Todo.FieldDefs examples/todoapp/todos/model.go:25:23
-text: The unique identifier of the model
-locales:
-  nl: Het unieke identificatienummer van het model
-
----
-
-# [GoFileFinder]:	*Todo.FieldDefs examples/todoapp/todos/model.go:29:23
-text: The title of the todo
-locales:
-  nl: De titel van de taak
-
----
-
-# [GoFileFinder]:	*Todo.FieldDefs examples/todoapp/todos/model.go:33:23
-text: A description of the todo
-locales:
-  nl: Een beschrijving van de taak
-
----
-
-# [GoFileFinder]:	*Todo.FieldDefs examples/todoapp/todos/model.go:43:23
-text: Indicates whether the todo is done or not
-locales:
-  nl: Is voltooid
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/todoapp/todos/todo.go:89:34
-text: Todo App
-locales:
-  nl: Todo-app
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/todoapp/todos/todo.go:90:34
-text: Manage the todos for your todo app.
-locales:
-  nl: Beheer de taken voor je todo-app.
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/todoapp/todos/todo.go:91:34
-text: Todos
-locales:
-  nl: Taken
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/todoapp/todos/todo.go:102:29
-text: Todo Title
-locales:
-  nl: Taaktitel
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/todoapp/todos/todo.go:103:29
-text: Todo Description
-locales:
-  nl: Taakomschrijving
-
----
-
-# [GoFileFinder]:	NewAppConfig examples/todoapp/todos/todo.go:104:29
-text: Is Done
-locales:
-  nl: Is voltooid
-
----
-
-# [GoFileFinder]:	*PreloadBook.FieldDefs queries/test/preload_test/models.go:36:23
-text: Title of the book. This is the title that will be displayed in the UI.
-locales:
-  nl: Titel van het boek. Dit is de titel die in de gebruikersinterface wordt weergegeven.
-
----
-
-# [GoFileFinder]:	*PreloadAuthor.FieldDefs queries/test/preload_test/models.go:145:23
-text: Name of the author. This is the name that will be displayed in the UI.
-locales:
-  nl: Naam van de auteur. Dit is de naam die in de gebruikersinterface wordt weergegeven.
-
----
-
-# [GoFileFinder]:   NewAppConfig                   contrib/admin/admin.go:139:40
-# [TemplateFinder]: {{ T "Search..." }}            contrib/admin/assets/templates/admin/views/search.tmpl:28:101
-# [GoFileFinder]:   *ChooserListPage[T].GetContext contrib/admin/chooser/chooser_list.go:305:96
-text: Search...
-locales:
-  nl: Zoeken...
-
----
-
-# [GoFileFinder]:	NewAppConfig contrib/admin/admin.go:159:39
-text: Edit Account
-locales:
-  nl: Bewerk account
-
----
-
-# [GoFileFinder]:	NewAppConfig contrib/admin/admin.go:178:38
-text: Logout
-locales:
-  nl: Uitloggen
-
----
-
-# [GoFileFinder]:	NewAppConfig contrib/admin/admin.go:194:38
-text: Account Details
-locales:
-  nl: Accountgegevens
-
----
-
-# [TemplateFinder]:	{{ T "Toggle sidebar" }} contrib/admin/assets/templates/admin/base.tmpl:10:100
-text: Toggle sidebar
-locales:
-  nl: "Zijbalk In/Uitklappen"
-
----
-
-# [TemplateFinder]:	{{ T "Clear all" }} contrib/admin/assets/templates/admin/shared/side_panels/filter_panel.tmpl:32:167
+# [TemplateFinder]:	{{ T "Clear all" }} contrib/admin/assets/templates/admin/shared/side_panels/filter_panel.tmpl:37:176
 text: Clear all
 locales:
+  de: ""
+  fr: ""
   nl: Alles wissen
 
 ---
@@ -1048,6 +752,8 @@ locales:
 # [TemplateFinder]:	{{ T "Adminsite" }} contrib/admin/assets/templates/admin/skeleton.tmpl:8:104
 text: Adminsite
 locales:
+  de: ""
+  fr: ""
   nl: Beheeromgeving
 
 ---
@@ -1058,6 +764,8 @@ locales:
 # [TemplateFinder]: {{ $headingText := (T "Login") }} contrib/openauth2/assets/templates/oauth2/admin/login.tmpl:14:34
 text: Login
 locales:
+  de: ""
+  fr: ""
   nl: Inloggen
 
 ---
@@ -1066,6 +774,8 @@ locales:
 # [TemplateFinder]: {{ $subText := (T "Login to access the admin area") }} contrib/openauth2/assets/templates/oauth2/admin/login.tmpl:15:30
 text: Login to access the admin area
 locales:
+  de: ""
+  fr: ""
   nl: Log in om toegang te krijgen tot de beheerdersomgeving
 
 ---
@@ -1074,6 +784,8 @@ locales:
 # [TemplateFinder]: {{ $headingText := (T "Permission Error") }} contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:13:34
 text: Permission Error
 locales:
+  de: ""
+  fr: ""
   nl: Machtigingsfout
 
 ---
@@ -1081,6 +793,8 @@ locales:
 # [TemplateFinder]:	{{ T "You do not have permissions to access the admin site." }} contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:17:32
 text: You do not have permissions to access the admin site.
 locales:
+  de: ""
+  fr: ""
   nl: Je hebt geen rechten om de beheeromgeving te openen.
 
 ---
@@ -1088,6 +802,8 @@ locales:
 # [TemplateFinder]:	{{ T "Please contact your administrator to get access, or log out and try again with a different account." }} contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:18:24
 text: Please contact your administrator to get access, or log out and try again with a different account.
 locales:
+  de: ""
+  fr: ""
   nl: Neem contact op met je beheerder om toegang te krijgen, of log uit en probeer opnieuw met een ander account.
 
 ---
@@ -1095,19 +811,23 @@ locales:
 # [TemplateFinder]:	{{ T "Log in with a different account" }} contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:22:21
 text: Log in with a different account
 locales:
+  de: ""
+  fr: ""
   nl: Inloggen met een ander account
 
 ---
 
 # [TemplateFinder]: {{ T "Add %s" (.Get "model").Label }} contrib/admin/assets/templates/admin/views/models/add.tmpl:3:25
-# [GoFileFinder]:                                         contrib/admin/views.go:428:20
+# [GoFileFinder]:                                         contrib/admin/views.go:430:20
 text: Add %s
 locales:
+  de: ""
+  fr: ""
   nl: '%s toevoegen'
 
 ---
 
-# [TemplateFinder]: {{ T "Cancel" }} contrib/admin/assets/templates/admin/views/models/add.tmpl:23:69
+# [TemplateFinder]: {{ T "Cancel" }} contrib/admin/assets/templates/admin/views/models/add.tmpl:24:69
 # [TemplateFinder]: {{ T "Cancel" }} contrib/admin/assets/templates/admin/views/models/delete.tmpl:36:71
 # [TemplateFinder]: {{ T "Cancel" }} contrib/admin/assets/templates/admin/views/models/delete.tmpl:39:130
 # [TemplateFinder]: {{ T "Cancel" }} contrib/admin/assets/templates/admin/views/models/delete.tmpl:41:159
@@ -1118,8 +838,8 @@ locales:
 # [TemplateFinder]: {{ T "Cancel" }} contrib/images/assets/templates/images/images_delete.tmpl:46:71
 # [TemplateFinder]: {{ T "Cancel" }} contrib/images/assets/templates/images/images_delete.tmpl:49:130
 # [TemplateFinder]: {{ T "Cancel" }} contrib/images/assets/templates/images/images_delete.tmpl:51:159
-# [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:33:69
-# [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:31:69
+# [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:34:69
+# [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:32:69
 # [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:35:75
 # [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:34:75
 # [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/delete_page.tmpl:51:71
@@ -1128,16 +848,19 @@ locales:
 # [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/publish_page.tmpl:24:69
 # [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/revisions/edit.tmpl:39:90
 # [TemplateFinder]: {{ T "Cancel" }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:32:69
+# [TemplateFinder]: {{ T "Cancel" }} contrib/settings/assets/templates/settings/change.tmpl:34:77
 text: Cancel
 locales:
+  de: ""
+  fr: ""
   nl: Annuleren
 
 ---
 
-# [TemplateFinder]: {{ T "Back" }} contrib/admin/assets/templates/admin/views/models/add.tmpl:25:124
+# [TemplateFinder]: {{ T "Back" }} contrib/admin/assets/templates/admin/views/models/add.tmpl:26:124
 # [TemplateFinder]: {{ T "Back" }} contrib/admin/assets/templates/admin/views/models/edit.tmpl:29:137
-# [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:35:107
-# [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:33:88
+# [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:36:107
+# [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:34:88
 # [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:37:123
 # [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:36:84
 # [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/delete_page.tmpl:53:119
@@ -1150,17 +873,21 @@ locales:
 # [TemplateFinder]: {{ T "Back" }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:34:117
 text: Back
 locales:
+  de: ""
+  fr: ""
   nl: Terug
 
 ---
 
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} contrib/admin/assets/templates/admin/views/models/delete.tmpl:3:25
-# [GoFileFinder]:   *AdminDeleteView.GetContext              contrib/admin/views.go:606:25
+# [GoFileFinder]:   *AdminDeleteView.GetContext              contrib/admin/views.go:608:25
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} contrib/documents/assets/templates/documents/documents_delete.tmpl:3:25
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} contrib/documents/assets/templates/documents/documents_delete.tmpl:12:17
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} contrib/images/assets/templates/images/images_delete.tmpl:3:25
 text: Delete %s
 locales:
+  de: ""
+  fr: ""
   nl: '%s verwijderen'
 
 ---
@@ -1170,6 +897,8 @@ locales:
 # [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} contrib/images/assets/templates/images/images_delete.tmpl:15:43
 text: Are you sure you want to delete objects with ids %v?
 locales:
+  de: ""
+  fr: ""
   nl: Weet je zeker dat je objecten met id's %v wilt verwijderen?
 
 ---
@@ -1179,6 +908,8 @@ locales:
 # [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} contrib/images/assets/templates/images/images_delete.tmpl:17:43
 text: Are you sure you want to delete object %q with id %v?
 locales:
+  de: ""
+  fr: ""
   nl: Weet je zeker dat je object %q met id %v wilt verwijderen?
 
 ---
@@ -1189,14 +920,18 @@ locales:
 # [TemplateFinder]: {{ T "This action cannot be reversed." }} contrib/pages/assets/templates/pages/admin/delete_page.tmpl:7:35
 text: This action cannot be reversed.
 locales:
+  de: ""
+  fr: ""
   nl: Deze actie kan niet worden teruggedraaid.
 
 ---
 
 # [TemplateFinder]: {{ T "Edit %s" (.Get "model").Label }} contrib/admin/assets/templates/admin/views/models/edit.tmpl:3:25
-# [GoFileFinder]:                                          contrib/admin/views.go:459:20
+# [GoFileFinder]:                                          contrib/admin/views.go:461:20
 text: Edit %s
 locales:
+  de: ""
+  fr: ""
   nl: '%s bewerken'
 
 ---
@@ -1212,6 +947,8 @@ locales:
 # [GoFileFinder]:   listPageHandler  contrib/pages/django_admin_views.go:603:23
 text: Delete
 locales:
+  de: ""
+  fr: ""
   nl: Verwijderen
 
 ---
@@ -1219,14 +956,19 @@ locales:
 # [TemplateFinder]:	{{ T "List %s" (.Get "model").PluralLabel }} contrib/admin/assets/templates/admin/views/models/list.tmpl:3:25
 text: List %s
 locales:
+  de: ""
+  fr: ""
   nl: '%s- lijst'
 
 ---
 
-# [TemplateFinder]: {{ T "Search" }}               contrib/admin/assets/templates/admin/views/search.tmpl:31:64
+# [TemplateFinder]: {{ T "Search" }}               contrib/admin/assets/templates/admin/views/search.tmpl:33:64
 # [GoFileFinder]:   *ChooserListPage[T].GetContext contrib/admin/chooser/chooser_list.go:306:74
+# [GoFileFinder]:   *ChooserListPage[T].GetContext contrib/chooser/chooser_list.go:300:74
 text: Search
 locales:
+  de: ""
+  fr: ""
   nl: Zoeken
 
 ---
@@ -1234,6 +976,8 @@ locales:
 # [TemplateFinder]:	{{ T "Back to list" }} contrib/admin/chooser/assets/templates/chooser/views/create.tmpl:11:84
 text: Back to list
 locales:
+  de: ""
+  fr: ""
   nl: Terug naar lijst
 
 ---
@@ -1241,6 +985,8 @@ locales:
 # [TemplateFinder]:	{{ T "Create" }} contrib/admin/chooser/assets/templates/chooser/views/create.tmpl:12:68
 text: Create
 locales:
+  de: ""
+  fr: ""
   nl: Aanmaken
 
 ---
@@ -1249,28 +995,73 @@ locales:
 # [TemplateFinder]: {{ T "Create new" }} contrib/images/assets/templates/images/images_chooser_list.tmpl:18:86
 text: Create new
 locales:
+  de: ""
+  fr: ""
   nl: Nieuw aanmaken
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Toggle dropdown menu" }} contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:19:129
+# [TemplateFinder]: {{ Translate .Data.context "Toggle dropdown menu" }} contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:19:129
+# [TemplateFinder]: {{ Translate .Data.context "Toggle dropdown menu" }} contrib/chooser/assets/templates/chooser/widget/widget.tmpl:13:129
 text: Toggle dropdown menu
 locales:
+  de: ""
+  fr: ""
   nl: Klap menu in/uit
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Choose" }} contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:27:25
+# [TemplateFinder]: {{ Translate .Data.context "Choose" }} contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:27:25
+# [TemplateFinder]: {{ Translate .Data.context "Choose" }} contrib/chooser/assets/templates/chooser/widget/widget.tmpl:21:25
 text: Choose
 locales:
+  de: ""
+  fr: ""
   nl: Kies
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Clear" }} contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:32:29
+# [TemplateFinder]: {{ Translate .Data.context "Clear" }} contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:32:29
+# [TemplateFinder]: {{ Translate .Data.context "Clear" }} contrib/chooser/assets/templates/chooser/widget/widget.tmpl:26:29
 text: Clear
 locales:
+  de: ""
+  fr: ""
   nl: Wissen
+
+---
+
+# [GoFileFinder]:	*BoundModelFormPanel[TARGET, FORM].renderSingleFormPanel contrib/admin/component_form_panels_bound_templ.go:1724:82
+text: 'Form error:'
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:   *BoundModelFormPanel[TARGET, FORM].renderSingleFormPanel contrib/admin/component_form_panels_bound_templ.go:1805:89
+# [GoFileFinder]:   *BoundModelFormPanel[TARGET, FORM].renderSingleFormPanel contrib/admin/component_form_panels_bound_templ.go:1902:89
+# [GoFileFinder]:   *BoundModelFormPanel[TARGET, FORM].formsComponent        contrib/admin/component_form_panels_bound_templ.go:2037:88
+# [GoFileFinder]:                                                            contrib/admin/views.go:340:23
+# [TemplateFinder]: {{ T "Add" }}                                            contrib/documents/assets/templates/documents/documents_list.tmpl:45:124
+# [TemplateFinder]: {{ T "Add" }}                                            contrib/images/assets/templates/images/image_list.tmpl:55:128
+# [TemplateFinder]: {{ T "Add" }}                                            contrib/pages/assets/templates/pages/admin/add_page.tmpl:3:25
+# [TemplateFinder]: {{ T "Add" }}                                            contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:3:25
+text: Add
+locales:
+  de: ""
+  fr: ""
+  nl: Toevoegen
+
+---
+
+# [GoFileFinder]:	*BoundModelFormPanel[TARGET, FORM].renderSingleFormPanel contrib/admin/component_form_panels_bound_templ.go:1860:89
+text: Remove
+locales:
+  de: ""
+  fr: ""
+  nl: ""
 
 ---
 
@@ -1278,6 +1069,12 @@ locales:
 text: '%d year'
 plural: '%d years'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%d jaar'
     1: '%d jaar'
@@ -1288,6 +1085,12 @@ locales:
 text: '%d month'
 plural: '%d months'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%d maand'
     1: '%d maanden'
@@ -1298,6 +1101,12 @@ locales:
 text: '%d week'
 plural: '%d weeks'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%d week'
     1: '%d weken'
@@ -1308,6 +1117,12 @@ locales:
 text: '%d day'
 plural: '%d days'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%d dag'
     1: '%d dagen'
@@ -1318,6 +1133,12 @@ locales:
 text: '%d hour'
 plural: '%d hours'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%d uur'
     1: '%d uren'
@@ -1328,6 +1149,12 @@ locales:
 text: '%d minute'
 plural: '%d minutes'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%d minuut'
     1: '%d minuten'
@@ -1337,6 +1164,8 @@ locales:
 # [GoFileFinder]:	FormatTimeSince contrib/admin/components/columns/time.go:101:24
 text: in %s
 locales:
+  de: ""
+  fr: ""
   nl: in %s
 
 ---
@@ -1344,6 +1173,8 @@ locales:
 # [GoFileFinder]:	FormatTimeSince contrib/admin/components/columns/time.go:103:24
 text: in %s and %s
 locales:
+  de: ""
+  fr: ""
   nl: in %s en %s
 
 ---
@@ -1351,6 +1182,8 @@ locales:
 # [GoFileFinder]:	FormatTimeSince contrib/admin/components/columns/time.go:108:24
 text: just now
 locales:
+  de: ""
+  fr: ""
   nl: zojuist
 
 ---
@@ -1358,6 +1191,8 @@ locales:
 # [GoFileFinder]:	FormatTimeSince contrib/admin/components/columns/time.go:110:24
 text: '%s ago'
 locales:
+  de: ""
+  fr: ""
   nl: '%s geleden'
 
 ---
@@ -1365,6 +1200,8 @@ locales:
 # [GoFileFinder]:	FormatTimeSince contrib/admin/components/columns/time.go:112:24
 text: '%s and %s ago'
 locales:
+  de: ""
+  fr: ""
   nl: '%s en %s geleden'
 
 ---
@@ -1372,21 +1209,54 @@ locales:
 # [GoFileFinder]:	TimeSinceColumn contrib/admin/components/columns/time.go:132:27
 text: Never
 locales:
+  de: ""
+  fr: ""
   nl: Nooit
 
 ---
 
-# [GoFileFinder]: RequiredMiddleware contrib/admin/middleware.go:20:68
-# [GoFileFinder]: reloginHandler     contrib/admin/views_auth.go:128:27
+# [GoFileFinder]:	*modelFormPanelForm[TARGET, FORM].Clean contrib/admin/form_panels.go:903:43
+text: Duplicate %s is not allowed
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]: RequiredMiddleware contrib/admin/middleware.go:47:68
+# [GoFileFinder]: reloginHandler     contrib/admin/views_auth.go:126:27
 text: You need to login
 locales:
+  de: ""
+  fr: ""
   nl: Je moet inloggen
+
+---
+
+# [GoFileFinder]:	*BoundSearchView.Setup contrib/admin/searches/views.go:131:32
+text: Search is not allowed for this model
+locales:
+  de: ""
+  fr: ""
+  nl: Zoeken is niet toegestaan voor dit model
+
+---
+
+# [GoFileFinder]:	*BoundSearchView.Setup contrib/admin/searches/views.go:144:32
+text: You must search a model.
+locales:
+  de: ""
+  fr: ""
+  nl: ""
 
 ---
 
 # [GoFileFinder]:	SidePanelFilters contrib/admin/side_panels.go:18:25
 text: Filters
 locales:
+  de: ""
+  fr: ""
   nl: Filters
 
 ---
@@ -1394,6 +1264,8 @@ locales:
 # [GoFileFinder]:	 contrib/admin/views.go:37:25
 text: app %q does not have an index view
 locales:
+  de: ""
+  fr: ""
   nl: app %q heeft geen indexweergave
 
 ---
@@ -1402,6 +1274,8 @@ locales:
 # [GoFileFinder]:  contrib/admin/views.go:109:25
 text: This model does not allow listing
 locales:
+  de: ""
+  fr: ""
   nl: Dit model staat geen lijstweergave toe.
 
 ---
@@ -1409,6 +1283,8 @@ locales:
 # [GoFileFinder]:	 contrib/admin/views.go:196:27
 text: Invalid list action
 locales:
+  de: ""
+  fr: ""
   nl: Ongeldige lijstactie
 
 ---
@@ -1416,6 +1292,8 @@ locales:
 # [GoFileFinder]:	 contrib/admin/views.go:209:27
 text: Failed to apply list action
 locales:
+  de: ""
+  fr: ""
   nl: Toepassen van lijstactie mislukt
 
 ---
@@ -1423,6 +1301,8 @@ locales:
 # [GoFileFinder]:	 contrib/admin/views.go:216:46
 text: List action applied successfully to one object
 locales:
+  de: ""
+  fr: ""
   nl: Lijstactie succesvol toegepast op één object
 
 ---
@@ -1430,91 +1310,103 @@ locales:
 # [GoFileFinder]:	 contrib/admin/views.go:219:46
 text: List action applied successfully to multiple objects
 locales:
+  de: ""
+  fr: ""
   nl: Lijstactie succesvol toegepast op meerdere objecten
 
 ---
 
-# [GoFileFinder]:	 contrib/admin/views.go:287:15
+# [GoFileFinder]:              contrib/admin/views.go:289:15
+# [GoFileFinder]: viewSettings contrib/settings/views.go:119:20
 text: Change
 locales:
+  de: ""
+  fr: ""
   nl: Wijzig
 
 ---
 
-# [GoFileFinder]:	 contrib/admin/views.go:319:34
+# [GoFileFinder]:	 contrib/admin/views.go:321:34
 text: Export %s
 locales:
+  de: ""
+  fr: ""
   nl: '%s exporteren'
 
 ---
 
-# [GoFileFinder]:	 contrib/admin/views.go:327:6
+# [GoFileFinder]:	 contrib/admin/views.go:329:6
 text: '%s List (%d)'
 locales:
+  de: ""
+  fr: ""
   nl: '%s Lijst (%d)'
 
 ---
 
-# [GoFileFinder]:                 contrib/admin/views.go:338:23
-# [TemplateFinder]: {{ T "Add" }} contrib/documents/assets/templates/documents/documents_list.tmpl:45:124
-# [TemplateFinder]: {{ T "Add" }} contrib/images/assets/templates/images/image_list.tmpl:55:128
-# [TemplateFinder]: {{ T "Add" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:3:25
-# [TemplateFinder]: {{ T "Add" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:3:25
-text: Add
-locales:
-  nl: Toevoegen
-
----
-
-# [GoFileFinder]:  contrib/admin/views.go:411:42
-# [GoFileFinder]:  contrib/admin/views.go:414:25
+# [GoFileFinder]:  contrib/admin/views.go:413:42
+# [GoFileFinder]:  contrib/admin/views.go:416:25
 text: This model does not allow creation
 locales:
+  de: ""
+  fr: ""
   nl: Dit model staat geen creatie toe.
 
 ---
 
-# [GoFileFinder]:  contrib/admin/views.go:443:42
-# [GoFileFinder]:  contrib/admin/views.go:446:25
+# [GoFileFinder]:  contrib/admin/views.go:445:42
+# [GoFileFinder]:  contrib/admin/views.go:448:25
 text: This model does not allow editing
 locales:
+  de: ""
+  fr: ""
   nl: Dit model staat geen bewerking toe.
 
 ---
 
-# [GoFileFinder]: *AdminDeleteView.Setup contrib/admin/views.go:509:42
-# [GoFileFinder]: *AdminDeleteView.Setup contrib/admin/views.go:512:25
+# [GoFileFinder]: *AdminDeleteView.Setup contrib/admin/views.go:511:42
+# [GoFileFinder]: *AdminDeleteView.Setup contrib/admin/views.go:514:25
 text: This model does not allow deletion
 locales:
+  de: ""
+  fr: ""
   nl: Dit model staat geen verwijdering toe.
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.ServePOST contrib/admin/views.go:542:5
+# [GoFileFinder]:	*AdminDeleteView.ServePOST contrib/admin/views.go:544:5
 text: model %T not deleted, model does not implement models.Deleter interface
 locales:
+  de: ""
+  fr: ""
   nl: model %T niet verwijderd, model implementeert de models.Deleter interface niet
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.ServePOST contrib/admin/views.go:558:5
+# [GoFileFinder]:	*AdminDeleteView.ServePOST contrib/admin/views.go:560:5
 text: 'Failed to delete %s (%v): %v'
 locales:
+  de: ""
+  fr: ""
   nl: 'Verwijderen van %s (%v) mislukt: %v'
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.ServePOST contrib/admin/views.go:567:5
+# [GoFileFinder]:	*AdminDeleteView.ServePOST contrib/admin/views.go:569:5
 text: Successfully deleted %s (%v)
 locales:
+  de: ""
+  fr: ""
   nl: Verwijderen van %s (%v) succesvol
 
 ---
 
-# [GoFileFinder]:   *AdminDeleteView.GetContext                                           contrib/admin/views.go:608:24
+# [GoFileFinder]:   *AdminDeleteView.GetContext                                           contrib/admin/views.go:610:24
 # [TemplateFinder]: {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }} contrib/documents/assets/templates/documents/documents_delete.tmpl:14:17
 text: Delete %d %s
 locales:
+  de: ""
+  fr: ""
   nl: '%d %s verwijderen'
 
 ---
@@ -1522,6 +1414,8 @@ locales:
 # [GoFileFinder]:	*AdminDeleteView.GetContext contrib/admin/views.go:652:25
 text: No primary keys provided for bulk delete
 locales:
+  de: ""
+  fr: ""
   nl: Geen primaire sleutels opgegeven voor bulkverwijdering
 
 ---
@@ -1529,35 +1423,45 @@ locales:
 # [GoFileFinder]:	*AdminDeleteView.GetContext contrib/admin/views.go:670:5
 text: 'Failed to retrieve instances for bulk delete: %v'
 locales:
+  de: ""
+  fr: ""
   nl: 'Mislukt om instanties op te halen voor bulkverwijdering: %v'
 
 ---
 
-# [GoFileFinder]:	GetAdminForm contrib/admin/views.go:748:7
+# [GoFileFinder]:	GetAdminForm contrib/admin/views.go:744:7
 text: model %T not saved, model does not implement models.Saver interface
 locales:
+  de: ""
+  fr: ""
   nl: model %T niet opgeslagen, model implementeert de models.Saver interface niet
 
 ---
 
-# [GoFileFinder]:	newInstanceView contrib/admin/views.go:846:18
+# [GoFileFinder]:	newInstanceView contrib/admin/views.go:839:18
 text: instance is nil after form submission
 locales:
+  de: ""
+  fr: ""
   nl: object is NULL na formulierindiening
 
 ---
 
-# [GoFileFinder]:	newInstanceView contrib/admin/views.go:851:6
+# [GoFileFinder]:	newInstanceView contrib/admin/views.go:844:6
 text: Successfully saved %s (%v)
 locales:
+  de: ""
+  fr: ""
   nl: Succesvol opgeslagen %s (%v)
 
 ---
 
-# [GoFileFinder]: logoutHandler contrib/admin/views_auth.go:168:27
-# [GoFileFinder]: LogoutView    contrib/auth/views.go:206:5
+# [GoFileFinder]: logoutHandler contrib/admin/views_auth.go:166:27
+# [GoFileFinder]: LogoutView    contrib/auth/views.go:217:5
 text: Failed to logout due to unexpected error
 locales:
+  de: ""
+  fr: ""
   nl: Uitloggen mislukt door onverwachte fout
 
 ---
@@ -1565,6 +1469,8 @@ locales:
 # [GoFileFinder]:	init contrib/admin/views_home.go:107:12
 text: Home
 locales:
+  de: ""
+  fr: ""
   nl: Startpagina
 
 ---
@@ -1572,255 +1478,304 @@ locales:
 # [GoFileFinder]:	init contrib/admin/views_home.go:115:6
 text: Welcome to the Go-Django admin dashboard, %s!
 locales:
+  de: ""
+  fr: ""
   nl: Welkom bij het Go-Django beheerdersdashboard, %s!
 
 ---
 
-# [GoFileFinder]:	*BoundSearchView.Setup contrib/admin/views_search.go:91:32
-text: Search is not allowed for this model
-locales:
-  nl: Zoeken is niet toegestaan voor dit model
-
----
-
-# [GoFileFinder]:	*BoundSearchView.GetContext contrib/admin/views_search.go:225:4
+# [GoFileFinder]:	 contrib/admin/views_search.go:40:5
 text: Search %s
 locales:
+  de: ""
+  fr: ""
   nl: Zoek %s
 
 ---
 
-# [GoFileFinder]: NewAppConfig contrib/auth/app.go:155:28
-# [GoFileFinder]: NewAppConfig contrib/auth/app.go:183:34
-# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:196:35
-# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:489:27
-text: Users
-locales:
-  nl: Gebruikers
-
----
-
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:156:28
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:167:28
 text: User model for authentication
 locales:
+  de: ""
+  fr: ""
   nl: Gebruikersmodel voor authenticatie
 
 ---
 
-# [GoFileFinder]: NewAppConfig contrib/auth/app.go:165:34
-# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:177:35
+# [GoFileFinder]: NewAppConfig contrib/auth/app.go:176:34
+# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:178:35
 text: Authentication and Authorization
 locales:
+  de: ""
+  fr: ""
   nl: Authenticatie en autorisatie
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:166:34
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:177:34
 text: Manage users and groups, control access to your site with permissions.
 locales:
+  de: ""
+  fr: ""
   nl: Beheer gebruikers en groepen, en beheer de toegang tot je site met rechten.
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:167:34
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:178:34
 text: Auth
 locales:
+  de: ""
+  fr: ""
   nl: Auth
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:189:33
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:200:33
 text: First name
 locales:
+  de: ""
+  fr: ""
   nl: Voornaam
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:190:33
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:201:33
 text: Last name
 locales:
+  de: ""
+  fr: ""
   nl: Achternaam
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:192:33
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:203:33
 text: Is administrator
 locales:
+  de: ""
+  fr: ""
   nl: Is beheerder
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:193:33
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:204:33
 text: Is active
 locales:
+  de: ""
+  fr: ""
   nl: Is actief
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:194:33
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:205:33
 text: Created at
 locales:
+  de: ""
+  fr: ""
   nl: Aangemaakt op
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:195:33
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:206:33
 text: Updated at
 locales:
+  de: ""
+  fr: ""
   nl: Bijgewerkt op
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:196:33
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:207:33
 text: Last login
 locales:
+  de: ""
+  fr: ""
   nl: Laatste Aanmelding
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:294:16
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:305:16
 text: Admin
 locales:
+  de: ""
+  fr: ""
   nl: Beheerder
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:298:16
+# [GoFileFinder]:	NewAppConfig contrib/auth/app.go:309:16
 text: Active
 locales:
+  de: ""
+  fr: ""
   nl: Actief
 
 ---
 
-# [GoFileFinder]: NewAppConfig contrib/auth/app.go:337:19
-# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:402:20
+# [GoFileFinder]: NewAppConfig contrib/auth/app.go:348:19
+# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:403:20
 text: User Chooser
 locales:
+  de: ""
+  fr: ""
   nl: Gebruikerskiezer
 
 ---
 
-# [GoFileFinder]: initAuthEditForm contrib/auth/app.go:440:4
-# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:200:5
+# [GoFileFinder]: initAuthEditForm contrib/auth/app.go:463:4
+# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:216:5
 text: Password Confirm
 locales:
+  de: ""
+  fr: ""
   nl: Bevestig wachtwoord
 
 ---
 
-# [GoFileFinder]: initAuthEditForm contrib/auth/app.go:443:4
-# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:203:5
+# [GoFileFinder]: initAuthEditForm contrib/auth/app.go:466:4
+# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:219:5
 text: Enter the password again to confirm
 locales:
+  de: ""
+  fr: ""
   nl: Voer het wachtwoord opnieuw in ter bevestiging
 
 ---
 
-# [GoFileFinder]: UserLoginForm    contrib/auth/forms.go:65:29
-# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:117:29
+# [GoFileFinder]: UserLoginForm    contrib/auth/forms.go:81:29
+# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:133:29
 text: Enter your email address
 locales:
+  de: ""
+  fr: ""
   nl: Voer je e-mailadres in
 
 ---
 
-# [GoFileFinder]: UserLoginForm    contrib/auth/forms.go:76:29
-# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:133:6
+# [GoFileFinder]: UserLoginForm    contrib/auth/forms.go:92:29
+# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:149:6
 text: Enter your username
 locales:
+  de: ""
+  fr: ""
   nl: Voer je gebruikersnaam in
 
 ---
 
-# [GoFileFinder]: UserLoginForm    contrib/auth/forms.go:93:28
-# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:186:5
+# [GoFileFinder]: UserLoginForm    contrib/auth/forms.go:109:28
+# [GoFileFinder]: UserRegisterForm contrib/auth/forms.go:202:5
 text: Enter your password
 locales:
+  de: ""
+  fr: ""
   nl: Voer je wachtwoord in
 
 ---
 
-# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:151:6
+# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:167:6
 text: Enter your first name
 locales:
+  de: ""
+  fr: ""
   nl: Voer je voornaam in
 
 ---
 
-# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:166:6
+# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:182:6
 text: Enter your last name
 locales:
+  de: ""
+  fr: ""
   nl: Voer je achternaam in
 
 ---
 
-# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:227:50
+# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:255:50
 text: Email is required
 locales:
+  de: ""
+  fr: ""
   nl: E-mailadres is verplicht
 
 ---
 
-# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:235:53
+# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:263:53
 text: Email exists
 locales:
+  de: ""
+  fr: ""
   nl: E-mailadres bestaat al
 
 ---
 
-# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:250:50
+# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:278:50
 text: Username is required
 locales:
+  de: ""
+  fr: ""
   nl: Gebruikersnaam is verplicht
 
 ---
 
-# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:258:53
+# [GoFileFinder]:	UserRegisterForm contrib/auth/forms.go:286:53
 text: Username exists
 locales:
+  de: ""
+  fr: ""
   nl: Gebruikersnaam bestaat al
 
 ---
 
-# [GoFileFinder]:	*BaseUserForm.basicChecks contrib/auth/forms.go:299:4
+# [GoFileFinder]:	*BaseUserForm.basicChecks contrib/auth/forms.go:332:4
 text: Form is not cleaned
 locales:
+  de: ""
+  fr: ""
   nl: Formulier is niet schoongemaakt
 
 ---
 
-# [GoFileFinder]:	*BaseUserForm.Save contrib/auth/forms.go:350:61
+# [GoFileFinder]:	*BaseUserForm.Save contrib/auth/forms.go:383:61
 text: Error saving user
 locales:
+  de: ""
+  fr: ""
   nl: Fout bij het opslaan van gebruiker
 
 ---
 
-# [GoFileFinder]:	*BaseUserForm.Save contrib/auth/forms.go:356:62
+# [GoFileFinder]:	*BaseUserForm.Save contrib/auth/forms.go:389:62
 text: Error logging in user
 locales:
+  de: ""
+  fr: ""
   nl: Fout bij het inloggen van gebruiker
 
 ---
 
-# [GoFileFinder]: *BaseUserForm.Login contrib/auth/forms.go:391:17
-# [GoFileFinder]: *BaseUserForm.Login contrib/auth/forms.go:399:17
+# [GoFileFinder]: *BaseUserForm.Login contrib/auth/forms.go:424:17
+# [GoFileFinder]: *BaseUserForm.Login contrib/auth/forms.go:432:17
 text: Invalid username / password combination
 locales:
-  nl: "Ongeldige combinatie van gebruikersnaam/wachtwoord"
+  de: ""
+  fr: ""
+  nl: Ongeldige combinatie van gebruikersnaam/wachtwoord
 
 ---
 
-# [GoFileFinder]:	*BaseUserForm.Login contrib/auth/forms.go:406:17
+# [GoFileFinder]:	*BaseUserForm.Login contrib/auth/forms.go:439:17
 text: User is not active
 locales:
-  nl: "Gebruiker is niet actief"
+  de: ""
+  fr: ""
+  nl: Gebruiker is niet actief
 
 ---
 
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:121:22
 text: The unique identifier for this user.
 locales:
+  de: ""
+  fr: ""
   nl: Het unieke identificatienummer voor deze gebruiker.
 
 ---
@@ -1828,6 +1783,8 @@ locales:
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:129:23
 text: The email address of the user.
 locales:
+  de: ""
+  fr: ""
   nl: Het e-mailadres van de gebruiker.
 
 ---
@@ -1835,6 +1792,8 @@ locales:
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:136:23
 text: The username of the user.
 locales:
+  de: ""
+  fr: ""
   nl: De gebruikersnaam van de gebruiker.
 
 ---
@@ -1842,6 +1801,8 @@ locales:
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:142:23
 text: The first name of the user.
 locales:
+  de: ""
+  fr: ""
   nl: De voornaam van de gebruiker.
 
 ---
@@ -1849,6 +1810,8 @@ locales:
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:148:23
 text: The last name of the user.
 locales:
+  de: ""
+  fr: ""
   nl: De achternaam van de gebruiker.
 
 ---
@@ -1856,6 +1819,8 @@ locales:
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:154:23
 text: The user's password. It is stored as a hash.
 locales:
+  de: ""
+  fr: ""
   nl: Het wachtwoord van de gebruiker. Het wordt opgeslagen als een hash.
 
 ---
@@ -1863,6 +1828,8 @@ locales:
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:158:22
 text: The date and time when the user was created.
 locales:
+  de: ""
+  fr: ""
   nl: De datum en tijd waarop de gebruiker is aangemaakt.
 
 ---
@@ -1870,6 +1837,8 @@ locales:
 # [GoFileFinder]:	*User.Fields contrib/auth/user.go:163:22
 text: The date and time when the user was last updated.
 locales:
+  de: ""
+  fr: ""
   nl: De datum en tijd waarop de gebruiker voor het laatst is bijgewerkt.
 
 ---
@@ -1877,6 +1846,8 @@ locales:
 # [GoFileFinder]:	*Base.Fields contrib/auth/users/baseuser.go:67:22
 text: Whether the user is an administrator
 locales:
+  de: ""
+  fr: ""
   nl: Of de gebruiker een administrator is.
 
 ---
@@ -1884,6 +1855,8 @@ locales:
 # [GoFileFinder]:	*Base.Fields contrib/auth/users/baseuser.go:73:22
 text: Whether the user is active and can log in.
 locales:
+  de: ""
+  fr: ""
   nl: Of de gebruiker actief is en kan inloggen.
 
 ---
@@ -1891,213 +1864,305 @@ locales:
 # [GoFileFinder]:	*Base.Fields contrib/auth/users/baseuser.go:84:22
 text: The last time the user logged in.
 locales:
+  de: ""
+  fr: ""
   nl: De laatste keer dat de gebruiker inlogde.
 
 ---
 
-# [GoFileFinder]:	*Base.Fields contrib/auth/users/baseuser.go:92:24
+# [GoFileFinder]:	*Base.Fields contrib/auth/users/baseuser.go:93:24
 text: The groups this user belongs to.
 locales:
+  de: ""
+  fr: ""
   nl: De groepen waartoe deze gebruiker behoort.
 
 ---
 
-# [GoFileFinder]:	*Base.Fields contrib/auth/users/baseuser.go:111:24
+# [GoFileFinder]:	*Base.Fields contrib/auth/users/baseuser.go:112:24
 text: The permissions this user has.
 locales:
+  de: ""
+  fr: ""
   nl: De machtigingen die deze gebruiker heeft.
 
 ---
 
-# [GoFileFinder]:	*Group.FieldDefs contrib/auth/users/group.go:31:23
+# [GoFileFinder]:	*Group.FieldDefs contrib/auth/users/group.go:34:23
 text: Name of the group. This is the name that will be displayed in the UI.
 locales:
+  de: ""
+  fr: ""
   nl: De naam van de groep. Dit is de naam die in de gebruikersinterface wordt weergegeven.
 
 ---
 
-# [GoFileFinder]:	*Group.FieldDefs contrib/auth/users/group.go:37:23
+# [GoFileFinder]:	*Group.FieldDefs contrib/auth/users/group.go:40:23
 text: Description of the group. This is the description that will be displayed in the UI.
 locales:
+  de: ""
+  fr: ""
   nl: De beschrijving van de groep. Dit is de beschrijving die in de gebruikersinterface wordt weergegeven.
 
 ---
 
-# [GoFileFinder]:	*Group.FieldDefs contrib/auth/users/group.go:44:24
+# [GoFileFinder]:	*Group.FieldDefs contrib/auth/users/group.go:47:24
 text: The permissions this group has.
 locales:
+  de: ""
+  fr: ""
   nl: De machtigingen die deze groep heeft.
 
 ---
 
-# [GoFileFinder]:	*Permission.FieldDefs contrib/auth/users/permission.go:28:23
+# [GoFileFinder]: *Group.FieldDefs      contrib/auth/users/group.go:66:24
+# [GoFileFinder]: *Permission.FieldDefs contrib/auth/users/permission.go:129:24
+text: The users this permission is assigned to.
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	*Permission.FieldDefs contrib/auth/users/permission.go:97:23
 text: Name of the permission. This is the name that will be displayed in the UI.
 locales:
+  de: ""
+  fr: ""
   nl: De naam van de toestemming. Dit is de naam die in de gebruikersinterface wordt weergegeven.
 
 ---
 
-# [GoFileFinder]:	*Permission.FieldDefs contrib/auth/users/permission.go:34:23
+# [GoFileFinder]:	*Permission.FieldDefs contrib/auth/users/permission.go:103:23
 text: Description of the permission. This is the description that will be displayed in the UI.
 locales:
+  de: ""
+  fr: ""
   nl: De beschrijving van de toestemming. Dit is de beschrijving die in de gebruikersinterface wordt weergegeven.
 
 ---
 
-# [GoFileFinder]:                           contrib/documents/admin.go:30:26
-# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:166:32
-# [GoFileFinder]: NewAppConfig              contrib/documents/app.go:116:34
-# [GoFileFinder]: NewAppConfig              contrib/documents/app.go:117:34
-text: Documents
+# [GoFileFinder]:	*Permission.FieldDefs contrib/auth/users/permission.go:110:24
+text: The groups this permission is assigned to.
 locales:
-  nl: Documenten
+  de: ""
+  fr: ""
+  nl: ""
 
 ---
 
 # [GoFileFinder]:	 contrib/documents/admin.go:31:26
+text: Document
+locales:
+  de: ""
+  fr: ""
+  nl: Document
+
+---
+
+# [GoFileFinder]:                           contrib/documents/admin.go:32:26
+# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:142:32
+# [GoFileFinder]: NewAppConfig              contrib/documents/app.go:117:34
+# [GoFileFinder]: NewAppConfig              contrib/documents/app.go:118:34
+text: Documents
+locales:
+  de: ""
+  fr: ""
+  nl: Documenten
+
+---
+
+# [GoFileFinder]:	 contrib/documents/admin.go:33:26
 text: A document file
 locales:
+  de: ""
+  fr: ""
   nl: Een documentbestand
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:50:27
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:52:27
 text: Document File
 locales:
+  de: ""
+  fr: ""
   nl: Documentbestand
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:51:30
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:53:30
 text: Upload an document file
 locales:
+  de: ""
+  fr: ""
   nl: Upload een documentbestand
 
 ---
 
-# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:118:44
-# [GoFileFinder]: AdminImageModelOptions    contrib/images/admin.go:135:44
-text: File is empty, please try to upload it again
-locales:
-  nl: Het bestand is leeg, probeer het opnieuw te uploaden.
-
----
-
-# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:189:14
-# [GoFileFinder]: AdminImageModelOptions    contrib/images/admin.go:208:14
+# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:165:14
+# [GoFileFinder]: AdminImageModelOptions    contrib/images/admin.go:187:14
 text: File Metadata
 locales:
+  de: ""
+  fr: ""
   nl: Bestandsmetadata
 
 ---
 
-# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:190:14
-# [GoFileFinder]: AdminImageModelOptions    contrib/images/admin.go:209:14
+# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:166:14
+# [GoFileFinder]: AdminImageModelOptions    contrib/images/admin.go:188:14
 text: Metadata about the file
 locales:
+  de: ""
+  fr: ""
   nl: Metadata over het bestand
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:234:14
+# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:204:14
+# [GoFileFinder]: *Document.FieldDefs       contrib/documents/models.go:109:19
+# [GoFileFinder]: *Image.FieldDefs          contrib/images/models.go:107:19
+text: Path
+locales:
+  de: ""
+  fr: ""
+  nl: Pad
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:210:14
 text: File Name
 locales:
+  de: ""
+  fr: ""
   nl: Bestandsnaam
 
 ---
 
-# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:241:14
-# [GoFileFinder]: NewAppConfig              contrib/openauth2/openauth2.go:359:17
-# [GoFileFinder]: listRevisionHandler       contrib/pages/django_admin_views_revisions.go:137:12
+# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:217:14
+# [GoFileFinder]: NewAppConfig              contrib/openauth2/openauth2.go:360:17
+# [GoFileFinder]: listRevisionHandler       contrib/pages/django_admin_views_revisions.go:158:12
 text: Created
 locales:
+  de: ""
+  fr: ""
   nl: Aangemaakt
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:245:14
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:221:14
 text: Size
 locales:
+  de: ""
+  fr: ""
   nl: Grootte
 
 ---
 
-# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:250:36
-# [GoFileFinder]:                           contrib/pages/django_admin.go:158:40
+# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:226:36
+# [GoFileFinder]:                           contrib/pages/django_admin.go:159:40
+# [GoFileFinder]: notFoundLabel             internal/strich/strich.go:32:22
 text: Unknown
 locales:
+  de: ""
+  fr: ""
   nl: Onbekend
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:252:36
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:228:36
 text: '%dB'
 locales:
+  de: ""
+  fr: ""
   nl: '%dB'
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:254:36
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:230:36
 text: '%dKB'
 locales:
+  de: ""
+  fr: ""
   nl: '%dKB'
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:256:36
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:232:36
 text: '%dMB'
 locales:
+  de: ""
+  fr: ""
   nl: '%dMB'
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:258:36
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:234:36
 text: '%dGB'
 locales:
+  de: ""
+  fr: ""
   nl: '%dGB'
 
 ---
 
-# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:266:58
+# [GoFileFinder]: AdminDocumentModelOptions contrib/documents/admin.go:242:58
 # [GoFileFinder]: outdatedPagesHandler      contrib/pages/django_admin_views.go:264:55
 text: Search by title or URL path
 locales:
+  de: ""
+  fr: ""
   nl: Zoeken op titel of URL-pad
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:284:29
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:260:29
 text: Start Date
 locales:
+  de: ""
+  fr: ""
   nl: Startdatum
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:289:29
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:265:29
 text: End Date
 locales:
+  de: ""
+  fr: ""
   nl: Einddatum
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:292:28
+# [GoFileFinder]:	AdminDocumentModelOptions contrib/documents/admin.go:268:28
 text: Date Range
 locales:
+  de: ""
+  fr: ""
   nl: Datumbereik
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/documents/app.go:124:19
+# [GoFileFinder]:	NewAppConfig contrib/documents/app.go:125:19
 text: Document Chooser
 locales:
+  de: ""
+  fr: ""
   nl: Document Kiezen
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/documents/app.go:152:26
+# [GoFileFinder]:	NewAppConfig contrib/documents/app.go:153:26
 text: Document
 plural: Documents
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: Document
     1: Documenten
@@ -2108,6 +2173,8 @@ locales:
 # [TemplateFinder]: {{ T "Image List" }} contrib/images/assets/templates/images/image_list.tmpl:3:25
 text: Image List
 locales:
+  de: ""
+  fr: ""
   nl: Afbeeldingenlijst
 
 ---
@@ -2116,6 +2183,8 @@ locales:
 # [TemplateFinder]: {{ T "%s List" $model.Label }} contrib/images/assets/templates/images/image_list.tmpl:38:33
 text: '%s List'
 locales:
+  de: ""
+  fr: ""
   nl: '%s- lijst'
 
 ---
@@ -2128,60 +2197,99 @@ locales:
 # [GoFileFinder]:   listPageHandler contrib/pages/django_admin_views.go:549:23
 text: Edit
 locales:
+  de: ""
+  fr: ""
   nl: Bewerken
 
 ---
 
-# [GoFileFinder]:                        contrib/images/admin.go:32:26
-# [GoFileFinder]: AdminImageModelOptions contrib/images/admin.go:183:32
-# [GoFileFinder]: NewAppConfig           contrib/images/app.go:111:34
+# [GoFileFinder]: *Document.FieldDefs contrib/documents/models.go:122:22
+# [GoFileFinder]: *Image.FieldDefs    contrib/images/models.go:121:19
+text: File Size
+locales:
+  de: ""
+  fr: ""
+  nl: Bestandsgrootte
+
+---
+
+# [GoFileFinder]: *Document.FieldDefs contrib/documents/models.go:131:22
+# [GoFileFinder]: *Image.FieldDefs    contrib/images/models.go:129:22
+text: File Hash
+locales:
+  de: ""
+  fr: ""
+  nl: Bestandshash
+
+---
+
+# [GoFileFinder]:                        contrib/images/admin.go:34:26
+# [GoFileFinder]: AdminImageModelOptions contrib/images/admin.go:162:32
 # [GoFileFinder]: NewAppConfig           contrib/images/app.go:112:34
+# [GoFileFinder]: NewAppConfig           contrib/images/app.go:113:34
 text: Images
 locales:
+  de: ""
+  fr: ""
   nl: Afbeeldingen
 
 ---
 
-# [GoFileFinder]:	 contrib/images/admin.go:33:26
+# [GoFileFinder]:	 contrib/images/admin.go:35:26
 text: An image file
 locales:
+  de: ""
+  fr: ""
   nl: Een afbeeldingsbestand
 
 ---
 
-# [GoFileFinder]:	AdminImageModelOptions contrib/images/admin.go:52:27
+# [GoFileFinder]:	AdminImageModelOptions contrib/images/admin.go:56:27
 text: Image File
 locales:
+  de: ""
+  fr: ""
   nl: Afbeeldingsbestand
 
 ---
 
-# [GoFileFinder]:	AdminImageModelOptions contrib/images/admin.go:53:30
+# [GoFileFinder]:	AdminImageModelOptions contrib/images/admin.go:57:30
 text: Upload an image file
 locales:
+  de: ""
+  fr: ""
   nl: Upload een afbeeldingsbestand
 
 ---
 
-# [GoFileFinder]: AdminImageModelOptions contrib/images/admin.go:116:45
-# [GoFileFinder]: AdminImageModelOptions contrib/images/admin.go:127:45
-text: This field is required
+# [GoFileFinder]:	AdminImageModelOptions contrib/images/admin.go:121:45
+text: This field is required (ImageFile & Path missing)
 locales:
-  nl: Dit veld is verplicht.
+  de: ""
+  fr: ""
+  nl: ""
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/images/app.go:119:19
+# [GoFileFinder]:	NewAppConfig contrib/images/app.go:120:19
 text: Image Chooser
 locales:
+  de: ""
+  fr: ""
   nl: Afbeelding Kiezen
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/images/app.go:165:26
+# [GoFileFinder]:	NewAppConfig contrib/images/app.go:166:26
 text: Image
 plural: Images
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: Afbeelding
     1: Afbeeldingen
@@ -2191,6 +2299,8 @@ locales:
 # [TemplateFinder]:	{{ T "Installed OAuth2 Providers" }} contrib/openauth2/assets/templates/oauth2/admin/components/providers.tmpl:6:21
 text: Installed OAuth2 Providers
 locales:
+  de: ""
+  fr: ""
   nl: Geïnstalleerde OAuth2-providers
 
 ---
@@ -2198,6 +2308,8 @@ locales:
 # [TemplateFinder]:	{{ T "Documentation" }} contrib/openauth2/assets/templates/oauth2/admin/components/providers.tmpl:30:49
 text: Documentation
 locales:
+  de: ""
+  fr: ""
   nl: Documentatie
 
 ---
@@ -2205,152 +2317,194 @@ locales:
 # [TemplateFinder]:	{{ T "Privacy Policy" }} contrib/openauth2/assets/templates/oauth2/admin/components/providers.tmpl:40:49
 text: Privacy Policy
 locales:
+  de: ""
+  fr: ""
   nl: Privacybeleid
 
 ---
 
-# [GoFileFinder]: *User.Fields contrib/openauth2/models.go:217:24
-# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:368:18
+# [GoFileFinder]: *User.Fields contrib/openauth2/models.go:223:24
+# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:369:18
 text: Unique Identifier
 locales:
+  de: ""
+  fr: ""
   nl: Unieke identificatie
 
 ---
 
-# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:227:24
+# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:233:24
 text: Provider Name
 locales:
+  de: ""
+  fr: ""
   nl: Providernaam
 
 ---
 
-# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:246:23
+# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:252:23
 text: Access Token
 locales:
+  de: ""
+  fr: ""
   nl: Toegangstoken
 
 ---
 
-# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:255:23
+# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:261:23
 text: Refresh Token
 locales:
+  de: ""
+  fr: ""
   nl: Vernieuwings-token
 
 ---
 
-# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:264:24
+# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:270:24
 text: Token Type
 locales:
+  de: ""
+  fr: ""
   nl: Token type
 
 ---
 
-# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:275:24
+# [GoFileFinder]:	*User.Fields contrib/openauth2/models.go:281:24
 text: Expires At
 locales:
+  de: ""
+  fr: ""
   nl: Verloopt op
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:179:7
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:180:7
 text: OpenAuth2 is an authentication backend for Go-Django. It allows you to authenticate users using OAuth2 providers such as Google, Facebook, GitHub, etc.
 locales:
+  de: ""
+  fr: ""
   nl: OpenAuth2 is een authenticatie-backend voor Go-Django. Hiermee kun je gebruikers authenticeren via OAuth2-providers zoals Google, Facebook, GitHub, enzovoort.
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:181:25
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:182:25
 text: OAuth 2
 locales:
+  de: ""
+  fr: ""
   nl: OAuth 2
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:206:18
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:207:18
 text: General
 locales:
+  de: ""
+  fr: ""
   nl: Algemeen
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:216:18
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:217:18
 text: Authentication
 locales:
+  de: ""
+  fr: ""
   nl: Authenticatie
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:223:18
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:224:18
 text: Details
 locales:
+  de: ""
+  fr: ""
   nl: Details
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:226:26
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:227:26
 text: User Data
 locales:
+  de: ""
+  fr: ""
   nl: Gebruikersgegevens
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:227:26
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:228:26
 text: User data retrieved from the OAuth2 provider.
 locales:
+  de: ""
+  fr: ""
   nl: Gebruikersgegevens opgehaald van de OAuth2-provider.
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:249:18
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:250:18
 text: Authorization
 locales:
+  de: ""
+  fr: ""
   nl: Autorisatie
 
 ---
 
-# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:296:33
-# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:317:17
+# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:297:33
+# [GoFileFinder]: NewAppConfig contrib/openauth2/openauth2.go:318:17
 text: Provider
 locales:
+  de: ""
+  fr: ""
   nl: Provider
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:335:17
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:336:17
 text: Has Refresh Token
 locales:
+  de: ""
+  fr: ""
   nl: Heeft refresh-token
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:350:17
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:351:17
 text: Is Admin
 locales:
+  de: ""
+  fr: ""
   nl: Is beheerder
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:363:17
+# [GoFileFinder]:	NewAppConfig contrib/openauth2/openauth2.go:364:17
 text: Last Updated
 locales:
+  de: ""
+  fr: ""
   nl: Laatst bijgewerkt
 
 ---
 
-# [TemplateFinder]: {{ T "Save" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:24:21
-# [TemplateFinder]: {{ T "Save" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:22:21
+# [TemplateFinder]: {{ T "Save" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:25:21
+# [TemplateFinder]: {{ T "Save" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:23:21
 # [TemplateFinder]: {{ T "Save" }} contrib/pages/assets/templates/pages/admin/edit_page.tmpl:23:21
 text: Save
 locales:
+  de: ""
+  fr: ""
   nl: Opslaan
 
 ---
 
-# [TemplateFinder]: {{ T "Save and Publish" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:28:25
-# [TemplateFinder]: {{ T "Save and Publish" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:26:25
+# [TemplateFinder]: {{ T "Save and Publish" }} contrib/pages/assets/templates/pages/admin/add_page.tmpl:29:25
+# [TemplateFinder]: {{ T "Save and Publish" }} contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:27:25
 # [TemplateFinder]: {{ T "Save and Publish" }} contrib/pages/assets/templates/pages/admin/edit_page.tmpl:28:25
 text: Save and Publish
 locales:
+  de: ""
+  fr: ""
   nl: Opslaan en publiceren
 
 ---
@@ -2361,6 +2515,8 @@ locales:
 # [TemplateFinder]: {{ T "List" }} contrib/pages/assets/templates/pages/admin/revisions/list.tmpl:3:25
 text: List
 locales:
+  de: ""
+  fr: ""
   nl: Lijst
 
 ---
@@ -2368,6 +2524,8 @@ locales:
 # [TemplateFinder]:	{{ T "The main level is where you can add new pages to your site. Pages created here will act as a home- page and be available once they have been added to a site." }} contrib/pages/assets/templates/pages/admin/admin_root_list.tmpl:7:35
 text: The main level is where you can add new pages to your site. Pages created here will act as a home- page and be available once they have been added to a site.
 locales:
+  de: ""
+  fr: ""
   nl: Het hoofd niveau is waar je nieuwe pagina's aan je site kunt toevoegen. Pagina's die hier zijn gemaakt, fungeren als een startpagina en zijn beschikbaar zodra ze aan een site zijn toegevoegd.
 
 ---
@@ -2375,6 +2533,8 @@ locales:
 # [TemplateFinder]:	{{ T "If you wish to add pages to an existing site, you can do so by adding child pages to the below pages." }} contrib/pages/assets/templates/pages/admin/admin_root_list.tmpl:8:35
 text: If you wish to add pages to an existing site, you can do so by adding child pages to the below pages.
 locales:
+  de: ""
+  fr: ""
   nl: Als je pagina's aan een bestaande site wilt toevoegen, kun je dit doen door onderliggende pagina's aan de onderstaande pagina's toe te voegen.
 
 ---
@@ -2382,6 +2542,8 @@ locales:
 # [TemplateFinder]:	{{ T "<a href=\"%s\" class=\"link\" target=\"_blank\">Click here to see your sites.</a>" (url "admin:apps:model" "settings" "site") | safe }} contrib/pages/assets/templates/pages/admin/admin_root_list.tmpl:9:35
 text: <a href="%s" class="link" target="_blank">Click here to see your sites.</a>
 locales:
+  de: ""
+  fr: ""
   nl: <a href="%s" class="link" target="_blank">Klik hier om je sites te bekijken.</a>
 
 ---
@@ -2389,15 +2551,19 @@ locales:
 # [TemplateFinder]:	{{ T "If you delete this page, %d children will also be deleted." (len .Data.Nodes) }} contrib/pages/assets/templates/pages/admin/delete_page.tmpl:9:39
 text: If you delete this page, %d children will also be deleted.
 locales:
+  de: ""
+  fr: ""
   nl: Als je deze pagina verwijdert, worden ook %d kinderen verwijderd.
 
 ---
 
 # [TemplateFinder]: {{ T "Live" }}      contrib/pages/assets/templates/pages/admin/delete_page.tmpl:20:204
-# [GoFileFinder]:                       contrib/pages/django_admin.go:143:13
-# [GoFileFinder]:   listRevisionHandler contrib/pages/django_admin_views_revisions.go:70:12
+# [GoFileFinder]:                       contrib/pages/django_admin.go:144:13
+# [GoFileFinder]:   listRevisionHandler contrib/pages/django_admin_views_revisions.go:77:12
 text: Live
 locales:
+  de: ""
+  fr: ""
   nl: Live
 
 ---
@@ -2405,6 +2571,8 @@ locales:
 # [TemplateFinder]:	{{ T "Unpublished" }} contrib/pages/assets/templates/pages/admin/delete_page.tmpl:26:199
 text: Unpublished
 locales:
+  de: ""
+  fr: ""
   nl: Ongepubliceerd
 
 ---
@@ -2413,6 +2581,12 @@ locales:
 text: Delete this node
 plural: Delete this node and all it's children
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: Verwijder dit knooppunt
     1: Verwijder dit knooppunt en alle onderliggende pagina's
@@ -2422,6 +2596,8 @@ locales:
 # [TemplateFinder]:	{{ T "Unpublish and Save" }} contrib/pages/assets/templates/pages/admin/edit_page.tmpl:34:25
 text: Unpublish and Save
 locales:
+  de: ""
+  fr: ""
   nl: Depubliceren en opslaan
 
 ---
@@ -2429,6 +2605,8 @@ locales:
 # [TemplateFinder]:	{{ T "Delete Page" }} contrib/pages/assets/templates/pages/admin/edit_page.tmpl:46:191
 text: Delete Page
 locales:
+  de: ""
+  fr: ""
   nl: Pagina verwijderen
 
 ---
@@ -2440,6 +2618,8 @@ locales:
 # [GoFileFinder]:   listPageHandler     contrib/pages/django_admin_views.go:594:23
 text: Unpublish
 locales:
+  de: ""
+  fr: ""
   nl: Depubliceren
 
 ---
@@ -2447,6 +2627,8 @@ locales:
 # [TemplateFinder]:	{{ T "Move pages between different positions in the page- tree hierarchy." }} contrib/pages/assets/templates/pages/admin/move_page.tmpl:23:39
 text: Move pages between different positions in the page- tree hierarchy.
 locales:
+  de: ""
+  fr: ""
   nl: Verplaats pagina's tussen verschillende posities in de hiërarchie.
 
 ---
@@ -2454,6 +2636,8 @@ locales:
 # [TemplateFinder]:	{{ T "Use the form below to select the new parent page for the target page." }} contrib/pages/assets/templates/pages/admin/move_page.tmpl:24:39
 text: Use the form below to select the new parent page for the target page.
 locales:
+  de: ""
+  fr: ""
   nl: Gebruik het onderstaande formulier om de nieuwe bovenliggende pagina voor de doelpagina te selecteren.
 
 ---
@@ -2461,6 +2645,8 @@ locales:
 # [TemplateFinder]:	{{ T "Note that moving a page will also move all its children and change their URL structure." }} contrib/pages/assets/templates/pages/admin/move_page.tmpl:25:39
 text: Note that moving a page will also move all its children and change their URL structure.
 locales:
+  de: ""
+  fr: ""
   nl: Houd er rekening mee dat het verplaatsen van een pagina ook al zijn kinderen verplaatst en hun URL-structuur wijzigt.
 
 ---
@@ -2468,6 +2654,8 @@ locales:
 # [TemplateFinder]:	{{ T "Move this page" }} contrib/pages/assets/templates/pages/admin/move_page.tmpl:41:21
 text: Move this page
 locales:
+  de: ""
+  fr: ""
   nl: Verplaats deze pagina
 
 ---
@@ -2475,6 +2663,8 @@ locales:
 # [TemplateFinder]:	{{ T "Publishing a page will make it visible on the live site." }} contrib/pages/assets/templates/pages/admin/publish_page.tmpl:8:39
 text: Publishing a page will make it visible on the live site.
 locales:
+  de: ""
+  fr: ""
   nl: Publiceren van een pagina maakt deze zichtbaar op de live site.
 
 ---
@@ -2482,6 +2672,8 @@ locales:
 # [TemplateFinder]:	{{ T "It is required to publish a page before it can be viewed by the public." }} contrib/pages/assets/templates/pages/admin/publish_page.tmpl:9:39
 text: It is required to publish a page before it can be viewed by the public.
 locales:
+  de: ""
+  fr: ""
   nl: Het is vereist om een pagina te publiceren voordat deze door het publiek kan worden bekeken.
 
 ---
@@ -2489,6 +2681,8 @@ locales:
 # [TemplateFinder]:	{{ T "Publish this node" }} contrib/pages/assets/templates/pages/admin/publish_page.tmpl:21:21
 text: Publish this node
 locales:
+  de: ""
+  fr: ""
   nl: Publiceer dit knooppunt
 
 ---
@@ -2496,34 +2690,44 @@ locales:
 # [TemplateFinder]:	{{ T "Compare Revision" }} contrib/pages/assets/templates/pages/admin/revisions/compare.tmpl:3:25
 text: Compare Revision
 locales:
-  nl: "Vergelijk revisie"
+  de: ""
+  fr: ""
+  nl: Vergelijk revisie
 
 ---
 
 # [TemplateFinder]:	{{ T "No differences found between the selected revisions." }} contrib/pages/assets/templates/pages/admin/revisions/compare.tmpl:21:21
 text: No differences found between the selected revisions.
 locales:
-  nl: "Geen verschillen gevonden tussen de geselecteerde revisies."
+  de: ""
+  fr: ""
+  nl: Geen verschillen gevonden tussen de geselecteerde revisies.
 
 ---
 
 # [TemplateFinder]:	{{ T "Revert" }} contrib/pages/assets/templates/pages/admin/revisions/edit.tmpl:28:21
 text: Revert
 locales:
-  nl: "Ongedaan maken"
+  de: ""
+  fr: ""
+  nl: Ongedaan maken
 
 ---
 
 # [TemplateFinder]:	{{ T "Revert and Publish" }} contrib/pages/assets/templates/pages/admin/revisions/edit.tmpl:33:25
 text: Revert and Publish
 locales:
-  nl: "Ongedaan maken en publiceren"
+  de: ""
+  fr: ""
+  nl: Ongedaan maken en publiceren
 
 ---
 
 # [TemplateFinder]:	{{ T "Unpublishing a page will remove it from the site, but its content will be preserved." }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:8:39
 text: Unpublishing a page will remove it from the site, but its content will be preserved.
 locales:
+  de: ""
+  fr: ""
   nl: Het ongedaan maken van de publicatie van een pagina verwijdert deze van de site, maar de inhoud blijft behouden.
 
 ---
@@ -2531,6 +2735,8 @@ locales:
 # [TemplateFinder]:	{{ T "This means that the page will no longer be accessible to users, but you can still edit its content in the admin interface." }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:9:39
 text: This means that the page will no longer be accessible to users, but you can still edit its content in the admin interface.
 locales:
+  de: ""
+  fr: ""
   nl: Dit betekent dat de pagina niet langer toegankelijk is voor gebruikers, maar je kunt de inhoud nog steeds bewerken in de beheerdersinterface.
 
 ---
@@ -2538,6 +2744,8 @@ locales:
 # [TemplateFinder]:	{{ T "Optionally, you can unpublish all child pages along with the current page." }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:11:43
 text: Optionally, you can unpublish all child pages along with the current page.
 locales:
+  de: ""
+  fr: ""
   nl: Optioneel kun je alle onderliggende pagina's samen met de huidige pagina ongedaan maken.
 
 ---
@@ -2545,6 +2753,8 @@ locales:
 # [TemplateFinder]:	{{ T "Unpublish this node" }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:24:21
 text: Unpublish this node
 locales:
+  de: ""
+  fr: ""
   nl: Publicatie van dit knooppunt ongedaan maken
 
 ---
@@ -2552,68 +2762,118 @@ locales:
 # [TemplateFinder]:	{{ T "Unpublish this node and all its children" }} contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:28:25
 text: Unpublish this node and all its children
 locales:
+  de: ""
+  fr: ""
   nl: Publicatie van dit knooppunt en alle onderliggende pagina's ongedaan maken
 
 ---
 
-# [GoFileFinder]:                               contrib/pages/django_admin.go:29:26
+# [GoFileFinder]:                               contrib/pages/django_admin.go:30:26
 # [GoFileFinder]: *PagesAdminHomeComponent.html contrib/pages/django_admin_home_component_templ.go:58:79
-# [GoFileFinder]: NewAppConfig                  contrib/pages/django_app.go:245:37
+# [GoFileFinder]: NewAppConfig                  contrib/pages/django_app.go:239:37
 text: Pages
 locales:
+  de: ""
+  fr: ""
   nl: Pagina's
 
 ---
 
-# [GoFileFinder]:	 contrib/pages/django_admin.go:30:26
+# [GoFileFinder]:	 contrib/pages/django_admin.go:31:26
 text: Manage pages in a hierarchical structure.
 locales:
+  de: ""
+  fr: ""
   nl: Beheer pagina's in een hiërarchische structuur.
 
 ---
 
-# [GoFileFinder]:	 contrib/pages/django_admin.go:53:26
+# [GoFileFinder]:	 contrib/pages/django_admin.go:54:26
 text: Tree Path
 locales:
+  de: ""
+  fr: ""
   nl: Boomstructuurpad
 
 ---
 
-# [GoFileFinder]:	 contrib/pages/django_admin.go:54:26
+# [GoFileFinder]:	 contrib/pages/django_admin.go:55:26
 text: Tree Depth
 locales:
+  de: ""
+  fr: ""
   nl: Boomstructuurdikte
 
 ---
 
-# [GoFileFinder]:	 contrib/pages/django_admin.go:55:26
+# [GoFileFinder]:	 contrib/pages/django_admin.go:56:26
 text: Number of Children
 locales:
+  de: ""
+  fr: ""
   nl: Aantal onderliggende pagina's
 
 ---
 
-# [GoFileFinder]:	 contrib/pages/django_admin.go:109:22
+# [GoFileFinder]:  contrib/pages/django_admin.go:57:26
+# [GoFileFinder]:  contrib/pages/django_admin.go:171:13
+text: URL Path
+locales:
+  de: ""
+  fr: ""
+  nl: URL-pad
+
+---
+
+# [GoFileFinder]:	 contrib/pages/django_admin.go:59:26
+text: Status Flags
+locales:
+  de: ""
+  fr: ""
+  nl: Statusvlaggen
+
+---
+
+# [GoFileFinder]:	 contrib/pages/django_admin.go:60:26
+text: Page ID
+locales:
+  de: ""
+  fr: ""
+  nl: Pagina-ID
+
+---
+
+# [GoFileFinder]:	 contrib/pages/django_admin.go:110:22
 text: '%d child'
 plural: '%d children'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%d kind'
     1: '%d kinderen'
 
 ---
 
-# [GoFileFinder]:	 contrib/pages/django_admin.go:150:13
+# [GoFileFinder]:	 contrib/pages/django_admin.go:151:13
 text: Time since last update
 locales:
+  de: ""
+  fr: ""
   nl: Tijd sinds laatste update
 
 ---
 
-# [GoFileFinder]: *PagesMenuItem.Component contrib/pages/django_admin_templ.go:138:79
-# [GoFileFinder]: getPageBreadcrumbs       contrib/pages/django_admin_views_utils.go:120:32
+# [GoFileFinder]: *PagesMenuItem.Component contrib/pages/django_admin_templ.go:142:79
+# [GoFileFinder]: getPageBreadcrumbs       contrib/pages/django_admin_views_utils.go:121:32
 text: Root Pages
 locales:
+  de: ""
+  fr: ""
   nl: Hoofdpagina's
 
 ---
@@ -2622,14 +2882,18 @@ locales:
 # [GoFileFinder]: listPageHandler contrib/pages/django_admin_views.go:558:23
 text: View Revisions
 locales:
-  nl: "Bekijk revisies"
+  de: ""
+  fr: ""
+  nl: Bekijk revisies
 
 ---
 
 # [GoFileFinder]: getListActions contrib/pages/django_admin_views.go:93:33
-# [GoFileFinder]: getPageActions contrib/pages/django_admin_views_utils.go:144:34
+# [GoFileFinder]: getPageActions contrib/pages/django_admin_views_utils.go:145:34
 text: View Live
 locales:
+  de: ""
+  fr: ""
   nl: Live bekijken
 
 ---
@@ -2637,14 +2901,18 @@ locales:
 # [GoFileFinder]:	getListActions contrib/pages/django_admin_views.go:105:33
 text: Add Child
 locales:
+  de: ""
+  fr: ""
   nl: Kind toevoegen
 
 ---
 
 # [GoFileFinder]: getListActions contrib/pages/django_admin_views.go:126:33
-# [GoFileFinder]: getPageActions contrib/pages/django_admin_views_utils.go:180:33
+# [GoFileFinder]: getPageActions contrib/pages/django_admin_views_utils.go:181:33
 text: History
 locales:
+  de: ""
+  fr: ""
   nl: Geschiedenis
 
 ---
@@ -2652,6 +2920,8 @@ locales:
 # [GoFileFinder]:	getListActions contrib/pages/django_admin_views.go:148:33
 text: Move Page
 locales:
+  de: ""
+  fr: ""
   nl: Verplaats pagina
 
 ---
@@ -2660,6 +2930,8 @@ locales:
 # [GoFileFinder]: listPageHandler contrib/pages/django_admin_views.go:585:23
 text: Publish
 locales:
+  de: ""
+  fr: ""
   nl: Publiceren
 
 ---
@@ -2667,6 +2939,8 @@ locales:
 # [GoFileFinder]:	outdatedPagesHandler contrib/pages/django_admin_views.go:280:28
 text: Only show root nodes
 locales:
+  de: ""
+  fr: ""
   nl: Toon alleen hoofdknooppunten
 
 ---
@@ -2674,6 +2948,8 @@ locales:
 # [GoFileFinder]:	outdatedPagesHandler contrib/pages/django_admin_views.go:285:38
 text: All
 locales:
+  de: ""
+  fr: ""
   nl: Alle
 
 ---
@@ -2681,6 +2957,8 @@ locales:
 # [GoFileFinder]:	outdatedPagesHandler contrib/pages/django_admin_views.go:289:38
 text: Yes
 locales:
+  de: ""
+  fr: ""
   nl: Ja
 
 ---
@@ -2688,6 +2966,8 @@ locales:
 # [GoFileFinder]:	outdatedPagesHandler contrib/pages/django_admin_views.go:293:38
 text: No
 locales:
+  de: ""
+  fr: ""
   nl: Nee
 
 ---
@@ -2695,6 +2975,8 @@ locales:
 # [GoFileFinder]:	outdatedPagesHandler contrib/pages/django_admin_views.go:317:28
 text: Filter by content type
 locales:
+  de: ""
+  fr: ""
   nl: Filter op inhoudstype
 
 ---
@@ -2702,6 +2984,8 @@ locales:
 # [GoFileFinder]:	outdatedPagesHandler contrib/pages/django_admin_views.go:403:25
 text: (%d) Outdated Pages
 locales:
+  de: ""
+  fr: ""
   nl: (%d) Verouderde pagina's
 
 ---
@@ -2709,6 +2993,8 @@ locales:
 # [GoFileFinder]:	outdatedPagesHandler contrib/pages/django_admin_views.go:404:25
 text: List of outdated pages
 locales:
+  de: ""
+  fr: ""
   nl: Lijst van verouderde pagina's
 
 ---
@@ -2717,6 +3003,12 @@ locales:
 text: '%s %q (%d child)'
 plural: '%s %q (%d children)'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: '%s %q (%d kind)'
     1: '%s %q (%d kinderen)'
@@ -2726,6 +3018,8 @@ locales:
 # [GoFileFinder]:	listPageHandler contrib/pages/django_admin_views.go:567:23
 text: Add Child Page
 locales:
+  de: ""
+  fr: ""
   nl: Kindpagina toevoegen
 
 ---
@@ -2733,341 +3027,479 @@ locales:
 # [GoFileFinder]:	listPageHandler contrib/pages/django_admin_views.go:576:23
 text: Move
 locales:
+  de: ""
+  fr: ""
   nl: Verplaatsen
 
 ---
 
 # [GoFileFinder]: choosePageTypeHandler     contrib/pages/django_admin_views.go:701:26
-# [GoFileFinder]: chooseRootPageTypeHandler contrib/pages/django_admin_views_root.go:167:25
+# [GoFileFinder]: chooseRootPageTypeHandler contrib/pages/django_admin_views_root.go:169:25
 text: Choose Page Type
 locales:
+  de: ""
+  fr: ""
   nl: Kies paginatype
 
 ---
 
 # [GoFileFinder]: choosePageTypeHandler     contrib/pages/django_admin_views.go:702:26
-# [GoFileFinder]: chooseRootPageTypeHandler contrib/pages/django_admin_views_root.go:168:25
+# [GoFileFinder]: chooseRootPageTypeHandler contrib/pages/django_admin_views_root.go:170:25
 text: Select the type of page you want to create
 locales:
+  de: ""
+  fr: ""
   nl: Selecteer het type pagina dat je wilt aanmaken
 
 ---
 
 # [GoFileFinder]: addPageHandler     contrib/pages/django_admin_views.go:876:27
-# [GoFileFinder]: addRootPageHandler contrib/pages/django_admin_views_root.go:324:23
+# [GoFileFinder]: addRootPageHandler contrib/pages/django_admin_views_root.go:340:23
 text: Add %q
 locales:
+  de: ""
+  fr: ""
   nl: '%q toevoegen'
 
 ---
 
-# [GoFileFinder]:	editPageHandler contrib/pages/django_admin_views.go:1118:27
+# [GoFileFinder]:	editPageHandler contrib/pages/django_admin_views.go:1101:27
 text: Edit %q
 locales:
+  de: ""
+  fr: ""
   nl: '%q bewerken'
 
 ---
 
-# [GoFileFinder]:	deletePageHandler contrib/pages/django_admin_views.go:1250:26
+# [GoFileFinder]:	deletePageHandler contrib/pages/django_admin_views.go:1237:26
 text: Delete %q
 locales:
+  de: ""
+  fr: ""
   nl: '%q verwijderen'
 
 ---
 
-# [GoFileFinder]:	deletePageHandler contrib/pages/django_admin_views.go:1251:26
+# [GoFileFinder]:	deletePageHandler contrib/pages/django_admin_views.go:1238:26
 text: Are you sure you want to delete this page?
 locales:
+  de: ""
+  fr: ""
   nl: Weet je zeker dat je deze pagina wilt verwijderen?
 
 ---
 
-# [GoFileFinder]:	unpublishPageHandler contrib/pages/django_admin_views.go:1334:26
+# [GoFileFinder]:	unpublishPageHandler contrib/pages/django_admin_views.go:1321:26
 text: Unpublish %q
 locales:
+  de: ""
+  fr: ""
   nl: '%q depubliceren'
 
 ---
 
-# [GoFileFinder]:	unpublishPageHandler contrib/pages/django_admin_views.go:1335:26
+# [GoFileFinder]:	unpublishPageHandler contrib/pages/django_admin_views.go:1322:26
 text: Unpublishing a page will remove it from the live site
 locales:
+  de: ""
+  fr: ""
   nl: Het depubliceren van een pagina verwijdert deze van de live site
 
 ---
 
-# [GoFileFinder]:	publishPageHandler contrib/pages/django_admin_views.go:1419:26
+# [GoFileFinder]:	publishPageHandler contrib/pages/django_admin_views.go:1406:26
 text: Publish %q
 locales:
+  de: ""
+  fr: ""
   nl: '%q publiceren'
 
 ---
 
-# [GoFileFinder]:	publishPageHandler contrib/pages/django_admin_views.go:1420:26
+# [GoFileFinder]:	publishPageHandler contrib/pages/django_admin_views.go:1407:26
 text: Publishing a page will make it live on the site
 locales:
+  de: ""
+  fr: ""
   nl: Een pagina publiceren maakt deze live op de site
 
 ---
 
-# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1446:25
+# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1433:25
 text: New Parent Page
 locales:
+  de: ""
+  fr: ""
   nl: Nieuwe bovenliggende pagina
 
 ---
 
-# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1448:28
+# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1435:28
 text: The new parent page for this page - this cannot be a child of the current page.
 locales:
+  de: ""
+  fr: ""
   nl: De nieuwe bovenliggende pagina voor deze pagina - dit kan geen kind zijn van de huidige pagina.
 
 ---
 
-# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1514:26
+# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1501:26
 text: Move %q
 locales:
+  de: ""
+  fr: ""
   nl: '%q verplaatsen'
 
 ---
 
-# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1515:26
+# [GoFileFinder]:	movePageHandler contrib/pages/django_admin_views.go:1502:26
 text: Moving a page will change its position in the hierarchy
 locales:
+  de: ""
+  fr: ""
   nl: Een pagina verplaatsen zal de positie in de hiërarchie wijzigen.
 
 ---
 
-# [GoFileFinder]:   listRevisionHandler contrib/pages/django_admin_views_revisions.go:92:21
+# [GoFileFinder]:   listRevisionHandler contrib/pages/django_admin_views_revisions.go:99:21
 # [TemplateFinder]: {{ T "Actions" }}   contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:47:152
 text: Actions
 locales:
+  de: ""
+  fr: ""
   nl: Acties
 
 ---
 
-# [GoFileFinder]:	listRevisionHandler contrib/pages/django_admin_views_revisions.go:96:35
+# [GoFileFinder]:	listRevisionHandler contrib/pages/django_admin_views_revisions.go:103:35
 text: Compare to current
 locales:
-  nl: "Vergelijk met huidige"
+  de: ""
+  fr: ""
+  nl: Vergelijk met huidige
 
 ---
 
-# [GoFileFinder]:	listRevisionHandler contrib/pages/django_admin_views_revisions.go:111:35
+# [GoFileFinder]:	listRevisionHandler contrib/pages/django_admin_views_revisions.go:118:35
 text: Compare to
 locales:
-  nl: "Vergelijk met"
+  de: ""
+  fr: ""
+  nl: Vergelijk met
 
 ---
 
-# [GoFileFinder]:	listRevisionHandler contrib/pages/django_admin_views_revisions.go:208:6
+# [GoFileFinder]:	listRevisionHandler contrib/pages/django_admin_views_revisions.go:143:35
+text: Preview
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	listRevisionHandler contrib/pages/django_admin_views_revisions.go:229:6
 text: '%s %q (%d revision)'
 plural: '%s %q (%d revisions)'
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
-    0: "%s %q (%d revisie)"
-    1: "%s %q (%d revisies)"
+    0: '%s %q (%d revisie)'
+    1: '%s %q (%d revisies)'
 
 ---
 
-# [GoFileFinder]: revisionDetailHandler contrib/pages/django_admin_views_revisions.go:401:35
-# [GoFileFinder]: revisionDetailHandler contrib/pages/django_admin_views_revisions.go:407:27
+# [GoFileFinder]: revisionDetailHandler contrib/pages/django_admin_views_revisions.go:404:35
+# [GoFileFinder]: revisionDetailHandler contrib/pages/django_admin_views_revisions.go:410:27
 text: Edit revision for %q
 locales:
-  nl: "Bewerk revisie voor %q"
+  de: ""
+  fr: ""
+  nl: Bewerk revisie voor %q
 
 ---
 
-# [GoFileFinder]: revisionCompareHandler contrib/pages/django_admin_views_revisions.go:549:22
-# [GoFileFinder]: revisionCompareHandler contrib/pages/django_admin_views_revisions.go:567:36
+# [GoFileFinder]: revisionCompareHandler contrib/pages/django_admin_views_revisions.go:553:22
+# [GoFileFinder]: revisionCompareHandler contrib/pages/django_admin_views_revisions.go:571:36
 text: Comparing revisions for %q
 locales:
-  nl: "Revisies vergelijken voor %q"
+  de: ""
+  fr: ""
+  nl: Revisies vergelijken voor %q
 
 ---
 
-# [GoFileFinder]:	revisionCompareHandler contrib/pages/django_admin_views_revisions.go:551:6
+# [GoFileFinder]:	revisionCompareHandler contrib/pages/django_admin_views_revisions.go:555:6
 text: Comparing revision from %s to %s
 locales:
-  nl: "Revisie vergelijken van %s tot %s"
+  de: ""
+  fr: ""
+  nl: Revisie vergelijken van %s tot %s
 
 ---
 
-# [GoFileFinder]:	listRootPageHandler contrib/pages/django_admin_views_root.go:82:22
+# [GoFileFinder]:	listRootPageHandler contrib/pages/django_admin_views_root.go:84:22
 text: Root Pages (%d)
 locales:
+  de: ""
+  fr: ""
   nl: Hoofdpagina's (%d)
 
 ---
 
-# [GoFileFinder]:	listRootPageHandler contrib/pages/django_admin_views_root.go:89:22
+# [GoFileFinder]:	listRootPageHandler contrib/pages/django_admin_views_root.go:91:22
 text: Add Root Page
 locales:
+  de: ""
+  fr: ""
   nl: Hoofdpagina toevoegen
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:193:29
+# [GoFileFinder]:	addRootPageHandler contrib/pages/django_admin_views_root.go:213:42
+text: This page type cannot be a root page
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	addRootPageHandler contrib/pages/django_admin_views_root.go:219:42
+text: Creation of this page type is disallowed
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:183:29
+text: Page
+locales:
+  de: ""
+  fr: ""
+  nl: Pagina
+
+---
+
+# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:184:29
 text: A page in a hierarchical page tree- structure.
 locales:
+  de: ""
+  fr: ""
   nl: Een pagina in een hiërarchische boomstructuur.
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:233:38
+# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:227:38
 text: Outdated Pages
 locales:
+  de: ""
+  fr: ""
   nl: Verouderde pagina's
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:276:19
+# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:270:19
 text: Page Chooser
 locales:
+  de: ""
+  fr: ""
   nl: Paginakeuze
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:451:20
+# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:445:20
 text: Page Revisions
 locales:
-  nl: "Paginarevisies"
+  de: ""
+  fr: ""
+  nl: Paginarevisies
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:482:16
+# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:476:16
 text: Model
 locales:
-  nl: "Model"
+  de: ""
+  fr: ""
+  nl: Model
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:527:26
+# [GoFileFinder]:	NewAppConfig contrib/pages/django_app.go:521:26
 text: Page
 plural: Pages
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: Pagina
     1: Pagina's
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:770:31
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:802:31
 text: Page type %q added
 locales:
+  de: ""
+  fr: ""
   nl: Paginatype %q toegevoegd
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:774:31
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:806:31
 text: Child page type %q added
 locales:
+  de: ""
+  fr: ""
   nl: Onderliggende paginatype %q toegevoegd
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:779:32
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:811:32
 text: Page type %q edited (new revision created)
 locales:
-  nl: "Paginatype %q bewerkt (nieuwe revisie aangemaakt)"
+  de: ""
+  fr: ""
+  nl: Paginatype %q bewerkt (nieuwe revisie aangemaakt)
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:781:31
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:813:31
 text: Page type %q edited
 locales:
+  de: ""
+  fr: ""
   nl: Paginatype %q bewerkt
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:786:32
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:818:32
 text: Page type %q published (new revision created)
 locales:
-  nl: "Paginatype %q gepubliceerd (nieuwe revisie aangemaakt)"
+  de: ""
+  fr: ""
+  nl: Paginatype %q gepubliceerd (nieuwe revisie aangemaakt)
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:788:31
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:820:31
 text: Page type %q published
 locales:
-  nl: "Paginatype %q gepubliceerd"
+  de: ""
+  fr: ""
+  nl: Paginatype %q gepubliceerd
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:793:32
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:825:32
 text: Page type %q and it's children were unpublished
 locales:
+  de: ""
+  fr: ""
   nl: Paginatype %q en zijn onderliggende pagina's zijn depubliceerd.
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:799:32
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:831:32
 text: Page type %q unpublished (new revision created)
 locales:
-  nl: "Paginatype %q depubliceerd (nieuwe revisie aangemaakt)"
+  de: ""
+  fr: ""
+  nl: Paginatype %q depubliceerd (nieuwe revisie aangemaakt)
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:802:31
+# [GoFileFinder]:	*pageLogDefinition.GetLabel contrib/pages/django_app.go:834:31
 text: Page type %q unpublished
 locales:
-  nl: "Paginatype %q depubliceerd"
+  de: ""
+  fr: ""
+  nl: Paginatype %q depubliceerd
 
 ---
 
-# [GoFileFinder]: *pageLogDefinition.GetLabel      contrib/pages/django_app.go:806:30
-# [GoFileFinder]: *pageLogDefinition.FormatMessage contrib/pages/django_app.go:883:30
+# [GoFileFinder]: *pageLogDefinition.GetLabel      contrib/pages/django_app.go:838:30
+# [GoFileFinder]: *pageLogDefinition.FormatMessage contrib/pages/django_app.go:915:30
 text: Unknown page log entry type
 locales:
+  de: ""
+  fr: ""
   nl: Onbekend paginalogboekvermeldingstype
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetActions contrib/pages/django_app.go:818:39
+# [GoFileFinder]:	*pageLogDefinition.GetActions contrib/pages/django_app.go:850:39
 text: Edit Live Page
 locales:
+  de: ""
+  fr: ""
   nl: Live pagina bewerken
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetActions contrib/pages/django_app.go:830:40
+# [GoFileFinder]:	*pageLogDefinition.GetActions contrib/pages/django_app.go:862:40
 text: View Revision
 locales:
-  nl: "Bekijk revisie"
+  de: ""
+  fr: ""
+  nl: Bekijk revisie
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:863:31
+# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:895:31
 text: Page %q with id %v and content type %q was added
 locales:
+  de: ""
+  fr: ""
   nl: Pagina %q met id %v en inhoudstype %q is toegevoegd.
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:867:31
+# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:899:31
 text: Child page %q with id %v and content type %q was added under parent with id %v
 locales:
+  de: ""
+  fr: ""
   nl: Onderliggende pagina %q met id %v en inhoudstype %q is toegevoegd onder ouder met id %v.
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:871:31
+# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:903:31
 text: Page %q with id %v and content type %q was edited
 locales:
+  de: ""
+  fr: ""
   nl: Pagina %q met id %v en inhoudstype %q is bewerkt.
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:875:31
+# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:907:31
 text: Page %q with id %v and content type %q was published
 locales:
+  de: ""
+  fr: ""
   nl: Pagina %q met id %v en inhoudstype %q is gepubliceerd.
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:879:31
+# [GoFileFinder]:	*pageLogDefinition.FormatMessage contrib/pages/django_app.go:911:31
 text: Page %q with id %v and content type %q was unpublished
 locales:
+  de: ""
+  fr: ""
   nl: Pagina %q met id %v en inhoudstype %q is depubliceerd.
 
 ---
@@ -3075,6 +3507,8 @@ locales:
 # [GoFileFinder]:	*Site.Fields contrib/pages/model_site.go:138:22
 text: The unique identifier for the site.
 locales:
+  de: ""
+  fr: ""
   nl: De unieke identificatie voor de site.
 
 ---
@@ -3082,6 +3516,8 @@ locales:
 # [GoFileFinder]:	*Site.Fields contrib/pages/model_site.go:144:23
 text: The name of the site.
 locales:
+  de: ""
+  fr: ""
   nl: De naam van de site.
 
 ---
@@ -3089,6 +3525,8 @@ locales:
 # [GoFileFinder]:	*Site.Fields contrib/pages/model_site.go:152:23
 text: The domain of the site, e.g. example.com.
 locales:
+  de: ""
+  fr: ""
   nl: De domeinnaam van de site, bijv. example.com.
 
 ---
@@ -3096,6 +3534,8 @@ locales:
 # [GoFileFinder]:	*Site.Fields contrib/pages/model_site.go:163:22
 text: The port of the site, e.g. 80 for HTTP or 443 for HTTPS.
 locales:
+  de: ""
+  fr: ""
   nl: De poort van de site, bijv. 80 voor HTTP of 443 voor HTTPS.
 
 ---
@@ -3103,6 +3543,8 @@ locales:
 # [GoFileFinder]:	*Site.Fields contrib/pages/model_site.go:172:22
 text: Whether this site is the default site. Only one site can be the default site.
 locales:
+  de: ""
+  fr: ""
   nl: Of deze site de standaardsite is. Slechts één site kan de standaardsite zijn.
 
 ---
@@ -3110,6 +3552,8 @@ locales:
 # [GoFileFinder]:	*Site.Fields contrib/pages/model_site.go:179:22
 text: The root page of the site. This is the page that will be displayed when the site is accessed.
 locales:
+  de: ""
+  fr: ""
   nl: De hoofdpagina van de site. Dit is de pagina die wordt weergegeven wanneer de site wordt geopend.
 
 ---
@@ -3117,74 +3561,157 @@ locales:
 # [GoFileFinder]:	Serve contrib/pages/pages_serve.go:40:26
 text: 'Method not allowed: %s'
 locales:
+  de: ""
+  fr: ""
   nl: 'Methode niet toegestaan: %s'
+
+---
+
+# [GoFileFinder]: NewAppConfig contrib/pages/settings/app.go:69:37
+# [GoFileFinder]: NewAppConfig contrib/pages/settings/app.go:80:34
+# [GoFileFinder]: NewAppConfig contrib/pages/settings/app.go:83:34
+# [GoFileFinder]: NewAppConfig contrib/settings/app.go:96:36
+# [GoFileFinder]: NewAppConfig contrib/settings/app.go:136:37
+text: Settings
+locales:
+  de: ""
+  fr: ""
+  nl: Instellingen
+
+---
+
+# [GoFileFinder]:	NewAppConfig contrib/pages/settings/app.go:94:34
+text: Sites
+locales:
+  de: ""
+  fr: ""
+  nl: Sites
+
+---
+
+# [GoFileFinder]:	NewAppConfig contrib/pages/settings/app.go:97:25
+text: Site Name
+locales:
+  de: ""
+  fr: ""
+  nl: Sitenaam
+
+---
+
+# [GoFileFinder]:	NewAppConfig contrib/pages/settings/app.go:98:25
+text: Domain
+locales:
+  de: ""
+  fr: ""
+  nl: Domein
+
+---
+
+# [GoFileFinder]:	NewAppConfig contrib/pages/settings/app.go:99:25
+text: Port
+locales:
+  de: ""
+  fr: ""
+  nl: Poort
+
+---
+
+# [GoFileFinder]:	NewAppConfig contrib/pages/settings/app.go:100:25
+text: Is Default Site
+locales:
+  de: ""
+  fr: ""
+  nl: Is standaardsite
+
+---
+
+# [GoFileFinder]: NewAppConfig contrib/pages/settings/app.go:101:25
+# [GoFileFinder]: NewAppConfig contrib/pages/settings/app.go:126:16
+text: Root Page
+locales:
+  de: ""
+  fr: ""
+  nl: Hoofdpagina
 
 ---
 
 # [GoFileFinder]:	NewAppConfig contrib/reports/app.go:49:38
 text: Reports
 locales:
+  de: ""
+  fr: ""
   nl: Rapporten
 
 ---
 
-# [GoFileFinder]:   NewAppConfig         contrib/reports/audit_logs/app.go:98:34
-# [GoFileFinder]:   auditLogView         contrib/reports/audit_logs/app.go:585:23
+# [GoFileFinder]:   NewAppConfig         contrib/reports/audit_logs/app.go:99:34
+# [GoFileFinder]:   auditLogView         contrib/reports/audit_logs/app.go:586:20
 # [TemplateFinder]: {{ T "Audit Logs" }} contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:3:25
 text: Audit Logs
 locales:
+  de: ""
+  fr: ""
   nl: Auditlogs
 
 ---
 
-# [GoFileFinder]:	NewAppConfig contrib/reports/audit_logs/app.go:115:26
+# [GoFileFinder]:	NewAppConfig contrib/reports/audit_logs/app.go:116:26
 text: Event
 plural: Events
 locales:
+  de:
+    0: ""
+    1: ""
+  fr:
+    0: ""
+    1: ""
   nl:
     0: Gebeurtenis
     1: Gebeurtenissen
 
 ---
 
-# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:443:88
+# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:444:88
 text: Debug
 locales:
+  de: ""
+  fr: ""
   nl: Debug
 
 ---
 
-# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:444:88
+# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:445:88
 text: Info
 locales:
+  de: ""
+  fr: ""
   nl: Info
 
 ---
 
-# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:445:88
+# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:446:88
 text: Warning
 locales:
+  de: ""
+  fr: ""
   nl: Waarschuwing
 
 ---
 
-# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:446:88
+# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:447:88
 text: Error
 locales:
+  de: ""
+  fr: ""
   nl: Fout
 
 ---
 
-# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:586:23
-text: View all audit logs
-locales:
-  nl: Bekijk alle auditlogs
-
----
-
-# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:596:33
+# [GoFileFinder]:	auditLogView contrib/reports/audit_logs/app.go:597:33
 text: Download CSV
 locales:
+  de: ""
+  fr: ""
   nl: CSV downloaden
 
 ---
@@ -3192,6 +3719,8 @@ locales:
 # [TemplateFinder]:	{{ T "Audit logs provide a record of actions and events that have occurred within the system." }} contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:20:39
 text: Audit logs provide a record of actions and events that have occurred within the system.
 locales:
+  de: ""
+  fr: ""
   nl: Auditlogs bieden een registratie van acties en gebeurtenissen die zich binnen het systeem hebben voorgedaan.
 
 ---
@@ -3199,6 +3728,8 @@ locales:
 # [TemplateFinder]:	{{ T "They are essential for tracking changes, monitoring user activity, and ensuring compliance with security policies." }} contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:21:39
 text: They are essential for tracking changes, monitoring user activity, and ensuring compliance with security policies.
 locales:
+  de: ""
+  fr: ""
   nl: Ze zijn essentieel voor het volgen van wijzigingen, het monitoren van gebruikersactiviteit en het waarborgen van naleving van beveiligingsbeleid.
 
 ---
@@ -3206,6 +3737,8 @@ locales:
 # [TemplateFinder]:	{{ T "Use the filters panel to narrow down the logs based on specific criteria such as date range, log level, or keywords." }} contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:22:39
 text: Use the filters panel to narrow down the logs based on specific criteria such as date range, log level, or keywords.
 locales:
+  de: ""
+  fr: ""
   nl: Gebruik het filterpaneel om de logs te verfijnen op basis van specifieke criteria, zoals datumbereik, logniveau of trefwoorden.
 
 ---
@@ -3213,27 +3746,35 @@ locales:
 # [TemplateFinder]:	{{ T "No audit logs found" }} contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:87:65
 text: No audit logs found
 locales:
+  de: ""
+  fr: ""
   nl: Geen auditlogs gevonden
 
 ---
 
-# [GoFileFinder]:	BoundDefinition.Actions contrib/reports/audit_logs/registry_definition.go:44:47
+# [GoFileFinder]:	BoundDefinition.Actions contrib/reports/audit_logs/registry_definition.go:49:47
 text: This type only
 locales:
+  de: ""
+  fr: ""
   nl: Alleen dit type
 
 ---
 
-# [GoFileFinder]:	BoundDefinition.Actions contrib/reports/audit_logs/registry_definition.go:50:48
+# [GoFileFinder]:	BoundDefinition.Actions contrib/reports/audit_logs/registry_definition.go:55:48
 text: This model type only
 locales:
+  de: ""
+  fr: ""
   nl: Alleen dit modeltype
 
 ---
 
-# [GoFileFinder]:	BoundDefinition.Actions contrib/reports/audit_logs/registry_definition.go:57:48
+# [GoFileFinder]:	BoundDefinition.Actions contrib/reports/audit_logs/registry_definition.go:62:48
 text: This object only
 locales:
+  de: ""
+  fr: ""
   nl: Alleen dit object
 
 ---
@@ -3241,6 +3782,8 @@ locales:
 # [GoFileFinder]:	*loginFailedDefinition.TypeLabel contrib/reports/audit_logs/registry_definitions.go:23:30
 text: Login failed
 locales:
+  de: ""
+  fr: ""
   nl: Inloggen mislukt
 
 ---
@@ -3248,6 +3791,8 @@ locales:
 # [GoFileFinder]:	*loginFailedDefinition.GetLabel contrib/reports/audit_logs/registry_definitions.go:30:30
 text: Login failed from %s
 locales:
+  de: ""
+  fr: ""
   nl: Inloggen mislukt van %s
 
 ---
@@ -3255,6 +3800,8 @@ locales:
 # [GoFileFinder]:	*loginFailedDefinition.FormatMessage contrib/reports/audit_logs/registry_definitions.go:42:38
 text: 'IP Address: %s'
 locales:
+  de: ""
+  fr: ""
   nl: 'IP-adres: %s'
 
 ---
@@ -3262,6 +3809,8 @@ locales:
 # [GoFileFinder]:	*loginFailedDefinition.FormatMessage contrib/reports/audit_logs/registry_definitions.go:65:38
 text: 'Form data:'
 locales:
+  de: ""
+  fr: ""
   nl: 'Formuliergegevens:'
 
 ---
@@ -3269,6 +3818,8 @@ locales:
 # [GoFileFinder]:	*Revision.FieldDefs contrib/revisions/models.go:102:22
 text: The unique identifier for the revision.
 locales:
+  de: ""
+  fr: ""
   nl: De unieke identificatie voor de revisie.
 
 ---
@@ -3276,6 +3827,8 @@ locales:
 # [GoFileFinder]:	*Revision.FieldDefs contrib/revisions/models.go:107:22
 text: The unique identifier for the object this revision belongs to.
 locales:
+  de: ""
+  fr: ""
   nl: De unieke identificatie voor het object waartoe deze revisie behoort.
 
 ---
@@ -3283,6 +3836,8 @@ locales:
 # [GoFileFinder]:	*Revision.FieldDefs contrib/revisions/models.go:112:22
 text: The content type of the object this revision belongs to.
 locales:
+  de: ""
+  fr: ""
   nl: Het inhoudstype van het object waartoe deze revisie behoort.
 
 ---
@@ -3290,6 +3845,8 @@ locales:
 # [GoFileFinder]:	*Revision.FieldDefs contrib/revisions/models.go:117:22
 text: The data of the revision, this is a snapshot of the object at the time of the revision.
 locales:
+  de: ""
+  fr: ""
   nl: De gegevens van de revisie, dit is een momentopname van het object op het moment van de revisie.
 
 ---
@@ -3297,79 +3854,218 @@ locales:
 # [GoFileFinder]:	*Revision.FieldDefs contrib/revisions/models.go:131:23
 text: The user who created the revision.
 locales:
-  nl: "De gebruiker die de revisie heeft aangemaakt."
+  de: ""
+  fr: ""
+  nl: De gebruiker die de revisie heeft aangemaakt.
 
 ---
 
 # [GoFileFinder]:	*Revision.FieldDefs contrib/revisions/models.go:137:22
 text: The date and time when the revision was created.
 locales:
+  de: ""
+  fr: ""
   nl: De datum en tijd waarop de revisie is aangemaakt.
 
 ---
 
-# [GoFileFinder]: NewAppConfig contrib/settings/app.go:70:38
-# [GoFileFinder]: NewAppConfig contrib/settings/app.go:82:34
-# [GoFileFinder]: NewAppConfig contrib/settings/app.go:85:34
-text: Settings
+# [TemplateFinder]:	{{ T "Editing Site Settings" }} contrib/settings/assets/templates/settings/change.tmpl:3:25
+text: Editing Site Settings
 locales:
-  nl: Instellingen
-
----
-
-# [GoFileFinder]:	NewAppConfig contrib/settings/app.go:96:34
-text: Sites
-locales:
-  nl: Sites
-
----
-
-# [GoFileFinder]:	NewAppConfig contrib/settings/app.go:99:25
-text: Site Name
-locales:
-  nl: Sitenaam
-
----
-
-# [GoFileFinder]:	NewAppConfig contrib/settings/app.go:102:25
-text: Is Default Site
-locales:
-  nl: Is standaardsite
-
----
-
-# [GoFileFinder]: NewAppConfig contrib/settings/app.go:103:25
-# [GoFileFinder]: NewAppConfig contrib/settings/app.go:128:16
-text: Root Page
-locales:
-  nl: Hoofdpagina
-
----
-
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:122:80
-text: <<
-locales:
+  de: ""
+  fr: ""
   nl: ""
 
 ---
 
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:152:80
+# [TemplateFinder]:	{{ T "You are currently editing the websites' settings" }} contrib/settings/assets/templates/settings/change.tmpl:22:21
+text: You are currently editing the websites' settings
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [TemplateFinder]:	{{ T "It is possible you cannot see or change all settings, you may need to contact your administrator for extra permissions." }} contrib/settings/assets/templates/settings/change.tmpl:24:20
+text: It is possible you cannot see or change all settings, you may need to contact your administrator for extra permissions.
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [TemplateFinder]:	{{ T "Any changes made here are instant and will have immediate impact on the website." }} contrib/settings/assets/templates/settings/change.tmpl:25:20
+text: Any changes made here are instant and will have immediate impact on the website.
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [TemplateFinder]:	{{ T "Save Changes" }} contrib/settings/assets/templates/settings/change.tmpl:33:70
+text: Save Changes
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [TemplateFinder]: {{ T "Site Settings" }} contrib/settings/assets/templates/settings/detail.tmpl:3:25
+# [GoFileFinder]:   viewSettings            contrib/settings/views.go:115:20
+text: Site Settings
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [TemplateFinder]:	{{ T "Site settings for the entire website." }} contrib/settings/assets/templates/settings/detail.tmpl:20:21
+text: Site settings for the entire website.
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [TemplateFinder]:	{{ T "It is possible you cannot see all settings, you may need to contact your administrator for extra permissions." }} contrib/settings/assets/templates/settings/detail.tmpl:22:20
+text: It is possible you cannot see all settings, you may need to contact your administrator for extra permissions.
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	viewSettingsEdit contrib/settings/views.go:322:20
+text: Change Site Settings
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	 nyi/workflows/models_state.go:24:32
+text: In Progress
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:  nyi/workflows/models_state.go:25:32
+# [GoFileFinder]:  nyi/workflows/models_task_state.go:24:31
+text: Approved
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	 nyi/workflows/models_state.go:26:32
+text: Needs Changes
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:  nyi/workflows/models_state.go:27:32
+# [GoFileFinder]:  nyi/workflows/models_task_state.go:27:31
+text: Cancelled
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	 nyi/workflows/models_task_state.go:23:31
+text: In progress
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	 nyi/workflows/models_task_state.go:25:31
+text: Rejected
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	 nyi/workflows/models_task_state.go:26:31
+text: Skipped
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	*PreloadBook.FieldDefs queries/test/preload_test/models.go:51:23
+text: Title of the book. This is the title that will be displayed in the UI.
+locales:
+  de: ""
+  fr: ""
+  nl: Titel van het boek. Dit is de titel die in de gebruikersinterface wordt weergegeven.
+
+---
+
+# [GoFileFinder]:	*PreloadAuthor.FieldDefs queries/test/preload_test/models.go:164:23
+text: Name of the author. This is the name that will be displayed in the UI.
+locales:
+  de: ""
+  fr: ""
+  nl: Naam van de auteur. Dit is de naam die in de gebruikersinterface wordt weergegeven.
+
+---
+
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:126:80
+text: <<
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:160:80
 text: Previous
 locales:
+  de: ""
+  fr: ""
   nl: Vorige
 
 ---
 
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:281:81
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:301:81
 text: Next
 locales:
+  de: ""
+  fr: ""
   nl: Volgende
 
 ---
 
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:317:82
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:341:82
 text: '>>'
 locales:
+  de: ""
+  fr: ""
   nl: ""
 
 ---
@@ -3377,6 +4073,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:15:16
 text: Monday
 locales:
+  de: ""
+  fr: ""
   nl: Maandag
 
 ---
@@ -3384,6 +4082,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:16:16
 text: Tuesday
 locales:
+  de: ""
+  fr: ""
   nl: Dinsdag
 
 ---
@@ -3391,6 +4091,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:17:16
 text: Wednesday
 locales:
+  de: ""
+  fr: ""
   nl: Woensdag
 
 ---
@@ -3398,6 +4100,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:18:16
 text: Thursday
 locales:
+  de: ""
+  fr: ""
   nl: Donderdag
 
 ---
@@ -3405,6 +4109,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:19:16
 text: Friday
 locales:
+  de: ""
+  fr: ""
   nl: Vrijdag
 
 ---
@@ -3412,6 +4118,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:20:16
 text: Saturday
 locales:
+  de: ""
+  fr: ""
   nl: Zaterdag
 
 ---
@@ -3419,6 +4127,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:21:16
 text: Sunday
 locales:
+  de: ""
+  fr: ""
   nl: Zondag
 
 ---
@@ -3426,6 +4136,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:23:21
 text: Mon
 locales:
+  de: ""
+  fr: ""
   nl: Ma
 
 ---
@@ -3433,6 +4145,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:24:21
 text: Tue
 locales:
+  de: ""
+  fr: ""
   nl: Di
 
 ---
@@ -3440,6 +4154,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:25:21
 text: Wed
 locales:
+  de: ""
+  fr: ""
   nl: Wo
 
 ---
@@ -3447,6 +4163,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:26:21
 text: Thu
 locales:
+  de: ""
+  fr: ""
   nl: Do
 
 ---
@@ -3454,6 +4172,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:27:21
 text: Fri
 locales:
+  de: ""
+  fr: ""
   nl: Vr
 
 ---
@@ -3461,6 +4181,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:28:21
 text: Sat
 locales:
+  de: ""
+  fr: ""
   nl: Za
 
 ---
@@ -3468,6 +4190,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:29:21
 text: Sun
 locales:
+  de: ""
+  fr: ""
   nl: Zo
 
 ---
@@ -3475,6 +4199,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:31:16
 text: January
 locales:
+  de: ""
+  fr: ""
   nl: Januari
 
 ---
@@ -3482,6 +4208,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:32:16
 text: February
 locales:
+  de: ""
+  fr: ""
   nl: Februari
 
 ---
@@ -3489,6 +4217,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:33:16
 text: March
 locales:
+  de: ""
+  fr: ""
   nl: Maart
 
 ---
@@ -3496,6 +4226,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:34:16
 text: April
 locales:
+  de: ""
+  fr: ""
   nl: April
 
 ---
@@ -3504,6 +4236,8 @@ locales:
 # [GoFileFinder]:  src/core/trans/time.go:48:21
 text: May
 locales:
+  de: ""
+  fr: ""
   nl: Mei
 
 ---
@@ -3511,6 +4245,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:36:16
 text: June
 locales:
+  de: ""
+  fr: ""
   nl: Juni
 
 ---
@@ -3518,6 +4254,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:37:16
 text: July
 locales:
+  de: ""
+  fr: ""
   nl: Juli
 
 ---
@@ -3525,6 +4263,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:38:16
 text: August
 locales:
+  de: ""
+  fr: ""
   nl: Augustus
 
 ---
@@ -3532,6 +4272,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:39:16
 text: September
 locales:
+  de: ""
+  fr: ""
   nl: September
 
 ---
@@ -3539,6 +4281,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:40:16
 text: October
 locales:
+  de: ""
+  fr: ""
   nl: Oktober
 
 ---
@@ -3546,6 +4290,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:41:16
 text: November
 locales:
+  de: ""
+  fr: ""
   nl: November
 
 ---
@@ -3553,6 +4299,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:42:16
 text: December
 locales:
+  de: ""
+  fr: ""
   nl: December
 
 ---
@@ -3560,6 +4308,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:44:21
 text: Jan
 locales:
+  de: ""
+  fr: ""
   nl: Jan
 
 ---
@@ -3567,6 +4317,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:45:21
 text: Feb
 locales:
+  de: ""
+  fr: ""
   nl: Feb
 
 ---
@@ -3574,6 +4326,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:46:21
 text: Mar
 locales:
+  de: ""
+  fr: ""
   nl: Mar
 
 ---
@@ -3581,6 +4335,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:47:21
 text: Apr
 locales:
+  de: ""
+  fr: ""
   nl: Apr
 
 ---
@@ -3588,6 +4344,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:49:21
 text: Jun
 locales:
+  de: ""
+  fr: ""
   nl: Jun
 
 ---
@@ -3595,6 +4353,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:50:21
 text: Jul
 locales:
+  de: ""
+  fr: ""
   nl: Jul
 
 ---
@@ -3602,6 +4362,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:51:21
 text: Aug
 locales:
+  de: ""
+  fr: ""
   nl: Aug
 
 ---
@@ -3609,6 +4371,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:52:21
 text: Sep
 locales:
+  de: ""
+  fr: ""
   nl: Sep
 
 ---
@@ -3616,6 +4380,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:53:21
 text: Oct
 locales:
+  de: ""
+  fr: ""
   nl: Okt
 
 ---
@@ -3623,6 +4389,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:54:21
 text: Nov
 locales:
+  de: ""
+  fr: ""
   nl: Nov
 
 ---
@@ -3630,6 +4398,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:55:21
 text: Dec
 locales:
+  de: ""
+  fr: ""
   nl: Dec
 
 ---
@@ -3637,6 +4407,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:57:11
 text: AM
 locales:
+  de: ""
+  fr: ""
   nl: AM
 
 ---
@@ -3644,6 +4416,8 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:58:11
 text: PM
 locales:
+  de: ""
+  fr: ""
   nl: PM
 
 ---
@@ -3651,26 +4425,81 @@ locales:
 # [GoFileFinder]:	 src/core/trans/time.go:59:11
 text: AM/PM
 locales:
+  de: ""
+  fr: ""
   nl: AM/PM
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Path: %s" .Data.file_value }} src/forms/assets/templates/forms/widgets/file.html:7:33
+# [TemplateFinder]: {{ Translate .Data.context "Path: %s" .Data.file_value }} src/forms/assets/templates/forms/widgets/file.html:10:75
+# [TemplateFinder]: {{ Translate .Data.context "Path: %s" .Data.file_value }} src/forms/assets/templates/forms/widgets/image_file.html:15:75
 text: 'Path: %s'
 locales:
+  de: ""
+  fr: ""
   nl: 'Pad: %s'
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Clear file" }} src/forms/assets/templates/forms/widgets/file.html:13:86
+# [TemplateFinder]: {{ Translate .Data.context "Clear file" }} src/forms/assets/templates/forms/widgets/file.html:16:130
+# [TemplateFinder]: {{ Translate .Data.context "Clear file" }} src/forms/assets/templates/forms/widgets/image_file.html:22:130
 text: Clear file
 locales:
+  de: ""
+  fr: ""
   nl: Wis bestand
 
 ---
 
-# [GoFileFinder]:	*ListObjectMixin[T].Hijack src/views/list/list_mixin.go:195:17
+# [GoFileFinder]:	NewManagementForm src/forms/formsets/formsets.go:78:5
+text: management form %s must be an integer, got %T
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	NewManagementForm src/forms/formsets/formsets.go:83:18
+text: Ensure at least %d forms are submitted (you submitted %d).
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	NewManagementForm src/forms/formsets/formsets.go:89:18
+text: Ensure at most %d forms are submitted (you submitted %d).
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	*BaseFormSet[FORM].setupForm src/forms/formsets/formsets.go:281:25
+text: Delete?
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	*BaseFormSet[FORM].CheckIsValid src/forms/formsets/formsets.go:393:17
+text: You cannot add more forms than the maximum allowed.
+locales:
+  de: ""
+  fr: ""
+  nl: ""
+
+---
+
+# [GoFileFinder]:	*ListObjectMixin[T].Hijack src/views/list/list_mixin.go:199:17
 text: '%d items updated successfully'
 locales:
+  de: ""
+  fr: ""
   nl: '%d items succesvol bijgewerkt.'
 
