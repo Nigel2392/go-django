@@ -17,7 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func init() {

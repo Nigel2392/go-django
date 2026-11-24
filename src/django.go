@@ -39,9 +39,10 @@ import (
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	utils_text "github.com/Nigel2392/go-django/src/utils/text"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
-	"github.com/Nigel2392/mux/middleware"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/hosts"
+	"github.com/Nigel2392/mux/v2/middleware"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/justinas/nosurf"
 	"github.com/pkg/errors"
@@ -189,7 +190,7 @@ func GetAppForModel(model attrs.Definer) (AppConfig, bool) {
 }
 
 func GetIP(r *http.Request) string {
-	return mux.GetIP(
+	return hosts.GetIP(
 		r, ConfigGet(
 			Global.Settings,
 			APPVAR_REQUESTS_PROXIED,

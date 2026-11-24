@@ -41,7 +41,7 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 	"github.com/justinas/nosurf"
 )
 
@@ -794,7 +794,7 @@ func NewAppConfig() (django.AppConfig, error) {
 			shopAdminApi := m.Any("/shop", nil, "shop")
 
 			// admin:ext:shop:generate_coupon
-			shopAdminApi.Post("/coupon/generate", mux.NewHandler(adminviews.GenerateCouponCode), "generate_coupon")
+			shopAdminApi.Post("/coupon/generate", http.HandlerFunc(adminviews.GenerateCouponCode), "generate_coupon")
 		}
 
 		return nil

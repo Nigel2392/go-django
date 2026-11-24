@@ -2,13 +2,14 @@ package main
 
 import (
 	"embed"
+	"net/http"
 
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 //go:embed assets/**
@@ -52,7 +53,7 @@ func NewAppConfig() *CoreAppConfig {
 	}
 	CONFIG.Routing = func(m mux.Multiplexer) {
 
-		m.Handle(mux.GET, "/", mux.NewHandler(IndexView))
+		m.Handle(mux.GET, "/", http.HandlerFunc(IndexView))
 	}
 
 	return CONFIG

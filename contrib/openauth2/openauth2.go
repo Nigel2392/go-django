@@ -33,8 +33,8 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views/list"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2"
 )
 
 const (
@@ -477,8 +477,8 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		)
 
 		var base = m.Any("/auth2", nil, "auth2")
-		base.Any("/logout", mux.NewHandler(App.LogoutHandler), "logout")
-		base.Any("/login", mux.NewHandler(App.LoginHandler), "login")
+		base.Any("/logout", http.HandlerFunc(App.LogoutHandler), "logout")
+		base.Any("/login", http.HandlerFunc(App.LoginHandler), "login")
 
 		var rt = base.Any("/<<provider>>", App.handler(App.AuthHandler), "provider")
 		rt.Any("/callback", App.handler(App.CallbackHandler), "callback")

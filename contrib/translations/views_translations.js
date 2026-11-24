@@ -114,8 +114,8 @@ handle text translations
 */
 
 
-// map[string][]string
-let _translations = {{ .Data.translations | json }};
+// Parse as JSON so every message key, including "__proto__", is an own property.
+let _translations = JSON.parse({{ .Data.translations | json | json }}) ?? {};
 
 // FNV-1a 32-bit over UTF-8 bytes
 function fnv32aBytes(bytes, seed = 0x811c9dc5) {
@@ -145,37 +145,20 @@ function pluralidx(num) {
     return (typeof(v) == 'boolean') ? (v ? 1 : 0) : v;
 }
 
-function _gettext(key) {
-    var translation = _translations[key];
-    if (translation === undefined) {
-        // Fallback to the key itself if no translation is found
-        return key;
+function translatedForm(key, index) {
+    if (Object.prototype.hasOwnProperty.call(_translations, key)) {
+        return _translations[key]?.[index];
     }
+}
 
-    // Return the singular form
-    return translation[0];
+function _gettext(key) {
+    return translatedForm(key, 0) || key;
 }
 
 function _ngettext(singular, plural, n) {
-    let key = fnv32aHashForPlural(singular, plural);
-    let pluralIndex = pluralidx(n);
-    let translation = _translations[key];
-    if (translation === undefined) {
-        if (pluralIndex === 0) {
-            return singular;
-        }
-        return plural;
-    }
-
-    if (pluralIndex < translation.length) {
-        return translation[pluralIndex];
-    }
-
-    if (pluralIndex === 0) {
-        return singular;
-    }
-
-    return plural;
+    const key = fnv32aHashForPlural(singular, plural);
+    const index = pluralidx(n);
+    return translatedForm(key, index) || (index === 0 ? singular : plural);
 }
 
 function gettext(key, ...args) {

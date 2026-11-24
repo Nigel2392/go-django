@@ -9,12 +9,12 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2"
 )
 
-func AppMiddleware(next mux.Handler) mux.Handler {
-	return mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+func AppMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var vars = mux.Vars(r)
 		var appNameSlice = vars["app_name"]
 		var appName string
@@ -39,7 +39,7 @@ func AppMiddleware(next mux.Handler) mux.Handler {
 	})
 }
 
-func RequiredMiddleware(next mux.Handler) mux.Handler {
+func RequiredMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		var user = authentication.Retrieve(req)
 

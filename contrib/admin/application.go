@@ -9,7 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 	"github.com/elliotchance/orderedmap/v2"
 )
 

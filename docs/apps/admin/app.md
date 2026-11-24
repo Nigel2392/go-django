@@ -175,18 +175,18 @@ type ModelHandlerFunc func(func(
 	adminSite *AdminApplication,
 	app *AppDefinition,
 	model *ModelDefinition,
-)) mux.Handler
+)) http.Handler
 
 func NewModelHandler(
 	appnameVar, modelVar string,
 	handler func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition),
 	fail ...func(w http.ResponseWriter, r *http.Request, msg string),
-) mux.Handler
+) http.Handler
 
 func NewInstanceHandler(
 	appnameVar, modelVar, idVar string,
 	handler func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer),
-) mux.Handler
+) http.Handler
 ```
 
 ---

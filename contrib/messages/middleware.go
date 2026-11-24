@@ -2,11 +2,9 @@ package messages
 
 import (
 	"net/http"
-
-	"github.com/Nigel2392/mux"
 )
 
-func MessagesMiddleware(next mux.Handler) mux.Handler {
+func MessagesMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if app.initBackend == nil {
 			next.ServeHTTP(w, r)

@@ -30,7 +30,7 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 var ViewOrderList = generic.ListViewConfig[*orders.Order]{

@@ -3,6 +3,7 @@ package translations
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"text/template"
 
 	_ "embed"
@@ -53,10 +54,13 @@ func translationCatalog(w http.ResponseWriter, req *http.Request) {
 		// Set up default header when none was found
 		header = TranslationHeaderLocale{
 			NumPluralForms:  2,
-			PluralRule:      "n != 1",
 			ShortTimeFormat: trans.SHORT_TIME_FORMAT,
 			LongTimeFormat:  trans.LONG_TIME_FORMAT,
 		}
+	}
+
+	if strings.TrimSpace(header.PluralRule) == "" {
+		header.PluralRule = "n != 1"
 	}
 
 	var translations = translatorApp.translations[foundChecks[0]]

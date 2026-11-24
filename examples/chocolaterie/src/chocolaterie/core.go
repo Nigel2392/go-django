@@ -15,7 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 //go:embed assets/**
@@ -32,7 +32,7 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	cfg.Routing = func(m mux.Multiplexer) {
-		m.Handle(mux.GET, "/", mux.NewHandler(Index))
+		m.Handle(mux.GET, "/", http.HandlerFunc(Index))
 	}
 
 	pages.SetRoutePrefix("/chocolaterie")

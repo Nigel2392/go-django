@@ -27,7 +27,6 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
@@ -196,7 +195,7 @@ func newCouponTestClient(t *testing.T) couponTestClient {
 		ErrRedeemed:           func(context.Context) string { return couponLimit },
 	}
 	return couponTestClient{
-		handler: sessions.SessionMiddleware(store)(mux.NewHandler(handler.RedeemCode)),
+		handler: sessions.SessionMiddleware(store)(http.HandlerFunc(handler.RedeemCode)),
 		cookie:  &http.Cookie{Name: store.Cookie.Name, Value: token},
 	}
 }

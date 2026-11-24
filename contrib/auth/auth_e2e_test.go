@@ -28,9 +28,9 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func createTestUser(t *testing.T, ctx context.Context, email, username, rawPassword string, active, admin bool) *auth.User {
@@ -522,11 +522,11 @@ func TestAuthApp_Check(t *testing.T) {
 
 type mapSettings map[string]any
 
-func (m mapSettings) App() *django.Application            { return django.Global }
-func (m mapSettings) Bind(app *django.Application) error  { return nil }
-func (m mapSettings) Set(key string, val interface{})     { m[key] = val }
-func (m mapSettings) Get(key string) (interface{}, bool)  { v, ok := m[key]; return v, ok }
-func (m mapSettings) Delete(key string)                   { delete(m, key) }
+func (m mapSettings) App() *django.Application           { return django.Global }
+func (m mapSettings) Bind(app *django.Application) error { return nil }
+func (m mapSettings) Set(key string, val interface{})    { m[key] = val }
+func (m mapSettings) Get(key string) (interface{}, bool) { v, ok := m[key]; return v, ok }
+func (m mapSettings) Delete(key string)                  { delete(m, key) }
 
 func TestMiddlewareAndUserFromRequest_EdgeCases(t *testing.T) {
 	ctx := t.Context()
@@ -738,7 +738,7 @@ func TestE2E_HTTP_AuthFlows(t *testing.T) {
 	auth.Auth.LoginWithEmail = false
 
 	// Register test helper routes on Global.Mux once for this test
-	django.Global.Mux.Handle(mux.GET, "/e2e-auth/whoami", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.GET, "/e2e-auth/whoami", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		u := auth.UserFromRequest(r)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"username":      u.Username,
@@ -746,7 +746,7 @@ func TestE2E_HTTP_AuthFlows(t *testing.T) {
 			"admin":         u.IsAdmin(),
 		})
 	}))
-	django.Global.Mux.Handle(mux.POST, "/e2e-auth/session-login", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.POST, "/e2e-auth/session-login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		idStr := r.URL.Query().Get("id")
 		uid, err := strconv.ParseUint(idStr, 10, 64)
 		if err != nil {
@@ -758,10 +758,10 @@ func TestE2E_HTTP_AuthFlows(t *testing.T) {
 		sess.Set(auth.SESSION_COOKIE_NAME, uid)
 		w.WriteHeader(http.StatusOK)
 	}))
-	django.Global.Mux.Handle(mux.GET, "/e2e-auth/fail", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.GET, "/e2e-auth/fail", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		autherrors.Fail(http.StatusUnauthorized, "login required", r.URL.RequestURI())
 	}))
-	django.Global.Mux.Handle(mux.GET, "/e2e-auth/custom-view", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.GET, "/e2e-auth/custom-view", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v := auth.LoginView(&views.BaseView{
 			BaseTemplateKey: "auth",
 			TemplateName:    "auth/login.tmpl",
@@ -775,7 +775,7 @@ func TestE2E_HTTP_AuthFlows(t *testing.T) {
 		}
 		views.Invoke(v, w, r)
 	}))
-	django.Global.Mux.Handle(mux.POST, "/e2e-auth/custom-view", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.POST, "/e2e-auth/custom-view", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v := auth.LoginView(&views.BaseView{
 			BaseTemplateKey: "auth",
 			TemplateName:    "auth/login.tmpl",
@@ -789,7 +789,7 @@ func TestE2E_HTTP_AuthFlows(t *testing.T) {
 		}
 		views.Invoke(v, w, r)
 	}))
-	django.Global.Mux.Handle(mux.GET, "/e2e-auth/target", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.GET, "/e2e-auth/target", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("target:" + r.URL.Path))
 	}))
 

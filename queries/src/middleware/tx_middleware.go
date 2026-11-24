@@ -8,7 +8,6 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux"
 )
 
 type TransactionOptions struct {
@@ -16,7 +15,7 @@ type TransactionOptions struct {
 }
 
 type transactionMiddleware struct {
-	next mux.Handler
+	next http.Handler
 	opts TransactionOptions
 }
 
@@ -57,8 +56,8 @@ func (m *transactionMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Reque
 	}
 }
 
-func TransactionMiddleware(opts TransactionOptions) func(next mux.Handler) mux.Handler {
-	return func(next mux.Handler) mux.Handler {
+func TransactionMiddleware(opts TransactionOptions) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
 		return &transactionMiddleware{next: next}
 	}
 }

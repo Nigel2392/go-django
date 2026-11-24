@@ -167,7 +167,7 @@ Wrap any `View` as a standard `http.Handler` with `views.Serve(view)`, or call `
 ```go
 import (
     "github.com/Nigel2392/go-django/src/views"
-    "github.com/Nigel2392/mux"
+    "github.com/Nigel2392/mux/v2"
 )
 
 myCustomApp.Routing = func(m mux.Multiplexer) {

@@ -16,7 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 //go:embed assets/**
@@ -65,7 +65,7 @@ func NewAppConfig() django.AppConfig {
 
 	app.Routing = func(m mux.Multiplexer) {
 		var chooserRoot = m.Any("chooser/<<model_key>>/<<chooser_key>>", nil, "chooser")
-		chooserRoot.Handle(mux.ANY, "list/", mux.NewHandler(viewChooserList), "list")
+		chooserRoot.Handle(mux.ANY, "list/", http.HandlerFunc(viewChooserList), "list")
 	}
 
 	return app

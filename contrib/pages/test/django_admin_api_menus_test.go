@@ -8,7 +8,6 @@ import (
 	_ "unsafe"
 
 	"github.com/Nigel2392/go-django/contrib/pages"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/pkg/errors"
 )
@@ -198,7 +197,7 @@ func TestPageMenuHandler(t *testing.T) {
 			var m = authentication.AddUserMiddleware(func(r *http.Request) authentication.User {
 				return &DummyUser{IsAdministrator: true}
 			})
-			var handler = m(mux.NewHandler(pageMenuHandler))
+			var handler = m(http.HandlerFunc(pageMenuHandler))
 			handler.ServeHTTP(w, r)
 
 			// if w.s != http.StatusOK {

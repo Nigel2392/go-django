@@ -14,7 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/forms/media"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pkg/errors"
 	"golang.org/x/net/html"

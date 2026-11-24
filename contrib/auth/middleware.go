@@ -10,9 +10,9 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware"
 )
 
 const SESSION_COOKIE_NAME = "user_authentication"
@@ -80,7 +80,7 @@ func userFromRequestPure(r *http.Request) authentication.User {
 }
 
 // Add a user to a request, if one exists in the session.
-func AddUserMiddleware() mux.Middleware {
+func AddUserMiddleware() middleware.Middleware {
 	return django.NonStaticMiddleware(authentication.AddUserMiddleware(
 		userFromRequestPure,
 	))

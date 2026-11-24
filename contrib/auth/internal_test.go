@@ -25,7 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/views"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 type mockCommandManager struct {
@@ -41,13 +41,13 @@ type mockCommandManager struct {
 	protErrOnce     bool
 }
 
-func (m *mockCommandManager) Log(message string)               { m.out.WriteString(message + "\n") }
-func (m *mockCommandManager) Logf(format string, args ...any)  {}
-func (m *mockCommandManager) Stdout() io.Writer                { return &m.out }
-func (m *mockCommandManager) Stderr() io.Writer                { return &m.err }
-func (m *mockCommandManager) Stdin() io.Reader                 { return strings.NewReader("") }
-func (m *mockCommandManager) Registry() command.Registry       { return m.reg }
-func (m *mockCommandManager) Command() command.Command         { return m.cmd }
+func (m *mockCommandManager) Log(message string)              { m.out.WriteString(message + "\n") }
+func (m *mockCommandManager) Logf(format string, args ...any) {}
+func (m *mockCommandManager) Stdout() io.Writer               { return &m.out }
+func (m *mockCommandManager) Stderr() io.Writer               { return &m.err }
+func (m *mockCommandManager) Stdin() io.Reader                { return strings.NewReader("") }
+func (m *mockCommandManager) Registry() command.Registry      { return m.reg }
+func (m *mockCommandManager) Command() command.Command        { return m.cmd }
 func (m *mockCommandManager) Input(question string) (string, error) {
 	if m.inputErrOnce {
 		m.inputErrOnce = false

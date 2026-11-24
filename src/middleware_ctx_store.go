@@ -3,8 +3,6 @@ package django
 import (
 	"context"
 	"net/http"
-
-	"github.com/Nigel2392/mux"
 )
 
 type middlewareContextStoreKey struct{}
@@ -126,8 +124,8 @@ func ContextDataStore(requestOrContext any) map[any]interface{} {
 // This is a global datastore, on a per request basis - the underlying datastructure is a map[string]interface{}.
 //
 // This allows for some flexibility with caching from lower context levels.
-func ContextDataStoreMiddleware(next mux.Handler) mux.Handler {
-	return mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+func ContextDataStoreMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var ctx = context.WithValue(r.Context(), middlewareContextStoreKey{}, newDatastore())
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

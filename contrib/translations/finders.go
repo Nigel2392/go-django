@@ -62,7 +62,8 @@ var (
 			return "", "", 0, 0, fmt.Errorf("expected string literals for Translate at indices %d and %d", idx+1, idx+2)
 		},
 		"P": func(tokens []string, colIdx, idx int) (string, string, int, int, error) {
-			if idx+2 >= len(tokens) || !(strings.HasPrefix(tokens[idx+1], `"`) || strings.HasPrefix(tokens[idx+1], "`")) || !(strings.HasPrefix(tokens[idx+2], `"`) || strings.HasPrefix(tokens[idx+2], `'`)) {
+			if idx+2 >= len(tokens) || !strings.HasPrefix(tokens[idx+1], `"`) && !strings.HasPrefix(tokens[idx+1], "`") ||
+				!strings.HasPrefix(tokens[idx+2], `"`) && !strings.HasPrefix(tokens[idx+2], "`") {
 				return "", "", 0, 0, fmt.Errorf("expected string literals for P at indices %d and %d", idx+1, idx+2)
 			}
 
@@ -74,7 +75,7 @@ var (
 			if err != nil {
 				return "", "", 0, 0, fmt.Errorf("failed to unquote plural string %q: %w", tokens[idx+2], err)
 			}
-			return singular, plural, idx + 2, colIdx, nil
+			return singular, plural, colIdx, idx + 2, nil
 		},
 	}
 

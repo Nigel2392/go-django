@@ -7,9 +7,9 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/except"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware"
 )
 
 func UnauthenticatedUser() *User {
@@ -67,6 +67,6 @@ func userFromRequestPure(r *http.Request) authentication.User {
 }
 
 // Add a user to a request, if one exists in the session.
-func AddUserMiddleware() mux.Middleware {
+func AddUserMiddleware() middleware.Middleware {
 	return authentication.AddUserMiddleware(userFromRequestPure)
 }

@@ -34,7 +34,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	gosigs "github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 	"github.com/Nigel2392/versatile/clone"
 )
 

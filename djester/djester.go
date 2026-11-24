@@ -18,9 +18,9 @@ import (
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2"
 )
 
 /*
@@ -105,7 +105,7 @@ type (
 		Name    string
 		Method  string
 		Route   string
-		Handler mux.Handler
+		Handler http.Handler
 	}
 	TesterAuth struct {
 		UnauthenticatedUser func() authentication.User
@@ -218,8 +218,8 @@ func (d *Tester) Setup(t TB) error {
 		)
 
 		var djester = d.App.Mux.Get("/djester/auth", nil, "djester")
-		djester.Post("/login/<<map_key>>", mux.NewHandler(d.loginHandler), "login")
-		djester.Post("/logout", mux.NewHandler(d.logoutHandler), "logout")
+		djester.Post("/login/<<map_key>>", http.HandlerFunc(d.loginHandler), "login")
+		djester.Post("/logout", http.HandlerFunc(d.logoutHandler), "logout")
 	}
 
 	var server, err = d.App.TestServe(true)

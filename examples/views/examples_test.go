@@ -17,7 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	dj_views "github.com/Nigel2392/go-django/src/views"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func TestExampleViews(t *testing.T) {

@@ -257,7 +257,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views/list"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 //go:embed assets/**
@@ -268,8 +268,8 @@ func NewAppConfig() django.AppConfig {
 
 	cfg.Routing = func(m mux.Multiplexer) {
 		todosGroup := m.Any("/todos", nil, "todos")
-		todosGroup.Get("/list", mux.NewHandler(ListTodos), "list")
-		todosGroup.Post("/<<id>>/done", mux.NewHandler(MarkTodoDone), "done")
+		todosGroup.Get("/list", http.HandlerFunc(ListTodos), "list")
+		todosGroup.Post("/<<id>>/done", http.HandlerFunc(MarkTodoDone), "done")
 	}
 
 	cfg.ModelObjects = []attrs.Definer{
@@ -384,7 +384,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/pagination"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func ListTodos(w http.ResponseWriter, r *http.Request) {

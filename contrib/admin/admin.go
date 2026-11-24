@@ -36,13 +36,13 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type ModelHandlerFunc func(func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition)) mux.Handler
+type ModelHandlerFunc func(func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition)) http.Handler
 
 var (
 	//go:embed assets/**
@@ -261,21 +261,21 @@ func NewAppConfig() django.AppConfig {
 
 		// First initialize routes which do not require authentication
 		AdminSite.Route.Get(
-			"login/", mux.NewHandler(loginHandler),
+			"login/", http.HandlerFunc(loginHandler),
 			"login", // admin:login
 		)
 		AdminSite.Route.Post(
-			"login/", mux.NewHandler(loginHandler),
+			"login/", http.HandlerFunc(loginHandler),
 			"login", // admin:login
 		)
 
 		AdminSite.Route.Get(
-			"logout/", mux.NewHandler(logoutHandler),
+			"logout/", http.HandlerFunc(logoutHandler),
 			"logout", // admin:logout
 		)
 
 		AdminSite.Route.Get(
-			"relogin/", mux.NewHandler(reloginHandler),
+			"relogin/", http.HandlerFunc(reloginHandler),
 			"relogin", // admin:relogin
 		)
 
@@ -627,11 +627,11 @@ func setupSearchWithModel(r *http.Request, s *searches.SearchOptions, model *Mod
 	}
 }
 
-func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handler {
-	return mux.NewHandler(handler)
+func newHandler(handler func(w http.ResponseWriter, r *http.Request)) http.Handler {
+	return http.HandlerFunc(handler)
 }
 
-func NewInstanceHandler(appnameVar, modelVar, idVar string, handler func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer)) mux.Handler {
+func NewInstanceHandler(appnameVar, modelVar, idVar string, handler func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer)) http.Handler {
 	return newHandler(func(w http.ResponseWriter, req *http.Request) {
 		var (
 			vars      = mux.Vars(req)
@@ -670,7 +670,7 @@ func NewInstanceHandler(appnameVar, modelVar, idVar string, handler func(w http.
 	})
 }
 
-func NewModelHandler(appnameVar, modelVar string, handler func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition), fail ...func(w http.ResponseWriter, r *http.Request, msg string)) mux.Handler {
+func NewModelHandler(appnameVar, modelVar string, handler func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition), fail ...func(w http.ResponseWriter, r *http.Request, msg string)) http.Handler {
 	if len(fail) == 0 {
 		fail = append(fail, func(w http.ResponseWriter, r *http.Request, msg string) {
 			Home(w, r, msg)
@@ -710,7 +710,7 @@ func NewModelHandler(appnameVar, modelVar string, handler func(w http.ResponseWr
 	})
 }
 
-func newAppHandler(handler func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition)) mux.Handler {
+func newAppHandler(handler func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition)) http.Handler {
 	return newHandler(func(w http.ResponseWriter, req *http.Request) {
 		var vars = mux.Vars(req)
 		var appName = vars.Get("app_name")

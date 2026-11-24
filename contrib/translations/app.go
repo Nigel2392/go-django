@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"reflect"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 //go:embed translations.yml
@@ -60,7 +61,7 @@ func NewAppConfig() django.AppConfig {
 
 		m.Get(
 			"/i18n/translations.js",
-			mux.NewHandler(translationCatalog),
+			http.HandlerFunc(translationCatalog),
 			"translations.js",
 		)
 	}
@@ -136,6 +137,7 @@ func NewAppConfig() django.AppConfig {
 				)
 			}
 
+			previousLocales := hdr.Locales
 			translationsList, err = readTranslationsYAML(
 				file, hdr, translationsList,
 			)
@@ -148,6 +150,13 @@ func NewAppConfig() django.AppConfig {
 			}
 
 			file.Close()
+
+			if previousLocales != nil && hdr.Locales != previousLocales {
+				for locale := hdr.Locales.Front(); locale != nil; locale = locale.Next() {
+					previousLocales.Set(locale.Key, locale.Value)
+				}
+				hdr.Locales = previousLocales
+			}
 		}
 
 		cfg.translationMatches = translationsList

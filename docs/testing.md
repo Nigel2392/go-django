@@ -115,7 +115,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/djester"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
@@ -136,7 +136,7 @@ func TestDashboard(t *testing.T) {
 				Name:   "home",
 				Method: "GET",
 				Route:  "/",
-				Handler: mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Header().Set("Content-Type", "text/html")
 					w.Write([]byte(`<h1 class="title">Welcome</h1>`))
 				}),

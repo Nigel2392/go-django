@@ -18,7 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2/hosts"
 )
 
 const DEFAULT_SITE_KEY = "default_site"
@@ -30,10 +30,10 @@ type siteContextKey struct{}
 //			WithContext(r.Context()).
 //			SelectRelated("Root").
 //			Annotate("includedInFilter", expr.Case(
-//				expr.When("Domain", mux.GetHost(r)).Then(1),
+//				expr.When("Domain", hosts.GetHost(r)).Then(1),
 //				expr.When("Default", true).Then(2),
 //				expr.When(expr.EXISTS(queries.GetQuerySet(&Site{}).
-//					Filter("Domain", mux.GetHost(r)).
+//					Filter("Domain", hosts.GetHost(r)).
 //					Filter("AllowFallback", true),
 //				)).Then(3),
 //			).Default(0)).
@@ -65,7 +65,7 @@ func SiteForRequest(requestOrContext any, fn ...func(qs *queries.QuerySet[*Site]
 	switch v := requestOrContext.(type) {
 	case *http.Request:
 		ctx = v.Context()
-		host = mux.GetHost(v)
+		host = hosts.GetHost(v)
 	case context.Context:
 		ctx = v
 	case nil:

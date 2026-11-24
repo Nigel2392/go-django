@@ -3,6 +3,7 @@ package apps
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
@@ -12,7 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 var (
@@ -78,7 +79,7 @@ func NewAppConfig(name string) *AppConfig {
 	return app
 }
 
-func NewAppConfigForHandler(name string, method string, path string, handler mux.Handler) *AppConfig {
+func NewAppConfigForHandler(name string, method string, path string, handler http.Handler) *AppConfig {
 	var app = NewAppConfig(name)
 	app.Routing = func(m mux.Multiplexer) {
 		m.Handle(method, path, handler, name)

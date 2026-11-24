@@ -1,6 +1,6 @@
 # Routing
 
-Routing maps HTTP methods and URL patterns to handlers and middleware using `github.com/Nigel2392/mux`. Routes for an app are typically registered inside its `Routing` function (`AppConfig.BuildRouting`).
+Routing maps HTTP methods and URL patterns to handlers and middleware using `github.com/Nigel2392/mux/v2`. Routes for an app are typically registered inside its `Routing` function (`AppConfig.BuildRouting`).
 
 ## The `mux.Multiplexer` Interface
 
@@ -39,8 +39,8 @@ Any `*mux.Route` returned by `Handle`, `HandleFunc`, `Any`, `Get`, `Post`, `Put`
 
 ```go
 myCustomApp.Routing = func(m mux.Multiplexer) {
-    m.Handle(mux.GET, "/", mux.NewHandler(Index), "index")
-    m.Get("/about", mux.NewHandler(About), "about")
+    m.Handle(mux.GET, "/", http.HandlerFunc(Index), "index")
+    m.Get("/about", http.HandlerFunc(About), "about")
     m.HandleFunc(mux.POST, "/contact", Contact, "contact")
 }
 ```
@@ -50,7 +50,7 @@ myCustomApp.Routing = func(m mux.Multiplexer) {
 Use `<<name>>` segments in URL patterns to capture dynamic path parameters:
 
 ```go
-m.Get("/user/<<id>>", mux.NewHandler(User), "user")
+m.Get("/user/<<id>>", http.HandlerFunc(User), "user")
 ```
 
 Retrieve captured path parameters with `mux.Vars(r)` (`mux.Variables`):
@@ -78,7 +78,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 Use `*` in a URL pattern to capture trailing path segments under the `"*"` variable key:
 
 ```go
-m.Get("/files/*", mux.NewHandler(Files), "files")
+m.Get("/files/*", http.HandlerFunc(Files), "files")
 ```
 
 ```go
@@ -95,8 +95,8 @@ Pass an optional route name as the final argument to `Handle` or method helpers.
 
 ```go
 myCustomApp.Routing = func(m mux.Multiplexer) {
-    blog := m.Any("/blog", mux.NewHandler(BlogIndex), "blog")
-    blog.Get("/post/<<slug>>", mux.NewHandler(BlogPost), "detail")
+    blog := m.Any("/blog", http.HandlerFunc(BlogIndex), "blog")
+    blog.Get("/post/<<slug>>", http.HandlerFunc(BlogPost), "detail")
 }
 ```
 
@@ -125,8 +125,8 @@ type Middleware = func(Handler) Handler
 
 ```go
 myCustomApp.Routing = func(m mux.Multiplexer) {
-    m.Use(func(next mux.Handler) mux.Handler {
-        return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+    m.Use(func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
             // Logic before the handler
             next.ServeHTTP(w, req)
             // Logic after the handler
@@ -141,7 +141,7 @@ myCustomApp.Routing = func(m mux.Multiplexer) {
 - `route.RunsMiddleware(false)`: Sets `route.DisabledMiddleware = true` so `PreMiddleware`, `app.Mux` middleware, and `route.Middleware` are skipped for that route. (Outer server wrappers added in `app.Serve()`, such as `RequestSignalMiddleware` and `nosurf`, still wrap `a.Mux`.)
 
 ```go
-route := m.Get("/health", mux.NewHandler(Health), "health")
+route := m.Get("/health", http.HandlerFunc(Health), "health")
 route.RunsMiddleware(false)
 ```
 
@@ -172,7 +172,7 @@ Go-Django automatically wires built-in middleware during `app.Initialize()` and 
 
 ### Client IP (`django.GetIP`)
 
-`django.GetIP(r *http.Request) string` returns the client IP using `mux.GetIP`, automatically passing `django.APPVAR_REQUESTS_PROXIED` from settings.
+`django.GetIP(r *http.Request) string` returns the client IP using `hosts.GetIP`, automatically passing `django.APPVAR_REQUESTS_PROXIED` from settings.
 
 ### Per-Request Context Data Store
 
@@ -193,7 +193,7 @@ Static and media routes run `django.MarkStaticRouteMiddleware` during `route.Pre
 
 - `django.IsStaticRouteRequest(r *http.Request) bool`: Reports whether the request was marked as a static/media route.
 - `django.RequestWithStaticMark(r *http.Request, isStatic bool) *http.Request`: Sets or updates the static route mark on the request context.
-- `django.NonStaticMiddleware(middleware mux.Middleware) mux.Middleware`: Wraps a middleware so it is bypassed when `IsStaticRouteRequest(r)` is `true` (used by apps such as `session`).
+- `django.NonStaticMiddleware(middleware middleware.Middleware) middleware.Middleware`: Wraps a middleware so it is bypassed when `IsStaticRouteRequest(r)` is `true` (used by apps such as `session`).
 
 ### Request Signals (`core.SIGNAL_BEFORE_REQUEST` / `core.SIGNAL_AFTER_REQUEST`)
 

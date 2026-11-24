@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2/middleware"
 )
 
 var DEFAULT_LOGGING_ENABLED = true
@@ -52,7 +52,7 @@ func RequestWithStaticMark(r *http.Request, isStatic bool) *http.Request {
 // This should be used for route handlers, not as a global mux middleware.
 // This middleware should be executed before any other middleware that needs to check if the route is static,
 // which can be done by adding the middleware using [mux.Route.Preprocess].
-func MarkStaticRouteMiddleware(next mux.Handler) mux.Handler {
+func MarkStaticRouteMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, RequestWithStaticMark(r, true))
 	})
@@ -61,8 +61,8 @@ func MarkStaticRouteMiddleware(next mux.Handler) mux.Handler {
 // NonStaticMiddleware is a middleware that skips the middleware if the request is a static route request.
 //
 // This is useful for middleware that should not be executed for static routes, such as the logger middleware.
-func NonStaticMiddleware(middleware mux.Middleware) mux.Middleware {
-	return func(next mux.Handler) mux.Handler {
+func NonStaticMiddleware(middleware middleware.Middleware) middleware.Middleware {
+	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if IsStaticRouteRequest(r) {
 				next.ServeHTTP(w, r)

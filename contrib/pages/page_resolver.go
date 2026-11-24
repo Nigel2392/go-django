@@ -2,6 +2,7 @@ package pages
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
@@ -9,16 +10,16 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 var (
 	_ mux.Resolver = &pageRouteResolver{}
-	_ mux.Handler  = &pageRouteResolver{}
+	_ http.Handler = &pageRouteResolver{}
 )
 
 type pageRouteResolver struct {
-	mux.Handler
+	http.Handler
 }
 
 // This is a custom resolver for page routes that allows us to reverse the URL of a page

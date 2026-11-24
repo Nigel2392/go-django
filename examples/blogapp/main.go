@@ -31,7 +31,6 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/secrets"
 	_ "github.com/Nigel2392/go-django/src/core/secrets"
-	"github.com/Nigel2392/mux"
 	"github.com/google/uuid"
 
 	"github.com/Nigel2392/go-django/contrib/revisions"
@@ -134,7 +133,7 @@ func main() {
 	//
 	// Kinda cool? Yes. Useless? For sure.
 	var devToolsID = uuid.NewString()
-	app.Mux.Any("/.well-known/appspecific/com.chrome.devtools.json", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+	app.Mux.Any("/.well-known/appspecific/com.chrome.devtools.json", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 

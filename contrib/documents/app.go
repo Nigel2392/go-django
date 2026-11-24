@@ -23,7 +23,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 type (
@@ -186,12 +186,12 @@ func NewAppConfig(opts *Options) django.AppConfig {
 		var g = m.Any("/documents", nil, "documents")
 		g.Get(
 			"/<<id>>",
-			mux.NewHandler(app.serveDocumentByIDView),
+			http.HandlerFunc(app.serveDocumentByIDView),
 			"serve_id",
 		)
 		g.Get(
 			"/serve/*",
-			mux.NewHandler(app.serveDocumentByPathView),
+			http.HandlerFunc(app.serveDocumentByPathView),
 			"serve",
 		)
 	}

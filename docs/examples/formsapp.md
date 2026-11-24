@@ -77,7 +77,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 //go:embed assets/**
@@ -87,9 +87,9 @@ func NewAppConfig() django.AppConfig {
 	cfg := apps.NewAppConfig("core")
 
 	cfg.Routing = func(m mux.Multiplexer) {
-		m.Handle(mux.GET, "/", mux.NewHandler(Index), "index")
-		m.Handle(mux.GET, "/contact", mux.NewHandler(Contact), "contact")
-		m.Handle(mux.POST, "/contact", mux.NewHandler(Contact), "contact")
+		m.Handle(mux.GET, "/", http.HandlerFunc(Index), "index")
+		m.Handle(mux.GET, "/contact", http.HandlerFunc(Contact), "contact")
+		m.Handle(mux.POST, "/contact", http.HandlerFunc(Contact), "contact")
 	}
 
 	cfg.Init = func(settings django.Settings) error {

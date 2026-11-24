@@ -96,7 +96,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func NewAppConfig() django.AppConfig {
@@ -124,7 +124,7 @@ func NewAppConfig() django.AppConfig {
 		// Mounted at /admin/ext/reports/summary/ -> reverse name "admin:ext:reports:summary"
 		adminApp.Routing = func(ext mux.Multiplexer) {
 			g := ext.Any("/reports", nil, "reports")
-			g.Get("/summary/", mux.NewHandler(summaryHandler), "summary")
+			g.Get("/summary/", http.HandlerFunc(summaryHandler), "summary")
 		}
 
 		// Add custom submenu link alongside registered models

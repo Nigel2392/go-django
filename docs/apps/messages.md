@@ -16,7 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/session"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 			apps.NewAppConfigForHandler(
 				"myapp",
 				mux.GET, "/myapp",
-				mux.NewHandler(myView),
+				http.HandlerFunc(myView),
 			),
 		),
 	)

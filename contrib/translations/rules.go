@@ -7,6 +7,13 @@ type pluralRule struct {
 	ltf string // long time format
 }
 
+// Parenthesize nested ternaries so Go's rule evaluator and JavaScript
+// both evaluate the same branches.
+const (
+	slavicPluralRule      = "(n % 10 == 1 && n % 100 != 11) ? 0 : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2)"
+	czechSlovakPluralRule = "(n == 1) ? 0 : ((n >= 2 && n <= 4) ? 1 : 2)"
+)
+
 var pluralRules = map[string]pluralRule{
 	"af": {
 		l:   2,
@@ -34,7 +41,7 @@ var pluralRules = map[string]pluralRule{
 	},
 	"ar": {
 		l:   6,
-		r:   "(n == 0) ? 0 : (n == 1) ? 1 : (n == 2) ? 2 : (n % 100 >= 3 && n % 100 <= 10) ? 3 : (n % 100 >= 11 && n % 100 <= 99) ? 4 : 5",
+		r:   "(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n % 100 >= 3 && n % 100 <= 10) ? 3 : ((n % 100 >= 11 && n % 100 <= 99) ? 4 : 5))))",
 		stf: "%H:%M:%S %-d/%-m/%Y",
 		ltf: "%A، %-d %B %Y %H:%M:%S",
 	},
@@ -118,7 +125,7 @@ var pluralRules = map[string]pluralRule{
 	},
 	"bs": {
 		l:   3,
-		r:   "(n % 10 == 1 && n % 100 != 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : (n != 0) ? 2 : 3",
+		r:   slavicPluralRule,
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d. %B %Y. %H:%M:%S",
 	},
@@ -172,13 +179,13 @@ var pluralRules = map[string]pluralRule{
 	},
 	"hr": {
 		l:   3,
-		r:   "(n % 10 == 1 && n % 100 != 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : (n != 0) ? 2 : 3",
+		r:   slavicPluralRule,
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d. %B %Y. u %H:%M:%S",
 	},
 	"cs": {
 		l:   3,
-		r:   "(n == 1) ? 0 : (n >= 2 && n <= 4) ? 1 : 2",
+		r:   czechSlovakPluralRule,
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d. %B %Y %H:%M:%S",
 	},
@@ -226,7 +233,7 @@ var pluralRules = map[string]pluralRule{
 	},
 	"pt_PT": {
 		l:   3,
-		r:   "(n == 0) ? 0 : (n == 1) ? 1 : (n != 0) ? 2 : 3",
+		r:   "(n == 0) ? 0 : ((n == 1) ? 1 : 2)",
 		stf: "%H:%M:%S %-d/%-m/%Y",
 		ltf: "%A, %-d de %B de %Y às %H:%M:%S",
 	},
@@ -304,7 +311,7 @@ var pluralRules = map[string]pluralRule{
 	},
 	"is": {
 		l:   2,
-		r:   "(n % 10 == 1 && n % 100 != 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : (n != 0) ? 2 : 3",
+		r:   "(n % 10 == 1 && n % 100 != 11) ? 0 : 1",
 		stf: "%H:%M:%S %-d.%-m.%Y",
 		ltf: "%A, %-d. %B %Y, %H:%M:%S",
 	},
@@ -352,13 +359,13 @@ var pluralRules = map[string]pluralRule{
 	},
 	"lv": {
 		l:   3,
-		r:   "(n == 1) ? 0 : (n % 10 >= 2 && n % 10 <= 9 && (n % 100 < 11 || n % 100 > 19)) ? 1 : 2",
+		r:   "(n == 1) ? 0 : ((n % 10 >= 2 && n % 10 <= 9 && (n % 100 < 11 || n % 100 > 19)) ? 1 : 2)",
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d. %B %Y. %H:%M:%S",
 	},
 	"lt": {
 		l:   3,
-		r:   "(n == 1) ? 0 : (n % 10 == 1 && n % 100 != 11) ? 1 : 2",
+		r:   "(n == 1) ? 0 : ((n % 10 == 1 && n % 100 != 11) ? 1 : 2)",
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %Y m. %-d d. %B, %H:%M:%S",
 	},
@@ -387,14 +394,15 @@ var pluralRules = map[string]pluralRule{
 		ltf: "%A, %-d %B %Y %H:%M:%S",
 	},
 	"mt": {
-		l:   5,
-		r:   "(n == 1) ? 0 : (n == 0 || n % 100 > 1 && n % 100 < 11) ? 1 : (n % 100 > 10 && n % 100 < 20) ? 2 : (n != 0) ? 3 : 4",
+		l: 5,
+		// Keep the existing slots for one, few, many, and other.
+		r:   "(n == 1) ? 0 : ((n == 2) ? 4 : ((n == 0 || (n % 100 >= 3 && n % 100 <= 10)) ? 1 : ((n % 100 >= 11 && n % 100 <= 19) ? 2 : 3)))",
 		stf: "%H:%M:%S %-d/%-m/%Y",
 		ltf: "%A, %-d ta’ %B, %Y %H:%M:%S",
 	},
 	"mo": {
 		l:   3,
-		r:   "(n % 10 == 1 && n % 100 != 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : (n != 0) ? 2 : 3",
+		r:   slavicPluralRule,
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d %B %Y, %H:%M:%S",
 	},
@@ -448,7 +456,7 @@ var pluralRules = map[string]pluralRule{
 	},
 	"sr": {
 		l:   3,
-		r:   "(n % 10 == 1 && n % 100 != 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : (n != 0) ? 2 : 3",
+		r:   slavicPluralRule,
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d. %B %Y. u %H:%M:%S",
 	},
@@ -460,13 +468,13 @@ var pluralRules = map[string]pluralRule{
 	},
 	"sk": {
 		l:   3,
-		r:   "(n == 1) ? 0 : (n >= 2 && n <= 4) ? 1 : 2",
+		r:   czechSlovakPluralRule,
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d. %B %Y %H:%M:%S",
 	},
 	"sl": {
 		l:   4,
-		r:   "(n % 100 == 1) ? 0 : (n % 100 == 2) ? 1 : (n % 100 == 3 || n % 100 == 4) ? 2 : 3",
+		r:   "(n % 100 == 1) ? 0 : ((n % 100 == 2) ? 1 : ((n % 100 == 3 || n % 100 == 4) ? 2 : 3))",
 		stf: "%H:%M:%S %-d.%-m.%Y",
 		ltf: "%A, %-d. %B %Y %H:%M:%S",
 	},
@@ -526,7 +534,7 @@ var pluralRules = map[string]pluralRule{
 	},
 	"uk": {
 		l:   3,
-		r:   "(n % 10 == 1 && n % 100 != 11) ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : (n != 0) ? 2 : 3",
+		r:   slavicPluralRule,
 		stf: "%H:%M:%S %-d.%m.%Y",
 		ltf: "%A, %-d %B %Y р. %H:%M:%S",
 	},
@@ -555,8 +563,8 @@ var pluralRules = map[string]pluralRule{
 		ltf: "%A, %-d %B %Y %H:%M:%S",
 	},
 	"cy": {
-		l:   5,
-		r:   "(n == 0) ? 0 : (n == 1) ? 1 : (n == 2) ? 2 : (n == 3 || n == 8 || n == 11) ? 3 : (n == 6 || n == 7 || n == 9 || n == 10) ? 4 : 5",
+		l:   6,
+		r:   "(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n == 3) ? 3 : ((n == 6) ? 4 : 5))))",
 		stf: "%H:%M:%S %-d/%-m/%Y",
 		ltf: "%A, %-d %B %Y am %H:%M:%S",
 	},

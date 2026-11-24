@@ -4,13 +4,12 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux"
 )
 
 type HttpSignal struct {
 	W http.ResponseWriter
 	R *http.Request
-	H mux.Handler
+	H http.Handler
 }
 
 var (

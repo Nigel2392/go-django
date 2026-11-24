@@ -22,8 +22,8 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func TestAuthSessions_NilSessionGuards(t *testing.T) {
@@ -65,7 +65,7 @@ func TestAuthSessions_FullSessionLifecycleAndFinalizer(t *testing.T) {
 		_, _ = auth.GetUserQuerySet().Filter("ID", created.ID).Delete()
 	})
 
-	django.Global.Mux.Handle(mux.GET, "/e2e-sessions/whoami", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.GET, "/e2e-sessions/whoami", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		curr := auth.UserFromRequest(r)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":            curr.ID,
@@ -74,7 +74,7 @@ func TestAuthSessions_FullSessionLifecycleAndFinalizer(t *testing.T) {
 		})
 	}))
 
-	django.Global.Mux.Handle(mux.POST, "/e2e-sessions/save-before-end", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.POST, "/e2e-sessions/save-before-end", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		row, err := auth.GetUserQuerySet().WithContext(r.Context()).Filter("ID", created.ID).First()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

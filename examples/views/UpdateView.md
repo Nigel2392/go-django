@@ -19,7 +19,7 @@ import (
     "net/http"
     "github.com/Nigel2392/go-django/src/views"
     "github.com/Nigel2392/go-django/src/forms"
-    "github.com/Nigel2392/mux"
+    "github.com/Nigel2392/mux/v2"
 )
 
 type TodoUpdateForm struct {

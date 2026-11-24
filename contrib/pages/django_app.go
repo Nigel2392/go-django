@@ -43,7 +43,6 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
 )
 
 type PageAppConfig struct {
@@ -724,13 +723,13 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		pagesAPI.Get(
-			"/menu", mux.NewHandler(pageMenuHandler), "menu",
+			"/menu", http.HandlerFunc(pageMenuHandler), "menu",
 		)
 
 		var djangoMux = django.Global.Mux
 		djangoMux.Get(
 			fmt.Sprintf("/__pages__/redirect/<<%s>>", PageIDVariableName),
-			mux.NewHandler(redirectHandler),
+			http.HandlerFunc(redirectHandler),
 			"pages_redirect",
 		)
 

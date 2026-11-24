@@ -163,11 +163,7 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 			Tag:   "!!str",
 			Value: "text",
 		},
-		&yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Tag:   "!!str",
-			Value: m.Text,
-		},
+		translationScalar(m.Text),
 	)
 
 	if m.Plural != "" {
@@ -177,11 +173,14 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 				Tag:   "!!str",
 				Value: "plural",
 			},
-			&yaml.Node{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!str",
-				Value: m.Plural,
-			},
+			translationScalar(m.Plural),
+		)
+	}
+
+	if m.Preference != 0 {
+		n.Content = append(n.Content,
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "preference"},
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!int", Value: strconv.Itoa(m.Preference)},
 		)
 	}
 
@@ -197,11 +196,7 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 			)
 
 			if len(head.Value) == 1 {
-				nodeContent = append(nodeContent, &yaml.Node{
-					Kind:  yaml.ScalarNode,
-					Tag:   "!!str",
-					Value: head.Value[0],
-				})
+				nodeContent = append(nodeContent, translationScalar(head.Value[0]))
 			} else {
 
 				var mapNode = &yaml.Node{
@@ -217,11 +212,7 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 							Tag:   "!!int",
 							Value: strconv.Itoa(idx),
 						},
-						&yaml.Node{
-							Kind:  yaml.ScalarNode,
-							Tag:   "!!str",
-							Value: text,
-						},
+						translationScalar(text),
 					)
 				}
 
@@ -269,4 +260,13 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 	}
 
 	return &n, nil
+}
+
+func translationScalar(value string) *yaml.Node {
+	node := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value}
+	if strings.ContainsAny(value, "\r\n\u0085\u2028\u2029") {
+		// Quoting preserves line breaks that YAML block scalars can discard or normalize.
+		node.Style = yaml.DoubleQuotedStyle
+	}
+	return node
 }

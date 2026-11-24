@@ -23,8 +23,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2"
 	"golang.org/x/oauth2"
 )
 
@@ -285,7 +285,7 @@ func TestE2E_HTTP_OAuth2FullFlowAndEdgeCases(t *testing.T) {
 		t.Fatalf("OnReady: %v", err)
 	}
 
-	django.Global.Mux.Handle(mux.GET, "/e2e-oauth2/whoami", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	django.Global.Mux.Handle(mux.GET, "/e2e-oauth2/whoami", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		u := openauth2.UserFromRequest(r)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":            u.ID,

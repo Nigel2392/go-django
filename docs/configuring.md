@@ -255,7 +255,7 @@ err := app.Task("warm caches", func(a *django.Application) error {
 You can also register routes or middleware directly on `app.Mux` without creating a separate `AppConfig`:
 
 ```go
-app.Mux.Get("/healthz", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+app.Mux.Get("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     w.Write([]byte("ok"))
 }), "healthz")

@@ -8,13 +8,12 @@ import (
 
 	autherrors "github.com/Nigel2392/go-django/contrib/auth/auth_errors"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func RedirectLoginFailedToAdmin(w http.ResponseWriter, r *http.Request, app *django.Application, authError *autherrors.AuthenticationError) (written bool) {
 	var path = strings.Trim(r.URL.Path, "/")
-	var pathParts = strings.Split(path, "/")
-	var _, matched, _ = AdminSite.Route.Match(mux.ANY, pathParts)
+	var _, matched, _ = AdminSite.Route.Match(mux.ANY, path)
 	if !matched {
 		return false
 	}

@@ -18,7 +18,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 var (
@@ -31,13 +31,13 @@ var (
 func newTestAppConfig() django.AppConfig {
 	var app = apps.NewAppConfig("testapp")
 	app.Routing = func(m mux.Multiplexer) {
-		m.Handle(mux.ANY, "/", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		m.Handle(mux.ANY, "/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			logger.Infof("Request cookies: %v", req.Cookies())
 			backend = messages.BackendFromContext(req)
 			w.Write([]byte("Hello World"))
 		}))
 
-		m.Handle(mux.ANY, "/setlevel", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		m.Handle(mux.ANY, "/setlevel", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			logger.Infof("Request cookies: %v", req.Cookies())
 			backend = messages.BackendFromContext(req)
 			if err := backend.SetLevel(messages.INFO); err != nil {
@@ -48,13 +48,13 @@ func newTestAppConfig() django.AppConfig {
 			w.Write([]byte("level_set"))
 		}))
 
-		m.Handle(mux.ANY, "/getlevel", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		m.Handle(mux.ANY, "/getlevel", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			logger.Infof("Request cookies: %v", req.Cookies())
 			backend = messages.BackendFromContext(req)
 			w.Write([]byte(backend.Level()))
 		}))
 
-		m.Handle(mux.ANY, "/add", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		m.Handle(mux.ANY, "/add", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			logger.Infof("Request cookies: %v", req.Cookies())
 			var err = messages.AddMessage(
 				req, messages.INFO, "Test message",
@@ -85,14 +85,14 @@ func newTestAppConfig() django.AppConfig {
 			w.Write([]byte("Message added"))
 		}))
 
-		m.Handle(mux.ANY, "/test", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		m.Handle(mux.ANY, "/test", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			logger.Infof("Request cookies: %v", req.Cookies())
 			var messages, _ = messages.Messages(req)
 			var lenStr = strconv.Itoa(len(messages))
 			w.Write([]byte(lenStr))
 		}))
 
-		m.Handle(mux.ANY, "/clear", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		m.Handle(mux.ANY, "/clear", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			logger.Infof("Request cookies: %v", req.Cookies())
 			backend = messages.BackendFromContext(req)
 			if err := backend.Clear(); err != nil {

@@ -7,7 +7,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func main() {
@@ -67,8 +67,8 @@ func main() {
 		django.Apps(&apps.AppConfig{
 			AppName: "server_errors",
 			Routing: func(m mux.Multiplexer) {
-				m.Any("/", mux.NewHandler(Index))
-				m.Any("/raise/<<code>>", mux.NewHandler(RaiseErrorCode))
+				m.Any("/", http.HandlerFunc(Index))
+				m.Any("/raise/<<code>>", http.HandlerFunc(RaiseErrorCode))
 			},
 		}),
 	)

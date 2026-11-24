@@ -227,7 +227,7 @@ Once started with `admin` installed, navigate to `http://127.0.0.1:8080/admin/lo
 
 ### Session and Request Helpers
 
-- `openauth2.AddUserMiddleware() mux.Middleware`: Attaches the current user to requests via `authentication.AddUserMiddleware`.
+- `openauth2.AddUserMiddleware() middleware.Middleware`: Attaches the current user to requests via `authentication.AddUserMiddleware`.
 - `openauth2.UserFromRequest(r *http.Request) *User`: Returns the authenticated `*User` from request context or loads active users via session key `USER_ID_SESSION_KEY` (`"openauth2_user_id"`).
 - `openauth2.UnauthenticatedUser() *User`: Returns a non-authenticated `*User` value.
 - `openauth2.Login(r *http.Request, u *User) (*User, error)`: Renews the session token, sets `USER_ID_SESSION_KEY`, emits `core.SIGNAL_USER_LOGGED_IN`, and updates `LastLogin`.

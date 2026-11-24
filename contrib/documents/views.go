@@ -15,7 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/permissions"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 
 	_ "unsafe"
 )

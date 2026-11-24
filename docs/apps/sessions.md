@@ -1,6 +1,6 @@
 # Sessions
 
-The `session` app provides session middleware and persistent database-backed storage for Go-Django, wrapping [alexedwards/scs](https://github.com/alexedwards/scs/v2) and [Nigel2392/mux/middleware/sessions](https://github.com/Nigel2392/mux). By default, sessions expire after 7 days (`time.Hour * 24 * 7`).
+The `session` app provides session middleware and persistent database-backed storage for Go-Django, wrapping [alexedwards/scs](https://github.com/alexedwards/scs/v2) and [Nigel2392/mux/middleware/sessions](https://github.com/Nigel2392/mux/v2). By default, sessions expire after 7 days (`time.Hour * 24 * 7`).
 
 ## Installation and Storage
 

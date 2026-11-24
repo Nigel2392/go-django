@@ -6,7 +6,6 @@ import (
 
 	core "github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/errs"
-	"github.com/Nigel2392/mux"
 )
 
 // ErrServeCanceled is an error that can be returned from a signal to indicate that the serve should be cancelled.
@@ -23,8 +22,8 @@ const ErrServeCanceled errs.Error = "Serve cancelled, signal hijacked response"
 // The signal it sends is of type *core.HttpSignal.
 //
 // This can be used to initialize and / or clean up resources before and after a request is served.
-func RequestSignalMiddleware(next mux.Handler) mux.Handler {
-	return mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+func RequestSignalMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var signal = &core.HttpSignal{W: w, R: r, H: next}
 
 		if err := core.SIGNAL_BEFORE_REQUEST.Send(r.Context(), signal); err != nil {

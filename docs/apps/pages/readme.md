@@ -150,7 +150,7 @@ type Site struct {
 ```
 
 - `(*Site).URL() string`: Formats `Domain`, appending `:<Port>` when `Port` is neither `80` nor `443`.
-- `pages.SiteForRequest(requestOrContext any, fn ...func(*queries.QuerySet[*Site]) *queries.QuerySet[*Site]) (context.Context, *Site, error)`: Resolves the `Site` matching the request's host (`mux.GetHost`) or falling back to `Default: true`. Results are cached per request context in `django.ContextDataStore`.
+- `pages.SiteForRequest(requestOrContext any, fn ...func(*queries.QuerySet[*Site]) *queries.QuerySet[*Site]) (context.Context, *Site, error)`: Resolves the `Site` matching the request's host (`hosts.GetHost`) or falling back to `Default: true`. Results are cached per request context in `django.ContextDataStore`.
 
 ### `contrib/pages/settings`
 

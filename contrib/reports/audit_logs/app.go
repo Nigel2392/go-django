@@ -43,7 +43,8 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/hosts"
 	"github.com/a-h/templ"
 
 	"embed"
@@ -198,7 +199,7 @@ func NewAppConfig() django.AppConfig {
 		}
 
 		logData["form"] = newData
-		logData["host"] = mux.GetHost(r)
+		logData["host"] = hosts.GetHost(r)
 		logData["ip"] = django.GetIP(r)
 
 		if _, err := Log(r.Context(), "auth.login_failed", logger.ERR, nil, logData); err != nil {
@@ -241,7 +242,7 @@ func NewAppConfig() django.AppConfig {
 
 	Logs.Ready = func() error {
 		admin.AdminSite.Route.Handle(
-			mux.ANY, "/auditlogs", mux.NewHandler(auditLogView),
+			mux.ANY, "/auditlogs", http.HandlerFunc(auditLogView),
 			"auditlogs",
 		)
 		return nil

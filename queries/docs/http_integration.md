@@ -1,6 +1,6 @@
 # HTTP Integration
 
-`queries` provides two HTTP helper packages for integrating database transactions and model lookups with Go-Django handlers and `github.com/Nigel2392/mux`:
+`queries` provides two HTTP helper packages for integrating database transactions and model lookups with Go-Django handlers and `github.com/Nigel2392/mux/v2`:
 
 - `github.com/Nigel2392/go-django/queries/src/middleware`: per-request database transaction middleware (`TransactionMiddleware`)
 - `github.com/Nigel2392/go-django/queries/src/views`: generic detail view helper (`ObjectView[T]`)
@@ -18,7 +18,7 @@ type TransactionOptions struct {
 	Deadline time.Duration
 }
 
-func TransactionMiddleware(opts TransactionOptions) func(next mux.Handler) mux.Handler
+func TransactionMiddleware(opts TransactionOptions) func(next http.Handler) http.Handler
 ```
 
 ### Usage
@@ -33,7 +33,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	qmiddleware "github.com/Nigel2392/go-django/queries/src/middleware"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func routes(r *mux.Mux) {

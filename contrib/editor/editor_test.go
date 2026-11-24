@@ -17,7 +17,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/media"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 var (
@@ -91,7 +91,7 @@ func (m MockBaseFeature) OnValidate(editor.BlockData) error {
 }
 
 func (m MockBaseFeature) OnRegister(mx mux.Multiplexer) error {
-	mx.Any("/mock", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	mx.Any("/mock", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("mock"))
 	}), "mock")
 	return nil

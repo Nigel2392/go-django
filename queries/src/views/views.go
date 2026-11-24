@@ -12,7 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	django_views "github.com/Nigel2392/go-django/src/views"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 type BaseView = django_views.BaseView

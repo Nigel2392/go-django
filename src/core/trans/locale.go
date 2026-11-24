@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2/middleware"
 	"golang.org/x/text/language"
 )
 
@@ -29,8 +29,8 @@ func DefaultLocale() language.Tag {
 	return TRANSLATIONS_DEFAULT_LOCALE
 }
 
-func LocaleMiddleware(localeFromRequest func(r *http.Request) (language.Tag, bool)) mux.Middleware {
-	return func(next mux.Handler) mux.Handler {
+func LocaleMiddleware(localeFromRequest func(r *http.Request) (language.Tag, bool)) middleware.Middleware {
+	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tag, ok := localeFromRequest(r)
 			if !ok {

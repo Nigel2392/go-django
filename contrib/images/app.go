@@ -24,7 +24,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 type (
@@ -198,12 +198,12 @@ func NewAppConfig(opts *Options) django.AppConfig {
 		var g = m.Any("/images", nil, "images")
 		g.Get(
 			"/<<id>>",
-			mux.NewHandler(App.serveImageByIDView),
+			http.HandlerFunc(App.serveImageByIDView),
 			"serve_id",
 		)
 		g.Get(
 			"/serve/*",
-			mux.NewHandler(App.serveImageByPathView),
+			http.HandlerFunc(App.serveImageByPathView),
 			"serve",
 		)
 	}

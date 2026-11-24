@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2/hosts"
 )
 
 // loggerMiddleware is a middleware that logs the request method, time taken, remote address and path of the request.
@@ -19,7 +19,7 @@ import (
 // The message might be prefixed and / or suffixed with additional information.
 //
 // If the request is a static route request, it will log the request with a debug level.
-func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
+func (a *Application) loggerMiddleware(next http.Handler) http.Handler {
 	var logggingEnabled = ConfigGet(a.Settings, APPVAR_ROUTE_LOGGING_ENABLED,
 		ConfigGet(a.Settings, APPVAR_DEBUG, true),
 	)
@@ -43,7 +43,7 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 
 		var (
 			timeTaken  = time.Since(startTime)
-			remoteAddr = mux.GetIP(
+			remoteAddr = hosts.GetIP(
 				r, ConfigGet(
 					a.Settings, APPVAR_REQUESTS_PROXIED, false,
 				),

@@ -40,11 +40,11 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 	)
 
 	var app, ok = django.AppFromContext(ctx)
-	if !ok {
+	if !ok && translatorApp != nil {
 		app = translatorApp
 	}
 
-	if t.appTranslations != nil {
+	if app != nil && t.appTranslations != nil {
 		appTranslations, ok := t.appTranslations[app.Name()]
 		if ok {
 			var t, ok, err = getTranslationFromMap(appTranslations, checks, v, 0)
@@ -108,95 +108,51 @@ func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n i
 		return ""
 	}
 
-	var (
-		locale      = trans.LocaleFromContext(ctx)
-		checks      = localeChecks(locale)
-		hash        = getHashForPluralTexts(singular, plural)
-		foundChecks = make([]string, 0, len(checks))
-	)
+	fallback := singular
+	if n != 1 {
+		fallback = plural
+	}
+	if t.hdr == nil || t.hdr.hdr == nil || t.hdr.hdr.Locales == nil {
+		return fallback
+	}
 
-	// Loop over all locale checks to find the first matching translation
-	//
-	// If no translation is found, we will try to find the appropriate plural form
-	// based on the plural rules defined in the translation header.
-	//
-	// If no translation header is found, we will use the default plural rule (n != 1).
-	for _, check := range checks {
+	locale := trans.LocaleFromContext(ctx)
+	key := getHashForPluralTexts(singular, plural)
+	hasRule := false
+	for _, check := range localeChecks(locale) {
 		if _, ok := t.hdr.hdr.Locales.Get(check); !ok {
-			//	logger.Debugf(
-			//		"Locale '%s' not found in translation header, using default plural rule (n != 1)",
-			//		check,
-			//	)
 			continue
 		}
 
-		// add the check to foundChecks in case no translation is found in the first
-		// loop, so we can check it again later
-		foundChecks = append(foundChecks, check)
-
-		var pluralIdx, err = t.hdr.pluralIndex(check, n)
+		index, err := t.hdr.pluralIndex(check, n)
+		if !hasRule {
+			hasRule = true
+			fallback = singular
+			if err == nil && index != 0 {
+				fallback = plural
+			}
+		}
 		if err != nil {
 			logger.Errorf(
 				"Failed to get plural index for locale '%s' and count %d: %v",
 				check, n, err,
 			)
-			return singular // Fallback to singular if plural index cannot be determined
+			continue
 		}
 
-		translation, ok, err := getTranslationFromMap(t.translations, checks, hash, pluralIdx)
+		translation, found, err := getTranslationFromMap(t.translations, []string{check}, key, index)
 		if err != nil {
 			logger.Errorf(
 				"Failed to get translation for locale '%s', plural index %d and hash '%s': %v",
-				check, pluralIdx, hash, err,
+				check, index, key, err,
 			)
-			continue
 		}
-		if !ok {
-			//	logger.Debugf(
-			//		"Plural translation for locale '%s', plural index %d and hash '%s' not found, using default plural rule (n != 1)",
-			//		check, pluralIdx, hash,
-			//	)
-			continue
+		if found {
+			return translation
 		}
-
-		return translation
 	}
 
-	// If we reach here, it means no translation was found for the plural form
-	// Some headers may have been found however, this means that we can try to use
-	// the headers' plural rules to determine the plural form.
-	for _, check := range foundChecks {
-		if _, ok := t.hdr.hdr.Locales.Get(check); !ok {
-			//	logger.Debugf(
-			//		"Locale '%s' not found in translation header, using default plural rule (n != 1)",
-			//		check,
-			//	)
-			continue
-		}
-
-		var pluralIdx, err = t.hdr.pluralIndex(check, n)
-		if err != nil {
-			logger.Errorf(
-				"Failed to get plural index for locale '%s' and count %d: %v",
-				check, n, err,
-			)
-			return singular // Fallback to singular if plural index cannot be determined
-		}
-
-		if pluralIdx == 0 {
-			return singular
-		}
-
-		return plural
-	}
-
-	// Fallback to the default plural rule (n != 1
-	// if no plural rule was found for the locale
-	if n != 1 {
-		return plural
-	}
-
-	return singular
+	return fallback
 }
 
 func (t *Translator) Pluralizef(ctx context.Context, singular, plural string, n int, args ...any) string {
@@ -212,7 +168,7 @@ func defaultTimeFormat(short bool) string {
 
 func (t *Translator) TimeFormat(ctx context.Context, short bool) string {
 
-	if t.hdr == nil || t.hdr.hdr == nil {
+	if t.hdr == nil || t.hdr.hdr == nil || t.hdr.hdr.Locales == nil {
 		return defaultTimeFormat(short)
 	}
 
@@ -238,17 +194,19 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 
 	if len(locales) == 0 {
 		locales = []language.Tag{trans.DefaultLocale()}
-
-		var settingsLocales = django.ConfigGet(
-			django.Global.Settings,
-			APPVAR_TRANSLATIONS_LOCALES,
-			[]language.Tag{},
-		)
-
-		locales = append(
-			locales,
-			settingsLocales...,
-		)
+		if django.Global != nil && django.Global.Settings != nil {
+			configured, _ := django.Global.Settings.Get(APPVAR_TRANSLATIONS_LOCALES)
+			switch values := configured.(type) {
+			case []language.Tag:
+				locales = append(locales, values...)
+			case []string:
+				for _, value := range values {
+					if tag, err := language.Parse(value); err == nil {
+						locales = append(locales, tag)
+					}
+				}
+			}
+		}
 	}
 
 	var t, ok = trans.DefaultBackend.(*Translator)
@@ -259,6 +217,9 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 		)
 		return v, false
 	}
+	if t == nil || t.hdr == nil || t.hdr.hdr == nil || t.hdr.hdr.Locales == nil {
+		return v, false
+	}
 
 	for _, locale := range locales {
 		for _, check := range localeChecks(locale) {
@@ -266,13 +227,8 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 				continue
 			}
 
-			var translations, ok = t.translations[check]
-			if !ok {
-				continue
-			}
-
-			if t, ok := translations[v]; ok && t[0] != "" {
-				return t[0], true
+			if forms := t.translations[check][v]; len(forms) > 0 && forms[0] != "" {
+				return forms[0], true
 			}
 		}
 	}
@@ -288,34 +244,26 @@ func getHashForPluralTexts(singular, plural string) string {
 }
 
 func getTranslationFromMap(localeMap map[trans.Locale]map[trans.Untranslated][]trans.Translation, checks []string, v string, idx int) (trans.Translation, bool, error) {
-	var (
-		translations map[trans.Untranslated][]trans.Translation
-		ok           bool
-	)
-
+	var firstErr error
 	for _, check := range checks {
-		if translations, ok = localeMap[check]; ok {
-			break
+		forms, ok := localeMap[check][v]
+		if !ok {
+			continue
+		}
+
+		if idx < 0 || idx >= len(forms) {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("index %d out of bounds for translations with %d entries", idx, len(forms))
+			}
+			continue
+		}
+
+		if forms[idx] != "" {
+			return forms[idx], true, nil
 		}
 	}
-	if !ok {
-		return v, false, nil
-	}
 
-	translation, ok := translations[v]
-
-	if ok && (idx < 0 || idx >= len(translation)) {
-		return v, false, fmt.Errorf(
-			"index %d out of bounds for translations with %d entries",
-			idx, len(translation),
-		)
-	}
-
-	if ok {
-		return translation[idx], true, nil
-	}
-
-	return v, false, nil
+	return v, false, firstErr
 }
 
 func localeChecks(locale language.Tag) []string {

@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Nigel2392/go-django/src/core/except"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func redirectHandler(w http.ResponseWriter, r *http.Request) {

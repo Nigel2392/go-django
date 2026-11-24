@@ -9,7 +9,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 func TestAuthenticationError_AndFail(t *testing.T) {
@@ -81,7 +81,7 @@ func TestRegisterHook_AndOnAuthenticationError(t *testing.T) {
 
 	m := mux.New()
 	g := m.Any("/auth", nil, "test")
-	g.Handle(mux.GET, "/login", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {}), "login")
+	g.Handle(mux.GET, "/login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}), "login")
 	app := &django.Application{Mux: m}
 
 	autherrors.RegisterHook("test:login")

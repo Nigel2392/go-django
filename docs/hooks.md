@@ -188,7 +188,7 @@ core.OnDjangoReady.Listen(context.Background(), func(ctx context.Context, s sign
 type HttpSignal struct {
     W http.ResponseWriter
     R *http.Request
-    H mux.Handler
+    H http.Handler
 }
 ```
 

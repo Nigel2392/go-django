@@ -16,11 +16,11 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/permissions"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
-func pageAdminAppHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition)) mux.Handler {
-	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+func pageAdminAppHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition)) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		var app, ok = admin.AdminSite.Apps.Get(AdminPagesAppName)
 		if !ok {
 			except.Fail(http.StatusBadRequest, "App not found")
@@ -37,8 +37,8 @@ func pageAdminAppHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppD
 	})
 }
 
-func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition, *PageNode)) mux.Handler {
-	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition, *PageNode)) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
 		var (
 			routeVars = mux.Vars(req)

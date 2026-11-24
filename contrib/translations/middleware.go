@@ -6,11 +6,10 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/Nigel2392/mux"
 	"golang.org/x/text/language"
 )
 
-func TranslatorMiddleware() func(next mux.Handler) mux.Handler {
+func TranslatorMiddleware() func(next http.Handler) http.Handler {
 	var matcher = language.NewMatcher(django.ConfigGet(
 		django.Global.Settings,
 		APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE,
@@ -20,19 +19,22 @@ func TranslatorMiddleware() func(next mux.Handler) mux.Handler {
 		},
 	))
 
-	return func(next mux.Handler) mux.Handler {
-		return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
 			if django.IsStaticRouteRequest(req) {
 				next.ServeHTTP(w, req)
 				return
 			}
 
-			var lang, _ = req.Cookie("lang")
+			var preferred string
+			if lang, err := req.Cookie("lang"); err == nil {
+				preferred = lang.Value
+			}
 			var header = req.Header.Get("Accept-Language")
 			var tag, _ = language.MatchStrings(
 				matcher,
-				lang.String(),
+				preferred,
 				header,
 			)
 

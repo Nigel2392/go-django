@@ -1,6 +1,7 @@
 package translations
 
 import (
+	"cmp"
 	"flag"
 	"fmt"
 	"io"
@@ -167,8 +168,27 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 			if m.Plural != "" {
 				key = getHashForPluralTexts(m.Text, m.Plural)
 			}
-			if _, ok := oldMatchMap[key]; !ok {
+			previous, ok := oldMatchMap[key]
+			if !ok {
+				if m.Locales != nil {
+					m.Locales = m.Locales.Copy()
+				}
 				oldMatchMap[key] = m
+				continue
+			}
+			if m.Locales == nil {
+				continue
+			}
+			if previous.Locales == nil {
+				previous.Locales = m.Locales.Copy()
+				oldMatchMap[key] = previous
+				continue
+			}
+			for locale := m.Locales.Front(); locale != nil; locale = locale.Next() {
+				_, exists := previous.Locales.Get(locale.Key)
+				if !exists || (len(locale.Value) > 0 && locale.Value[0] != "") {
+					previous.Locales.Set(locale.Key, locale.Value)
+				}
 			}
 		}
 
@@ -380,7 +400,7 @@ func sortMatches(matches []Translation) {
 	slices.SortStableFunc(matches, comparePaths)
 	slices.SortStableFunc(matches, matchCompare)
 	slices.SortStableFunc(matches, func(a, b Translation) int {
-		return b.Preference - a.Preference // higher first
+		return cmp.Compare(b.Preference, a.Preference)
 	})
 }
 

@@ -52,7 +52,7 @@ import (
     "github.com/Nigel2392/go-django/src/apps"
     "github.com/Nigel2392/go-django/src/core/attrs"
     "github.com/Nigel2392/go-django/src/core/ctx"
-    "github.com/Nigel2392/mux"
+    "github.com/Nigel2392/mux/v2"
 )
 
 type CustomApp struct {
@@ -83,7 +83,7 @@ func NewCustomAppConfig() *CustomApp {
     }
 
     myCustomApp.Routing = func(m mux.Multiplexer) {
-        m.Get("/", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+        m.Get("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
             w.Write([]byte("Hello from myapp"))
         }), "index")
     }
@@ -114,7 +114,7 @@ import (
     "net/http"
 
     "github.com/Nigel2392/go-django/src/apps"
-    "github.com/Nigel2392/mux"
+    "github.com/Nigel2392/mux/v2"
 )
 
 func myHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +122,7 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var app = apps.NewAppConfigForHandler(
-    "myapp", mux.GET, "/myapp", mux.NewHandler(myHandler),
+    "myapp", mux.GET, "/myapp", http.HandlerFunc(myHandler),
 )
 ```
 

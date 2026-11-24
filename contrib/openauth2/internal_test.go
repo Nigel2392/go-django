@@ -36,13 +36,13 @@ type mockCmdMgr struct {
 	reg          command.Registry
 }
 
-func (m *mockCmdMgr) Log(msg string)              { m.logs.WriteString(msg + "\n") }
-func (m *mockCmdMgr) Logf(f string, args ...any)  {}
-func (m *mockCmdMgr) Stdout() io.Writer           { return &m.logs }
-func (m *mockCmdMgr) Stderr() io.Writer           { return &m.logs }
-func (m *mockCmdMgr) Stdin() io.Reader            { return strings.NewReader("") }
-func (m *mockCmdMgr) Registry() command.Registry  { return m.reg }
-func (m *mockCmdMgr) Command() command.Command    { return m.cmd }
+func (m *mockCmdMgr) Log(msg string)             { m.logs.WriteString(msg + "\n") }
+func (m *mockCmdMgr) Logf(f string, args ...any) {}
+func (m *mockCmdMgr) Stdout() io.Writer          { return &m.logs }
+func (m *mockCmdMgr) Stderr() io.Writer          { return &m.logs }
+func (m *mockCmdMgr) Stdin() io.Reader           { return strings.NewReader("") }
+func (m *mockCmdMgr) Registry() command.Registry { return m.reg }
+func (m *mockCmdMgr) Command() command.Command   { return m.cmd }
 func (m *mockCmdMgr) ProtectedInput(string) (string, error) {
 	return "", nil
 }

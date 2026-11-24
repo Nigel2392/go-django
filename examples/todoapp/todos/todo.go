@@ -15,7 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views/list"
-	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/v2"
 )
 
 //go:embed assets/**
@@ -29,8 +29,8 @@ func NewAppConfig() django.AppConfig {
 	// Set up routing for this app
 	cfg.Routing = func(m mux.Multiplexer) {
 		var todosGroup = m.Any("/todos", nil, "todos")
-		todosGroup.Get("/list", mux.NewHandler(ListTodos), "list")
-		todosGroup.Post("/<<id>>/done", mux.NewHandler(MarkTodoDone), "done")
+		todosGroup.Get("/list", http.HandlerFunc(ListTodos), "list")
+		todosGroup.Post("/<<id>>/done", http.HandlerFunc(MarkTodoDone), "done")
 	}
 
 	// Models which are a part of this app

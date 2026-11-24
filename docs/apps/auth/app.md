@@ -110,7 +110,7 @@ During routing, `auth` installs `AddUserMiddleware()` globally on the multiplexe
 ```go
 const SESSION_COOKIE_NAME = "user_authentication"
 
-func AddUserMiddleware() mux.Middleware
+func AddUserMiddleware() middleware.Middleware
 func UserFromRequest(r *http.Request) *User
 func UnAuthenticatedUser() *User
 func Login(r *http.Request, u *User) (*User, error)

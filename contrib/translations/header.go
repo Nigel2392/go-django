@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -14,40 +16,47 @@ import (
 )
 
 type translationHeader struct {
-	hdr      *FileTranslationsHeader
-	exprs    map[trans.Locale]*govaluate.EvaluableExpression
-	wasSetup bool
+	hdr       *FileTranslationsHeader
+	exprs     map[trans.Locale]*govaluate.EvaluableExpression
+	setupOnce sync.Once
+	parseErrs map[trans.Locale]error
 }
 
 func newTranslationHeader(header *FileTranslationsHeader) *translationHeader {
 	var t = &translationHeader{
-		hdr:   header,
-		exprs: make(map[trans.Locale]*govaluate.EvaluableExpression),
+		hdr:       header,
+		exprs:     make(map[trans.Locale]*govaluate.EvaluableExpression),
+		parseErrs: make(map[trans.Locale]error),
 	}
 
 	return t
 }
 
 func (t *translationHeader) setup() {
-	if t.wasSetup {
-		return
-	}
-
-	t.wasSetup = true
-
-	if t.hdr != nil && t.hdr.Locales != nil && t.hdr.Locales.Len() > 0 {
+	t.setupOnce.Do(func() {
+		if t.hdr == nil || t.hdr.Locales == nil {
+			return
+		}
 		for head := t.hdr.Locales.Front(); head != nil; head = head.Next() {
+			if strings.TrimSpace(head.Value.PluralRule) == "" {
+				continue
+			}
 			var expr, err = govaluate.NewEvaluableExpression(head.Value.PluralRule)
 			if err != nil {
-				panic(fmt.Errorf("failed to parse plural rule for locale %s: %w", head.Key, err))
+				t.parseErrs[head.Key] = fmt.Errorf("failed to parse plural rule for locale %s: %w", head.Key, err)
+				continue
 			}
 			t.exprs[head.Key] = expr
 		}
-	}
+	})
 }
 
 func (t *translationHeader) pluralIndex(locale trans.Locale, count int) (int, error) {
 	t.setup()
+
+	if err := t.parseErrs[locale]; err != nil {
+		return 0, err
+	}
 
 	if expr, ok := t.exprs[locale]; ok {
 		result, err := expr.Evaluate(map[string]any{"n": count})
@@ -82,7 +91,7 @@ func (t *translationHeader) pluralIndex(locale trans.Locale, count int) (int, er
 		"Plural rule for locale '%s' not found, using default rule (n != 1)", locale,
 	)
 
-	if count > 1 {
+	if count != 1 {
 		return 1, nil
 	}
 	return 0, nil

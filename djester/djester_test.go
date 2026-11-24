@@ -17,8 +17,8 @@ import (
 	"github.com/Nigel2392/go-django/djester"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2"
 )
 
 type mockUser struct {
@@ -32,7 +32,7 @@ func (m mockUser) IsAdmin() bool         { return m.admin }
 func newApp() *apps.AppConfig {
 	app := apps.NewAppConfig("djester_selftest")
 	app.Routing = func(m mux.Multiplexer) {
-		m.Handle("GET", "/me", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("GET", "/me", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user := authentication.Retrieve(r)
 			if user != nil && user.IsAuthenticated() {
 				if user.IsAdmin() {
@@ -46,12 +46,12 @@ func newApp() *apps.AppConfig {
 			}
 		}))
 
-		m.Handle("GET", "/ping", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("GET", "/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("pong"))
 		}))
 
 		// NEW ROUTE: Serve HTML for our DOM tests
-		m.Handle("GET", "/html", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("GET", "/html", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			htmlBody := `
 			<!DOCTYPE html>
@@ -76,13 +76,13 @@ func newApp() *apps.AppConfig {
 			w.Write([]byte(htmlBody))
 		}))
 
-		m.Handle("POST", "/echo", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("POST", "/echo", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			b, _ := io.ReadAll(r.Body)
 			defer r.Body.Close()
 			w.Write(b)
 		}))
 
-		m.Handle("POST", "/json", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("POST", "/json", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
@@ -93,7 +93,7 @@ func newApp() *apps.AppConfig {
 			w.Write(b)
 		}))
 
-		m.Handle("POST", "/form", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("POST", "/form", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
@@ -103,7 +103,7 @@ func newApp() *apps.AppConfig {
 			w.Write([]byte(val))
 		}))
 
-		m.Handle("POST", "/upload", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("POST", "/upload", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return

@@ -34,7 +34,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
-	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
@@ -387,7 +386,7 @@ func issueSessionToken(t *testing.T, sm *scs.SessionManager) (string, *http.Cook
 	t.Helper()
 	var token string
 	mw := sessions.SessionMiddleware(sm)
-	handler := mw(mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s := sessions.Retrieve(r)
 		s.Set("init", true)
 		_ = s.RenewToken()
@@ -406,7 +405,7 @@ func issueSessionToken(t *testing.T, sm *scs.SessionManager) (string, *http.Cook
 		followReq := httptest.NewRequest(http.MethodGet, "/", nil)
 		followReq.AddCookie(cookies[0])
 		followRec := httptest.NewRecorder()
-		mw(mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token = sessions.Retrieve(r).Token()
 		})).ServeHTTP(followRec, followReq)
 	}
@@ -427,7 +426,7 @@ func buildRequestWithMiddleware(t *testing.T, sm *scs.SessionManager, cookie *ht
 	}
 
 	var captured *http.Request
-	handler := sessions.SessionMiddleware(sm)(mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+	handler := sessions.SessionMiddleware(sm)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		captured = r
 	}))
 	handler.ServeHTTP(httptest.NewRecorder(), baseReq)
