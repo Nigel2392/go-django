@@ -170,6 +170,11 @@ func (m *SQLiteSchemaEditor) RemoveMigration(ctx context.Context, appName string
 }
 
 func (m *SQLiteSchemaEditor) CreateTable(ctx context.Context, table migrator.Table, ifNotExists bool) error {
+	return m.CreateTableWithConstraints(ctx, table, nil, ifNotExists)
+}
+
+// CreateTableWithConstraints creates the table with its resolved constraints.
+func (m *SQLiteSchemaEditor) CreateTableWithConstraints(ctx context.Context, table migrator.Table, inline []constraints.Constraint, ifNotExists bool) error {
 	var w strings.Builder
 	w.WriteString("CREATE TABLE ")
 	if ifNotExists {
@@ -182,6 +187,10 @@ func (m *SQLiteSchemaEditor) CreateTable(ctx context.Context, table migrator.Tab
 
 	var written bool
 	var cols = table.Columns()
+	fkConstraints := table.Constraints()
+	if inline != nil {
+		fkConstraints = inline
+	}
 	for _, col := range cols {
 		if !col.UseInDB {
 			continue
@@ -194,7 +203,7 @@ func (m *SQLiteSchemaEditor) CreateTable(ctx context.Context, table migrator.Tab
 
 		w.WriteString("  ")
 		includeRel := true
-		for _, c := range table.Constraints() {
+		for _, c := range fkConstraints {
 			if c != nil && c.Type() == constraints.C_FOREIGN_KEY {
 				if fk, ok := c.(interface{ ForeignKeyField() string }); ok {
 					if name := fk.ForeignKeyField(); name != "" && (name == col.Name || name == col.Column) {
@@ -206,6 +215,25 @@ func (m *SQLiteSchemaEditor) CreateTable(ctx context.Context, table migrator.Tab
 		}
 		m.writeColumn(&w, *col, includeRel)
 
+		written = true
+	}
+	constraintNames := make(map[string]struct{}, len(inline))
+	for _, constraint := range inline {
+		ddl, err := sqliteConstraintSQL(constraint)
+		if err != nil {
+			return err
+		}
+		if name := strings.ToLower(constraint.ID()); name != "" {
+			if _, exists := constraintNames[name]; exists {
+				return fmt.Errorf("constraint %q already exists on table %q", constraint.ID(), table.TableName())
+			}
+			constraintNames[name] = struct{}{}
+		}
+		if written {
+			w.WriteString(", \n")
+		}
+		w.WriteString("  ")
+		w.WriteString(ddl)
 		written = true
 	}
 	w.WriteString("\n")
@@ -317,23 +345,30 @@ func (m *SQLiteSchemaEditor) RenameIndex(ctx context.Context, table migrator.Tab
 	return err
 }
 
-func (m *SQLiteSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+func sqliteConstraintSQL(constraint constraints.Constraint) (string, error) {
 	if constraint == nil {
-		return errors.NilPointer.Wrap("constraint is nil")
+		return "", errors.NilPointer.Wrap("constraint is nil")
 	}
 	var sb builder.BaseBuilder
 	constraint.SQL(&sb)
 	if err := sb.GetError(); err != nil {
-		return err
+		return "", err
 	}
 	if len(sb.Vars) > 0 {
-		return fmt.Errorf("constraint %q cannot use bound parameters in DDL", constraint.ID())
+		return "", fmt.Errorf("constraint %q cannot use bound parameters in DDL", constraint.ID())
 	}
 	constraintSQL := strings.TrimSpace(sb.String())
 	if constraintSQL == "" {
-		return fmt.Errorf("constraint %q generated empty SQL", constraint.ID())
+		return "", fmt.Errorf("constraint %q generated empty SQL", constraint.ID())
 	}
+	return constraintSQL, nil
+}
 
+func (m *SQLiteSchemaEditor) AddConstraint(ctx context.Context, table migrator.Table, constraint constraints.Constraint) error {
+	constraintSQL, err := sqliteConstraintSQL(constraint)
+	if err != nil {
+		return err
+	}
 	items, suffix, err := m.readSQLiteTableItems(ctx, table.TableName())
 	if err != nil {
 		return err

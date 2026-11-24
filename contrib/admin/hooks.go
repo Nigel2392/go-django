@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components"
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/searches"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
@@ -28,6 +29,7 @@ const (
 	RegisterHomePageComponentHook    = "admin:home:register_component"
 	RegisterHomePageDisplayPanelHook = "admin:home:register_display_panel"
 
+	AdminModelHookBulkActions   = "admin:model:bulk_actions"
 	AdminModelHookAdd           = "admin:model:add"
 	AdminModelHookEdit          = "admin:model:edit"
 	AdminModelHookDelete        = "admin:model:delete"
@@ -60,9 +62,10 @@ type (
 
 	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
 
-	AdminModelHookFunc    = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
-	AdminModelDeleteFunc  = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instances []attrs.Definer)
-	RegisterRouteHookFunc = func(adminSite *AdminApplication, route mux.Multiplexer)
+	AdminModelHookFunc        = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
+	AdminModelBulkActionsFunc = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, queryset *queries.QuerySet[attrs.Definer]) []BulkAction
+	AdminModelDeleteFunc      = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instances []attrs.Definer)
+	RegisterRouteHookFunc     = func(adminSite *AdminApplication, route mux.Multiplexer)
 )
 
 // Register an item to the django admin menu (sidebar).
@@ -111,6 +114,11 @@ func RegisterHomePageAction(f RegisterHomePageActionHookFunc) {
 // Register a custom component for the home page.
 func RegisterHomePageComponent(f RegisterHomePageComponentHookFunc) {
 	goldcrest.Register(RegisterHomePageComponentHook, 0, f)
+}
+
+// Register a hook to be called when a a models' list bulk actions are requested.
+func RegisterModelBulkActions(f AdminModelBulkActionsFunc) {
+	goldcrest.Register(AdminModelHookAdd, 0, f)
 }
 
 // Register a hook to be called when a model is added.

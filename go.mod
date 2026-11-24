@@ -8,6 +8,7 @@ require (
 	github.com/Nigel2392/go-telepath v1.4.3
 	github.com/Nigel2392/goldcrest v1.0.7
 	github.com/Nigel2392/mux v1.6.1
+	github.com/Nigel2392/mux/v2 v2.0.2
 	github.com/Nigel2392/tags v1.0.0
 	github.com/Nigel2392/versatile v1.0.8
 	github.com/PuerkitoBio/goquery v1.10.3
@@ -40,7 +41,6 @@ require (
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/Nigel2392/errors v1.0.4 // indirect
-	github.com/Nigel2392/mux/v2 v2.0.2 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

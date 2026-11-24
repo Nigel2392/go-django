@@ -41,8 +41,7 @@ func (m *FastAttrsInlineBenchmarkM2MSource) FieldDefs(ctx context.Context) attrs
 	return m.Model.Define(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64] {
 			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, uint64]{
-				Config:  *fast_inline_fldCnfPrimary,
-				Default: uint64(0),
+				Primary: true, Default: uint64(0),
 			}
 		}),
 		fattrs.Field(m, "Title", &m.Title, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, string] {
@@ -50,11 +49,9 @@ func (m *FastAttrsInlineBenchmarkM2MSource) FieldDefs(ctx context.Context) attrs
 		}),
 		fattrs.Field(m, "Target", &m.Target, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]] {
 			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MSource, *queries.RelM2M[*FastAttrsInlineBenchmarkM2MTarget, *FastAttrsInlineBenchmarkM2MThrough]]{
-				Config: attrs.Config{
-					RelManyToMany: fast_inline_m2mRel,
-					Attributes: map[string]interface{}{
-						attrs.AttrReverseAliasKey: "TargetReverse",
-					},
+				RelManyToMany: fast_inline_m2mRel,
+				Attributes: map[string]interface{}{
+					attrs.AttrReverseAliasKey: "TargetReverse",
 				},
 			}
 		}),
@@ -96,16 +93,12 @@ func (m *FastAttrsInlineBenchmarkM2MThrough) FieldDefs(ctx context.Context) attr
 		}),
 		fattrs.Field(m, "SourceModel", &m.SourceModel, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
 			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
-				Config: attrs.Config{
-					Column: "source_id",
-				},
+				Column: "source_id",
 			}
 		}),
 		fattrs.Field(m, "TargetModel", &m.TargetModel, func() fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64] {
 			return fattrs.PtrFieldConfig[*FastAttrsInlineBenchmarkM2MThrough, uint64]{
-				Config: attrs.Config{
-					Column: "target_id",
-				},
+				Column: "target_id",
 			}
 		}),
 	).WithTableName("fast_m2m_through_bench")

@@ -112,19 +112,6 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		return
 	}
 
-	var actions = make(map[string]BulkAction)
-
-	var hasBulkActionsPerm = permissions.HasPermission(r, "admin:bulk_actions")
-	if len(model.ListView.BulkActions) > 0 && hasBulkActionsPerm {
-		for _, action := range model.ListView.BulkActions {
-			if !action.HasPermission(r, model) {
-				continue
-			}
-
-			actions[action.Name()] = action
-		}
-	}
-
 	if model.ListView.GetHandler != nil {
 		var err = views.Invoke(model.ListView.GetHandler(adminSite, app, model), w, r)
 		except.AssertNil(err, 500, err)
@@ -164,7 +151,29 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		r = r.WithContext(list.SetAllowListEdit(r.Context(), true))
 	}
 
-	if len(actions) > 0 && hasBulkActionsPerm {
+	var actions = make(map[string]BulkAction)
+	var hasBulkActionsPerm = permissions.HasPermission(r, "admin:bulk_actions")
+	if hasBulkActionsPerm {
+		for _, action := range model.ListView.BulkActions {
+			if !action.HasPermission(r, model) {
+				continue
+			}
+
+			actions[action.Name()] = action
+		}
+
+		for _, hook := range goldcrest.Get[AdminModelBulkActionsFunc](AdminModelHookBulkActions) {
+			for _, action := range hook(r, adminSite, model, qs) {
+				if !action.HasPermission(r, model) {
+					continue
+				}
+
+				actions[action.Name()] = action
+			}
+		}
+	}
+
+	if len(actions) > 0 {
 		r = r.WithContext(list.SetAllowListRowSelect(r.Context(), true))
 
 		if r.Method == http.MethodPost {

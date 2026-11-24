@@ -6,6 +6,7 @@ github.com/Nigel2392/goldcrest v1.0.7 h1:cQV71lWodn9MUAME0VVhA/E65TGwPikdm/nv5va
 github.com/Nigel2392/goldcrest v1.0.7/go.mod h1:FITH+WXlpWLD4PaZ80aUHUZE9n2Z/lx1mkeRFEr5e9M=
 github.com/Nigel2392/mux v1.6.1 h1:gnoN5DnCWrRFJwDA9WQMW9RkYktU+3p6+qzyD3uqWp4=
 github.com/Nigel2392/mux v1.6.1/go.mod h1:kJKdmtgm9XfV6luZYDxrnxCzhlcTWTf7msdDxn2Dpzo=
+github.com/Nigel2392/mux/v2 v2.0.2 h1:87oYJqeUJXf6YgjR8BQqsNYD3UjmiFpzinbkeX42VeE=
 github.com/Nigel2392/versatile v1.0.8 h1:JaLmpuyW0fZdZYpBpHVF4eYRyV5qjPkWoJsgT+FuwaM=
 github.com/Nigel2392/versatile v1.0.8/go.mod h1:LcAHOsw44043/8g7AjyA9xhBfZehVaRErEsb9L3G3Vo=
 github.com/PuerkitoBio/goquery v1.10.3 h1:pFYcNSqHxBD06Fpj/KsbStFRsgRATgnf3LeXiUkhzPo=

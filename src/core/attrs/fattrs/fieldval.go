@@ -39,7 +39,6 @@ const (
 type PtrFieldConfig[MODEL attrs.Definer, VALUE any] struct {
 	attrs.Config
 	Flags    fieldFlag
-	Default  interface{} // func() VALUE | VALUE
 	Validate func(obj MODEL, value VALUE) error
 	New      func() VALUE
 	IsZero   func(VALUE) bool
@@ -76,8 +75,8 @@ func ptrConf_Validate_Nop[MODEL attrs.Definer, VALUE any](obj MODEL, value VALUE
 	return nil
 }
 
-func ptrConf_Default_Zero[MODEL attrs.Definer, VALUE any](obj MODEL) (v VALUE) {
-	return v
+func ptrConf_Default_Nil[MODEL attrs.Definer, VALUE any](obj MODEL) *VALUE {
+	return nil
 }
 
 // only to be used on value types that can be initialized by just
@@ -206,6 +205,16 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 			return &d
 		}
 
+	case func() *VALUE:
+		opts.getDefault = func(_ MODEL) *VALUE {
+			return _default()
+		}
+
+	case func() VALUE:
+		opts.getDefault = func(_ MODEL) *VALUE {
+			d := _default()
+			return &d
+		}
 	case *VALUE:
 		opts.getDefault = func(obj MODEL) *VALUE {
 			if _default == nil {
@@ -223,7 +232,7 @@ func ptrFieldConfigToOptions[MODEL attrs.Definer, VALUE any](fld *ptrField[MODEL
 		}
 
 	case nil, NULL:
-		opts.getDefault = ptrConf_Default_Zero
+		opts.getDefault = ptrConf_Default_Nil
 
 	default:
 		panic(fmt.Sprintf("Invalid default type %T", _default))
@@ -696,7 +705,13 @@ func (r *ptrField[M, V]) get(val *V) V {
 }
 
 func (r *ptrField[M, V]) Value() (driver.Value, error) {
-	return drivers.GetValue(*r.val)
+	val := r.val
+	if !r.AllowNull() && r.useOpts().Default != nil && (r.opts.isNil(val) || attrs.IsZero(*val)) {
+		if def := r.opts.getDefault(r.obj); def != nil {
+			val = def
+		}
+	}
+	return drivers.GetValue(*val)
 }
 
 func (r *ptrField[M, V]) GetValue() interface{} {

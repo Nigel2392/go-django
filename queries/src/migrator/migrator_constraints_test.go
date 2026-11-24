@@ -75,6 +75,10 @@ type MigConMember struct {
 	Org   *MigConOrg
 }
 
+func (m *MigConMember) DatabaseIndexes(attrs.Definer) []migrator.Index {
+	return []migrator.Index{{Identifier: "idx_con_member_age", Fields: []string{"Age"}}}
+}
+
 func (m *MigConMember) Constraints() []constraints.Constraint {
 	cs := []constraints.Constraint{
 		constraints.UniqueConstraint("uq_con_member_org_email", "duplicate email per org", "Org", "Email"),
@@ -215,8 +219,17 @@ func TestMigrator_Constraints_FullLifecycle_LiveSQLite(t *testing.T) {
 	if err := engine.MakeMigrations(ctx); err != nil {
 		t.Fatalf("Step 1 MakeMigrations: %v", err)
 	}
-	if err := engine.Migrate(ctx); err != nil {
+	initialCtx, initialQueries := drivers.ContextWithQueryInfo(ctx)
+	if err := engine.Migrate(initialCtx); err != nil {
 		t.Fatalf("Step 1 Migrate: %v", err)
+	}
+	for _, query := range initialQueries.Queries {
+		if strings.Contains(query.Query, "__tmp") {
+			t.Fatalf("initial migration rebuilt a newly created table: %s", query.Query)
+		}
+	}
+	if _, exists := sqliteIndexes(t, db, "mig_con_member")["idx_con_member_age"]; !exists {
+		t.Error("initial migration did not create the age index")
 	}
 
 	if _, err := db.ExecContext(ctx, "INSERT INTO mig_con_org (id, name) VALUES (1, 'Acme')"); err != nil {
@@ -243,8 +256,19 @@ func TestMigrator_Constraints_FullLifecycle_LiveSQLite(t *testing.T) {
 	if err := engine.MakeMigrations(ctx); err != nil {
 		t.Fatalf("Step 2 MakeMigrations: %v", err)
 	}
-	if err := engine.Migrate(ctx); err != nil {
+	alterCtx, alterQueries := drivers.ContextWithQueryInfo(ctx)
+	if err := engine.Migrate(alterCtx); err != nil {
 		t.Fatalf("Step 2 Migrate: %v", err)
+	}
+	var rebuilt bool
+	for _, query := range alterQueries.Queries {
+		if strings.HasPrefix(query.Query, "CREATE TABLE `mig_con_member__tmp`") {
+			rebuilt = true
+			break
+		}
+	}
+	if !rebuilt {
+		t.Error("expected the later constraint migration to rebuild the existing table")
 	}
 	if _, err := db.ExecContext(ctx, "INSERT INTO mig_con_member (id, age, email, role, org_id) VALUES (2, 25, 'b@x.com', 'guest', 1)"); err == nil {
 		t.Errorf("expected chk_con_member_role to reject role='guest'")

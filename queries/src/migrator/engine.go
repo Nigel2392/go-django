@@ -361,12 +361,59 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 		}
 
 		var res *resolver.Resolver
+		resolveConstraint := func(action MigrationAction) (resolved constraints.Constraint, err error) {
+			if action.Constraint == nil || action.Constraint.New == nil {
+				return nil, fmt.Errorf("add_constraint action has nil constraint")
+			}
+			if res == nil {
+				if CompilerForModel == nil {
+					return nil, fmt.Errorf("migrator.CompilerForModel is not registered")
+				}
+				res = resolver.New(ctx, n.mig.Table.Object, CompilerForModel(n.mig.Table.Object))
+			}
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("failed to resolve constraint %q: %v", action.Constraint.New.ID(), r)
+				}
+			}()
+			return res.ResolveExpression(action.Constraint.New).(constraints.Constraint), nil
+		}
 
-		for _, action := range n.mig.Actions {
+		var inlineUntil int
+		for i, action := range n.mig.Actions {
 			var err error
 
 			switch action.ActionType {
 			case ActionCreateTable:
+				var inline []constraints.Constraint
+				if editor, ok := m.SchemaEditor.(interface {
+					CreateTableWithConstraints(context.Context, Table, []constraints.Constraint, bool) error
+				}); ok && i == 0 && working == nil {
+					// A new table can include constraints before its indexes are added.
+					// Stop at any action that could depend on the earlier schema.
+					for inlineUntil = i + 1; inlineUntil < len(n.mig.Actions); inlineUntil++ {
+						next := n.mig.Actions[inlineUntil]
+						if next.ActionType == ActionAddIndex {
+							continue
+						}
+						if next.ActionType != ActionAddConstraint {
+							break
+						}
+						var resolved constraints.Constraint
+						resolved, err = resolveConstraint(next)
+						if err != nil {
+							break
+						}
+						inline = append(inline, resolved)
+					}
+					if err != nil {
+						break
+					}
+					if len(inline) > 0 {
+						err = editor.CreateTableWithConstraints(ctx, n.mig.Table, inline, false)
+						break
+					}
+				}
 				err = m.SchemaEditor.CreateTable(ctx, n.mig.Table, false)
 
 			case ActionDropTable:
@@ -410,34 +457,21 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 					working.Fields.Set(action.Field.New.Name, *action.Field.New)
 				}
 			case ActionAddConstraint:
-				if action.Constraint == nil || action.Constraint.New == nil {
-					return fmt.Errorf("failed to apply migration %q: add_constraint action has nil constraint", n.mig.FileName())
+				if i < inlineUntil {
+					continue
 				}
-				if res == nil {
-					if CompilerForModel == nil {
-						return fmt.Errorf("failed to apply migration %q: migrator.CompilerForModel is not registered", n.mig.FileName())
-					}
-					res = resolver.New(ctx, n.mig.Table.Object, CompilerForModel(n.mig.Table.Object))
+				var resolved constraints.Constraint
+				resolved, err = resolveConstraint(action)
+				if err != nil {
+					break
 				}
 				var targetTable = n.mig.Table
 				if working != nil {
 					targetTable = working
 				}
-				var resolved constraints.Constraint
-				err = func() (rErr error) {
-					defer func() {
-						if r := recover(); r != nil {
-							rErr = fmt.Errorf("failed to resolve constraint %q: %v", action.Constraint.New.ID(), r)
-						}
-					}()
-					resolved = res.ResolveExpression(action.Constraint.New).(constraints.Constraint)
-					return nil
-				}()
-				if err == nil {
-					err = m.SchemaEditor.AddConstraint(ctx, targetTable, resolved)
-					if err == nil && working != nil {
-						working.Constraint = append(working.Constraint, resolved)
-					}
+				err = m.SchemaEditor.AddConstraint(ctx, targetTable, resolved)
+				if err == nil && working != nil {
+					working.Constraint = append(working.Constraint, resolved)
 				}
 
 			case ActionDropConstraint:

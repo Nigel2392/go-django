@@ -13,6 +13,7 @@ import (
 var (
 	fast_fldCnfRelAuthor = attrs.Config{
 		Column:        "author_id",
+		Default:       fattrs.NULL{},
 		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkAuthor{}, "", nil),
 		Attributes: map[string]interface{}{
 			attrs.AttrReverseAliasKey: "Books",
@@ -76,8 +77,7 @@ func (b *FastAttrsBenchmarkBook) FieldDefs(ctx context.Context) attrs.Definition
 		}),
 		fattrs.Field(b, "Author", &b.Author, func() fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor] {
 			return fattrs.PtrFieldConfig[*FastAttrsBenchmarkBook, *FastAttrsBenchmarkAuthor]{
-				Config:  fast_fldCnfRelAuthor,
-				Default: fattrs.NULL{},
+				Config: fast_fldCnfRelAuthor,
 				New: func() *FastAttrsBenchmarkAuthor {
 					return &FastAttrsBenchmarkAuthor{}
 				},

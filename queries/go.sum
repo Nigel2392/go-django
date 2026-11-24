@@ -3,6 +3,7 @@ github.com/Nigel2392/errors v1.0.4 h1:t9JA1HJbmUKsOxba2e2c53zvFr3YwT1Ro08jkqhayy
 github.com/Nigel2392/go-signals v1.1.9 h1:g+axqZmjQ13l52czrTnsLz/QhxkkGuDIKlJnRCsKqt0=
 github.com/Nigel2392/goldcrest v1.0.7 h1:cQV71lWodn9MUAME0VVhA/E65TGwPikdm/nv5vaaLBY=
 github.com/Nigel2392/mux v1.6.1 h1:gnoN5DnCWrRFJwDA9WQMW9RkYktU+3p6+qzyD3uqWp4=
+github.com/Nigel2392/mux/v2 v2.0.2 h1:87oYJqeUJXf6YgjR8BQqsNYD3UjmiFpzinbkeX42VeE=
 github.com/Nigel2392/tags v1.0.0 h1:KR7VZosoKjksv0uYQDQp03iOo7l04MhCZhCjDeLIChg=
 github.com/Nigel2392/versatile v1.0.8 h1:JaLmpuyW0fZdZYpBpHVF4eYRyV5qjPkWoJsgT+FuwaM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=

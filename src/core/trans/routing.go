@@ -1,5 +1,27 @@
 package trans
 
-import "github.com/Nigel2392/mux/v2"
+import (
+	"net/http"
 
-var ROUTE = mux.NewRoute(mux.ANY, "/<<locale_param>>", nil)
+	"golang.org/x/text/language"
+)
+
+type TranslationsHandler struct {
+	AllowedLocales []language.Tag
+	Next           http.Handler
+}
+
+func (h *TranslationsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	//	var preferred string
+	//	if lang, err := r.Cookie("lang"); err == nil {
+	//		preferred = lang.Value
+	//	}
+	//
+	//	var header = r.Header.Get("Accept-Language")
+	//	var tag, _ = language.MatchStrings(
+	//		matcher,
+	//		preferred,
+	//		header,
+	//	)
+}
