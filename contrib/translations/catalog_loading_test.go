@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/goldcrest"
 	"golang.org/x/text/language"
+	"gopkg.in/yaml.v3"
 )
 
 type catalogTestFS struct {
@@ -112,6 +113,24 @@ func TestCatalogFilesystemErrorsAndCleanup(t *testing.T) {
 
 func TestCatalogLayersRetainLocalizedMetadata(t *testing.T) {
 	t.Chdir(t.TempDir())
+	embeddedCatalog, err := translationsFileFS.Open(translationsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer embeddedCatalog.Close()
+	var embeddedHeader FileTranslationsHeader
+	if err := yaml.NewDecoder(embeddedCatalog).Decode(&embeddedHeader); err != nil {
+		t.Fatal(err)
+	}
+
+	// Overrides retain their original position, and new locales are appended.
+	wantLocales := embeddedHeader.Locales.Keys()
+	for _, locale := range []string{"es", "fr", "ja"} {
+		if !slices.Contains(wantLocales, locale) {
+			wantLocales = append(wantLocales, locale)
+		}
+	}
+
 	const projectCatalog = `generator: project
 locales:
   es: {nplural: 2, rule: "n != 1", short_time_format: "%d/%m/%Y"}
@@ -148,8 +167,8 @@ locales:
 	if header.Generator != "last plugin" {
 		t.Errorf("generator = %q, want last plugin", header.Generator)
 	}
-	if got, want := header.Locales.Keys(), []string{"nl", "es", "fr", "ja"}; !slices.Equal(got, want) {
-		t.Errorf("catalog locales = %v, want %v", got, want)
+	if got := header.Locales.Keys(); !slices.Equal(got, wantLocales) {
+		t.Errorf("catalog locales = %v, want %v", got, wantLocales)
 	}
 	translator := NewTranslator(header, app.translations, nil)
 	for _, tc := range []struct {
