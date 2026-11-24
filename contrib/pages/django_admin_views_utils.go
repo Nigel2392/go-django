@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/mux/v2"
 )
 
@@ -68,7 +69,7 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 			app = appConf
 		}
 
-		req = req.WithContext(django.ContextWithApp(
+		req = req.WithContext(djangoapps.ContextWithApp(
 			req.Context(), app,
 		))
 

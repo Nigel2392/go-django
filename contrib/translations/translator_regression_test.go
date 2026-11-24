@@ -8,6 +8,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"golang.org/x/text/language"
 )
 
@@ -63,7 +64,7 @@ func TestTranslatorAppCatalogLookup(t *testing.T) {
 		}
 	})
 	t.Run("app regional catalog misses key", func(t *testing.T) {
-		ctx := django.ContextWithApp(ctx, apps.NewAppConfig("shop"))
+		ctx := djangoapps.ContextWithApp(ctx, apps.NewAppConfig("shop"))
 		if got := translator.Translate(ctx, "Hello"); got != "Welkom" {
 			t.Errorf("Translate = %q, want Welkom", got)
 		}

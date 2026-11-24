@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/pkg/errors"
 )
 
@@ -106,7 +107,7 @@ var sqlShellCommand = &command.Cmd[string]{
 	},
 	Execute: func(m command.Manager, stored string, args []string) error {
 
-		var db, ok = ConfigGetOK[drivers.Database](Global.Settings, APPVAR_DATABASE)
+		var db, ok = djangoapps.CONFIG.GetOK[drivers.Database](APPVAR_DATABASE)
 		if !ok {
 			m.Log("No database connection found")
 			os.Exit(1)

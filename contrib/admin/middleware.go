@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/v2"
 )
@@ -33,7 +34,7 @@ func AppMiddleware(next http.Handler) http.Handler {
 			djangoApp = AdminSite
 		}
 
-		next.ServeHTTP(w, r.WithContext(django.ContextWithApp(
+		next.ServeHTTP(w, r.WithContext(djangoapps.ContextWithApp(
 			r.Context(), djangoApp,
 		)))
 	})

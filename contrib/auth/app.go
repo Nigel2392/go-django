@@ -30,6 +30,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/v2"
@@ -72,12 +73,12 @@ func NewAppConfig() django.AppConfig {
 			AddUserMiddleware(),
 		)
 
-		if django.ConfigGet(django.Global.Settings, APPVAR_REGISTER_AUTH_URLS, true) {
+		if djangoapps.CONFIG.Get(APPVAR_REGISTER_AUTH_URLS, true) {
 			var g = m.Any("/auth", nil, "auth")
 			g.Handle(mux.GET, "/login", http.HandlerFunc(viewUserLogin), "login")
 			g.Handle(mux.POST, "/login", http.HandlerFunc(viewUserLogin))
 
-			if django.ConfigGet(django.Global.Settings, APPVAR_ALLOW_USER_REGISTER, true) {
+			if djangoapps.CONFIG.Get(APPVAR_ALLOW_USER_REGISTER, true) {
 				g.Handle(mux.GET, "/register", http.HandlerFunc(viewUserRegister), "register")
 				g.Handle(mux.POST, "/register", http.HandlerFunc(viewUserRegister))
 			}

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/elliotchance/orderedmap/v2"
 	"golang.org/x/text/language"
 )
@@ -66,7 +66,7 @@ func TestTranslatorTranslate(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := trans.ContextWithLocale(t.Context(), language.MustParse(tc.locale))
-			ctx = django.ContextWithApp(ctx, apps.NewAppConfig(tc.app))
+			ctx = djangoapps.ContextWithApp(ctx, apps.NewAppConfig(tc.app))
 			if got := backend.Translatef(ctx, tc.input, tc.args...); got != tc.want {
 				t.Errorf("Translatef(%q, %v) = %q, want %q", tc.input, tc.args, got, tc.want)
 			}

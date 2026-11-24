@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/pkg/errors"
 )
 
@@ -88,8 +89,7 @@ func (a *AutoMigrateConfig) apps() []string {
 
 func (a *AutoMigrateConfig) migrationDir() string {
 	if a.MigrationDir == "" {
-		a.MigrationDir = django.ConfigGet(
-			django.Global.Settings,
+		a.MigrationDir = djangoapps.CONFIG.Get(
 			APPVAR_MIGRATION_DIR,
 			DEFAULT_MIGRATION_DIR,
 		)

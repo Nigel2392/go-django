@@ -16,6 +16,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/embedder"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 
 	// Register all schema editors for the migrator package.
 	_ "github.com/Nigel2392/go-django/queries/src/migrator/sql/mysql"
@@ -865,8 +866,7 @@ func Compiler(defaultDB string) QueryCompiler {
 		panic("django.Global or django.Global.Settings is nil")
 	}
 
-	var db = django.ConfigGet[interface{ Driver() driver.Driver }](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[interface{ Driver() driver.Driver }](
 		defaultDB,
 	)
 	if db == nil {

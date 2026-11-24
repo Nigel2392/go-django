@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command/flags"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
@@ -33,7 +34,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 	ID:   "make-translations",
 	Desc: "Search for translation strings in the project files",
 	FlagFunc: func(m command.Manager, stored *translationsCommandContext, f *flag.FlagSet) error {
-		stored.dir = flags.NewList(django.ConfigGet(django.Global.Settings, APPVAR_TRANSLATIONS_DIR, []string{})...)
+		stored.dir = flags.NewList(djangoapps.CONFIG.Get(APPVAR_TRANSLATIONS_DIR, []string{})...)
 		locales, err := configuredLocaleNames(django.Global.Settings)
 		if err != nil {
 			return err

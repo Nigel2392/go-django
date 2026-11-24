@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 const (
@@ -1446,8 +1447,7 @@ func TestWhereFilterVirtualFieldAliassed(t *testing.T) {
 
 func TestSubquery(t *testing.T) {
 
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 

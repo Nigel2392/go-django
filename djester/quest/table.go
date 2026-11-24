@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 type TB interface {
@@ -42,8 +43,7 @@ func Table[T TB](t T, model ...attrs.Definer) *DBTables[T] {
 		table = &DBTables[T]{}
 	)
 	if django.Global != nil && django.Global.Settings != nil {
-		db = django.ConfigGet[interface{ Driver() driver.Driver }](
-			django.Global.Settings,
+		db = djangoapps.CONFIG.Get[interface{ Driver() driver.Driver }](
 			django.APPVAR_DATABASE,
 		)
 

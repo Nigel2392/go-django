@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -101,13 +102,11 @@ var HomeHandler = &views.BaseView{
 		var user = authentication.Retrieve(req)
 
 		// Initialize / retrieve home page intro texts
-		var pageTitle = django.ConfigGet[any](
-			django.Global.Settings,
+		var pageTitle = djangoapps.CONFIG.Get[any](
 			APPVAR_HOME_PAGE_TITLE,
 			trans.S("Home"),
 		)
-		var pageSubtitle = django.ConfigGet[any](
-			django.Global.Settings,
+		var pageSubtitle = djangoapps.CONFIG.Get[any](
 			APPVAR_HOME_PAGE_SUBTITLE,
 			func(r *http.Request) string {
 				return trans.T(
@@ -125,8 +124,7 @@ var HomeHandler = &views.BaseView{
 		)))
 
 		// Initialize / retrieve the home page logo's static path
-		var logo = django.ConfigGet[any](
-			django.Global.Settings,
+		var logo = djangoapps.CONFIG.Get[any](
 			APPVAR_HOME_PAGE_LOGO_PATH,
 			django.Static("admin/images/home_logo.png"),
 		)

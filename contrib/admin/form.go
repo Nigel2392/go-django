@@ -22,6 +22,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/models"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/versatile"
 	"github.com/elliotchance/orderedmap/v2"
@@ -629,7 +630,7 @@ func (a *AdminForm[T1, T2]) FormSet() formsets.ListFormSet[formsets.BaseFormSetF
 }
 
 func (a *AdminForm[T1, T2]) startSaveTx(origCtx context.Context) (context.Context, drivers.DatabaseSpecificTransaction, error) {
-	if django.Global == nil || django.Global.Settings == nil || django.ConfigGet[any](django.Global.Settings, django.APPVAR_DATABASE) == nil {
+	if django.Global == nil || django.Global.Settings == nil || djangoapps.CONFIG.Get[any](django.APPVAR_DATABASE) == nil {
 		return origCtx, nil, nil
 	}
 	txCtx, tx, err := queries.StartTransaction(origCtx)

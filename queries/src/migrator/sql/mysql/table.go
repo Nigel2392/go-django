@@ -18,6 +18,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/go-sql-driver/mysql"
 )
 
@@ -25,8 +26,7 @@ var _ migrator.SchemaEditor = &MySQLSchemaEditor{}
 
 func init() {
 	migrator.RegisterSchemaEditor(&drivers.DriverMySQL{}, func() (migrator.SchemaEditor, error) {
-		var db, ok = django.ConfigGetOK[drivers.Database](
-			django.Global.Settings,
+		var db, ok = djangoapps.CONFIG.GetOK[drivers.Database](
 			django.APPVAR_DATABASE,
 		)
 		if !ok {
@@ -36,8 +36,7 @@ func init() {
 	})
 
 	migrator.RegisterSchemaEditor(&drivers.DriverMariaDB{}, func() (migrator.SchemaEditor, error) {
-		var db, ok = django.ConfigGetOK[drivers.Database](
-			django.Global.Settings,
+		var db, ok = djangoapps.CONFIG.GetOK[drivers.Database](
 			django.APPVAR_DATABASE,
 		)
 		if !ok {

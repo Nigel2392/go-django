@@ -2,7 +2,7 @@ package search
 
 import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 type backendRegistry struct {
@@ -15,8 +15,7 @@ var registry = &backendRegistry{
 }
 
 func GetDefaultSearchBackend() (string, bool) {
-	var v, ok = django.ConfigGetOK[string](
-		django.Global.Settings,
+	var v, ok = djangoapps.CONFIG.GetOK[string](
 		APPVAR_SEARCH_BACKEND,
 	)
 	return v, ok

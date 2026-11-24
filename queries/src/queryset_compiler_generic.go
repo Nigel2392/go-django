@@ -16,8 +16,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/expr/builder"
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5"
 	"github.com/jmoiron/sqlx"
@@ -61,9 +61,7 @@ func SqlxDriverName(db drivers.DB) string {
 }
 
 func GetCompilerInformation(dbKey string) (*CompilerInformation, error) {
-	var db, ok = django.ConfigGetOK[drivers.Database](
-		django.Global.Settings, dbKey,
-	)
+	var db, ok = djangoapps.CONFIG.GetOK[drivers.Database](dbKey)
 	if !ok {
 		return nil, errors.NoDatabase.WithCause(fmt.Errorf(
 			"no database connection found for key %q", dbKey,

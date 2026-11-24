@@ -21,6 +21,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
@@ -76,8 +77,7 @@ func NewAppConfig() django.AppConfig {
 
 	AppConfig.Init = func(settings django.Settings) error {
 
-		middlewareEnabled := django.ConfigGet(
-			settings,
+		middlewareEnabled := djangoapps.CONFIG.Get(
 			"contrib.settings.SettingsForRequestMiddleware",
 			true,
 		)

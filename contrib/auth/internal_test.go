@@ -24,6 +24,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux/v2"
 )
@@ -550,6 +551,7 @@ func TestAppRouting_ConfigFlagsEdgeCases(t *testing.T) {
 	origAuth := *Auth
 	t.Cleanup(func() {
 		django.Global.Settings = origSettings
+		djangoapps.CONFIG.ApplicationSettings = origSettings
 		*Auth = origAuth
 	})
 
@@ -560,6 +562,7 @@ func TestAppRouting_ConfigFlagsEdgeCases(t *testing.T) {
 			APPVAR_REGISTER_AUTH_URLS:  true,
 			APPVAR_ALLOW_USER_REGISTER: false,
 		})
+		djangoapps.CONFIG.ApplicationSettings = django.Global.Settings
 		m := mux.New()
 		appCfg.Routing(m)
 
@@ -578,6 +581,7 @@ func TestAppRouting_ConfigFlagsEdgeCases(t *testing.T) {
 		django.Global.Settings = django.Config(map[string]any{
 			APPVAR_REGISTER_AUTH_URLS: false,
 		})
+		djangoapps.CONFIG.ApplicationSettings = django.Global.Settings
 		m := mux.New()
 		appCfg.Routing(m)
 

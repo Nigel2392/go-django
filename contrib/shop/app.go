@@ -39,6 +39,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux/v2"
@@ -836,7 +837,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		}
 
 		p := public.PaymentsAPI{
-			Currency: django.ConfigGet(django.Global.Settings, APPVAR_SHOP_CURRENCY, ""),
+			Currency: djangoapps.CONFIG.Get(APPVAR_SHOP_CURRENCY, ""),
 		}
 		pay := baseApiRoute.Get("/payments", nil, "payments")
 		pay.Get("/options", http.HandlerFunc(p.PaymentOptions), "options")

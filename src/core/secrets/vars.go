@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/secrets/encryption"
 	"github.com/Nigel2392/go-django/src/core/secrets/signing"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 type Settings interface {
@@ -62,8 +63,7 @@ var _ = checks.Register(checks.TagSettings, func(ctx context.Context, app any, s
 })
 
 func SECRET_KEY() SecretKey {
-	var key, ok = django.ConfigGetOK[string](
-		django.Global.Settings,
+	var key, ok = djangoapps.CONFIG.GetOK[string](
 		APPVAR_SECRET_KEY,
 	)
 	if !ok {
@@ -75,8 +75,7 @@ func SECRET_KEY() SecretKey {
 }
 
 func SECRET_KEY_FALLBACKS() []SecretKey {
-	var fallbacks = django.ConfigGet(
-		django.Global.Settings,
+	var fallbacks = djangoapps.CONFIG.Get(
 		APPVAR_SECRET_KEY_FALLBACKS,
 		make([]SecretKey, 0),
 	)
@@ -84,8 +83,7 @@ func SECRET_KEY_FALLBACKS() []SecretKey {
 }
 
 func SIGNER_BACKEND() signing.Signer {
-	var signer, ok = django.ConfigGetOK[signing.Signer](
-		django.Global.Settings,
+	var signer, ok = djangoapps.CONFIG.GetOK[signing.Signer](
 		APPVAR_SIGNER_BACKEND,
 	)
 	if !ok {
@@ -99,8 +97,7 @@ func SIGNER_BACKEND() signing.Signer {
 
 func ENCRYPTION_BACKEND() (enc encryption.Encryption, err error) {
 	var ok bool
-	enc, ok = django.ConfigGetOK[encryption.Encryption](
-		django.Global.Settings,
+	enc, ok = djangoapps.CONFIG.GetOK[encryption.Encryption](
 		APPVAR_ENCRYPTION_BACKEND,
 	)
 	if !ok {

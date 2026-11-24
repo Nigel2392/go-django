@@ -6,9 +6,11 @@ import (
 	"hash/fnv"
 	"strconv"
 
+	"github.com/Nigel2392/go-django/internal/sets"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"golang.org/x/text/language"
 )
 
@@ -28,6 +30,76 @@ func NewTranslator(hdr *FileTranslationsHeader, translations map[trans.Locale]ma
 	}
 }
 
+func (t *Translator) BestLocaleMatch(ctx context.Context, locales ...language.Tag) (language.Tag, language.Confidence) {
+	configured, err := configuredLocaleNames(django.Global.Settings)
+	if err != nil {
+		return language.Und, language.No
+	}
+
+	allowedLocales := make([]language.Tag, 0, len(configured))
+	for _, conf := range configured {
+		tag, err := language.Parse(conf)
+		if err != nil {
+			logger.Errorf(
+				"Failed to parse locale %q",
+				conf,
+			)
+		}
+
+		allowedLocales = append(allowedLocales, tag)
+	}
+
+	if len(allowedLocales) == 0 {
+		allowedLocales = []language.Tag{language.English}
+	}
+
+	var matcher = language.NewMatcher(djangoapps.CONFIG.Get(
+		APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE,
+		allowedLocales,
+	))
+
+	tag, _, conf := matcher.Match(locales...)
+	return tag, conf
+}
+
+func (t *Translator) IsAcceptedLocale(ctx context.Context, locales ...language.Tag) bool {
+	var checks = sets.NewOrderedSet[string]()
+	for _, locale := range locales {
+		checks.Add(localeChecks(locale)...)
+	}
+
+	var values = checks.Values()
+	var app, ok = djangoapps.AppFromContext(ctx)
+	if !ok && translatorApp != nil {
+		app = translatorApp
+	}
+
+	if app != nil && t.appTranslations != nil {
+		appTranslations, ok := t.appTranslations[app.Name()]
+		if !ok {
+			goto checkTranslatorHeader
+		}
+
+		for _, check := range values {
+			translations, ok := appTranslations[check][check]
+			if ok && len(translations) > 0 {
+				return true
+			}
+		}
+	}
+
+checkTranslatorHeader:
+	for _, check := range values {
+		translations, ok := t.translations[check][check]
+		if ok && len(translations) > 0 {
+			return true
+		}
+	}
+
+	_, confidence := t.BestLocaleMatch(ctx, locales...)
+	return confidence != language.No
+}
+
 func (t *Translator) Translate(ctx context.Context, v string) string {
 
 	if v == "" {
@@ -39,7 +111,7 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 		checks = localeChecks(locale)
 	)
 
-	var app, ok = django.AppFromContext(ctx)
+	var app, ok = djangoapps.AppFromContext(ctx)
 	if !ok && translatorApp != nil {
 		app = translatorApp
 	}

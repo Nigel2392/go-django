@@ -50,20 +50,10 @@ import (
 )
 
 type (
-	appContextKey struct{}
-	Locale        = string
-	Untranslated  = string
-	Translation   = string
+	Locale       = string
+	Untranslated = string
+	Translation  = string
 )
-
-func AppFromContext(ctx context.Context) (AppConfig, bool) {
-	app, ok := ctx.Value(appContextKey{}).(AppConfig)
-	return app, ok
-}
-
-func ContextWithApp(ctx context.Context, app AppConfig) context.Context {
-	return context.WithValue(ctx, appContextKey{}, app)
-}
 
 // AppConfig is the interface that must be implemented by all Django applications.
 //
@@ -73,43 +63,15 @@ func ContextWithApp(ctx context.Context, app AppConfig) context.Context {
 //
 // The implementation of this interface can be found in [./src/apps/apps.go].
 type AppConfig interface {
-	// The application name.
-	//
-	// This is used to identify the application.
-	//
-	// An application cannot be registered twice - the name MUST be unique.
-	Name() string
-
-	// Dependencies for the application.
-	//
-	// This can be used to define dependencies for the application.
-	//
-	// All of theses dependencies must be registered before the application is initialized.
-	Dependencies() []string
+	djangoapps.BaseAppConfig
 
 	// Models is used to define the models for the app.
 	//
 	// These models can then be used throughout the go-django application.
 	Models() []attrs.Definer
 
-	// Commands for the application.
-	//
-	// These commands can be used to run tasks from the command line.
-	//
-	// The commands are registered in the Django command registry.
-	Commands() []command.Command
-
-	// All apps have been initialized before OnReady() is called.
-	OnReady() error
-
 	// Check is used to check the application for any issues.
 	Check(ctx context.Context, settings Settings) []checks.Message
-
-	// BuildRouting is used to define the routes for the application.
-	// It can also be used to define middleware for the application.
-	//
-	// A Mux object is passed to the function which can be used to define routes.
-	BuildRouting(mux mux.Multiplexer)
 
 	// Initialize your application.
 	//
@@ -124,10 +86,6 @@ type AppConfig interface {
 	//
 	// I.E.: The 'sessions' app must always be registered before 'auth' in order for the auth app to work.
 	Initialize(settings Settings) error
-
-	Processors() []func(ctx.ContextWithRequest)
-
-	Templates() *tpl.Config
 }
 
 // The global application struct.
@@ -191,8 +149,7 @@ func GetAppForModel(model attrs.Definer) (AppConfig, bool) {
 
 func GetIP(r *http.Request) string {
 	return hosts.GetIP(
-		r, ConfigGet(
-			Global.Settings,
+		r, djangoapps.CONFIG.Get(
 			APPVAR_REQUESTS_PROXIED,
 			false,
 		),
@@ -230,6 +187,8 @@ func App(opts ...Option) *Application {
 		}
 	}
 
+	djangoapps.CONFIG.ApplicationSettings = Global.Settings
+
 	return Global
 }
 
@@ -242,7 +201,7 @@ func (a *Application) App(name string) AppConfig {
 // Config returns the value of the key from the settings
 // Shortcut for Application.Settings.Get(key)
 func (a *Application) Config(key string) interface{} {
-	return ConfigGet[interface{}](a.Settings, key)
+	return djangoapps.CONFIG.Get[interface{}](key)
 }
 
 func (a *Application) newAppRegisterFunc(appType any) func() (AppConfig, error) {
@@ -371,8 +330,7 @@ func (a *Application) Reverse(name string, args ...any) string {
 
 func (a *Application) staticURL() string {
 	var staticURL = []byte(
-		ConfigGet(
-			a.Settings,
+		djangoapps.CONFIG.Get(
 			APPVAR_STATIC_URL,
 			"/static/",
 		),
@@ -385,8 +343,7 @@ func (a *Application) staticURL() string {
 
 func (a *Application) mediaURL() string {
 	var mediaURL = []byte(
-		ConfigGet(
-			a.Settings,
+		djangoapps.CONFIG.Get(
 			APPVAR_MEDIA_URL,
 			"/media/",
 		),
@@ -571,13 +528,13 @@ func (a *Application) Initialize() error {
 	a.Mux.Use(
 		// middleware.Recoverer(a.veryBadServerError),
 		middleware.AllowedHosts(
-			ConfigGet(a.Settings, APPVAR_ALLOWED_HOSTS, []string{"*"})...,
+			djangoapps.CONFIG.Get(APPVAR_ALLOWED_HOSTS, []string{"*"})...,
 		),
 		a.loggerMiddleware,         // logs routes when enabled
 		ContextDataStoreMiddleware, // basically attaches a map[string]interface{} to the request.
 	)
 
-	if ConfigGet(a.Settings, APPVAR_RECOVERER, true) {
+	if djangoapps.CONFIG.Get(APPVAR_RECOVERER, true) {
 		a.Mux.Use(
 			middleware.Recoverer(a.ServerError),
 		)
@@ -603,7 +560,7 @@ func (a *Application) Initialize() error {
 
 		// yeesh this took me way too long to realise.
 		var handler http.Handler = staticfiles.EntryHandler
-		var maxAge = ConfigGet(a.Settings, APPVAR_STATIC_ROUTE_CACHING_MAXAGE, 3600)
+		var maxAge = djangoapps.CONFIG.Get(APPVAR_STATIC_ROUTE_CACHING_MAXAGE, 3600)
 		if maxAge > 0 {
 			handler = middleware.Cache(maxAge)(handler)
 		}
@@ -632,8 +589,7 @@ func (a *Application) Initialize() error {
 		var rt = a.Mux.Handle(
 			mux.GET,
 			fmt.Sprintf("%s*", mediaURL),
-			http.StripPrefix(mediaURL, mhttp.Serve(ConfigGet(
-				a.Settings,
+			http.StripPrefix(mediaURL, mhttp.Serve(djangoapps.CONFIG.Get(
 				APPVAR_MEDIA_BACKEND,
 				"",
 			))),
@@ -917,7 +873,7 @@ func (a *Application) Initialize() error {
 			return err
 		}
 
-		if !ConfigGet(a.Settings, APPVAR_CONTINUE_AFTER_COMMANDS, false) && commandsRan {
+		if !djangoapps.CONFIG.Get(APPVAR_CONTINUE_AFTER_COMMANDS, false) && commandsRan {
 			return command.ErrShouldExit
 		}
 
@@ -934,7 +890,7 @@ func (a *Application) Initialize() error {
 		// get assigned a middleware to set up the app- specific request context variables.
 		h.Value.BuildRouting(a.Mux.Namespace(mux.NamespaceOptions{
 			OnRouteServe: func(r *http.Request) *http.Request {
-				return r.WithContext(ContextWithApp(
+				return r.WithContext(djangoapps.ContextWithApp(
 					r.Context(), h.Value,
 				))
 			},
@@ -974,8 +930,7 @@ func (a *Application) Initialize() error {
 		}
 	}
 
-	trans.TRANSLATIONS_DEFAULT_LOCALE = ConfigGet(
-		a.Settings,
+	trans.TRANSLATIONS_DEFAULT_LOCALE = djangoapps.CONFIG.Get(
 		APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
 		language.English,
 	)
@@ -1003,7 +958,7 @@ func (a *Application) middlewareBuiltins() []func(http.Handler) http.Handler {
 		mw, RequestSignalMiddleware,
 	)
 
-	if !ConfigGet(a.Settings, APPVAR_DISABLE_NOSURF, false) {
+	if !djangoapps.CONFIG.Get(APPVAR_DISABLE_NOSURF, false) {
 		mw = append(mw, func(h http.Handler) http.Handler {
 			var hnd = nosurf.New(h)
 			hnd.ExemptFunc(func(r *http.Request) bool {
@@ -1040,12 +995,12 @@ func (a *Application) Serve() error {
 	//	})
 
 	var (
-		HOST        = ConfigGet(a.Settings, APPVAR_HOST, "localhost")
-		PORT        = ConfigGet(a.Settings, APPVAR_PORT, "8080")
-		TLS_PORT    = ConfigGet(a.Settings, APPVAR_TLS_PORT, "")
-		TLSCert     = ConfigGet[string](a.Settings, APPVAR_TLS_CERT)
-		TLSKey      = ConfigGet[string](a.Settings, APPVAR_TLS_KEY)
-		TLSConfig   = ConfigGet[*tls.Config](a.Settings, APPVAR_TLS_CONFIG)
+		HOST        = djangoapps.CONFIG.Get(APPVAR_HOST, "localhost")
+		PORT        = djangoapps.CONFIG.Get(APPVAR_PORT, "8080")
+		TLS_PORT    = djangoapps.CONFIG.Get(APPVAR_TLS_PORT, "")
+		TLSCert     = djangoapps.CONFIG.Get[string](APPVAR_TLS_CERT)
+		TLSKey      = djangoapps.CONFIG.Get[string](APPVAR_TLS_KEY)
+		TLSConfig   = djangoapps.CONFIG.Get[*tls.Config](APPVAR_TLS_CONFIG)
 		addr_http   = fmt.Sprintf("%s:%s", HOST, PORT)
 		addr_https  = fmt.Sprintf("%s:%s", HOST, TLS_PORT)
 		server_http = &http.Server{

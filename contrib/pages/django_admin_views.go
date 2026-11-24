@@ -35,6 +35,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -233,14 +234,12 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		return
 	}
 
-	var outdatedAfter = django.ConfigGet(
-		django.Global.Settings,
+	var outdatedAfter = djangoapps.CONFIG.Get(
 		APPVAR_OUTDATED_AFTER_DURATION,
 		time.Duration(24*time.Hour),
 	)
 
-	var listDisplay = django.ConfigGet(
-		django.Global.Settings,
+	var listDisplay = djangoapps.CONFIG.Get(
 		APPVAR_OUTDATED_LIST_DISPLAY,
 		[]string{"Title", "UrlPath", "ContentType", "Live", "UpdatedAt"},
 	)

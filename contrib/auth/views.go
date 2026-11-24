@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
@@ -59,8 +60,7 @@ func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	if nextURL != "" {
 		context.Set("NextURL", nextURL)
 	} else {
-		var nextURLSetting = django.ConfigGet[interface{}](
-			django.Global.Settings,
+		var nextURLSetting = djangoapps.CONFIG.Get[interface{}](
 			APPVAR_LOGIN_REDIRECT_URL,
 			DEFAULT_LOGIN_REDIRECT_URL,
 		)
@@ -109,8 +109,7 @@ checkFormErr:
 formSuccess:
 	var nextURL = req.URL.Query().Get("next")
 	if nextURL == "" {
-		var nextURLSetting = django.ConfigGet[interface{}](
-			django.Global.Settings,
+		var nextURLSetting = djangoapps.CONFIG.Get[interface{}](
 			APPVAR_LOGIN_REDIRECT_URL,
 			DEFAULT_LOGIN_REDIRECT_URL,
 		)
@@ -151,8 +150,7 @@ func RegisterView(baseView *views.BaseView, cfg RegisterFormConfig, opts ...func
 func viewUserLogin(w http.ResponseWriter, r *http.Request) {
 	var u = authentication.Retrieve(r)
 	if u.IsAuthenticated() {
-		var nextURLSetting = django.ConfigGet[interface{}](
-			django.Global.Settings,
+		var nextURLSetting = djangoapps.CONFIG.Get[interface{}](
 			APPVAR_LOGIN_REDIRECT_URL,
 			DEFAULT_LOGIN_REDIRECT_URL,
 		)

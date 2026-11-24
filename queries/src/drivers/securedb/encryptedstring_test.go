@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/securedb"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/secrets"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 func setupSettings(t *testing.T) {
@@ -19,6 +20,7 @@ func setupSettings(t *testing.T) {
 	django.Global.Settings = django.Config(map[string]interface{}{
 		secrets.APPVAR_SECRET_KEY: string(hash[:]),
 	})
+	djangoapps.CONFIG.ApplicationSettings = django.Global.Settings
 }
 
 func TestEncryptedString_Lifecycle(t *testing.T) {

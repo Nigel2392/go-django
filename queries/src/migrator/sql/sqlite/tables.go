@@ -17,6 +17,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/mattn/go-sqlite3"
 )
 
@@ -24,8 +25,7 @@ var _ migrator.SchemaEditor = &SQLiteSchemaEditor{}
 
 func init() {
 	migrator.RegisterSchemaEditor(&sqlite3.SQLiteDriver{}, func() (migrator.SchemaEditor, error) {
-		var db, ok = django.ConfigGetOK[drivers.Database](
-			django.Global.Settings,
+		var db, ok = djangoapps.CONFIG.GetOK[drivers.Database](
 			django.APPVAR_DATABASE,
 		)
 		if !ok {

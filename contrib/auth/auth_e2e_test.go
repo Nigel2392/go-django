@@ -25,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
@@ -1191,29 +1192,29 @@ func TestPassword_StringHashEdgeCases(t *testing.T) {
 }
 
 func TestSettings_ConfigGetInterfaceEdgeCases(t *testing.T) {
-	s := mapSettings{}
+	s := djangoapps.NewConfig(mapSettings{})
 
 	// Unset key falls back to default
-	if v, ok := django.ConfigGetOK[interface{}](s, "LOGIN_REDIRECT_URL", "/default"); ok || v != "/default" {
+	if v, ok := s.GetOK[interface{}]("LOGIN_REDIRECT_URL", "/default"); ok || v != "/default" {
 		t.Errorf("unset ConfigGetOK[any] = (%v, %v), want (/default, false)", v, ok)
 	}
 
 	// Explicit nil value returns (nil, false)
-	s["LOGIN_REDIRECT_URL"] = nil
-	if v, ok := django.ConfigGetOK[interface{}](s, "LOGIN_REDIRECT_URL", "/default"); ok || v != nil {
+	s.ApplicationSettings.(mapSettings)["LOGIN_REDIRECT_URL"] = nil
+	if v, ok := s.GetOK[interface{}]("LOGIN_REDIRECT_URL", "/default"); ok || v != nil {
 		t.Errorf("nil ConfigGetOK[any] = (%v, %v), want (nil, false)", v, ok)
 	}
 
 	// Empty string returns default with ok=true
-	s["LOGIN_REDIRECT_URL"] = ""
-	if v, ok := django.ConfigGetOK[interface{}](s, "LOGIN_REDIRECT_URL", "/default"); !ok || v != "/default" {
+	s.ApplicationSettings.(mapSettings)["LOGIN_REDIRECT_URL"] = ""
+	if v, ok := s.GetOK[interface{}]("LOGIN_REDIRECT_URL", "/default"); !ok || v != "/default" {
 		t.Errorf("empty string ConfigGetOK[any] = (%v, %v), want (/default, true)", v, ok)
 	}
 
 	// func(*http.Request) string succeeds
 	fn := func(*http.Request) string { return "/fn-target" }
-	s["LOGIN_REDIRECT_URL"] = fn
-	if v, ok := django.ConfigGetOK[interface{}](s, "LOGIN_REDIRECT_URL", "/default"); !ok || v == nil {
+	s.ApplicationSettings.(mapSettings)["LOGIN_REDIRECT_URL"] = fn
+	if v, ok := s.GetOK[interface{}]("LOGIN_REDIRECT_URL", "/default"); !ok || v == nil {
 		t.Errorf("func ConfigGetOK[any] = (%v, %v), want non-nil func, true", v, ok)
 	}
 }

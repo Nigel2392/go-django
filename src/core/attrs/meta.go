@@ -277,10 +277,17 @@ func registerModel(t reflect.Type, model Definer, final bool, sendSignals bool) 
 	//	modelReg[t] = meta
 
 	// register and set up embedded types
+	embedder.Register.Register(model)
 	embedder.Init.Register(model)
 	embedder.PreSave.Register(model)
 	embedder.PostSave.Register(model)
-	err := embedder.Init.Bind(registerContext, model)
+
+	err := embedder.Register.Bind(registerContext, model)
+	if err != nil {
+		panic(fmt.Errorf("error during registry initialisation (embedder.Register.Bind): %w", err))
+	}
+
+	err = embedder.Init.Bind(registerContext, model)
 	if err != nil {
 		panic(fmt.Errorf("error during registry initialisation (embedder.Init.Bind): %w", err))
 	}

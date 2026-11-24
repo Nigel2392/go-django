@@ -14,6 +14,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux/v2"
 	"golang.org/x/text/language"
@@ -91,6 +92,7 @@ func setTestDjango(t *testing.T, settings django.Settings) {
 	previous := django.Global
 	t.Cleanup(func() { django.Global = previous })
 	django.Global = &django.Application{Settings: settings}
+	djangoapps.CONFIG.ApplicationSettings = settings
 }
 
 func setTestTranslationsApp(t *testing.T, app *TranslationsAppConfig) {

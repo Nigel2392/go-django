@@ -64,6 +64,7 @@ type TranslationBackend interface {
 	Pluralize(ctx context.Context, singular, plural Untranslated, n int) Translation
 	Pluralizef(ctx context.Context, singular, plural Untranslated, n int, args ...any) Translation
 	TimeFormat(ctx context.Context, short bool) Translation
+	IsAcceptedLocale(ctx context.Context, locales ...language.Tag) bool
 }
 
 // S is a shortcut for translating a string with the default backend.
@@ -160,6 +161,14 @@ func GetText(ctx context.Context, v any) (string, bool) {
 	}
 
 	return fn(ctx), true
+}
+
+func IsAcceptedLocale(ctx context.Context, locales ...language.Tag) bool {
+	if len(locales) == 0 {
+		return false
+	}
+
+	return DefaultBackend.IsAcceptedLocale(ctx, locales...)
 }
 
 const (

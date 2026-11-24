@@ -13,6 +13,7 @@ type Registry interface {
 }
 
 var (
+	Register Registry = NewRegistry("RegisterEmbedded")
 	Init     Registry = NewRegistry("SetupEmbedded")
 	PreSave  Registry = NewRegistry("PreSaveEmbedded")
 	PostSave Registry = NewRegistry("PostSaveEmbedded")

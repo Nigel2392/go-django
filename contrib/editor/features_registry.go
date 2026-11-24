@@ -11,6 +11,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -103,8 +104,7 @@ func (e *EditorJSBlockData) Render() (template.HTML, error) {
 
 	var wrap_rendered_blocks bool
 	if django.Global != nil {
-		wrap_rendered_blocks = django.ConfigGet(
-			django.Global.Settings,
+		wrap_rendered_blocks = djangoapps.CONFIG.Get(
 			APPVAR_WRAP_RENDERED_BLOCKS,
 			true,
 		)
@@ -275,8 +275,7 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 
 	var enableInlineToolbar bool
 	if django.Global != nil {
-		enableInlineToolbar = django.ConfigGet(
-			django.Global.Settings,
+		enableInlineToolbar = djangoapps.CONFIG.Get(
 			APPVAR_ENABLE_INLINE_TOOLBAR,
 			true,
 		)

@@ -16,14 +16,14 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 var _ migrator.SchemaEditor = &PostgresSchemaEditor{}
 
 func init() {
 	migrator.RegisterSchemaEditor(&drivers.DriverPostgres{}, func() (migrator.SchemaEditor, error) {
-		var db, ok = django.ConfigGetOK[drivers.Database](
-			django.Global.Settings,
+		var db, ok = djangoapps.CONFIG.GetOK[drivers.Database](
 			django.APPVAR_DATABASE,
 		)
 		if !ok {

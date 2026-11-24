@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/mux/v2/hosts"
 )
 
@@ -20,8 +21,8 @@ import (
 //
 // If the request is a static route request, it will log the request with a debug level.
 func (a *Application) loggerMiddleware(next http.Handler) http.Handler {
-	var logggingEnabled = ConfigGet(a.Settings, APPVAR_ROUTE_LOGGING_ENABLED,
-		ConfigGet(a.Settings, APPVAR_DEBUG, true),
+	var logggingEnabled = djangoapps.CONFIG.Get(APPVAR_ROUTE_LOGGING_ENABLED,
+		djangoapps.CONFIG.Get(APPVAR_DEBUG, true),
 	)
 	if !logggingEnabled {
 		return next
@@ -35,7 +36,7 @@ func (a *Application) loggerMiddleware(next http.Handler) http.Handler {
 
 		var logLevel = logger.INF
 		if IsStaticRouteRequest(r) {
-			if !ConfigGet(a.Settings, APPVAR_DEBUG, true) || !ConfigGet(a.Settings, APPVAR_STATIC_ROUTE_LOGGING_ENABLED, false) {
+			if !djangoapps.CONFIG.Get(APPVAR_DEBUG, true) || !djangoapps.CONFIG.Get(APPVAR_STATIC_ROUTE_LOGGING_ENABLED, false) {
 				return
 			}
 			logLevel = logger.DBG
@@ -44,8 +45,8 @@ func (a *Application) loggerMiddleware(next http.Handler) http.Handler {
 		var (
 			timeTaken  = time.Since(startTime)
 			remoteAddr = hosts.GetIP(
-				r, ConfigGet(
-					a.Settings, APPVAR_REQUESTS_PROXIED, false,
+				r, djangoapps.CONFIG.Get(
+					APPVAR_REQUESTS_PROXIED, false,
 				),
 			)
 			pathBuf = new(strings.Builder)

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"slices"
 
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 var (
@@ -67,8 +67,7 @@ func decodeMessages(encoded string) ([]Message, error) {
 }
 
 func NewCookieBackend(r *http.Request) (MessageBackend, error) {
-	var key = django.ConfigGet(
-		django.Global.Settings,
+	var key = djangoapps.CONFIG.Get(
 		APPVAR_COOKIE_KEY,
 		cookieBackendBaseCoookie,
 	)

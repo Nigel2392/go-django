@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 const (
@@ -85,8 +86,7 @@ var app = &migratorAppConfig{
 
 func NewAppConfig() *migratorAppConfig {
 
-	app.MigrationDir, _ = django.ConfigGetOK(
-		django.Global.Settings,
+	app.MigrationDir, _ = djangoapps.CONFIG.GetOK(
 		APPVAR_MIGRATION_DIR,
 		DEFAULT_MIGRATION_DIR,
 	)

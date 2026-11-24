@@ -18,6 +18,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -556,8 +557,7 @@ func TestTodoInsert(t *testing.T) {
 		{Title: "Test Todo 3", Description: "Description 3", Done: false},
 	}
 
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 
@@ -586,8 +586,7 @@ func TestTodoInsert(t *testing.T) {
 }
 
 func TestTodoUpdate(t *testing.T) {
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 
@@ -622,8 +621,7 @@ func TestTodoUpdate(t *testing.T) {
 }
 
 func TestTodoGet(t *testing.T) {
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 
@@ -652,8 +650,7 @@ func TestTodoGet(t *testing.T) {
 }
 
 func TestTodoList(t *testing.T) {
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 
@@ -684,8 +681,7 @@ func TestTodoList(t *testing.T) {
 }
 
 func TestListTodoByIDs(t *testing.T) {
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 
@@ -726,8 +722,7 @@ func TestListTodoByIDs(t *testing.T) {
 }
 
 func TestTodoDelete(t *testing.T) {
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 	var err error
@@ -1830,8 +1825,7 @@ func TestQueryGetMultipleRows(t *testing.T) {
 
 func TestQueryCreate(t *testing.T) {
 
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 
@@ -2411,8 +2405,7 @@ type testQuerySet_Concurrency struct {
 
 func TestQuerySet_SharedInstance_Concurrency(t *testing.T) {
 
-	var db = django.ConfigGet[drivers.Database](
-		django.Global.Settings,
+	var db = djangoapps.CONFIG.Get[drivers.Database](
 		django.APPVAR_DATABASE,
 	)
 

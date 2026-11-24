@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux/v2"
 )
@@ -92,8 +93,8 @@ func NewAppConfig() django.AppConfig {
 
 		cfg.finders = []Finder{
 			&templateTranslationsFinder{
-				extensions: django.ConfigGet(
-					django.Global.Settings, APPVAR_TRANSLATIONS_EXTENSIONS, []string{
+				extensions: djangoapps.CONFIG.Get(
+					APPVAR_TRANSLATIONS_EXTENSIONS, []string{
 						"tmpl",
 						"html",
 						"txt",
@@ -102,8 +103,8 @@ func NewAppConfig() django.AppConfig {
 				matches: templateTranslationMatchers,
 			},
 			&goTranslationsFinder{
-				packageAliases: django.ConfigGet(
-					django.Global.Settings, APPVAR_TRANSLATIONS_PACKAGES, []string{},
+				packageAliases: djangoapps.CONFIG.Get(
+					APPVAR_TRANSLATIONS_PACKAGES, []string{},
 				),
 				functions: goFileTranslationMatchers,
 			},

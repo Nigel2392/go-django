@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 func setupTestSettings() {
@@ -18,6 +19,7 @@ func setupTestSettings() {
 	django.Global.Settings = django.Config(map[string]interface{}{
 		APPVAR_SECRET_KEY: string(hash[:]),
 	})
+	djangoapps.CONFIG.ApplicationSettings = django.Global.Settings
 }
 
 func TestSecretKeyMethods(t *testing.T) {

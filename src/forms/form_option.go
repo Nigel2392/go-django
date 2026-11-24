@@ -11,6 +11,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-signals"
 )
 
@@ -46,8 +47,7 @@ func WithRequestData(method string, r *http.Request) func(Form) {
 	var files = make(map[string][]filesystem.FileHeader)
 	var onceFn = func() (url.Values, map[string][]filesystem.FileHeader) {
 		once.Do(func() {
-			err := r.ParseMultipartForm(int64(django.ConfigGet(
-				django.Global.Settings,
+			err := r.ParseMultipartForm(int64(djangoapps.CONFIG.Get(
 				django.APPVAR_MAX_FORM_MEMORY,
 				django.DEFAULT_MAX_FORM_MEMORY,
 			)))

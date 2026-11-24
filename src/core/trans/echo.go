@@ -3,9 +3,15 @@ package trans
 import (
 	"context"
 	"fmt"
+
+	"golang.org/x/text/language"
 )
 
 type SprintBackend struct{}
+
+func (b *SprintBackend) IsAcceptedLocale(ctx context.Context, locales ...language.Tag) bool {
+	return true
+}
 
 func (b *SprintBackend) Translate(ctx context.Context, v string) string {
 	return v

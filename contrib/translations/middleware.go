@@ -6,12 +6,12 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"golang.org/x/text/language"
 )
 
 func TranslatorMiddleware() func(next http.Handler) http.Handler {
-	var matcher = language.NewMatcher(django.ConfigGet(
-		django.Global.Settings,
+	var matcher = language.NewMatcher(djangoapps.CONFIG.Get(
 		APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE,
 		[]language.Tag{
 			language.English,
