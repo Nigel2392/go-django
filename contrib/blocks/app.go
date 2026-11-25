@@ -19,7 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -148,7 +148,7 @@ func NewAppConfig() *apps.AppConfig {
 			}),
 		)
 
-		staticfiles.AddFS(
+		static.AddFS(
 			staticFS,
 			filesystem.MatchAnd(
 				filesystem.MatchPrefix("blocks"),

@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/elliotchance/orderedmap/v2"
 	"golang.org/x/text/language"
@@ -32,7 +33,7 @@ func TestSyncLocalesCommandRegistersAndPersists(t *testing.T) {
 	for _, cmd := range cfg.Commands() {
 		registry.Register(cmd)
 	}
-	django.Global.Settings.Set(APPVAR_TRANSLATIONS_LOCALES, []string{"nl", " EN-us ", "en-US", "nl", "zh-hant-tw"})
+	django.Global.Settings.Set(trans.APPVAR_TRANSLATIONS_LOCALES, []string{"nl", " EN-us ", "en-US", "nl", "zh-hant-tw"})
 	args := []string{"sync-locales", "-locales=fr", "-locales=nl", "-locales=fr"}
 	for range 2 {
 		if err := registry.ExecCommand(args); err != nil {
@@ -41,7 +42,7 @@ func TestSyncLocalesCommandRegistersAndPersists(t *testing.T) {
 		assertStoredLocales(t, "de", "en-US", "fr", "nl", "zh-Hant-TW")
 	}
 
-	django.Global.Settings.Set(APPVAR_TRANSLATIONS_LOCALES, []language.Tag{language.Portuguese, language.MustParse("pt-PT"), language.Und})
+	django.Global.Settings.Set(trans.APPVAR_TRANSLATIONS_LOCALES, []language.Tag{language.Portuguese, language.MustParse("pt-PT"), language.Und})
 	if err := registry.ExecCommand([]string{"sync-locales"}); err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +51,7 @@ func TestSyncLocalesCommandRegistersAndPersists(t *testing.T) {
 
 func TestSyncLocalesRejectsInputWithoutWriting(t *testing.T) {
 	setupLocaleDatabase(t)
-	django.Global.Settings.Set(APPVAR_TRANSLATIONS_LOCALES, []string{"nl"})
+	django.Global.Settings.Set(trans.APPVAR_TRANSLATIONS_LOCALES, []string{"nl"})
 	if err := executeSyncLocalesCommand(); err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +70,7 @@ func TestSyncLocalesRejectsInputWithoutWriting(t *testing.T) {
 		{"unexpected positional argument", []string{"fr"}, []string{"de"}, "does not accept positional arguments"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			django.Global.Settings.Set(APPVAR_TRANSLATIONS_LOCALES, tc.setting)
+			django.Global.Settings.Set(trans.APPVAR_TRANSLATIONS_LOCALES, tc.setting)
 			err := executeSyncLocalesCommand(tc.args...)
 			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 				t.Errorf("sync-locales error = %v, want %q", err, tc.wantErr)
@@ -88,7 +89,7 @@ BEGIN SELECT RAISE(ABORT, 'fixture rejects fr'); END;`
 		t.Fatal(err)
 	}
 
-	django.Global.Settings.Set(APPVAR_TRANSLATIONS_LOCALES, []string{"de", "fr"})
+	django.Global.Settings.Set(trans.APPVAR_TRANSLATIONS_LOCALES, []string{"de", "fr"})
 	err := executeSyncLocalesCommand()
 	if err == nil || !strings.Contains(err.Error(), "could not save locales") || !strings.Contains(err.Error(), "fixture rejects fr") {
 		t.Fatalf("sync-locales error = %v, want trigger failure", err)
@@ -108,7 +109,7 @@ func TestSyncLocalesReportsMissingTable(t *testing.T) {
 	if _, err := db.ExecContext(t.Context(), "DROP TABLE translations_locale"); err != nil {
 		t.Fatal(err)
 	}
-	django.Global.Settings.Set(APPVAR_TRANSLATIONS_LOCALES, []string{"en"})
+	django.Global.Settings.Set(trans.APPVAR_TRANSLATIONS_LOCALES, []string{"en"})
 	if err := executeSyncLocalesCommand(); err == nil || !strings.Contains(err.Error(), "could not read existing locales") {
 		t.Errorf("sync-locales error = %v, want missing table", err)
 	}
@@ -119,7 +120,7 @@ func TestSyncLocalesReportsClosedDatabase(t *testing.T) {
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
-	django.Global.Settings.Set(APPVAR_TRANSLATIONS_LOCALES, []string{"en"})
+	django.Global.Settings.Set(trans.APPVAR_TRANSLATIONS_LOCALES, []string{"en"})
 	if err := executeSyncLocalesCommand(); err == nil || !strings.Contains(err.Error(), "could not start a transaction") {
 		t.Errorf("sync-locales error = %v, want transaction startup error", err)
 	}

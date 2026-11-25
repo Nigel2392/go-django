@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/command/flags"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -35,11 +34,15 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 	Desc: "Search for translation strings in the project files",
 	FlagFunc: func(m command.Manager, stored *translationsCommandContext, f *flag.FlagSet) error {
 		stored.dir = flags.NewList(djangoapps.CONFIG.Get(APPVAR_TRANSLATIONS_DIR, []string{})...)
-		locales, err := configuredLocaleNames(django.Global.Settings)
+		locales, err := trans.ConfiguredLocales()
 		if err != nil {
 			return err
 		}
-		stored.locs = flags.NewList(locales...)
+		var str = make([]string, len(locales))
+		for i, locale := range locales {
+			str[i] = locale.String()
+		}
+		stored.locs = flags.NewList(str...)
 
 		f.Var(&stored.dir, "dir", "The directory to search for translation strings")
 		f.Var(&stored.locs, "locales", "Generate the following locales for the translation strings")
@@ -125,7 +128,11 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 		if len(locales.List()) > 0 {
 			for _, locale := range locales.List() {
 
+				var legacyLocale = strings.ReplaceAll(locale, "-", "_")
 				var rule, ok = pluralRules[locale]
+				if !ok {
+					rule, ok = pluralRules[legacyLocale]
+				}
 				if !ok {
 					rule = pluralRule{
 						l:   2,
@@ -135,33 +142,24 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 					}
 				}
 
-				if loc, ok := translatorApp.translationHeader.hdr.Locales.Get(locale); ok {
-					if loc.LongTimeFormat == "" {
-						loc.LongTimeFormat = rule.ltf
-					}
-
-					if loc.ShortTimeFormat == "" {
-						loc.ShortTimeFormat = rule.stf
-					}
-
-					if loc.NumPluralForms == 0 {
-						loc.NumPluralForms = rule.l
-					}
-
-					if loc.PluralRule == "" {
-						loc.PluralRule = rule.r
-					}
-
-					translatorApp.translationHeader.hdr.Locales.Set(locale, loc)
-					continue // Locale already exists
+				var headers = translatorApp.translationHeader.hdr.Locales
+				loc, exists := headers.Get(locale)
+				if !exists && legacyLocale != locale {
+					loc, _ = headers.Get(legacyLocale)
 				}
-
-				translatorApp.translationHeader.hdr.Locales.Set(locale, TranslationHeaderLocale{
-					NumPluralForms:  rule.l,
-					PluralRule:      rule.r,
-					ShortTimeFormat: rule.stf,
-					LongTimeFormat:  rule.ltf,
-				})
+				if loc.LongTimeFormat == "" {
+					loc.LongTimeFormat = rule.ltf
+				}
+				if loc.ShortTimeFormat == "" {
+					loc.ShortTimeFormat = rule.stf
+				}
+				if loc.NumPluralForms == 0 {
+					loc.NumPluralForms = rule.l
+				}
+				if loc.PluralRule == "" {
+					loc.PluralRule = rule.r
+				}
+				headers.Set(locale, loc)
 			}
 		}
 
@@ -226,7 +224,12 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 			// If a locale is not found, it will be added with an empty string value
 			for _, locale := range locales.List() {
 				if _, ok := m.Locales.Get(locale); !ok {
-					// m.Locales.Set(locale, []string{""})
+					if legacyLocale := strings.ReplaceAll(locale, "-", "_"); legacyLocale != locale {
+						if forms, ok := m.Locales.Get(legacyLocale); ok {
+							m.Locales.Set(locale, forms)
+							continue
+						}
+					}
 					var headerLocale, ok = translatorApp.translationHeader.hdr.Locales.Get(locale)
 					if !ok || m.Plural == "" {
 						m.Locales.Set(locale, []string{""})

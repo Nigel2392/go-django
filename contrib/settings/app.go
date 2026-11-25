@@ -17,7 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
@@ -41,7 +41,7 @@ var AppConfig *SettingsApp = &SettingsApp{
 
 func NewAppConfig() django.AppConfig {
 
-	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+	static.AddFS(staticFS, filesystem.MatchAnd(
 		filesystem.MatchPrefix("settings/"),
 		filesystem.MatchOr(
 			filesystem.MatchExt(".css"),
@@ -211,7 +211,7 @@ func (a *SettingsApp) Check(ctx context.Context, djangosettings django.Settings)
 func SettingsForRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		if django.IsStaticRouteRequest(r) {
+		if static.Request(r) {
 			next.ServeHTTP(w, r)
 			return
 		}

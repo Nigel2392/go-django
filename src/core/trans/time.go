@@ -289,9 +289,9 @@ var (
 			format: func(ctx context.Context, t *timeInfo, flags map[byte]bool) Translation { // hour (00-23)
 				var hour = t.hour
 				if _, ok := flags['-']; ok {
-					return fmt.Sprintf("%02d", hour)
+					return strconv.Itoa(hour)
 				}
-				return strconv.Itoa(hour)
+				return fmt.Sprintf("%02d", hour)
 			},
 		},
 		'I': {
@@ -363,8 +363,7 @@ var (
 		},
 		'z': {
 			format: func(ctx context.Context, t *timeInfo, flags map[byte]bool) Translation { // timezone offset
-				_, offset := t.time.Zone()
-				return fmt.Sprintf("%+03d:00", offset/3600)
+				return t.time.Format("-07:00")
 			},
 		},
 		'Z': {

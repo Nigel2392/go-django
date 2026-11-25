@@ -13,7 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-telepath/telepath"
@@ -92,7 +92,7 @@ func NewAppConfig() django.AppConfig {
 		return EditorJSField(features, opts...), true
 	})
 
-	staticfiles.AddFS(
+	static.AddFS(
 		editorJS_FS,
 		filesystem.MatchAnd(
 			filesystem.MatchPrefix("editorjs"),

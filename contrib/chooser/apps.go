@@ -11,7 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
@@ -51,7 +51,7 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	app.Init = func(settings django.Settings) error {
-		staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+		static.AddFS(staticFS, filesystem.MatchAnd(
 			filesystem.MatchPrefix("chooser/"),
 			filesystem.MatchOr(
 				filesystem.MatchExt(".css"),

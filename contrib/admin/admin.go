@@ -25,7 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -364,7 +364,7 @@ func NewAppConfig() django.AppConfig {
 		return nil
 	}
 
-	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+	static.AddFS(staticFS, filesystem.MatchAnd(
 		filesystem.MatchPrefix("admin/"),
 		filesystem.MatchOr(
 			filesystem.MatchExt(".css"),
@@ -378,7 +378,7 @@ func NewAppConfig() django.AppConfig {
 		),
 	))
 
-	staticfiles.AddFS(
+	static.AddFS(
 		// telepath.TelepathJS,
 		filesystem.Sub(telepath.TelepathJS, "static"),
 		filesystem.MatchPrefix("telepath/"),

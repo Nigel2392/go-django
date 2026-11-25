@@ -8,7 +8,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/mux/v2"
 )
@@ -38,7 +38,7 @@ func NewAppConfig() django.AppConfig {
 			return err
 		}
 
-		staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+		static.AddFS(staticFS, filesystem.MatchAnd(
 			filesystem.MatchPrefix("formsapp/"),
 			filesystem.MatchOr(
 				filesystem.MatchExt(".css"),

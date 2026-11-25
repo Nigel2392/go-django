@@ -7,7 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/mux/v2"
 )
@@ -26,7 +26,7 @@ func NewAppConfig() *CoreAppConfig {
 
 	CONFIG.ModelObjects = []attrs.Definer{}
 
-	staticfiles.AddFS(filesystem.Sub(coreFS, "assets/static"), filesystem.MatchAnd(
+	static.AddFS(filesystem.Sub(coreFS, "assets/static"), filesystem.MatchAnd(
 		filesystem.MatchPrefix("commerce/"),
 		filesystem.MatchOr(
 			filesystem.MatchExt(".css"),

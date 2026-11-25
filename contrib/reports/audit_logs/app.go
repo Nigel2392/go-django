@@ -30,7 +30,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/pagination"
@@ -137,7 +137,7 @@ func NewAppConfig() django.AppConfig {
 		panic(err)
 	}
 
-	staticfiles.AddFS(
+	static.AddFS(
 		sFs, filesystem.MatchAnd(
 			filesystem.MatchPrefix("auditlogs/"),
 			filesystem.MatchOr(

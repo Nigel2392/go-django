@@ -34,7 +34,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -492,7 +492,7 @@ func NewAppConfig() django.AppConfig {
 		return nil
 	}
 
-	// Only register staticfiles & templates if the admin app is installed
+	// Only register static & templates if the admin app is installed
 	if django.AppInstalled("admin") {
 		var assetFileSys, err = fs.Sub(assetsFS, "assets/static")
 		if err != nil {
@@ -504,7 +504,7 @@ func NewAppConfig() django.AppConfig {
 			panic(err)
 		}
 
-		staticfiles.AddFS(
+		static.AddFS(
 			assetFileSys, filesystem.MatchAnd(
 				filesystem.MatchPrefix("pages/"),
 				filesystem.MatchOr(

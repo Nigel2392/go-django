@@ -25,8 +25,6 @@ var DefaultBackend TranslationBackend = &SprintBackend{}
 
 const PACKAGE_PATH = "github.com/Nigel2392/go-django/src/core/trans"
 
-var TRANSLATIONS_DEFAULT_LOCALE = language.English
-
 type (
 	Locale        = string
 	Translation   = string
@@ -138,7 +136,9 @@ func GetTextFunc(v any) (fn TranslateFunc) {
 	case string:
 		fn = S(v)
 	case func() string:
-		fn = func(_ context.Context) string { return v() }
+		if v != nil {
+			fn = func(_ context.Context) string { return v() }
+		}
 	case func(ctx context.Context) string:
 		fn = v
 	case TranslateFunc:

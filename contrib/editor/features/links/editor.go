@@ -12,7 +12,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/mux/v2"
 	"github.com/PuerkitoBio/goquery"
@@ -78,7 +78,7 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 			return fb
 		},
 		Register: func(m mux.Multiplexer) {
-			staticfiles.AddFS(
+			static.AddFS(
 				filesystem.Sub(linksFs, "static"),
 				filesystem.MatchPrefix("links/editorjs"),
 			)

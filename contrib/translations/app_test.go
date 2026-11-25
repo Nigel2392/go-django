@@ -13,6 +13,7 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/checks"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/goldcrest"
@@ -90,7 +91,11 @@ func TestTranslationsAppInitialize(t *testing.T) {
 func setTestDjango(t *testing.T, settings django.Settings) {
 	t.Helper()
 	previous := django.Global
-	t.Cleanup(func() { django.Global = previous })
+	previousSettings := djangoapps.CONFIG.ApplicationSettings
+	t.Cleanup(func() {
+		django.Global = previous
+		djangoapps.CONFIG.ApplicationSettings = previousSettings
+	})
 	django.Global = &django.Application{Settings: settings}
 	djangoapps.CONFIG.ApplicationSettings = settings
 }
@@ -124,7 +129,7 @@ func TestTranslatorMiddleware(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			settings := django.Config(nil)
 			if tc.configured != nil {
-				settings.Set(APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE, tc.configured)
+				settings.Set(trans.APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE, tc.configured)
 			}
 			setTestDjango(t, settings)
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -134,7 +139,7 @@ func TestTranslatorMiddleware(t *testing.T) {
 				req.AddCookie(&http.Cookie{Name: "lang", Value: tc.cookie})
 			}
 			if tc.static {
-				req = django.RequestWithStaticMark(req, true)
+				req = static.MarkRequest(req, true)
 			}
 
 			rec := httptest.NewRecorder()

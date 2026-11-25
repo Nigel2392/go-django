@@ -11,7 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
@@ -24,7 +24,7 @@ func initTemplateLibrary() {
 	var templates, err = fs.Sub(formAssets, "assets/templates")
 	assert.True(err == nil, "failed to get form templates")
 
-	static, err := fs.Sub(formAssets, "assets/static")
+	assets, err := fs.Sub(formAssets, "assets/static")
 	assert.True(err == nil, "failed to get form static files")
 
 	var templateConfig = tpl.Config{
@@ -44,11 +44,11 @@ func initTemplateLibrary() {
 	}
 
 	for _, hook := range goldcrest.Get[FormTemplateStaticHook](FormTemplateStaticHookName) {
-		static = hook(static)
+		assets = hook(assets)
 	}
 
 	tpl.Add(templateConfig)
-	staticfiles.AddFS(static, filesystem.MatchPrefix("forms/"))
+	static.AddFS(assets, filesystem.MatchPrefix("forms/"))
 }
 
 type (

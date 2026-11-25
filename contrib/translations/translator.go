@@ -30,38 +30,6 @@ func NewTranslator(hdr *FileTranslationsHeader, translations map[trans.Locale]ma
 	}
 }
 
-func (t *Translator) BestLocaleMatch(ctx context.Context, locales ...language.Tag) (language.Tag, language.Confidence) {
-	configured, err := configuredLocaleNames(django.Global.Settings)
-	if err != nil {
-		return language.Und, language.No
-	}
-
-	allowedLocales := make([]language.Tag, 0, len(configured))
-	for _, conf := range configured {
-		tag, err := language.Parse(conf)
-		if err != nil {
-			logger.Errorf(
-				"Failed to parse locale %q",
-				conf,
-			)
-		}
-
-		allowedLocales = append(allowedLocales, tag)
-	}
-
-	if len(allowedLocales) == 0 {
-		allowedLocales = []language.Tag{language.English}
-	}
-
-	var matcher = language.NewMatcher(djangoapps.CONFIG.Get(
-		APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE,
-		allowedLocales,
-	))
-
-	tag, _, conf := matcher.Match(locales...)
-	return tag, conf
-}
-
 func (t *Translator) IsAcceptedLocale(ctx context.Context, locales ...language.Tag) bool {
 	var checks = sets.NewOrderedSet[string]()
 	for _, locale := range locales {
@@ -96,7 +64,12 @@ checkTranslatorHeader:
 		}
 	}
 
-	_, confidence := t.BestLocaleMatch(ctx, locales...)
+	m, err := trans.Matcher()
+	if err != nil {
+		return false
+	}
+
+	_, _, confidence := m.Match(locales...)
 	return confidence != language.No
 }
 
@@ -267,7 +240,7 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 	if len(locales) == 0 {
 		locales = []language.Tag{trans.DefaultLocale()}
 		if django.Global != nil && django.Global.Settings != nil {
-			configured, _ := django.Global.Settings.Get(APPVAR_TRANSLATIONS_LOCALES)
+			configured, _ := django.Global.Settings.Get(trans.APPVAR_TRANSLATIONS_LOCALES)
 			switch values := configured.(type) {
 			case []language.Tag:
 				locales = append(locales, values...)

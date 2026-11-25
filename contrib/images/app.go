@@ -20,7 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/goldcrest"
@@ -102,7 +102,7 @@ func NewAppConfig(opts *Options) django.AppConfig {
 			},
 			admin.AdminSite.TemplateConfig,
 		))
-		staticfiles.AddFS(filesystem.Sub(assetsFS, "assets/static"), nil)
+		static.AddFS(filesystem.Sub(assetsFS, "assets/static"), nil)
 
 		admin.RegisterApp(
 			"images",

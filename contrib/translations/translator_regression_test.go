@@ -215,11 +215,10 @@ func TestTranslatorPluralizeConcurrentInitialLookup(t *testing.T) {
 }
 
 func TestTranslateLocaleDefaultsAndMalformedEntries(t *testing.T) {
-	oldBackend, oldLocale := trans.DefaultBackend, trans.TRANSLATIONS_DEFAULT_LOCALE
+	oldBackend := trans.DefaultBackend
 	t.Cleanup(func() {
-		trans.DefaultBackend, trans.TRANSLATIONS_DEFAULT_LOCALE = oldBackend, oldLocale
+		trans.DefaultBackend = oldBackend
 	})
-	trans.TRANSLATIONS_DEFAULT_LOCALE = language.English
 	trans.DefaultBackend = NewTranslator(testHeader(map[string]TranslationHeaderLocale{
 		"en": {}, "nl": {}, "fr": {},
 	}), map[string]map[string][]string{
@@ -229,13 +228,15 @@ func TestTranslateLocaleDefaultsAndMalformedEntries(t *testing.T) {
 	}, nil)
 
 	for _, tc := range []struct {
-		name       string
-		configured any
-		key, want  string
-		locales    []language.Tag
-		found      bool
+		name          string
+		configured    any
+		defaultLocale language.Tag
+		key, want     string
+		locales       []language.Tag
+		found         bool
 	}{
 		{name: "default locale first", configured: []string{"nl"}, key: "Open", want: "Open in English", found: true},
+		{name: "custom default locale first", configured: []string{"nl"}, defaultLocale: language.French, key: "Close", want: "Fermer", found: true},
 		{name: "configured locale strings", configured: []string{"bad_tag!", "nl", "fr"}, key: "Close", want: "Sluiten", found: true},
 		{name: "configured locale tags", configured: []language.Tag{language.French, language.Dutch}, key: "Close", want: "Fermer", found: true},
 		{name: "explicit locales override settings", configured: []string{"nl"}, key: "Close", want: "Fermer", locales: []language.Tag{language.French}, found: true},
@@ -243,7 +244,11 @@ func TestTranslateLocaleDefaultsAndMalformedEntries(t *testing.T) {
 		{name: "missing locale", configured: []string{"fr"}, key: "Unknown", want: "Unknown"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			setTestDjango(t, django.Config(map[string]any{APPVAR_TRANSLATIONS_LOCALES: tc.configured}))
+			settings := django.Config(map[string]any{trans.APPVAR_TRANSLATIONS_LOCALES: tc.configured})
+			if tc.defaultLocale != language.Und {
+				settings.Set(trans.APPVAR_TRANSLATIONS_DEFAULT_LOCALE, tc.defaultLocale)
+			}
+			setTestDjango(t, settings)
 			if got, found := Translate(tc.key, tc.locales...); got != tc.want || found != tc.found {
 				t.Errorf("Translate(%q) = (%q, %t), want (%q, %t)", tc.key, got, found, tc.want, tc.found)
 			}
@@ -251,8 +256,7 @@ func TestTranslateLocaleDefaultsAndMalformedEntries(t *testing.T) {
 	}
 
 	t.Run("without a django application", func(t *testing.T) {
-		previous := django.Global
-		t.Cleanup(func() { django.Global = previous })
+		setTestDjango(t, nil)
 		django.Global = nil
 		if got, ok := Translate("Open"); got != "Open in English" || !ok {
 			t.Errorf("Translate = (%q, %t), want (Open in English, true)", got, ok)

@@ -31,7 +31,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/mhttp"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -46,7 +46,6 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/justinas/nosurf"
 	"github.com/pkg/errors"
-	"golang.org/x/text/language"
 )
 
 type (
@@ -543,14 +542,14 @@ func (a *Application) Initialize() error {
 	// if memory serves me correct, this HAS to be used after the recoverer.
 	// TODO: re-test
 	a.Mux.Use(middleware.BufferMiddleware(func(w http.ResponseWriter, r *http.Request) http.ResponseWriter {
-		if IsStaticRouteRequest(r) {
+		if static.Request(r) {
 			return w
 		}
 
 		return middleware.NewBufferedWriter(w)
 	}))
 
-	// add a handler for the staticfiles route
+	// add a handler for the static route
 	var staticUrl = a.staticURL()
 	if staticUrl != "" {
 		a.Log.Debugf(
@@ -559,7 +558,7 @@ func (a *Application) Initialize() error {
 		)
 
 		// yeesh this took me way too long to realise.
-		var handler http.Handler = staticfiles.EntryHandler
+		var handler http.Handler = static.EntryHandler
 		var maxAge = djangoapps.CONFIG.Get(APPVAR_STATIC_ROUTE_CACHING_MAXAGE, 3600)
 		if maxAge > 0 {
 			handler = middleware.Cache(maxAge)(handler)
@@ -575,10 +574,10 @@ func (a *Application) Initialize() error {
 		// this is to allow easily identifying which
 		// route is a static route, and to allow
 		// for possibly disabling / enabling some features.
-		rt.Preprocess(MarkStaticRouteMiddleware)
+		rt.Preprocess(static.MarkerMiddleware)
 	}
 
-	// add a handler for the staticfiles route
+	// add a handler for the static route
 	var mediaURL = a.mediaURL()
 	if len(mediafiles.MapRegistry()) > 0 && mediaURL != "" {
 		a.Log.Debugf(
@@ -599,7 +598,7 @@ func (a *Application) Initialize() error {
 		// this is to allow easily identifying which
 		// route is a static route, and to allow
 		// for possibly disabling / enabling some features.
-		rt.Preprocess(MarkStaticRouteMiddleware)
+		rt.Preprocess(static.MarkerMiddleware)
 	}
 
 	tpl.Processors(func(val any) {
@@ -929,11 +928,6 @@ func (a *Application) Initialize() error {
 			return err
 		}
 	}
-
-	trans.TRANSLATIONS_DEFAULT_LOCALE = djangoapps.CONFIG.Get(
-		APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
-		language.English,
-	)
 
 	a.initialized.Store(true)
 

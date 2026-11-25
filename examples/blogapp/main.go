@@ -235,7 +235,7 @@ func main() {
 
 	// fmt.Println(qf.Queries[len(qf.Queries)-1].Explain(ctx, db))
 
-	//err = staticfiles.Collect(func(path string, f fs.File) error {
+	//err = static.Collect(func(path string, f fs.File) error {
 	//	var stat, err = f.Stat()
 	//	if err != nil {
 	//		return err

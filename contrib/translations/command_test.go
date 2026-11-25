@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/urfave/cli/v2"
 )
 
@@ -47,8 +48,8 @@ locales: {nl: Verwijderd}
 		translationMatches: entries,
 	})
 	settings := django.Config(map[string]any{
-		APPVAR_TRANSLATIONS_DIR:     []string{dir},
-		APPVAR_TRANSLATIONS_LOCALES: []string{"nl"},
+		APPVAR_TRANSLATIONS_DIR:           []string{dir},
+		trans.APPVAR_TRANSLATIONS_LOCALES: []string{"nl"},
 	})
 	setTestDjango(t, settings)
 	t.Chdir(dir)

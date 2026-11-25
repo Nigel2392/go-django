@@ -15,6 +15,7 @@ import (
 	"time"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux/v2"
 	"golang.org/x/text/language"
 )
@@ -89,7 +90,7 @@ func TestBrowserTranslationCatalog(t *testing.T) {
 	}
 
 	setTestDjango(t, django.Config(map[string]any{
-		APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE: []language.Tag{language.English, language.Dutch, language.Arabic, language.French, language.German},
+		trans.APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE: []language.Tag{language.English, language.Dutch, language.Arabic, language.French, language.German},
 	}))
 	setTestTranslationsApp(t, nil)
 	cfg := NewAppConfig().(*TranslationsAppConfig)

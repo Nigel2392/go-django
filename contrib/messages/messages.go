@@ -6,6 +6,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux/v2"
 )
@@ -47,7 +48,7 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	app.Routing = func(m mux.Multiplexer) {
-		m.Use(django.NonStaticMiddleware(
+		m.Use(static.NonStaticMiddleware(
 			MessagesMiddleware,
 		))
 	}

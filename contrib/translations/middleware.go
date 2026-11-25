@@ -3,7 +3,7 @@ package translations
 import (
 	"net/http"
 
-	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
@@ -12,7 +12,7 @@ import (
 
 func TranslatorMiddleware() func(next http.Handler) http.Handler {
 	var matcher = language.NewMatcher(djangoapps.CONFIG.Get(
-		APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE,
+		trans.APPVAR_TRANSLATIONS_ACCEPT_LANGUAGE,
 		[]language.Tag{
 			language.English,
 			language.Dutch,
@@ -22,7 +22,7 @@ func TranslatorMiddleware() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
-			if django.IsStaticRouteRequest(req) {
+			if static.Request(req) {
 				next.ServeHTTP(w, req)
 				return
 			}
@@ -31,6 +31,7 @@ func TranslatorMiddleware() func(next http.Handler) http.Handler {
 			if lang, err := req.Cookie("lang"); err == nil {
 				preferred = lang.Value
 			}
+
 			var header = req.Header.Get("Accept-Language")
 			var tag, _ = language.MatchStrings(
 				matcher,

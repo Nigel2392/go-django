@@ -16,7 +16,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/mux/v2"
 )
 
@@ -69,7 +69,7 @@ var onFeatureRegisterOnce sync.Once
 
 func onFeatureRegister(m mux.Multiplexer) {
 	onFeatureRegisterOnce.Do(func() {
-		staticfiles.AddFS(
+		static.AddFS(
 			filesystem.Sub(imagesFS, "static"),
 			filesystem.MatchPrefix("images/editorjs"),
 		)

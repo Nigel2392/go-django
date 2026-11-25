@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"golang.org/x/text/language"
 )
 
@@ -35,12 +36,17 @@ var syncLocalesCommand = &command.Cmd[[]string]{
 			settings = django.Global.Settings
 		}
 
-		configured, err := configuredLocaleNames(settings)
+		configured, err := trans.ConfiguredLocales()
 		if err != nil {
 			return err
 		}
 
-		names := slices.Concat(configured, additional)
+		var str = make([]string, len(configured))
+		for i, locale := range configured {
+			str[i] = locale.String()
+		}
+
+		names := slices.Concat(str, additional)
 		if len(names) == 0 {
 			return nil
 		}

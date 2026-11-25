@@ -1,6 +1,10 @@
 package django
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/Nigel2392/go-django/src/core/trans"
+)
 
 const (
 
@@ -55,7 +59,7 @@ const (
 	// Log static routes that are accessed
 	APPVAR_STATIC_ROUTE_LOGGING_ENABLED = "STATIC_ROUTE_LOGGING_ENABLED" // bool
 
-	// Set the maxage on the cache for staticfiles
+	// Set the maxage on the cache for static
 	// If 0, no caching headers will be sent.
 	APPVAR_STATIC_ROUTE_CACHING_MAXAGE = "STATIC_ROUTE_CACHING_MAXAGE" // int
 
@@ -71,7 +75,7 @@ const (
 	APPVAR_DISABLE_NOSURF = "DISABLE_NOSURF" // bool
 
 	// APPVAR_TRANSLATIONS_DEFAULT_LOCALE
-	APPVAR_TRANSLATIONS_DEFAULT_LOCALE = "TRANSLATIONS_DEFAULT_LOCALE" // string
+	APPVAR_TRANSLATIONS_DEFAULT_LOCALE = trans.APPVAR_TRANSLATIONS_DEFAULT_LOCALE // string
 )
 
 const DEFAULT_MAX_FORM_MEMORY int = 1024 * 1024 * 64

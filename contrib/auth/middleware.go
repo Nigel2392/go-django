@@ -7,8 +7,8 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
@@ -81,7 +81,7 @@ func userFromRequestPure(r *http.Request) authentication.User {
 
 // Add a user to a request, if one exists in the session.
 func AddUserMiddleware() middleware.Middleware {
-	return django.NonStaticMiddleware(authentication.AddUserMiddleware(
+	return static.NonStaticMiddleware(authentication.AddUserMiddleware(
 		userFromRequestPure,
 	))
 }

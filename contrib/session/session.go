@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/Nigel2392/mux/v2"
@@ -98,7 +99,7 @@ func NewAppConfig() django.AppConfig {
 
 	app.Routing = func(m mux.Multiplexer) {
 		m.Use(
-			django.NonStaticMiddleware(
+			static.NonStaticMiddleware(
 				sessions.SessionMiddleware(sessionManager),
 			),
 		)

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/mux/v2/hosts"
@@ -35,7 +36,7 @@ func (a *Application) loggerMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 
 		var logLevel = logger.INF
-		if IsStaticRouteRequest(r) {
+		if static.Request(r) {
 			if !djangoapps.CONFIG.Get(APPVAR_DEBUG, true) || !djangoapps.CONFIG.Get(APPVAR_STATIC_ROUTE_LOGGING_ENABLED, false) {
 				return
 			}

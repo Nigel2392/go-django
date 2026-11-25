@@ -16,7 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -73,7 +73,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 
 		// Set up the static files for this app
 		// They are stored in the "assets/static" directory
-		staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+		static.AddFS(staticFS, filesystem.MatchAnd(
 			filesystem.MatchPrefix("blog/"),
 			filesystem.MatchOr(
 				filesystem.MatchExt(".css"),
