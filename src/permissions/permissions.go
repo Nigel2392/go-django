@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 )
 
 type PermissionTester interface {

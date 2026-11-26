@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/auth"
@@ -50,7 +51,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/permissions"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
@@ -384,7 +385,7 @@ func TestAdminProductViews(t *testing.T) {
 				},
 			},
 			&djester.BasicTest{
-				Label: "Order edit loads the order and displays payment attempts",
+				Label: "Order edit displays payment attempts and their lifecycle",
 				Function: func(d *djester.Tester, t *testing.T) {
 					customer, err := queries.GetQuerySet(&customers.Customer{}).Create(&customers.Customer{
 						Email:     drivers.MustParseEmail("order-admin@example.test"),
@@ -398,6 +399,20 @@ func TestAdminProductViews(t *testing.T) {
 					payment, err := queries.GetQuerySet(&payments.Payment{}).Create(&payments.Payment{
 						Order: order, Provider: "<admin-test-payment>", State: paystate.STATUS_INIT,
 						Amount: decimal.NewFromInt(25), Currency: "EUR",
+						History: drivers.JSON[[]payments.PaymentEvent]{
+							Data: []payments.PaymentEvent{
+								{
+									At:    time.Unix(1, 0).UTC(),
+									Kind:  payments.EventPrepared,
+									State: paystate.STATUS_INIT,
+								},
+								{
+									At:    time.Unix(2, 0).UTC(),
+									Kind:  payments.EventCheckoutFailed,
+									State: paystate.STATUS_INIT,
+								},
+							},
+						},
 					})
 					require.NoError(t, err)
 
@@ -414,6 +429,10 @@ func TestAdminProductViews(t *testing.T) {
 					require.Contains(t, doc.Text(), "Payment "+payment.ID.String())
 					require.Contains(t, doc.Text(), "<admin-test-payment>")
 					require.Zero(t, doc.Find("admin-test-payment").Length())
+					events := doc.Find(".panel-alert ol li")
+					require.Equal(t, 2, events.Length())
+					require.Contains(t, events.Eq(0).Text(), "Payment prepared")
+					require.Contains(t, events.Eq(1).Text(), "Provider checkout failed to open")
 					action, ok := doc.Find("form.admin-form").Attr("action")
 					require.True(t, ok)
 					require.Equal(t, editURL, action)

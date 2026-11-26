@@ -47,7 +47,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
 	"github.com/Nigel2392/go-django/src/forms"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/shopspring/decimal"
 	"golang.org/x/text/currency"
 )

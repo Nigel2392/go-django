@@ -7,7 +7,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/except"
-	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 )
 
 func Login(r *http.Request, u *User) (*User, error) {

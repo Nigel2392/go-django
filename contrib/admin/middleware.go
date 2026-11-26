@@ -10,8 +10,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
-	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 )
 
 func AppMiddleware(next http.Handler) http.Handler {

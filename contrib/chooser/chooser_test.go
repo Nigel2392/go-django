@@ -35,7 +35,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/PuerkitoBio/goquery"
 )
 

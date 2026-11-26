@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -32,6 +33,37 @@ type OperationRecord struct {
 	Amount        Money
 	Phase         OperationState
 	Result        OperationResult
+}
+
+// appendEvent advances the row version used by all writers of the history.
+func (p *Payment) appendEvent(event PaymentEvent) expr.ClauseExpression {
+	event.At = time.Now().UTC()
+	event.State = p.State
+	p.History.Null = false
+	p.History.Data = append(p.History.Data, event)
+
+	version := p.OperationVersion
+	p.OperationVersion++
+	if version == 0 {
+		return expr.Or(
+			expr.Q("OperationVersion", version),
+			expr.Q("OperationVersion__isnull", true),
+		)
+	}
+	return expr.Q("OperationVersion", version)
+}
+
+func (p *Payment) appendOperationEvent(key string, record OperationRecord) expr.ClauseExpression {
+	event := PaymentEvent{
+		Kind:      EventOperation,
+		RequestID: key,
+		Operation: record.Kind,
+		Phase:     record.Phase,
+	}
+	if record.Amount.Currency != "" {
+		event.Amount = &record.Amount
+	}
+	return p.appendEvent(event)
 }
 
 func Refund(ctx context.Context, id drivers.ULID, request RefundRequest) (OperationResult, error) {
@@ -365,13 +397,12 @@ func reserveOperation(ctx context.Context, payment *Payment, key string, record 
 	payment.Operations.Null = false
 	payment.Operations.Data[key] = record
 	payment.OperationKey = key
-	version := payment.OperationVersion
-	payment.OperationVersion++
+	version := payment.appendOperationEvent(key, record)
 
 	n, err := queries.
 		GetQuerySet(&Payment{}).
 		WithContext(ctx).
-		Select("Operations", "OperationKey", "OperationVersion", "State", "UpdatedAt").
+		Select("Operations", "History", "OperationKey", "OperationVersion", "State", "UpdatedAt").
 		Filter(
 			expr.Q("ID", payment.ID),
 			expr.Q("State", priorState),
@@ -379,10 +410,7 @@ func reserveOperation(ctx context.Context, payment *Payment, key string, record 
 				expr.Q("OperationKey", ""),
 				expr.Q("OperationKey__isnull", true),
 			),
-			expr.Or(
-				expr.Q("OperationVersion", version),
-				expr.Q("OperationVersion__isnull", true),
-			),
+			version,
 		).
 		Update(payment)
 	if err != nil {
@@ -415,16 +443,24 @@ func failOperation(ctx context.Context, payment *Payment, key string, cause erro
 	record.Phase = OperationUncertain
 	record.Result = OperationResult{}
 	payment.Operations.Data[key] = record
+	version := payment.appendOperationEvent(key, record)
 
-	_, saveErr := queries.
+	count, saveErr := queries.
 		GetQuerySet(&Payment{}).
 		WithContext(ctx).
-		Select("Operations", "UpdatedAt").
+		Select("Operations", "History", "OperationVersion", "UpdatedAt").
 		Filter(
 			expr.Q("ID", payment.ID),
 			expr.Q("OperationKey", key),
+			version,
 		).
 		Update(payment)
+	if saveErr != nil {
+		return errors.Join(cause, saveErr)
+	}
+	if count != 1 {
+		return errors.Join(cause, errors.New("operation updated concurrently"))
+	}
 
 	signalErr := Signals.OperationFailed.Send(ctx, PaymentOperationSignal{
 		Payment:   payment,
@@ -433,7 +469,7 @@ func failOperation(ctx context.Context, payment *Payment, key string, cause erro
 		Error:     cause,
 	})
 
-	return errors.Join(cause, saveErr, signalErr)
+	return errors.Join(cause, signalErr)
 }
 
 // ResolveOperation records a server-verified PSP outcome after an ambiguous or
@@ -521,13 +557,17 @@ func finishOperation(ctx context.Context, id drivers.ULID, key string, result Op
 	if result.State != OperationPending {
 		payment.OperationKey = ""
 	}
+	version := payment.appendOperationEvent(key, record)
 
 	n, err := queries.
 		GetQuerySet(&Payment{}).
 		WithContext(ctx).
-		Select("Operations", "OperationKey", "State", "CaptureRef", "UpdatedAt").
-		Filter("ID", id).
-		Filter("OperationKey", key).
+		Select("Operations", "History", "OperationVersion", "OperationKey", "State", "CaptureRef", "UpdatedAt").
+		Filter(
+			expr.Q("ID", id),
+			expr.Q("OperationKey", key),
+			version,
+		).
 		Update(payment)
 	if err != nil {
 		return OperationResult{}, err
@@ -632,6 +672,15 @@ func createAttempt(ctx context.Context, order attrs.Definer, accountID drivers.U
 			Fee:      quote.Fee,
 			Currency: quote.Currency,
 			State:    paystate.STATUS_INIT,
+			History: drivers.JSON[[]PaymentEvent]{
+				Data: []PaymentEvent{
+					{
+						At:    time.Now().UTC(),
+						Kind:  EventPrepared,
+						State: paystate.STATUS_INIT,
+					},
+				},
+			},
 		})
 }
 
@@ -652,7 +701,7 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 
 	provider, err := payment.Account.provider(ctx)
 	if err != nil {
-		return Checkout{}, err
+		return Checkout{}, errors.Join(err, recordCheckoutFailure(ctx, payment))
 	}
 
 	checkout, err := provider.CreatePayment(ctx, CreatePaymentRequest{
@@ -665,11 +714,11 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 		WebhookURL: webhookURL,
 	})
 	if err != nil {
-		return Checkout{}, err
+		return Checkout{}, errors.Join(err, recordCheckoutFailure(ctx, payment))
 	}
 
 	if err := payment.validateStatus(checkout.PaymentStatus); err != nil {
-		return Checkout{}, err
+		return Checkout{}, errors.Join(err, recordCheckoutFailure(ctx, payment))
 	}
 
 	payment.TransactionID = sql.NullString{
@@ -680,6 +729,9 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 	payment.CheckoutURL, payment.State = checkout.URL, checkout.State
 	payment.AuthorizationRef = checkout.AuthorizationRef
 	payment.CaptureRef = checkout.CaptureRef
+	version := payment.appendEvent(PaymentEvent{
+		Kind: EventCheckoutOpened,
+	})
 	ctx, tx, err := queries.StartTransaction(ctx)
 	if err != nil {
 		return Checkout{}, err
@@ -694,21 +746,27 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 			"State",
 			"AuthorizationRef",
 			"CaptureRef",
+			"History",
+			"OperationVersion",
 			"UpdatedAt",
 		).
 		Filter(
 			expr.Q("ID", id),
 			expr.Q("TransactionID__isnull", true),
+			version,
 		).
 		Update(payment)
 
 	if err == nil && n == 0 {
 		payment, err = getAttempt(ctx, id)
-		if err == nil {
+		if err == nil && payment.TransactionID.Valid {
 			return Checkout{
 				PaymentStatus: payment.status(),
 				URL:           payment.CheckoutURL,
 			}, nil
+		}
+		if err == nil {
+			err = errors.New("payment changed concurrently; retry checkout")
 		}
 	}
 
@@ -723,6 +781,23 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 	}
 
 	return checkout, err
+}
+
+func recordCheckoutFailure(ctx context.Context, payment *Payment) error {
+	version := payment.appendEvent(PaymentEvent{
+		Kind: EventCheckoutFailed,
+	})
+	_, err := queries.
+		GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Select("History", "OperationVersion", "UpdatedAt").
+		Filter(
+			expr.Q("ID", payment.ID),
+			expr.Q("TransactionID__isnull", true),
+			version,
+		).
+		Update(payment)
+	return err
 }
 
 // Refresh reconciles an attempt with the provider. It also works on disabled accounts.
@@ -847,6 +922,9 @@ func applyStatus(ctx context.Context, payment *Payment, status PaymentStatus) (*
 	if status.CaptureRef != "" {
 		payment.CaptureRef = status.CaptureRef
 	}
+	version := payment.appendEvent(PaymentEvent{
+		Kind: EventStatusUpdated,
+	})
 
 	n, err := queries.
 		GetQuerySet(&Payment{}).
@@ -855,11 +933,14 @@ func applyStatus(ctx context.Context, payment *Payment, status PaymentStatus) (*
 			"State",
 			"AuthorizationRef",
 			"CaptureRef",
+			"History",
+			"OperationVersion",
 			"UpdatedAt",
 		).
 		Filter(
 			expr.Q("ID", payment.ID),
 			expr.Q("State", prior),
+			version,
 			expr.Or(
 				expr.Q("OperationKey", ""),
 				expr.Q("OperationKey__isnull", true),

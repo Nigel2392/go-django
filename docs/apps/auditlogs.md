@@ -201,7 +201,7 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 )
 
 func logDelete(ctx context.Context, actor users.User, obj attrs.Definer, title string) error {

@@ -13,7 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 )
 
 type AuthView[T forms.Form] struct {

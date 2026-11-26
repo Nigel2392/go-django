@@ -13,7 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 )
 
 type testUser struct {

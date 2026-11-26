@@ -5,7 +5,7 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 	"github.com/pkg/errors"
 )
 

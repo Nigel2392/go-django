@@ -14,8 +14,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/except"
-	"github.com/Nigel2392/mux/middleware/authentication"
-	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 )
 
 type CartItemRequest struct {

@@ -2,12 +2,12 @@ package orders
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -60,7 +60,12 @@ func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
 	if m.Payments == nil {
 		attrs.Define(ctx, m).Get("Payments")
 	}
-	n, paymentRows, err := m.Payments.Objects().WithContext(ctx).IterAll()
+
+	n, paymentRows, err := m.Payments.
+		Objects().
+		WithContext(ctx).
+		OrderBy("CreatedAt", "ID").
+		IterAll()
 	if err != nil {
 		return nil, errors.Wrap(err, "EditPanels")
 	}
@@ -71,10 +76,42 @@ func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
 			return nil, errors.Wrap(err, "EditPanels/paymentRows")
 		}
 
+		var alertType = admin.ALERT_INFO
+		switch row.Object.State {
+		case paystate.STATUS_CANCEL,
+			paystate.STATUS_EXPIRED,
+			paystate.STATUS_DENIED,
+			paystate.STATUS_FAILURE,
+			paystate.STATUS_CHARGEBACK,
+			paystate.STATUS_PARTIAL_REFUND:
+			alertType = admin.ALERT_ERROR
+
+		case paystate.STATUS_VERIFY,
+			paystate.STATUS_AUTHORIZE,
+			paystate.STATUS_REFUNDING,
+			paystate.STATUS_REFUND,
+			paystate.STATUS_PARTLY_CAPTURED:
+			alertType = admin.ALERT_WARNING
+
+		case paystate.STATUS_PAID:
+			alertType = admin.ALERT_SUCCESS
+		}
+
 		paymentPanels = append(paymentPanels, &admin.AlertPanel{
-			Label: "Payment " + row.Object.ID.String(),
-			HTML: template.HTMLEscapeString(fmt.Sprintf("%s · %s %s · %s",
-				row.Object.Provider, row.Object.Amount, row.Object.Currency, row.Object.State)),
+			Type:  alertType,
+			Label: trans.S("Payment %s", row.Object.ID.String()),
+			HTML:  paymentHistoryHTML(ctx, row.Object),
+		})
+	}
+
+	if len(paymentPanels) == 0 {
+		paymentPanels = append(paymentPanels, &admin.AlertPanel{
+			Type:  admin.ALERT_ERROR,
+			Label: trans.S("No payments"),
+			HTML: template.HTMLEscapeString(trans.T(
+				ctx, "No payments on record for order %q",
+				m.ID.String(),
+			)),
 		})
 	}
 
@@ -84,6 +121,8 @@ func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
 				trans.S("Product Details"),
 				admin.FieldPanel("ID"),
 				admin.FieldPanel("State"),
+				admin.FieldPanel("Processed"),
+				admin.FieldPanel("Completed"),
 			),
 			admin.PanelTab(
 				trans.S("Order Items"),

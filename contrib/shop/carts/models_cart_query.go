@@ -16,8 +16,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/authentication"
-	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 	"github.com/shopspring/decimal"
 )
 

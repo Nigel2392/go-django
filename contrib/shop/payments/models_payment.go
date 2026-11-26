@@ -3,6 +3,7 @@ package payments
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/Nigel2392/go-django/contrib/shop/shared/relations/modelkeys"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
@@ -30,7 +31,29 @@ type Payment struct {
 	OperationKey     string
 	OperationVersion uint64
 	Operations       drivers.JSON[map[string]OperationRecord]
+	History          drivers.JSON[[]PaymentEvent]
 }
+
+// PaymentEvent is a recorded step in a payment attempt, in write order.
+type PaymentEvent struct {
+	At        time.Time
+	Kind      PaymentEventKind
+	State     paystate.PayState
+	RequestID string         `json:",omitempty"`
+	Operation OperationKind  `json:",omitempty"`
+	Phase     OperationState `json:",omitempty"`
+	Amount    *Money         `json:",omitempty"`
+}
+
+type PaymentEventKind string
+
+const (
+	EventPrepared       PaymentEventKind = "prepared"
+	EventCheckoutOpened PaymentEventKind = "checkout_opened"
+	EventCheckoutFailed PaymentEventKind = "checkout_failed"
+	EventStatusUpdated  PaymentEventKind = "status_updated"
+	EventOperation      PaymentEventKind = "operation"
+)
 
 func (m *Payment) BeforeCreate(context.Context) error {
 	if m.ID.IsZero() {
@@ -70,5 +93,6 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		paymentField(m, "OperationKey", &m.OperationKey, attrs.Config{MaxLength: 128, Blank: true, Default: ""}),
 		paymentField(m, "OperationVersion", &m.OperationVersion, attrs.Config{Null: true, Blank: true, Default: uint64(0)}),
 		paymentField(m, "Operations", &m.Operations, attrs.Config{Null: true, Blank: true}),
+		paymentField(m, "History", &m.History, attrs.Config{Null: true, Blank: true, ReadOnly: true}),
 	)
 }

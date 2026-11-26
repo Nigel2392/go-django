@@ -255,7 +255,7 @@ package myapp
 
 import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 )
 
 var lazyUserModel = contenttypes.NewLazyRegistry("users.User", func(ctd *contenttypes.ContentTypeDefinition) bool {

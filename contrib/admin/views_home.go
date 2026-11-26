@@ -15,7 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 )
 
 // AdminPageComponent is an interface for custom page components

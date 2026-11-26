@@ -29,9 +29,9 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux/middleware/authentication"
-	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 )
 
 func createTestUser(t *testing.T, ctx context.Context, email, username, rawPassword string, active, admin bool) *auth.User {

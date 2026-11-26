@@ -27,8 +27,8 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux/middleware/authentication"
-	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
 	"github.com/shopspring/decimal"
 )

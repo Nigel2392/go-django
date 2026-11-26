@@ -36,8 +36,8 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
 )

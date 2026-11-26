@@ -86,7 +86,7 @@ import (
 	"slices"
 
 	"github.com/Nigel2392/go-django/src/permissions"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 )
 
 type RoleUser interface {

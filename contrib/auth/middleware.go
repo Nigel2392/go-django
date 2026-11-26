@@ -10,9 +10,9 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/authentication"
-	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/Nigel2392/mux/v2/middleware"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 )
 
 const SESSION_COOKIE_NAME = "user_authentication"

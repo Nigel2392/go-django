@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	"github.com/Nigel2392/go-django/djester"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -203,6 +204,18 @@ func testPaymentCheckout(d *djester.Tester, t *testing.T, product, otherProduct 
 	count, err = queries.GetQuerySet(&orders.Order{}).Filter("Customer", customer.Object.ID).Count()
 	require.NoError(t, err)
 	require.EqualValues(t, 1, count)
+
+	provider.status.State = paystate.STATUS_PAID
+	_, err = payments.Refresh(ctx, cart.ID)
+	require.NoError(t, err)
+	savedPayment, err := payments.Refresh(ctx, cart.ID)
+	require.NoError(t, err)
+	require.Len(t, savedPayment.History.Data, 4)
+	require.Equal(t, payments.EventPrepared, savedPayment.History.Data[0].Kind)
+	require.Equal(t, payments.EventCheckoutFailed, savedPayment.History.Data[1].Kind)
+	require.Equal(t, payments.EventCheckoutOpened, savedPayment.History.Data[2].Kind)
+	require.Equal(t, payments.EventStatusUpdated, savedPayment.History.Data[3].Kind)
+	require.Equal(t, paystate.STATUS_PAID, savedPayment.History.Data[3].State)
 
 	_, _ = d.Logout()
 	login, err = d.Login("other_checkout_user")

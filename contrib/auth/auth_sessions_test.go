@@ -22,8 +22,8 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-signals"
-	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 )
 
 func TestAuthSessions_NilSessionGuards(t *testing.T) {

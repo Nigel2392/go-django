@@ -14,7 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 
 	_ "unsafe"
 )
@@ -55,11 +55,15 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		return uuid.Nil, ErrLogsNotReady
 	}
 
-	_, defined := registry.definitions[entryType]
-	if !defined && !LogUnknownTypes {
-		err := fmt.Errorf("no definition registered for log entry type %q, cannot log", entryType)
-		logger.Warn(err)
-		return uuid.Nil, err
+	if !LogUnknownTypes {
+		if _, ok := registry.definitions[entryType]; !ok {
+			err := fmt.Errorf(
+				"no definition registered for log entry type %q, cannot log",
+				entryType,
+			)
+			logger.Warn(err)
+			return uuid.Nil, err
+		}
 	}
 
 	var user, _ = authentication.UserFromContext(ctx).(users.User)
@@ -123,8 +127,14 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 	}
 
 	var entry DBCreateLogEntry = baseEntry
-	if !defined && len(filtersForTyp) == 0 && len(handlersForTyp) == 0 {
-		logger.Warnf("no filters or handlers registered for entry type %q", entryType)
+	if len(filtersForTyp) == 0 && len(handlersForTyp) == 0 {
+		err = fmt.Errorf(
+			"no filters or handlers registered for entry type %q",
+			entryType,
+		)
+
+		logger.Warn(err)
+		goto storeLogEntry
 	}
 
 	for _, filter := range filtersForTyp {
@@ -140,6 +150,7 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		}
 	}
 
+storeLogEntry:
 	logger.Logf(
 		level, "Adding new %q entry to audit log", entryType,
 	)

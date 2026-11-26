@@ -15,8 +15,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/static"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
 )

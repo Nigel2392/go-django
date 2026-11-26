@@ -276,6 +276,22 @@ func TestServiceOperations(t *testing.T) {
 		if _, err := Refund(ctx, p.ID, refund("too-much", "5")); err == nil {
 			t.Fatal("refund balance lost")
 		}
+
+		saved, err := getAttempt(ctx, p.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		history := saved.History.Data
+		want := []OperationState{OperationRequested, OperationPending, OperationSucceeded}
+		if len(history) != len(want) {
+			t.Fatalf("got %d history events, want %d", len(history), len(want))
+		}
+		for i, event := range history {
+			if event.Kind != EventOperation || event.Operation != OperationRefund || event.Phase != want[i] ||
+				event.RequestID != "async" || event.At.IsZero() || event.Amount == nil || !event.Amount.Amount.Equal(decimal.NewFromInt(6)) {
+				t.Fatalf("unexpected history event %d: %+v", i, event)
+			}
+		}
 	})
 	t.Run("ambiguous failure prevents duplicate requests", func(t *testing.T) {
 		p := seed(paystate.STATUS_PAID)
@@ -327,7 +343,7 @@ func TestServiceOperations(t *testing.T) {
 		}
 
 		saved, err := getAttempt(ctx, p.ID)
-		if err != nil || saved.OperationKey != "" {
+		if err != nil || saved.OperationKey != "" || len(saved.History.Data) != 0 {
 			t.Fatal("reservation rollback failed", err)
 		}
 	})

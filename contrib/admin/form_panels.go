@@ -606,6 +606,9 @@ func (a *AlertPanel) GetLabel(ctx context.Context) string {
 }
 
 func (a *AlertPanel) GetHTML(ctx context.Context) template.HTML {
+	if html, ok := a.HTML.(template.HTML); ok {
+		return html
+	}
 	s, ok := trans.GetText(ctx, a.HTML)
 	if ok {
 		return template.HTML(s)

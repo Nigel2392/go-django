@@ -8,7 +8,7 @@ import (
 	_ "unsafe"
 
 	"github.com/Nigel2392/go-django/contrib/pages"
-	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/pkg/errors"
 )
 

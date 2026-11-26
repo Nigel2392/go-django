@@ -32,8 +32,8 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views/list"
-	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/v2"
+	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/alexedwards/scs/v2"
 )
 

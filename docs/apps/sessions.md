@@ -60,7 +60,7 @@ During routing setup, `session` installs `sessions.SessionMiddleware(sessionMana
 
 Go-Django distinguishes between the request-scoped `sessions.Session` interface and the database-backed `session.Session` model:
 
-- **`sessions.Session`** (`github.com/Nigel2392/mux/middleware/sessions`) is the interface stored on the HTTP request context for reading and mutating session state.
+- **`sessions.Session`** (`github.com/Nigel2392/mux/v2/middleware/sessions`) is the interface stored on the HTTP request context for reading and mutating session state.
 - **`session.Session`** (`github.com/Nigel2392/go-django/contrib/session`) is the ORM model mapped to the `sessions` database table.
 
 ### `sessions.Session` Interface
@@ -101,7 +101,7 @@ The `Session` model maps to the `"sessions"` table and defines unique and expiry
 
 ## Retrieving the Session
 
-The `github.com/Nigel2392/mux/middleware/sessions` package provides two functions for retrieving the active session:
+The `github.com/Nigel2392/mux/v2/middleware/sessions` package provides two functions for retrieving the active session:
 
 ```go
 func Retrieve(r *http.Request) sessions.Session
@@ -124,7 +124,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/mux/middleware/sessions"
+	"github.com/Nigel2392/mux/v2/middleware/sessions"
 )
 
 func Index(w http.ResponseWriter, r *http.Request) {
