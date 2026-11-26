@@ -94,6 +94,20 @@ var (
 			}
 			return singular, nil, nil
 		},
+		"L": func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+			if len(call.Args) == 0 {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected at least 1 argument for S, got %d", len(call.Args),
+				)
+			}
+			singular, ok := call.Args[0].(*ast.BasicLit)
+			if !ok {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected a string literal for S, got %s (%s)", reflect.TypeOf(call.Args[0]), stringCall(call),
+				)
+			}
+			return singular, nil, nil
+		},
 		"T": func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error) {
 			if len(call.Args) < 2 {
 				return nil, nil, errors.TypeMismatch.Wrapf(
@@ -308,6 +322,7 @@ type goTranslationsFinder struct {
 
 func (f *goTranslationsFinder) Find(fsys fs.FS, isExcluded func(filename string) bool) ([]Translation, error) {
 	var matches []Translation
+	sourcePaths := goSourcePaths{fsys: fsys, packages: make(map[string]string)}
 
 	if f.functions == nil {
 		f.functions = goFileTranslationMatchers
@@ -367,6 +382,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS, isExcluded func(filename string)
 			return nil
 		}
 
+		sourcePath := sourcePaths.filename(path)
 		var currentFuncName string
 		var funcEnd token.Pos
 		var subMatches = make([]Translation, 0)
@@ -457,7 +473,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS, isExcluded func(filename string)
 			}
 
 			subMatches = append(subMatches, Translation{
-				Path:    filepath.ToSlash(path),
+				Path:    sourcePath,
 				Line:    pos.Line,
 				Col:     pos.Column,
 				Text:    singularUnquoted,
@@ -507,7 +523,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS, isExcluded func(filename string)
 			col++
 
 			var cType = contenttypes.NewContentType(model)
-			var matchPath = filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model()))
+			var matchPath = cType.TypeName()
 			if isExcluded(matchPath) {
 				continue
 			}
@@ -526,7 +542,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS, isExcluded func(filename string)
 			var fieldDefs = attrs.Define(context.Background(), model)
 			for i, field := range fieldDefs.Fields() {
 
-				var fieldPath = filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model(), "fields", field.Name()))
+				var fieldPath = fmt.Sprintf("%s.%s", matchPath, field.Name())
 				if isExcluded(fieldPath) {
 					continue
 				}
@@ -538,6 +554,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS, isExcluded func(filename string)
 					Text:    field.Label(context.Background()),
 					Comment: fmt.Sprintf("[ModelFinder.Field]:\t%s.%s", cType.ShortTypeName(), field.Name()),
 				}
+
 				fieldMatches = append(fieldMatches, fieldMatch)
 			}
 

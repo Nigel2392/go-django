@@ -17,8 +17,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	_ "github.com/Nigel2392/go-django/contrib/shop/shared/relations/modelkeys"
 	"github.com/Nigel2392/go-django/djester/quest"
@@ -84,8 +84,8 @@ type testCartSupplierProduct struct {
 	SKU string
 }
 
-func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) supplier.Price {
-	return supplier.Price{
+func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) products.Price {
+	return products.Price{
 		Unit:   currency.EUR,
 		Amount: p.Price,
 	}
@@ -137,13 +137,13 @@ func setupCartQueryTestEnv(t *testing.T) {
 		GetPluralLabel: func(ctx context.Context) string { return "Cart Query Test Users" },
 	})
 
-	supplier.Register(&supplier.Supplier{
+	orders.RegisterSupplier(&orders.Supplier{
 		Order: 1,
 		Name:  "cart_query_test_supplier",
 		TextLabel: func(ctx context.Context) string {
 			return "Cart Query Test Supplier"
 		},
-		ProductModel: func(ctx context.Context) supplier.ProductModel {
+		ProductModel: func(ctx context.Context) products.ProductModel {
 			return &testCartSupplierProduct{}
 		},
 	})
@@ -163,7 +163,7 @@ func setupCartQueryTestEnv(t *testing.T) {
 				cfg.ModelObjects = []attrs.Definer{
 					&CartQueryTestUser{},
 					&models.Category{},
-					&supplier.SupplierModel{},
+					&orders.SupplierModel{},
 					&testCartSupplierProduct{},
 					&products.Product{},
 					&carts.Cart{},
@@ -185,7 +185,7 @@ func setupCartQueryTestEnv(t *testing.T) {
 	tables := quest.Table(t,
 		&CartQueryTestUser{},
 		&models.Category{},
-		&supplier.SupplierModel{},
+		&orders.SupplierModel{},
 		&testCartSupplierProduct{},
 		&products.Product{},
 		&carts.Cart{},
@@ -199,7 +199,7 @@ func setupCartQueryTestEnv(t *testing.T) {
 	tables.IfNotExists = true
 	tables.Create()
 
-	if err := supplier.Suppliers().Sync(); err != nil {
+	if err := orders.SuppliersQuery().Sync(); err != nil {
 		t.Fatalf("failed to sync suppliers: %v", err)
 	}
 
@@ -277,7 +277,7 @@ func seedProduct(t *testing.T, cat *models.Category, title, slug, sku, priceStr,
 			Slug:          slug,
 			Category:      cat,
 			Editor:        &editor.EditorJSBlockData{},
-			Supplier:      supplier.SupplierValue("cart_query_test_supplier"),
+			Supplier:      products.SupplierValue("cart_query_test_supplier"),
 			Price:         d(priceStr),
 			AdditionalFee: d(feeStr),
 			TaxRate:       d(taxStr),

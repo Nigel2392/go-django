@@ -21,6 +21,8 @@ type finderModel struct {
 	Internal string
 }
 
+type excludedFinderModel struct{ finderModel }
+
 func (m *finderModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		attrs.NewField(m, "Title", &attrs.Config{Label: "Display title"}),
@@ -37,20 +39,22 @@ func TestModelTranslationsFinder(t *testing.T) {
 	}
 
 	django.Global.Apps = orderedmap.NewOrderedMap[string, django.AppConfig]()
-	for _, name := range []string{"pages", "private"} {
-		app := apps.NewAppConfig(name)
-		app.ModelObjects = []attrs.Definer{&finderModel{}}
-		django.Global.Apps.Set(name, app)
-	}
+	pages := apps.NewAppConfig("pages")
+	pages.ModelObjects = []attrs.Definer{&finderModel{}}
+	django.Global.Apps.Set("pages", pages)
+	private := apps.NewAppConfig("private")
+	private.ModelObjects = []attrs.Definer{&excludedFinderModel{}}
+	django.Global.Apps.Set("private", private)
 	got, err := finder.Find(nil, func(path string) bool {
-		return strings.HasPrefix(path, ".models/private/") || strings.HasSuffix(path, "/Internal")
+		return strings.HasSuffix(path, ".excludedFinderModel") || strings.HasSuffix(path, ".Internal")
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	const modelPath = "github.com/Nigel2392/go-django/contrib/translations.finderModel"
 	want := []Translation{
-		{Path: ".models/pages/finderModel", Line: 1, Col: 1, Text: "finderModel", Comment: "[ModelFinder]:\ttranslations.finderModel"},
-		{Path: ".models/pages/finderModel/fields/Title", Line: 1, Col: 0, Text: "Display title", Comment: "[ModelFinder.Field]:\ttranslations.finderModel.Title"},
+		{Path: modelPath, Line: 1, Col: 1, Text: "finderModel", Comment: "[ModelFinder]:\ttranslations.finderModel"},
+		{Path: modelPath + ".Title", Line: 1, Col: 0, Text: "Display title", Comment: "[ModelFinder.Field]:\ttranslations.finderModel.Title"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("model matches = %+v, want %+v", got, want)

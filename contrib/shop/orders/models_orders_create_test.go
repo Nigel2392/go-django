@@ -18,7 +18,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/djester/quest"
@@ -64,8 +63,8 @@ type testOrderSupplierProduct struct {
 	SKU string
 }
 
-func (p *testOrderSupplierProduct) ProductPrice(ctx context.Context) supplier.Price {
-	return supplier.Price{
+func (p *testOrderSupplierProduct) ProductPrice(ctx context.Context) products.Price {
+	return products.Price{
 		Unit:   currency.EUR,
 		Amount: p.Price,
 	}
@@ -116,13 +115,13 @@ func setupOrderTestEnv(t *testing.T) {
 		GetPluralLabel: func(ctx context.Context) string { return "Order Test Users" },
 	})
 
-	supplier.Register(&supplier.Supplier{
+	orders.RegisterSupplier(&orders.Supplier{
 		Order: 1,
 		Name:  "order_test_supplier",
 		TextLabel: func(ctx context.Context) string {
 			return "Order Test Supplier"
 		},
-		ProductModel: func(ctx context.Context) supplier.ProductModel {
+		ProductModel: func(ctx context.Context) products.ProductModel {
 			return &testOrderSupplierProduct{}
 		},
 	})
@@ -142,7 +141,7 @@ func setupOrderTestEnv(t *testing.T) {
 				cfg.ModelObjects = []attrs.Definer{
 					&OrderTestUser{},
 					&models.Category{},
-					&supplier.SupplierModel{},
+					&orders.SupplierModel{},
 					&testOrderSupplierProduct{},
 					&products.Product{},
 					&carts.Cart{},
@@ -164,7 +163,7 @@ func setupOrderTestEnv(t *testing.T) {
 	tables := quest.Table(t,
 		&OrderTestUser{},
 		&models.Category{},
-		&supplier.SupplierModel{},
+		&orders.SupplierModel{},
 		&testOrderSupplierProduct{},
 		&products.Product{},
 		&carts.Cart{},
@@ -202,7 +201,7 @@ func seedTestProduct(t *testing.T, cat *models.Category, title, slug, sku, price
 			Slug:          slug,
 			Category:      cat,
 			Editor:        &editor.EditorJSBlockData{},
-			Supplier:      supplier.SupplierValue("order_test_supplier"),
+			Supplier:      products.SupplierValue("order_test_supplier"),
 			Price:         decimal.RequireFromString(price),
 			TaxRate:       decimal.RequireFromString(tax),
 			DiscountPrice: decimal.RequireFromString(discount),
@@ -305,6 +304,42 @@ func TestCreateOrder(t *testing.T) {
 		t.Fatalf("error creating customer: %v", err)
 	}
 
+	t.Run("Supplier sync creates missing suppliers and preserves manual disables", testSupplierSync)
+	t.Run("Order snapshot and supplier-specific metadata", func(t *testing.T) {
+		testOrderSupplierSnapshot(t, customer, prodKeyboard)
+	})
+
+	t.Run("Invalid specific products abort order creation", func(t *testing.T) {
+		clearOrderAndCartTables(t)
+		wrongModel := *prodKeyboard
+		wrongModel.SpecificContentType = contenttypes.NewContentType[attrs.Definer](&OrderTestUser{})
+		for _, tc := range []struct {
+			name string
+			item *carts.CartItem
+			want error
+		}{
+			{"nil cart item", nil, qerrors.NilPointer},
+			{"missing content type", &carts.CartItem{Product: &products.Product{}}, qerrors.NilPointer},
+			{"non-product content type", &carts.CartItem{Product: &wrongModel}, qerrors.CorruptedData},
+			{"invalid specific ID", &carts.CartItem{Product: productWithSpecificID(prodKeyboard, "invalid")}, qerrors.CorruptedData},
+			{"missing specific row", &carts.CartItem{Product: productWithSpecificID(prodKeyboard, `"`+drivers.NewULID().String()+`"`)}, qerrors.NoRows},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				req := httptest.NewRequest(http.MethodPost, "/checkout", nil).WithContext(t.Context())
+				order, items, err := orders.CreateOrder(req, customer, nil, tc.item)
+				if !errors.Is(err, tc.want) || order != nil || items != nil {
+					t.Fatalf("CreateOrder returned (%v, %v, %v), want %v", order, items, err, tc.want)
+				}
+				for _, model := range []attrs.Definer{&orders.Order{}, &orders.OrderItem{}} {
+					count, err := queries.GetQuerySet(model).Count()
+					if err != nil || count != 0 {
+						t.Fatalf("%T has %d rows after failure: %v", model, count, err)
+					}
+				}
+			})
+		}
+	})
+
 	t.Run("Cleanup removes payments before their orders", func(t *testing.T) {
 		order, err := queries.GetQuerySet(&orders.Order{}).Create(&orders.Order{
 			Customer: customer,
@@ -313,15 +348,28 @@ func TestCreateOrder(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		panels, err := order.EditPanels(t.Context())
+		if err != nil || len(panels) != 1 {
+			t.Fatalf("expected a tabbed panel for the order without payments, got %d panels: %v", len(panels), err)
+		}
+
 		_, err = queries.GetQuerySet(&payments.Payment{}).Create(&payments.Payment{
 			Order:    order,
-			Provider: "cleanup-test",
+			Provider: "<cleanup-test>",
 			State:    paystate.STATUS_INIT,
 			Amount:   decimal.NewFromInt(10),
 			Currency: "EUR",
 		})
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		panels, err = order.EditPanels(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(panels) != 1 {
+			t.Fatalf("expected payment details in the tabbed panel, got %d panels", len(panels))
 		}
 
 		clearOrderAndCartTables(t)
@@ -404,11 +452,11 @@ func TestCreateOrder(t *testing.T) {
 		if orderItems[0].Amount != 2 {
 			t.Fatalf("expected orderItems[0].Amount 2, got %d", orderItems[0].Amount)
 		}
-		if orderItems[0].Product.Data.ID != prodKeyboard.ID {
-			t.Fatalf("expected orderItems[0].Product.Data.ID %s, got %s", prodKeyboard.ID, orderItems[0].Product.Data.ID)
+		if orderItems[0].Product.Data.Product.ID != prodKeyboard.ID {
+			t.Fatalf("expected orderItems[0].Product.Data.Product.ID %s, got %s", prodKeyboard.ID, orderItems[0].Product.Data.Product.ID)
 		}
-		if orderItems[0].Product.Data.Title != "Mechanical Keyboard" {
-			t.Fatalf("expected orderItems[0].Product.Data.Title 'Mechanical Keyboard', got %q", orderItems[0].Product.Data.Title)
+		if orderItems[0].Product.Data.Product.Title != "Mechanical Keyboard" {
+			t.Fatalf("expected orderItems[0].Product.Data.Product.Title 'Mechanical Keyboard', got %q", orderItems[0].Product.Data.Product.Title)
 		}
 
 		// Item 2 checks
@@ -421,8 +469,8 @@ func TestCreateOrder(t *testing.T) {
 		if orderItems[1].Amount != 3 {
 			t.Fatalf("expected orderItems[1].Amount 3, got %d", orderItems[1].Amount)
 		}
-		if orderItems[1].Product.Data.ID != prodMouse.ID {
-			t.Fatalf("expected orderItems[1].Product.Data.ID %s, got %s", prodMouse.ID, orderItems[1].Product.Data.ID)
+		if orderItems[1].Product.Data.Product.ID != prodMouse.ID {
+			t.Fatalf("expected orderItems[1].Product.Data.Product.ID %s, got %s", prodMouse.ID, orderItems[1].Product.Data.Product.ID)
 		}
 
 		// Verify persistence in DB via Orders() queryset including Preload("OrderItems")
@@ -461,8 +509,8 @@ func TestCreateOrder(t *testing.T) {
 		dbAmountsByProd := make(map[string]int, len(dbItemRows))
 		dbPricesByProd := make(map[string]decimal.Decimal, len(dbItemRows))
 		for _, row := range dbItemRows {
-			dbAmountsByProd[row.Object.Product.Data.ID.String()] = row.Object.Amount
-			dbPricesByProd[row.Object.Product.Data.ID.String()] = row.Object.ItemPrice
+			dbAmountsByProd[row.Object.Product.Data.Product.ID.String()] = row.Object.Amount
+			dbPricesByProd[row.Object.Product.Data.Product.ID.String()] = row.Object.ItemPrice
 		}
 		if got := dbAmountsByProd[prodKeyboard.ID.String()]; got != 2 {
 			t.Fatalf("expected persisted prodKeyboard Amount 2, got %d", got)
@@ -503,8 +551,8 @@ func TestCreateOrder(t *testing.T) {
 		if len(orderItems) != 1 {
 			t.Fatalf("expected only the 1 explicit item, got %d", len(orderItems))
 		}
-		if orderItems[0].Product.Data.ID != prodMat.ID {
-			t.Fatalf("expected explicit product %s, got %s", prodMat.ID, orderItems[0].Product.Data.ID)
+		if orderItems[0].Product.Data.Product.ID != prodMat.ID {
+			t.Fatalf("expected explicit product %s, got %s", prodMat.ID, orderItems[0].Product.Data.Product.ID)
 		}
 		if orderItems[0].Amount != 5 {
 			t.Fatalf("expected explicit amount 5, got %d", orderItems[0].Amount)
@@ -565,7 +613,7 @@ func TestCreateOrder(t *testing.T) {
 
 		titles := map[string]decimal.Decimal{}
 		for _, item := range orderItems {
-			titles[item.Product.Data.Title] = item.ItemPrice
+			titles[item.Product.Data.Product.Title] = item.ItemPrice
 		}
 		if price, ok := titles["Mechanical Keyboard"]; !ok || !price.Equal(decimal.RequireFromString("129.99")) {
 			t.Fatalf("unexpected Mechanical Keyboard item in orderItems: %v", titles)
@@ -621,7 +669,7 @@ func TestCreateOrder(t *testing.T) {
 		foundMouse := false
 		foundMat := false
 		for _, row := range persistedRows {
-			switch row.Object.Product.Data.Slug {
+			switch row.Object.Product.Data.Product.Slug {
 			case "wireless-mouse":
 				foundMouse = true
 				if !row.Object.ItemPrice.Equal(decimal.RequireFromString("59.50")) {
@@ -669,11 +717,11 @@ func TestCreateOrder(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to reload OrderItem from DB: %v", err)
 		}
-		if itemRow.Object.Product.Data.Title != "Limited Edition Keycaps" {
-			t.Fatalf("expected snapshot Title 'Limited Edition Keycaps', got %q", itemRow.Object.Product.Data.Title)
+		if itemRow.Object.Product.Data.Product.Title != "Limited Edition Keycaps" {
+			t.Fatalf("expected snapshot Title 'Limited Edition Keycaps', got %q", itemRow.Object.Product.Data.Product.Title)
 		}
-		if !itemRow.Object.Product.Data.Price.Equal(decimal.RequireFromString("75.00")) {
-			t.Fatalf("expected snapshot Product.Data.Price 75.00, got %s", itemRow.Object.Product.Data.Price)
+		if !itemRow.Object.Product.Data.Product.Price.Equal(decimal.RequireFromString("75.00")) {
+			t.Fatalf("expected snapshot Product.Data.Product.Price 75.00, got %s", itemRow.Object.Product.Data.Product.Price)
 		}
 		if !itemRow.Object.ItemPrice.Equal(decimal.RequireFromString("75.00")) {
 			t.Fatalf("expected OrderItem.ItemPrice 75.00, got %s", itemRow.Object.ItemPrice)
@@ -955,8 +1003,8 @@ func TestCreateOrder(t *testing.T) {
 		if len(dbItems2) != 2 {
 			t.Fatalf("expected 2 persisted items for order2, got %d", len(dbItems2))
 		}
-		if dbItems1[0].Object.Product.Data.ID != prodKeyboard.ID {
-			t.Fatalf("expected order1 item to be prodKeyboard, got %s", dbItems1[0].Object.Product.Data.ID)
+		if dbItems1[0].Object.Product.Data.Product.ID != prodKeyboard.ID {
+			t.Fatalf("expected order1 item to be prodKeyboard, got %s", dbItems1[0].Object.Product.Data.Product.ID)
 		}
 	})
 
@@ -994,7 +1042,7 @@ func TestCreateOrder(t *testing.T) {
 
 		itemsByProd := make(map[string]*orders.OrderItem, len(orderItems))
 		for _, item := range orderItems {
-			itemsByProd[item.Product.Data.ID.String()] = item
+			itemsByProd[item.Product.Data.Product.ID.String()] = item
 		}
 
 		freeItem := itemsByProd[prodFree.ID.String()]
@@ -1015,8 +1063,8 @@ func TestCreateOrder(t *testing.T) {
 		if !discountedItem.ItemPrice.Equal(decimal.RequireFromString("129.99")) {
 			t.Fatalf("expected ItemPrice to match Product.Price 129.99, got %s", discountedItem.ItemPrice)
 		}
-		if !discountedItem.Product.Data.DiscountPrice.Equal(decimal.RequireFromString("109.99")) {
-			t.Fatalf("expected snapshot Product.DiscountPrice 109.99, got %s", discountedItem.Product.Data.DiscountPrice)
+		if !discountedItem.Product.Data.Product.DiscountPrice.Equal(decimal.RequireFromString("109.99")) {
+			t.Fatalf("expected snapshot Product.DiscountPrice 109.99, got %s", discountedItem.Product.Data.Product.DiscountPrice)
 		}
 		if discountedItem.Amount != 10 {
 			t.Fatalf("expected Amount 10, got %d", discountedItem.Amount)
@@ -1030,7 +1078,7 @@ func TestCreateOrder(t *testing.T) {
 			t.Fatalf("expected 2 persisted OrderItems, got %d", len(dbItems))
 		}
 		for _, row := range dbItems {
-			switch row.Object.Product.Data.ID {
+			switch row.Object.Product.Data.Product.ID {
 			case prodFree.ID:
 				if row.Object.Amount != 0 || !row.Object.ItemPrice.Equal(decimal.Zero) {
 					t.Fatalf("unexpected persisted free item values: amount=%d price=%s", row.Object.Amount, row.Object.ItemPrice)
@@ -1040,7 +1088,7 @@ func TestCreateOrder(t *testing.T) {
 					t.Fatalf("unexpected persisted keyboard item values: amount=%d price=%s", row.Object.Amount, row.Object.ItemPrice)
 				}
 			default:
-				t.Fatalf("unexpected product ID in persisted OrderItems: %s", row.Object.Product.Data.ID)
+				t.Fatalf("unexpected product ID in persisted OrderItems: %s", row.Object.Product.Data.Product.ID)
 			}
 		}
 	})
@@ -1122,7 +1170,7 @@ func TestCreateOrder(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected CreateOrder on inactive cart with DB items to succeed, got: %v", err)
 		}
-		if order == nil || len(orderItems) != 1 || orderItems[0].Product.Data.ID != prodMouse.ID {
+		if order == nil || len(orderItems) != 1 || orderItems[0].Product.Data.Product.ID != prodMouse.ID {
 			t.Fatalf("unexpected order result for inactive cart: order=%v items=%v", order, orderItems)
 		}
 	})

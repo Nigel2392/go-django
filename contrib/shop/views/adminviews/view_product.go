@@ -13,8 +13,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/contrib/filters"
 	"github.com/Nigel2392/go-django/contrib/messages"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/util/forms"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews/generic"
@@ -134,7 +134,7 @@ func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	qs := supplier.Suppliers().
+	qs := orders.SuppliersQuery().
 		WithContext(r.Context()).
 		OrderBy("Enabled")
 
@@ -150,24 +150,24 @@ func ViewAddNewProductSupplier(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	bound := make([]supplier.BoundBackend, 0, len(rows))
+	bound := make([]orders.BoundSupplierBackend, 0, len(rows))
 	for _, row := range rows {
-		backend, ok := supplier.Retrieve(row.Object.InternalName)
+		backend, ok := orders.RetrieveSupplier(row.Object.InternalName)
 		if !ok {
-			backend = &supplier.Supplier{
+			backend = &orders.Supplier{
 				Name:      row.Object.InternalName,
 				TextLabel: trans.S(row.Object.InternalName),
 			}
 		}
 
-		bound = append(bound, supplier.BoundBackend{
-			Context:  r.Context(),
-			Instance: row.Object,
-			Backend:  backend,
+		bound = append(bound, orders.BoundSupplierBackend{
+			Context:         r.Context(),
+			Instance:        row.Object,
+			SupplierBackend: backend,
 		})
 	}
 
-	slices.SortStableFunc(bound, func(a, b supplier.BoundBackend) int {
+	slices.SortStableFunc(bound, func(a, b orders.BoundSupplierBackend) int {
 		if a.Instance.Enabled != b.Instance.Enabled {
 			if a.Instance.Enabled {
 				return -1
@@ -217,7 +217,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var supplierVal, ok = supplier.Retrieve(mux.Vars(r).Get("supplier"))
+	var supplierVal, ok = orders.RetrieveSupplier(mux.Vars(r).Get("supplier"))
 	if !ok {
 		except.Fail(
 			http.StatusNotFound,
@@ -237,13 +237,13 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(transactionCtx)
 
 	var model = supplierVal.ProductType(r.Context())
-	var form = forms.NewAdminForm(r, model, func(p supplier.ProductModel) []admin.Panel {
+	var form = forms.NewAdminForm(r, model, func(p products.ProductModel) []admin.Panel {
 		return supplierVal.ProductAddPanel(r.Context())
 	})
 
 	form.Load()
 
-	form.Form.SaveInstance = func(ctx context.Context, p supplier.ProductModel) error {
+	form.Form.SaveInstance = func(ctx context.Context, p products.ProductModel) error {
 		saved, err := djmodels.SaveModel(ctx, p)
 		if err == nil && !saved {
 			err = fmt.Errorf("model %T not saved", p)
@@ -254,7 +254,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 		}
 
 		product := p.SpecificObject().Embedder().(*products.Product)
-		product.Supplier = supplier.SupplierValue(supplierVal.InternalName())
+		product.Supplier = products.SupplierValue(supplierVal.InternalName())
 
 		_, err = queries.GetQuerySet[attrs.Definer](&products.Product{}).
 			WithContext(ctx).
@@ -268,7 +268,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 		return nil
 	}
 
-	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]]{
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[products.ProductModel], products.ProductModel]]{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "shop",
 		TemplateName:    "shop/products/admin/add.tmpl",
@@ -288,7 +288,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 
 			return context, nil
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[products.ProductModel], products.ProductModel] {
 			return form
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
@@ -299,7 +299,7 @@ func ViewAddProduct(w http.ResponseWriter, r *http.Request) {
 			initial["Supplier"] = supplierVal.InternalName()
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[products.ProductModel], products.ProductModel]) {
 			var instance = form.Instance()
 			except.Assert(
 				instance != nil,
@@ -362,9 +362,9 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, instance *products.
 	}
 
 	var (
-		specific         = specificObj.(supplier.ProductModel)
+		specific         = specificObj.(products.ProductModel)
 		originalProduct  *products.Product
-		originalInstance supplier.ProductModel
+		originalInstance products.ProductModel
 	)
 	if r.Method == http.MethodPost {
 		err = clone.Copy(
@@ -405,13 +405,21 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, instance *products.
 	defer tx.Rollback(transactionCtx)
 	r = r.WithContext(transactionCtx)
 
-	var form = forms.NewAdminForm(r, specific, func(p supplier.ProductModel) []admin.Panel {
-		return instance.Supplier.ProductEditPanel(r.Context())
+	backend, ok := orders.RetrieveSupplier(instance.Supplier)
+	if !ok {
+		except.Fail(
+			http.StatusInternalServerError,
+			"no supplier found for %q", instance.Supplier,
+		)
+	}
+
+	var form = forms.NewAdminForm(r, specific, func(p products.ProductModel) []admin.Panel {
+		return backend.ProductEditPanel(r.Context())
 	})
 
 	form.Load()
 
-	form.Form.SaveInstance = func(ctx context.Context, p supplier.ProductModel) error {
+	form.Form.SaveInstance = func(ctx context.Context, p products.ProductModel) error {
 
 		saved, err := djmodels.SaveModel(ctx, p)
 		if err == nil && !saved {
@@ -432,7 +440,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, instance *products.
 		return err
 	}
 
-	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]]{
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[products.ProductModel], products.ProductModel]]{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "shop",
 		TemplateName:    "shop/products/admin/edit.tmpl",
@@ -453,7 +461,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, instance *products.
 
 			return context, nil
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[products.ProductModel], products.ProductModel] {
 			return form
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
@@ -466,7 +474,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, instance *products.
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[supplier.ProductModel], supplier.ProductModel]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[products.ProductModel], products.ProductModel]) {
 			var instance = form.Instance()
 			except.Assert(
 				instance != nil,
@@ -480,7 +488,7 @@ func ViewEditProduct(w http.ResponseWriter, r *http.Request, instance *products.
 					Old: originalProduct,
 					New: instance.SpecificObject().Embedder().(*products.Product),
 				},
-				Specific: signals.Changed[supplier.ProductModel]{
+				Specific: signals.Changed[products.ProductModel]{
 					Old: originalInstance,
 					New: instance,
 				},

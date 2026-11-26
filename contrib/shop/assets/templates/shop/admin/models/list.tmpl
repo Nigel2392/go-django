@@ -40,10 +40,28 @@
     {{ end }}
 {{ end }}
 
+{{ if or (len .Data.actions) .Data.view_list_form }}
+    <form action="{{ url "admin:apps:model" .Data.app.Name .Data.model.GetName }}" method="post" data-controller="bulk-actions">
+        {{ csrf_field }}
+        <div id="content__header">
+            {{ template "header" . }}
+        </div>
+        <div id="content__body">
+            {{ template "content" . }}
+        </div>
+    </form>
+{{ else }}
+    <div id="content__header">
+        {{ template "header" . }}
+    </div>
+    <div id="content__body">
+        {{ template "content" . }}
+    </div>
+{{ end }}
+
 {{ define "content" }}
 
     <div class="list-root">
-
         <div class="list-wrapper">
             <div class="list-wrapper__content">
                 {{ $list := (.Get "view_list") }}

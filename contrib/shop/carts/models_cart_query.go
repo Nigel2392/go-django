@@ -110,14 +110,24 @@ func (qs *CartQuery) PreloadProducts(productFields ...string) *CartQuery {
 	})
 }
 
-// Equals to queryset.Get()
-func (qs *CartQuery) CalcOne() (row *CartRow, err error) {
+// CalcOne returns the calculated totals for one cart.
+func (qs *CartQuery) CalcOne() (*CartRow, error) {
+	return qs.calcOne(false)
+}
+
+// CalcOneWithProducts loads complete products for callers that use the priced
+// cart items to create order snapshots.
+func (qs *CartQuery) CalcOneWithProducts() (*CartRow, error) {
+	return qs.calcOne(true)
+}
+
+func (qs *CartQuery) calcOne(includeProductDetails bool) (row *CartRow, err error) {
 	qs = qs.Clone()
 
 	// limit to max_get_results
 	qs = qs.Limit(queries.MAX_GET_RESULTS)
 
-	guessSize, resIter, err := qs.Calc()
+	guessSize, resIter, err := qs.calc(includeProductDetails)
 	if err != nil {
 		return row, errors.Wrap(err, "CalcOne/Calc")
 	}
@@ -199,6 +209,10 @@ create:
 }
 
 func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
+	return qs.calc(false)
+}
+
+func (qs *CartQuery) calc(includeProductDetails bool) (int, iter.Seq2[*CartRow, error], error) {
 	ctx, tx, err := queries.StartTransaction(qs.Context())
 	if err != nil {
 		return 0, nil, errors.Wrap(err, "CartQuery.Calc[StartTransaction]")
@@ -208,21 +222,17 @@ func (qs *CartQuery) Calc() (int, iter.Seq2[*CartRow, error], error) {
 
 	qs = qs.Clone().WithContext(ctx)
 
+	productFields := []any{"*", "Product.ID", "Product.Price", "Product.AdditionalFee", "Product.TaxRate"}
+	if includeProductDetails {
+		productFields = []any{"*", "Product.*"}
+	}
 	qs = qs.Preload(queries.Preload{
 		Path:    "CartItems",
 		NoJoins: true,
 		QuerySet: queries.
 			GetQuerySet[attrs.Definer](&CartItem{}).
-			Select(
-				"*",
-				"Product.ID",
-				"Product.Price",
-				"Product.AdditionalFee",
-				"Product.TaxRate",
-			).
-			OrderBy(
-				"Product.Price",
-			), // Order by price ascending (cheapest first) or descending based on preference
+			Select(productFields...).
+			OrderBy("Product.Price", "ID"),
 	})
 
 	n, cartRows, err := qs.IterAll()

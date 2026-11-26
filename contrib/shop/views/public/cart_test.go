@@ -29,7 +29,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
@@ -78,8 +77,8 @@ type testCartSupplierProduct struct {
 	SKU string
 }
 
-func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) supplier.Price {
-	return supplier.Price{
+func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) products.Price {
+	return products.Price{
 		Unit:   currency.EUR,
 		Amount: p.Price,
 	}
@@ -125,7 +124,7 @@ func createTestProduct(t *testing.T, cat *models.Category, title, slug, price, t
 			Slug:          slug,
 			Category:      cat,
 			Editor:        &editor.EditorJSBlockData{},
-			Supplier:      supplier.SupplierValue("cart_test_supplier"),
+			Supplier:      products.SupplierValue("cart_test_supplier"),
 			Price:         decimal.RequireFromString(price),
 			TaxRate:       decimal.RequireFromString(tax),
 			DiscountPrice: decimal.RequireFromString(discount),
@@ -164,7 +163,7 @@ func TestCartsAPI(t *testing.T) {
 		GetPluralLabel: func(ctx context.Context) string { return "Cart Test Users" },
 	})
 
-	supplier.Register(&supplier.Supplier{
+	orders.RegisterSupplier(&orders.Supplier{
 		Order: 1,
 		Name:  "cart_test_supplier",
 		HTMLIcon: func(ctx context.Context) template.HTML {
@@ -176,7 +175,7 @@ func TestCartsAPI(t *testing.T) {
 		TextDescription: func(ctx context.Context) string {
 			return "Supplier for Cart API tests"
 		},
-		ProductModel: func(ctx context.Context) supplier.ProductModel {
+		ProductModel: func(ctx context.Context) products.ProductModel {
 			return &testCartSupplierProduct{}
 		},
 	})
@@ -195,7 +194,7 @@ func TestCartsAPI(t *testing.T) {
 				&CartTestUser{},
 				&auditlogs.Entry{},
 				&models.Category{},
-				&supplier.SupplierModel{},
+				&orders.SupplierModel{},
 				&testCartSupplierProduct{},
 				&products.Product{},
 				&carts.Cart{},
@@ -203,6 +202,7 @@ func TestCartsAPI(t *testing.T) {
 				&customers.Customer{},
 				&payments.ProviderAccount{},
 				&orders.Order{},
+				&orders.OrderItem{},
 				&payments.Payment{},
 				&coupons.Coupon{},
 				&coupons.CouponProductThrough{},
@@ -702,7 +702,7 @@ func TestCartsAPI(t *testing.T) {
 				},
 			},
 			&djester.BasicTest{
-				Label:    "Quote fees for a payment account and reconcile checkout",
+				Label:    "Quote fees and prepare, retry, and reconcile checkout",
 				Function: testPaymentOptions,
 			},
 			&djester.BasicTest{

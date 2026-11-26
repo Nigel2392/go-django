@@ -125,6 +125,18 @@ func NewAppConfig() django.AppConfig {
 			}
 		}
 
+		for app := range djangoapps.Apps {
+			translatorFs, ok := app.(AppTranslationFilesystemDefiner)
+			if !ok {
+				continue
+			}
+
+			var fsys = translatorFs.TranslationsFS(settings)
+			if len(fsys) > 0 {
+				cfg.filesystems = append(cfg.filesystems, fsys...)
+			}
+		}
+
 		var hdr = &FileTranslationsHeader{}
 		var translationsList []Translation
 

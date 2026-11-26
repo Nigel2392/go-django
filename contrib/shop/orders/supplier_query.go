@@ -1,4 +1,4 @@
-package supplier
+package orders
 
 import (
 	"fmt"
@@ -8,12 +8,12 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 )
 
-type Query struct {
-	*queries.WrappedQuerySet[*SupplierModel, *Query, *queries.QuerySet[*SupplierModel]]
+type SupplierQuery struct {
+	*queries.WrappedQuerySet[*SupplierModel, *SupplierQuery, *queries.QuerySet[*SupplierModel]]
 }
 
-func Suppliers() *Query {
-	supplierQs := &Query{}
+func SuppliersQuery() *SupplierQuery {
+	supplierQs := &SupplierQuery{}
 	supplierQs.WrappedQuerySet = queries.WrapQuerySet[*SupplierModel](
 		queries.GetQuerySet(&SupplierModel{}),
 		supplierQs,
@@ -21,26 +21,34 @@ func Suppliers() *Query {
 	return supplierQs
 }
 
-func (qs *Query) CloneQuerySet(wrapped *queries.WrappedQuerySet[*SupplierModel, *Query, *queries.QuerySet[*SupplierModel]]) *Query {
-	return &Query{
+func (qs *SupplierQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*SupplierModel, *SupplierQuery, *queries.QuerySet[*SupplierModel]]) *SupplierQuery {
+	return &SupplierQuery{
 		WrappedQuerySet: wrapped,
 	}
 }
 
 // A helper function to automatically create all suppliers in the database
-func (qs *Query) Sync() error {
+func (qs *SupplierQuery) Sync() error {
 	qs = qs.Clone()
 
 	tx, err := qs.GetOrCreateTransaction()
 	if err != nil {
-		return fmt.Errorf("suppliers.Query.Sync/GetOrCreateTransaction: %w", err)
+		return fmt.Errorf("suppliers.SupplierQuery.Sync/GetOrCreateTransaction: %w", err)
 	}
 
 	defer tx.Rollback(qs.Context())
 
-	var supplierNames = make([]string, 0, BackendCount())
-	for _, supplier := range IterBackends(false) {
+	var supplierNames = make([]string, 0, SupplierBackendCount())
+	for _, supplier := range IterSupplierBackends(false) {
 		supplierNames = append(supplierNames, supplier.InternalName())
+	}
+
+	if len(supplierNames) == 0 {
+		_, err := qs.BulkUpdate(expr.As("Enabled", expr.V(false)))
+		if err != nil && !errors.Is(err, errors.NoRows) {
+			return err
+		}
+		return tx.Commit(qs.Context())
 	}
 
 	var suppliers = make([]*SupplierModel, 0, len(supplierNames))

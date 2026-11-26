@@ -225,12 +225,25 @@ createRedemption:
 
 	cartsRow, err := cartQ.CalcOne()
 	if err != nil {
+		logger.Warnf("error calculating cart with applied coupon: %v", err)
 		api.RespondError(w,
 			http.StatusNotFound,
 			a.ErrInvalid(ctx),
 		)
 		return
 	}
+
+	err = coupons.Signals.Redeemed.Send(ctx, coupons.CouponRedeemedSignal{
+		Request: r,
+		Coupon:  coupon,
+		Cart:    cartRow.Object,
+	})
+	if err != nil {
+		logger.Warnf("error sending coupon redemption signal: %v", err)
+		api.RespondError(w, http.StatusInternalServerError, "failed to redeem coupon")
+		return
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		logger.Warnf("error committing coupon redemption: %v", err)
 		api.RespondError(w, http.StatusInternalServerError, "failed to redeem coupon")

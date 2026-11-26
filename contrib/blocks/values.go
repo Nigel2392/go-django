@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"bytes"
 	"context"
 	"database/sql/driver"
 	"encoding/json"
@@ -10,9 +11,12 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/versatile"
 )
+
+const AttrKeyBlockControl = "blocks.AttrKeyBlockControl"
 
 var _ BoundBlockValue = (*BoundValue[interface{}])(nil)
 var _ attrs.Binder = (*BoundValue[interface{}])(nil)
@@ -48,6 +52,15 @@ func (l *BoundValue[T]) Data() interface{} {
 	return l.V
 }
 
+// HasData reports whether the value has decoded data or data waiting for a block.
+func (l *BoundValue[T]) HasData() bool {
+	if l == nil {
+		return false
+	}
+	raw := bytes.TrimSpace(l._rawData)
+	return (len(raw) > 0 && !bytes.Equal(raw, []byte("null"))) || !versatile.IsZero(l.V)
+}
+
 func (l *BoundValue[T]) BindToModel(model attrs.Definer, field attrs.Field) error {
 	if l == nil {
 		return nil
@@ -57,17 +70,46 @@ func (l *BoundValue[T]) BindToModel(model attrs.Definer, field attrs.Field) erro
 		return l.loadData()
 	}
 
-	// fmt.Printf("Binding %T to model %T field %s\n%s\n", l, model, field.Name(), debug.Stack())
-	var b, err = methodGetBlock(model, field)
-	if err != nil {
-		panic(fmt.Sprintf("blocks: failed to get block for field %s on %T: %v", field.Name(), model, err))
+	m := attrs.GetModelMeta(model)
+	attrMapObj, ok := m.Storage(attrs.MetaStorageKeyAttrs)
+	if !ok {
+		return l.methodGetBlock(model, field)
 	}
 
-	if b == nil {
+	fieldAttrMap, ok := attrMapObj.(map[string]map[string]any)
+	if !ok {
+		return l.methodGetBlock(model, field)
+	}
+
+	attrMap, ok := fieldAttrMap[field.Name()]
+	if !ok {
+		return l.methodGetBlock(model, field)
+	}
+
+	blockControl, ok, err := attrutils.AttrFromMap[bool](attrMap, AttrKeyBlockControl)
+	if err != nil {
+		return err
+	}
+
+	if ok && blockControl {
 		return nil
 	}
 
-	l.BlockObject = b
+	return l.methodGetBlock(model, field)
+}
+
+func (l *BoundValue[T]) methodGetBlock(model attrs.Definer, field attrs.Field) error {
+	// fmt.Printf("Binding %T to model %T field %s\n%s\n", l, model, field.Name(), debug.Stack())
+	b, err := methodGetBlock(model, field)
+	if err != nil {
+		return fmt.Errorf("blocks: failed to get block for field %s on %T: %w", field.Name(), model, err)
+	}
+
+	return l.BindToBlock(b)
+}
+
+func (l *BoundValue[T]) BindToBlock(block Block) error {
+	l.BlockObject = block
 	return l.loadData()
 }
 
@@ -92,7 +134,7 @@ func (l BoundValue[T]) MarshalJSON() ([]byte, error) {
 }
 
 func (l *BoundValue[T]) UnmarshalJSON(data []byte) error {
-	l._rawData = json.RawMessage(data)
+	l._rawData = bytes.Clone(data)
 	if l.BlockObject == nil {
 		return nil
 	}
@@ -157,7 +199,7 @@ func (l BoundValue[T]) Value() (driver.Value, error) {
 func (l *BoundValue[T]) Scan(value interface{}) (err error) {
 	switch v := value.(type) {
 	case []byte:
-		l._rawData = json.RawMessage(v)
+		l._rawData = bytes.Clone(v)
 	case string:
 		l._rawData = json.RawMessage(v)
 	case nil:

@@ -55,15 +55,11 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		return uuid.Nil, ErrLogsNotReady
 	}
 
-	if !LogUnknownTypes {
-		if _, ok := registry.definitions[entryType]; !ok {
-			err := fmt.Errorf(
-				"no definition registered for log entry type %q, cannot log",
-				entryType,
-			)
-			logger.Warn(err)
-			return uuid.Nil, err
-		}
+	_, defined := registry.definitions[entryType]
+	if !defined && !LogUnknownTypes {
+		err := fmt.Errorf("no definition registered for log entry type %q, cannot log", entryType)
+		logger.Warn(err)
+		return uuid.Nil, err
 	}
 
 	var user, _ = authentication.UserFromContext(ctx).(users.User)
@@ -127,14 +123,8 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 	}
 
 	var entry DBCreateLogEntry = baseEntry
-	if len(filtersForTyp) == 0 && len(handlersForTyp) == 0 {
-		err = fmt.Errorf(
-			"no filters or handlers registered for entry type %q",
-			entryType,
-		)
-
-		logger.Warn(err)
-		goto storeLogEntry
+	if !defined && len(filtersForTyp) == 0 && len(handlersForTyp) == 0 {
+		logger.Warnf("no filters or handlers registered for entry type %q", entryType)
 	}
 
 	for _, filter := range filtersForTyp {
@@ -150,7 +140,6 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		}
 	}
 
-storeLogEntry:
 	logger.Logf(
 		level, "Adding new %q entry to audit log", entryType,
 	)

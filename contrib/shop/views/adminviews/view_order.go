@@ -169,9 +169,12 @@ func ViewAddOrder(w http.ResponseWriter, r *http.Request) {
 		if err == nil && !saved {
 			err = fmt.Errorf("model %T not saved", p)
 		}
+		if err != nil {
+			return err
+		}
 
-		return orders.Signals.Created.Send(r.Context(), orders.OrderCreatedSignal{
-			Request: r,
+		return orders.Signals.Created.Send(ctx, orders.OrderCreatedSignal{
+			Request: r.WithContext(ctx),
 			Order:   p,
 			Lines:   skus,
 		})
@@ -235,8 +238,9 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request) {
 
 	var vars = mux.Vars(r)
 	var orderRow, err = queries.GetQuerySet(&orders.Order{}).
-		Preload(queries.NoJoins("Payments"), queries.NoJoins("OrderItems")).
-		Filter("ID", vars.Get("order_id")).
+		WithContext(r.Context()).
+		Preload(queries.NoJoins("OrderItems")).
+		Filter("ID", vars.Get("model_id")).
 		Get()
 
 	if errors.Is(err, errors.NoRows) {
@@ -251,8 +255,16 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
+	editPanels, err := orderRow.Object.EditPanels(r.Context())
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"failed to retrieve order panels: %v", err,
+		)
+	}
+
 	var form = forms.NewAdminForm(r, orderRow.Object, func(p *orders.Order) []admin.Panel {
-		return p.EditPanels(r.Context())
+		return editPanels
 	})
 
 	form.Load()
@@ -309,9 +321,12 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request) {
 		if err == nil && !saved {
 			err = fmt.Errorf("model %T not saved", p)
 		}
+		if err != nil {
+			return err
+		}
 
-		return orders.Signals.Updated.Send(r.Context(), orders.OrderUpdatedSignal{
-			Request: r,
+		return orders.Signals.Updated.Send(ctx, orders.OrderUpdatedSignal{
+			Request: r.WithContext(ctx),
 			Order:   p,
 			Lines:   skus,
 		})

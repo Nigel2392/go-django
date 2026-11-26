@@ -18,8 +18,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	_ "github.com/Nigel2392/go-django/contrib/shop/shared/relations/modelkeys"
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
@@ -84,8 +84,8 @@ type generatorTestSupplierProduct struct {
 	SKU string
 }
 
-func (p *generatorTestSupplierProduct) ProductPrice(ctx context.Context) supplier.Price {
-	return supplier.Price{
+func (p *generatorTestSupplierProduct) ProductPrice(ctx context.Context) products.Price {
+	return products.Price{
 		Unit:   currency.EUR,
 		Amount: p.Price,
 	}
@@ -137,13 +137,13 @@ func setupGeneratorTestEnv(t *testing.T) {
 		GetPluralLabel: func(ctx context.Context) string { return "Generator Test Users" },
 	})
 
-	supplier.Register(&supplier.Supplier{
+	orders.RegisterSupplier(&orders.Supplier{
 		Order: 1,
 		Name:  "generator_test_supplier",
 		TextLabel: func(ctx context.Context) string {
 			return "Generator Test Supplier"
 		},
-		ProductModel: func(ctx context.Context) supplier.ProductModel {
+		ProductModel: func(ctx context.Context) products.ProductModel {
 			return &generatorTestSupplierProduct{}
 		},
 	})
@@ -163,7 +163,7 @@ func setupGeneratorTestEnv(t *testing.T) {
 				cfg.ModelObjects = []attrs.Definer{
 					&generatorTestUser{},
 					&models.Category{},
-					&supplier.SupplierModel{},
+					&orders.SupplierModel{},
 					&generatorTestSupplierProduct{},
 					&products.Product{},
 					&carts.Cart{},
@@ -185,7 +185,7 @@ func setupGeneratorTestEnv(t *testing.T) {
 	tables := quest.Table(t,
 		&generatorTestUser{},
 		&models.Category{},
-		&supplier.SupplierModel{},
+		&orders.SupplierModel{},
 		&generatorTestSupplierProduct{},
 		&products.Product{},
 		&carts.Cart{},
@@ -199,7 +199,7 @@ func setupGeneratorTestEnv(t *testing.T) {
 	tables.IfNotExists = true
 	tables.Create()
 
-	if err := supplier.Suppliers().Sync(); err != nil {
+	if err := orders.SuppliersQuery().Sync(); err != nil {
 		t.Fatalf("failed to sync suppliers: %v", err)
 	}
 

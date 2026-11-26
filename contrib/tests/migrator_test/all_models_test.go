@@ -33,7 +33,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	_ "github.com/Nigel2392/go-django/contrib/shop/shared/relations/modelkeys"
 	_ "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -147,7 +146,7 @@ func allContribAppGroups() []appModelGroup {
 			name: "shop",
 			models: []attrs.Definer{
 				&shopmodels.Category{},
-				&supplier.SupplierModel{},
+				&orders.SupplierModel{},
 				&products.Product{},
 				&carts.Cart{},
 				&carts.CartItem{},

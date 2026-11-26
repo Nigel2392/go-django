@@ -28,18 +28,21 @@ import (
 
 func methodGetBlock(model any, field attrs.FieldDefinition) (Block, error) {
 	var methodName = fmt.Sprintf("Get%sBlock", field.Name())
+
 	method, ok := attrs.Method[func() Block](model, methodName)
 	if !ok {
 		return nil, errors.FieldNotFound.Wrapf(
 			"no %s method found on %T", methodName, model,
 		)
 	}
+
 	blockDef := method()
 	if blockDef == nil {
 		return nil, errors.ValueError.Wrapf(
 			"%s method on %T returned nil", methodName, model,
 		)
 	}
+
 	return blockDef, nil
 }
 

@@ -7,8 +7,11 @@ import (
 )
 
 type (
-	TranslationFinderHook     func(settings django.Settings) []Finder
-	TranslationFilesystemHook func(settings django.Settings) []fs.FS
+	TranslationFinderHook           func(settings django.Settings) []Finder
+	TranslationFilesystemHook       func(settings django.Settings) []fs.FS
+	AppTranslationFilesystemDefiner interface {
+		TranslationsFS(settings django.Settings) []fs.FS
+	}
 )
 
 const (

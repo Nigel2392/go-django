@@ -138,11 +138,6 @@ func main() {
 		"github.com/Nigel2392/go-django/contrib/shop/models.Product",
 		"github.com/Nigel2392/go-django/contrib/shop/products.Product",
 	)
-	contenttypes.RegisterAlias(
-		"github.com/Nigel2392/go-django/contrib/shop/supplier.SupplierModel",
-		"github.com/Nigel2392/go-django/contrib/shop/products/supplier.SupplierModel",
-	)
-
 	err = app.Initialize()
 	if err != nil {
 		panic(err)

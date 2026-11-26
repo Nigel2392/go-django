@@ -10,8 +10,10 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
@@ -54,43 +56,67 @@ func (m *Order) AddPanels(ctx context.Context) []admin.Panel {
 	}
 }
 
-func (m *Order) EditPanels(ctx context.Context) []admin.Panel {
-	panels := []admin.Panel{
-		admin.FieldPanel("ID"),
-		admin.FieldPanel("State"),
+func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
+	if m.Payments == nil {
+		attrs.Define(ctx, m).Get("Payments")
 	}
-	for _, payment := range m.Payments.AsList() {
-		panels = append(panels, &admin.AlertPanel{
-			Label: "Payment " + payment.ID.String(),
+	n, paymentRows, err := m.Payments.Objects().WithContext(ctx).IterAll()
+	if err != nil {
+		return nil, errors.Wrap(err, "EditPanels")
+	}
+
+	var paymentPanels = make([]admin.Panel, 0, n)
+	for row, err := range paymentRows {
+		if err != nil {
+			return nil, errors.Wrap(err, "EditPanels/paymentRows")
+		}
+
+		paymentPanels = append(paymentPanels, &admin.AlertPanel{
+			Label: "Payment " + row.Object.ID.String(),
 			HTML: template.HTMLEscapeString(fmt.Sprintf("%s · %s %s · %s",
-				payment.Provider, payment.Amount, payment.Currency, payment.State)),
+				row.Object.Provider, row.Object.Amount, row.Object.Currency, row.Object.State)),
 		})
 	}
-	return append(panels,
-		&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
-			TargetType: &OrderItem{},
-			FieldName:  "OrderItems",
-			Classname:  "collapsible",
-			// SubClassname: "collapsed",
-			MinNum: 1,
-			// DisallowAdd:    true,
-			// DisallowRemove: true,
-			Panels: []admin.Panel{
+
+	panels := []admin.Panel{
+		admin.TabbedPanel(
+			admin.PanelTab(
+				trans.S("Product Details"),
 				admin.FieldPanel("ID"),
-				admin.FieldPanel("Amount"),
-			},
-		},
-	)
+				admin.FieldPanel("State"),
+			),
+			admin.PanelTab(
+				trans.S("Order Items"),
+				&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
+					TargetType: &OrderItem{},
+					FieldName:  "OrderItems",
+					Classname:  "collapsible",
+					// SubClassname: "collapsed",
+					MinNum: 1,
+					// DisallowAdd:    true,
+					// DisallowRemove: true,
+					Panels: []admin.Panel{
+						admin.FieldPanel("ID"),
+						admin.FieldPanel("Amount"),
+					},
+				},
+			),
+			admin.PanelTab(
+				trans.S("Payment Details"),
+				paymentPanels...,
+			),
+		),
+	}
+
+	return panels, nil
 }
 
 func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, m,
 		fattrs.Field(m, "ID", &m.ID, func() fattrs.PtrFieldConfig[*Order, drivers.ULID] {
 			return fattrs.PtrFieldConfig[*Order, drivers.ULID]{
-				Config: attrs.Config{
-					Primary:  true,
-					ReadOnly: true,
-				},
+				Primary:  true,
+				ReadOnly: true,
 			}
 		}),
 		//	fattrs.Field(m, "State", &m.State, func() fattrs.PtrFieldConfig[*Order, *OrderState] {

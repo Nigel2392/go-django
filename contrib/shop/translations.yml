@@ -1,0 +1,2516 @@
+generator: "godjango"
+created: "2023-10-01T12:00:00Z"
+translators:
+  - Nigel
+locales:
+  nl:
+    nplural: 2
+    rule: '(n != 1) ? 1 : 0'
+    long_time_format: '%A %-d %B %Y om %H:%M:%S'
+    short_time_format: '%H:%M:%S %d-%m-%Y'
+  de:
+    nplural: 2
+    rule: '(n != 1) ? 1 : 0'
+    long_time_format: '%A, %-d. %B %Y um %H:%M:%S'
+    short_time_format: '%H:%M:%S %-d.%m.%Y'
+  fr:
+    nplural: 2
+    rule: '(n > 1) ? 1 : 0'
+    long_time_format: '%A %-d %B %Y à %H:%M:%S'
+    short_time_format: '%H:%M:%S %-d/%-m/%Y'
+  en:
+    nplural: 2
+    rule: '(n != 1) ? 1 : 0'
+    long_time_format: '%A, %d %B %Y at %H:%M:%S'
+    short_time_format: '%Y-%m-%d %H:%M:%S'
+
+---
+
+# [TemplateFinder]:	{{ T "Filter Results" }} assets/templates/shop/admin/shop_base.tmpl:39:145
+text: Filter Results
+locales:
+  de: "Ergebnisse filtern"
+  en: "Filter Results"
+  fr: "Filtrer les résultats"
+  nl: "Resultaten filteren"
+
+---
+
+# [TemplateFinder]:	{{ T "Clear Filters" }} assets/templates/shop/admin/shop_base.tmpl:51:73
+text: Clear Filters
+locales:
+  de: "Filter zurücksetzen"
+  en: "Clear Filters"
+  fr: "Effacer les filtres"
+  nl: "Filters wissen"
+
+---
+
+# [TemplateFinder]:	{{ T "Add Order" }} assets/templates/shop/orders/admin/add.tmpl:3:25
+text: Add Order
+locales:
+  de: "Bestellung hinzufügen"
+  en: "Add Order"
+  fr: "Ajouter une commande"
+  nl: "Bestelling toevoegen"
+
+---
+
+# [TemplateFinder]: {{ T "Save Changes" }} assets/templates/shop/orders/admin/add.tmpl:22:70
+# [TemplateFinder]: {{ T "Save Changes" }} assets/templates/shop/orders/admin/edit.tmpl:23:70
+# [TemplateFinder]: {{ T "Save Changes" }} assets/templates/shop/products/admin/edit.tmpl:24:70
+text: Save Changes
+locales:
+  de: "Änderungen speichern"
+  en: "Save Changes"
+  fr: "Enregistrer les modifications"
+  nl: "Wijzigingen opslaan"
+
+---
+
+# [TemplateFinder]: {{ T "Cancel" }} assets/templates/shop/orders/admin/add.tmpl:25:69
+# [TemplateFinder]: {{ T "Cancel" }} assets/templates/shop/orders/admin/edit.tmpl:26:69
+# [TemplateFinder]: {{ T "Cancel" }} assets/templates/shop/products/admin/add.tmpl:28:69
+# [TemplateFinder]: {{ T "Cancel" }} assets/templates/shop/products/admin/edit.tmpl:27:69
+text: Cancel
+locales:
+  de: "Abbrechen"
+  en: "Cancel"
+  fr: "Annuler"
+  nl: Annuleren
+
+---
+
+# [TemplateFinder]: {{ T "Back" }} assets/templates/shop/orders/admin/add.tmpl:27:99
+# [TemplateFinder]: {{ T "Back" }} assets/templates/shop/orders/admin/edit.tmpl:28:99
+# [TemplateFinder]: {{ T "Back" }} assets/templates/shop/products/admin/add.tmpl:30:101
+# [TemplateFinder]: {{ T "Back" }} assets/templates/shop/products/admin/edit.tmpl:29:101
+# [TemplateFinder]: {{ T "Back" }} assets/templates/shop/products/admin/suppliers.tmpl:43:76
+text: Back
+locales:
+  de: "Zurück"
+  en: "Back"
+  fr: "Retour"
+  nl: Terug
+
+---
+
+# [TemplateFinder]:	{{ T "Change or View Order" }} assets/templates/shop/orders/admin/edit.tmpl:3:25
+text: Change or View Order
+locales:
+  de: "Bestellung bearbeiten oder anzeigen"
+  en: "Change or View Order"
+  fr: "Modifier ou consulter la commande"
+  nl: "Bestelling wijzigen of bekijken"
+
+---
+
+# [TemplateFinder]: {{ T "Add" }} assets/templates/shop/products/admin/add.tmpl:3:25
+# [GoFileFinder]:                 github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:89:18
+text: Add
+locales:
+  de: "Hinzufügen"
+  en: "Add"
+  fr: "Ajouter"
+  nl: Toevoegen
+
+---
+
+# [TemplateFinder]:	{{ T "Add Product" }} assets/templates/shop/products/admin/add.tmpl:25:70
+text: Add Product
+locales:
+  de: "Produkt hinzufügen"
+  en: "Add Product"
+  fr: "Ajouter un produit"
+  nl: "Product toevoegen"
+
+---
+
+# [TemplateFinder]:	{{ T "Change Product" }} assets/templates/shop/products/admin/edit.tmpl:3:25
+text: Change Product
+locales:
+  de: "Produkt bearbeiten"
+  en: "Change Product"
+  fr: "Modifier le produit"
+  nl: "Product wijzigen"
+
+---
+
+# [TemplateFinder]:	{{ T "Choose Supplier" }} assets/templates/shop/products/admin/suppliers.tmpl:3:25
+text: Choose Supplier
+locales:
+  de: "Lieferant auswählen"
+  en: "Choose Supplier"
+  fr: "Choisir un fournisseur"
+  nl: "Leverancier kiezen"
+
+---
+
+# [TemplateFinder]:	{{ T "%s (Disabled)" $backend.Label }} assets/templates/shop/products/admin/suppliers.tmpl:31:96
+text: '%s (Disabled)'
+locales:
+  de: "%s (deaktiviert)"
+  en: "%s (Disabled)"
+  fr: "%s (désactivé)"
+  nl: "%s (uitgeschakeld)"
+
+---
+
+# [ModelFinder]:       auth.User               github.com/Nigel2392/go-django/contrib/auth.User:4:1
+# [ModelFinder.Field]: revisions.Revision.User github.com/Nigel2392/go-django/contrib/revisions.Revision.User:1:4
+# [ModelFinder.Field]: carts.Cart.User         github.com/Nigel2392/go-django/contrib/shop/carts.Cart.User:2:1
+# [ModelFinder.Field]: customers.Customer.User github.com/Nigel2392/go-django/contrib/shop/customers.Customer.User:14:4
+text: User
+locales:
+  de: "Benutzer"
+  en: "User"
+  fr: "Utilisateur"
+  nl: Gebruiker
+
+---
+
+# [ModelFinder.Field]:	auth.User.CartSet github.com/Nigel2392/go-django/contrib/auth.User.CartSet:1:14
+text: Cart Set
+locales:
+  de: "Warenkörbe"
+  en: "Cart Set"
+  fr: "Paniers"
+  nl: "Winkelwagens"
+
+---
+
+# [ModelFinder.Field]:	auth.User.CouponSet github.com/Nigel2392/go-django/contrib/auth.User.CouponSet:1:16
+text: Coupon Set
+locales:
+  de: "Gutscheine"
+  en: "Coupon Set"
+  fr: "Codes promo"
+  nl: "Kortingsbonnen"
+
+---
+
+# [ModelFinder.Field]: auth.User.CreatedAt          github.com/Nigel2392/go-django/contrib/auth.User.CreatedAt:1:6
+# [ModelFinder.Field]: revisions.Revision.CreatedAt github.com/Nigel2392/go-django/contrib/revisions.Revision.CreatedAt:1:5
+# [ModelFinder.Field]: carts.Cart.CreatedAt         github.com/Nigel2392/go-django/contrib/shop/carts.Cart.CreatedAt:2:4
+# [ModelFinder.Field]: coupons.Coupon.CreatedAt     github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.CreatedAt:11:11
+# [ModelFinder.Field]: payments.Payment.CreatedAt   github.com/Nigel2392/go-django/contrib/shop/payments.Payment.CreatedAt:7:10
+text: Created At
+locales:
+  de: "Erstellt am"
+  en: "Created At"
+  fr: "Date de création"
+  nl: Aangemaakt op
+
+---
+
+# [ModelFinder.Field]:	auth.User.CustomerSet github.com/Nigel2392/go-django/contrib/auth.User.CustomerSet:1:15
+text: Customer Set
+locales:
+  de: "Kunden"
+  en: "Customer Set"
+  fr: "Clients"
+  nl: "Klanten"
+
+---
+
+# [ModelFinder.Field]: auth.User.Email          github.com/Nigel2392/go-django/contrib/auth.User.Email:1:1
+# [ModelFinder.Field]: customers.Customer.Email github.com/Nigel2392/go-django/contrib/shop/customers.Customer.Email:14:1
+# [GoFileFinder]:      *Customer.FieldDefs      github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:51:25
+text: Email
+locales:
+  de: "E-Mail-Adresse"
+  en: "Email"
+  fr: "Adresse e-mail"
+  nl: E-mail
+
+---
+
+# [ModelFinder.Field]:	auth.User.EntrySet github.com/Nigel2392/go-django/contrib/auth.User.EntrySet:1:13
+text: Entry Set
+locales:
+  de: "Einträge"
+  en: "Entry Set"
+  fr: "Entrées"
+  nl: Invoerset
+
+---
+
+# [ModelFinder.Field]: auth.User.FirstName          github.com/Nigel2392/go-django/contrib/auth.User.FirstName:1:3
+# [ModelFinder.Field]: customers.Customer.FirstName github.com/Nigel2392/go-django/contrib/shop/customers.Customer.FirstName:14:2
+# [GoFileFinder]:      *Customer.FieldDefs          github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:61:25
+text: First Name
+locales:
+  de: "Vorname"
+  en: "First Name"
+  fr: "Prénom"
+  nl: Voornaam
+
+---
+
+# [ModelFinder.Field]: auth.User.Groups                  github.com/Nigel2392/go-django/contrib/auth.User.Groups:1:11
+# [ModelFinder.Field]: users.Permission.GroupPermissions github.com/Nigel2392/go-django/contrib/auth/users.Permission.GroupPermissions:3:3
+text: Groups
+locales:
+  de: "Gruppen"
+  en: "Groups"
+  fr: "Groupes"
+  nl: Groepen
+
+---
+
+# [ModelFinder.Field]: auth.User.ID                  github.com/Nigel2392/go-django/contrib/auth.User.ID:1:0
+# [ModelFinder.Field]: users.Group.ID                github.com/Nigel2392/go-django/contrib/auth/users.Group.ID:2:0
+# [ModelFinder.Field]: users.Permission.ID           github.com/Nigel2392/go-django/contrib/auth/users.Permission.ID:3:0
+# [ModelFinder.Field]: audit_logs.Entry.ID           github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.ID:1:0
+# [ModelFinder.Field]: revisions.Revision.ID         github.com/Nigel2392/go-django/contrib/revisions.Revision.ID:1:0
+# [ModelFinder.Field]: settings.RegisteredSetting.ID github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting.ID:1:0
+# [ModelFinder.Field]: carts.Cart.ID                 github.com/Nigel2392/go-django/contrib/shop/carts.Cart.ID:2:0
+# [ModelFinder.Field]: carts.CartItem.ID             github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.ID:1:0
+# [ModelFinder.Field]: coupons.Coupon.ID             github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ID:11:0
+# [ModelFinder.Field]: coupons.Redemption.ID         github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.ID:13:0
+# [ModelFinder.Field]: customers.Customer.ID         github.com/Nigel2392/go-django/contrib/shop/customers.Customer.ID:14:0
+# [ModelFinder.Field]: models.Category.ID            github.com/Nigel2392/go-django/contrib/shop/models.Category.ID:9:0
+# [ModelFinder.Field]: orders.Order.ID               github.com/Nigel2392/go-django/contrib/shop/orders.Order.ID:5:0
+# [ModelFinder.Field]: orders.OrderItem.ID           github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.ID:4:0
+# [ModelFinder.Field]: orders.OrderState.ID          github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.ID:3:0
+# [ModelFinder.Field]: payments.Payment.ID           github.com/Nigel2392/go-django/contrib/shop/payments.Payment.ID:7:0
+# [ModelFinder.Field]: payments.ProviderAccount.ID   github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.ID:6:0
+# [ModelFinder.Field]: products.Product.ID           github.com/Nigel2392/go-django/contrib/shop/products.Product.ID:8:0
+# [ModelFinder.Field]: dbsupplier.Product.ID         github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.ID:1:0
+text: ID
+locales:
+  de: "ID"
+  en: "ID"
+  fr: "ID"
+  nl: ID
+
+---
+
+# [ModelFinder.Field]:	auth.User.IsActive github.com/Nigel2392/go-django/contrib/auth.User.IsActive:1:9
+text: Is Active
+locales:
+  de: "Aktiv"
+  en: "Is Active"
+  fr: "Actif"
+  nl: Is Actief
+
+---
+
+# [ModelFinder.Field]:	auth.User.IsAdministrator github.com/Nigel2392/go-django/contrib/auth.User.IsAdministrator:1:8
+text: Is Administrator
+locales:
+  de: "Administrator"
+  en: "Is Administrator"
+  fr: "Administrateur"
+  nl: Is Beheerder
+
+---
+
+# [ModelFinder.Field]:	auth.User.LastLogin github.com/Nigel2392/go-django/contrib/auth.User.LastLogin:1:10
+text: Last Login
+locales:
+  de: "Letzte Anmeldung"
+  en: "Last Login"
+  fr: "Dernière connexion"
+  nl: Laatste Aanmelding
+
+---
+
+# [ModelFinder.Field]: auth.User.LastName          github.com/Nigel2392/go-django/contrib/auth.User.LastName:1:4
+# [ModelFinder.Field]: customers.Customer.LastName github.com/Nigel2392/go-django/contrib/shop/customers.Customer.LastName:14:3
+# [GoFileFinder]:      *Customer.FieldDefs         github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:71:25
+text: Last Name
+locales:
+  de: "Nachname"
+  en: "Last Name"
+  fr: "Nom de famille"
+  nl: Achternaam
+
+---
+
+# [ModelFinder.Field]:	auth.User.Password github.com/Nigel2392/go-django/contrib/auth.User.Password:1:5
+text: Password
+locales:
+  de: "Passwort"
+  en: "Password"
+  fr: "Mot de passe"
+  nl: Wachtwoord
+
+---
+
+# [ModelFinder.Field]: auth.User.Permissions   github.com/Nigel2392/go-django/contrib/auth.User.Permissions:1:12
+# [ModelFinder.Field]: users.Group.Permissions github.com/Nigel2392/go-django/contrib/auth/users.Group.Permissions:2:3
+text: Permissions
+locales:
+  de: "Berechtigungen"
+  en: "Permissions"
+  fr: "Autorisations"
+  nl: Rechten
+
+---
+
+# [ModelFinder.Field]:	auth.User.Revisions github.com/Nigel2392/go-django/contrib/auth.User.Revisions:1:17
+text: Revisions
+locales:
+  de: "Revisionen"
+  en: "Revisions"
+  fr: "Révisions"
+  nl: Revisies
+
+---
+
+# [ModelFinder.Field]: auth.User.UpdatedAt        github.com/Nigel2392/go-django/contrib/auth.User.UpdatedAt:1:7
+# [ModelFinder.Field]: coupons.Coupon.UpdatedAt   github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.UpdatedAt:11:12
+# [ModelFinder.Field]: payments.Payment.UpdatedAt github.com/Nigel2392/go-django/contrib/shop/payments.Payment.UpdatedAt:7:11
+text: Updated At
+locales:
+  de: "Aktualisiert am"
+  en: "Updated At"
+  fr: "Date de mise à jour"
+  nl: Bijgewerkt op
+
+---
+
+# [ModelFinder.Field]:	auth.User.Username github.com/Nigel2392/go-django/contrib/auth.User.Username:1:2
+text: Username
+locales:
+  de: "Benutzername"
+  en: "Username"
+  fr: "Nom d’utilisateur"
+  nl: Gebruikersnaam
+
+---
+
+# [ModelFinder]:	users.Group github.com/Nigel2392/go-django/contrib/auth/users.Group:4:2
+text: Group
+locales:
+  de: "Gruppe"
+  en: "Group"
+  fr: "Groupe"
+  nl: Groep
+
+---
+
+# [ModelFinder.Field]: users.Group.Description      github.com/Nigel2392/go-django/contrib/auth/users.Group.Description:2:2
+# [ModelFinder.Field]: users.Permission.Description github.com/Nigel2392/go-django/contrib/auth/users.Permission.Description:3:2
+# [GoFileFinder]:      NewAppConfig                 github.com/Nigel2392/go-django/contrib/shop/app.go:500:34
+# [ModelFinder.Field]: products.Product.Editor      github.com/Nigel2392/go-django/contrib/shop/products.Product.Editor:8:5
+# [GoFileFinder]:      *Product.FieldDefs           github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:220:22
+# [ModelFinder.Field]: dbsupplier.Product.Editor    github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Editor:1:4
+text: Description
+locales:
+  de: "Beschreibung"
+  en: "Description"
+  fr: "Description"
+  nl: Beschrijving
+
+---
+
+# [ModelFinder.Field]:	users.Group.Name github.com/Nigel2392/go-django/contrib/auth/users.Group.Name:2:1
+text: Group Name
+locales:
+  de: "Gruppenname"
+  en: "Group Name"
+  fr: "Nom du groupe"
+  nl: Groepsnaam
+
+---
+
+# [ModelFinder.Field]: users.Group.UserGroups           github.com/Nigel2392/go-django/contrib/auth/users.Group.UserGroups:2:4
+# [ModelFinder.Field]: users.Permission.UserPermissions github.com/Nigel2392/go-django/contrib/auth/users.Permission.UserPermissions:3:4
+text: Users
+locales:
+  de: "Benutzer"
+  en: "Users"
+  fr: "Utilisateurs"
+  nl: Gebruikers
+
+---
+
+# [ModelFinder]:	users.GroupPermission github.com/Nigel2392/go-django/contrib/auth/users.GroupPermission:4:5
+text: GroupPermission
+locales:
+  de: "Gruppenberechtigung"
+  en: "GroupPermission"
+  fr: "Autorisation de groupe"
+  nl: GroepRecht
+
+---
+
+# [ModelFinder.Field]: users.GroupPermission.GroupID github.com/Nigel2392/go-django/contrib/auth/users.GroupPermission.GroupID:5:0
+# [ModelFinder.Field]: users.UserGroup.GroupID       github.com/Nigel2392/go-django/contrib/auth/users.UserGroup.GroupID:4:1
+text: Group ID
+locales:
+  de: "Gruppen-ID"
+  en: "Group ID"
+  fr: "ID du groupe"
+  nl: Groep-ID
+
+---
+
+# [ModelFinder.Field]: users.GroupPermission.PermissionID github.com/Nigel2392/go-django/contrib/auth/users.GroupPermission.PermissionID:5:1
+# [ModelFinder.Field]: users.UserPermission.PermissionID  github.com/Nigel2392/go-django/contrib/auth/users.UserPermission.PermissionID:6:1
+text: Permission ID
+locales:
+  de: "Berechtigungs-ID"
+  en: "Permission ID"
+  fr: "ID de l’autorisation"
+  nl: Recht-ID
+
+---
+
+# [ModelFinder]:	users.Permission github.com/Nigel2392/go-django/contrib/auth/users.Permission:4:3
+text: Permission
+locales:
+  de: "Berechtigung"
+  en: "Permission"
+  fr: "Autorisation"
+  nl: Recht
+
+---
+
+# [ModelFinder.Field]:	users.Permission.Name github.com/Nigel2392/go-django/contrib/auth/users.Permission.Name:3:1
+text: Permission Name
+locales:
+  de: "Name der Berechtigung"
+  en: "Permission Name"
+  fr: "Nom de l’autorisation"
+  nl: Naam van het recht
+
+---
+
+# [ModelFinder]:	users.UserGroup github.com/Nigel2392/go-django/contrib/auth/users.UserGroup:4:4
+text: UserGroup
+locales:
+  de: "Benutzergruppe"
+  en: "UserGroup"
+  fr: "Groupe d’utilisateurs"
+  nl: Gebruikersgroep
+
+---
+
+# [ModelFinder.Field]: users.UserGroup.UserID      github.com/Nigel2392/go-django/contrib/auth/users.UserGroup.UserID:4:0
+# [ModelFinder.Field]: users.UserPermission.UserID github.com/Nigel2392/go-django/contrib/auth/users.UserPermission.UserID:6:0
+text: User ID
+locales:
+  de: "Benutzer-ID"
+  en: "User ID"
+  fr: "ID de l’utilisateur"
+  nl: Gebruiker-ID
+
+---
+
+# [ModelFinder]:	users.UserPermission github.com/Nigel2392/go-django/contrib/auth/users.UserPermission:4:6
+text: UserPermission
+locales:
+  de: "Benutzerberechtigung"
+  en: "UserPermission"
+  fr: "Autorisation utilisateur"
+  nl: GebruikerRecht
+
+---
+
+# [ModelFinder]:	audit_logs.Entry github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry:6:1
+text: Entry
+locales:
+  de: "Eintrag"
+  en: "Entry"
+  fr: "Entrée"
+  nl: "Vermelding"
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.ContentType github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.ContentType:1:7
+text: C Type
+locales:
+  de: "Inhaltstyp"
+  en: "C Type"
+  fr: "Type de contenu"
+  nl: Inhoudstype
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.Data github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.Data:1:8
+text: Src
+locales:
+  de: "Quelle"
+  en: "Src"
+  fr: "Source"
+  nl: Bron
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.Level github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.Level:1:2
+text: Lvl
+locales:
+  de: "Stufe"
+  en: "Lvl"
+  fr: "Niveau"
+  nl: Niveau
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.Object github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.Object:1:5
+text: Obj
+locales:
+  de: "Objekt"
+  en: "Obj"
+  fr: "Objet"
+  nl: Object
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.ObjectID github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.ObjectID:1:6
+text: Obj ID
+locales:
+  de: "Objekt-ID"
+  en: "Obj ID"
+  fr: "ID de l’objet"
+  nl: Object-ID
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.Timestamp github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.Timestamp:1:3
+text: Time
+locales:
+  de: "Zeit"
+  en: "Time"
+  fr: "Heure"
+  nl: Tijd
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.Type github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.Type:1:1
+text: Typ
+locales:
+  de: "Typ"
+  en: "Typ"
+  fr: "Type"
+  nl: Type
+
+---
+
+# [ModelFinder.Field]:	audit_logs.Entry.User github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.User:1:4
+text: Usr
+locales:
+  de: "Benutzer"
+  en: "Usr"
+  fr: "Utilisateur"
+  nl: Gebruiker
+
+---
+
+# [ModelFinder]:	revisions.Revision github.com/Nigel2392/go-django/contrib/revisions.Revision:12:1
+text: Revision
+locales:
+  de: "Revision"
+  en: "Revision"
+  fr: "Révision"
+  nl: Revisie
+
+---
+
+# [ModelFinder.Field]:	revisions.Revision.ContentType github.com/Nigel2392/go-django/contrib/revisions.Revision.ContentType:1:2
+text: Content Type
+locales:
+  de: "Inhaltstyp"
+  en: "Content Type"
+  fr: "Type de contenu"
+  nl: Inhoudstype
+
+---
+
+# [ModelFinder.Field]: revisions.Revision.Data         github.com/Nigel2392/go-django/contrib/revisions.Revision.Data:1:3
+# [ModelFinder.Field]: session.Session.Data            github.com/Nigel2392/go-django/contrib/session.Session.Data:1:1
+# [ModelFinder.Field]: settings.RegisteredSetting.Data github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting.Data:1:2
+text: Data
+locales:
+  de: "Daten"
+  en: "Data"
+  fr: "Données"
+  nl: Data
+
+---
+
+# [ModelFinder.Field]:	revisions.Revision.ObjectID github.com/Nigel2392/go-django/contrib/revisions.Revision.ObjectID:1:1
+text: Object ID
+locales:
+  de: "Objekt-ID"
+  en: "Object ID"
+  fr: "ID de l’objet"
+  nl: Object-ID
+
+---
+
+# [ModelFinder]:       session.Session    github.com/Nigel2392/go-django/contrib/session.Session:1:1
+# [ModelFinder.Field]: carts.Cart.Session github.com/Nigel2392/go-django/contrib/shop/carts.Cart.Session:2:2
+text: Session
+locales:
+  de: "Sitzung"
+  en: "Session"
+  fr: "Session"
+  nl: Sessie
+
+---
+
+# [ModelFinder.Field]:	session.Session.Expiry github.com/Nigel2392/go-django/contrib/session.Session.Expiry:1:2
+text: Expiry
+locales:
+  de: "Ablaufdatum"
+  en: "Expiry"
+  fr: "Date d’expiration"
+  nl: Verloopdatum
+
+---
+
+# [ModelFinder.Field]:	session.Session.Token github.com/Nigel2392/go-django/contrib/session.Session.Token:1:0
+text: Token
+locales:
+  de: "Token"
+  en: "Token"
+  fr: "Jeton"
+  nl: Token
+
+---
+
+# [ModelFinder]:	settings.RegisteredSetting github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting:14:1
+text: RegisteredSetting
+locales:
+  de: "Registrierte Einstellung"
+  en: "RegisteredSetting"
+  fr: "Paramètre enregistré"
+  nl: "Geregistreerde instelling"
+
+---
+
+# [ModelFinder.Field]: settings.RegisteredSetting.InternalName github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting.InternalName:1:1
+# [ModelFinder.Field]: orders.SupplierModel.InternalName       github.com/Nigel2392/go-django/contrib/shop/orders.SupplierModel.InternalName:10:0
+text: Internal Name
+locales:
+  de: "Interner Name"
+  en: "Internal Name"
+  fr: "Nom interne"
+  nl: "Interne naam"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:203:36
+text: Home
+locales:
+  de: "Startseite"
+  en: "Home"
+  fr: "Accueil"
+  nl: Startpagina
+
+---
+
+# [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:210:36
+# [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:443:34
+# [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:549:17
+# [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:589:17
+# [ModelFinder.Field]: coupons.Coupon.Products   github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.Products:11:15
+# [GoFileFinder]:      ViewAddNewProductSupplier github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:200:33
+text: Products
+locales:
+  de: "Produkte"
+  en: "Products"
+  fr: "Produits"
+  nl: "Producten"
+
+---
+
+# [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:217:36
+# [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:470:34
+# [ModelFinder.Field]: customers.Customer.Orders github.com/Nigel2392/go-django/contrib/shop/customers.Customer.Orders:14:6
+text: Orders
+locales:
+  de: "Bestellungen"
+  en: "Orders"
+  fr: "Commandes"
+  nl: "Bestellingen"
+
+---
+
+# [GoFileFinder]:      NewAppConfig             github.com/Nigel2392/go-django/contrib/shop/app.go:224:36
+# [GoFileFinder]:      NewAppConfig             github.com/Nigel2392/go-django/contrib/shop/app.go:496:34
+# [ModelFinder.Field]: products.Product.Coupons github.com/Nigel2392/go-django/contrib/shop/products.Product.Coupons:8:14
+text: Coupons
+locales:
+  de: "Gutscheine"
+  en: "Coupons"
+  fr: "Codes promo"
+  nl: "Kortingsbonnen"
+
+---
+
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:231:36
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:610:33
+text: Customers
+locales:
+  de: "Kunden"
+  en: "Customers"
+  fr: "Clients"
+  nl: "Klanten"
+
+---
+
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:239:36
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:666:33
+text: Payment providers
+locales:
+  de: "Zahlungsanbieter"
+  en: "Payment providers"
+  fr: "Prestataires de paiement"
+  nl: "Betaalproviders"
+
+---
+
+# [GoFileFinder]:      NewAppConfig          github.com/Nigel2392/go-django/contrib/shop/app.go:247:36
+# [GoFileFinder]:      NewAppConfig          github.com/Nigel2392/go-django/contrib/shop/app.go:713:33
+# [ModelFinder.Field]: orders.Order.Payments github.com/Nigel2392/go-django/contrib/shop/orders.Order.Payments:5:5
+text: Payments
+locales:
+  de: "Zahlungen"
+  en: "Payments"
+  fr: "Paiements"
+  nl: "Betalingen"
+
+---
+
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:255:36
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:738:33
+text: Carts
+locales:
+  de: "Warenkörbe"
+  en: "Carts"
+  fr: "Paniers"
+  nl: "Winkelwagens"
+
+---
+
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:263:36
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:753:33
+text: Coupon redemptions
+locales:
+  de: "Gutscheineinlösungen"
+  en: "Coupon redemptions"
+  fr: "Utilisations de codes promo"
+  nl: "Gebruikte kortingsbonnen"
+
+---
+
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:271:36
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:770:33
+text: Order states
+locales:
+  de: "Bestellstatus"
+  en: "Order states"
+  fr: "Statuts de commande"
+  nl: "Bestelstatussen"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:286:18
+text: Product Chooser
+locales:
+  de: "Produktauswahl"
+  en: "Product Chooser"
+  fr: "Sélecteur de produits"
+  nl: "Productkiezer"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:359:26
+text: Product
+plural: Products
+locales:
+  de:
+    0: "Produkt"
+    1: "Produkte"
+  en:
+    0: "Product"
+    1: "Products"
+  fr:
+    0: "Produit"
+    1: "Produits"
+  nl:
+    0: "Product"
+    1: "Producten"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:373:34
+text: Shop
+locales:
+  de: "Shop"
+  en: "Shop"
+  fr: "Boutique"
+  nl: "Winkel"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:374:34
+text: Commerce
+locales:
+  de: "E-Commerce"
+  en: "Commerce"
+  fr: "Commerce"
+  nl: "E-commerce"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:378:34
+text: The commerce module is intended to manage your webshop, such as product stock, orders, refunds, etc.
+locales:
+  de: "Mit dem E-Commerce-Modul verwalten Sie Ihren Onlineshop, etwa Lagerbestände, Bestellungen und Rückerstattungen."
+  en: "The commerce module is intended to manage your webshop, such as product stock, orders, refunds, etc."
+  fr: "Le module de commerce permet de gérer votre boutique en ligne, notamment les stocks, les commandes et les remboursements."
+  nl: "Met de e-commercemodule beheert u uw webshop, waaronder de voorraad, bestellingen en terugbetalingen."
+
+---
+
+# [GoFileFinder]:      NewAppConfig                github.com/Nigel2392/go-django/contrib/shop/app.go:388:34
+# [ModelFinder]:       models.Category             github.com/Nigel2392/go-django/contrib/shop/models.Category:11:9
+# [ModelFinder.Field]: products.Product.Category   github.com/Nigel2392/go-django/contrib/shop/products.Product.Category:8:4
+# [GoFileFinder]:                                  github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:118:13
+# [ModelFinder.Field]: dbsupplier.Product.Category github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Category:1:5
+text: Category
+locales:
+  de: "Kategorie"
+  en: "Category"
+  fr: "Catégorie"
+  nl: "Categorie"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:501:34
+text: Uses
+locales:
+  de: "Einlösungen"
+  en: "Uses"
+  fr: "Utilisations"
+  nl: "Gebruik"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:502:34
+text: Limit
+locales:
+  de: "Limit"
+  en: "Limit"
+  fr: "Limite"
+  nl: "Limiet"
+
+---
+
+# [GoFileFinder]:      NewAppConfig             github.com/Nigel2392/go-django/contrib/shop/app.go:503:34
+# [ModelFinder.Field]: coupons.Coupon.ValidFrom github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ValidFrom:11:9
+text: Valid From
+locales:
+  de: "Gültig ab"
+  en: "Valid From"
+  fr: "Valable à partir du"
+  nl: "Geldig vanaf"
+
+---
+
+# [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:504:34
+# [ModelFinder.Field]: coupons.Coupon.ValidUntil github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ValidUntil:11:10
+text: Valid Until
+locales:
+  de: "Gültig bis"
+  en: "Valid Until"
+  fr: "Valable jusqu’au"
+  nl: "Geldig tot"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:505:34
+text: Created
+locales:
+  de: "Erstellt"
+  en: "Created"
+  fr: "Créé"
+  nl: Aangemaakt
+
+---
+
+# [GoFileFinder]:      NewAppConfig                        github.com/Nigel2392/go-django/contrib/shop/app.go:532:17
+# [GoFileFinder]:      NewAppConfig                        github.com/Nigel2392/go-django/contrib/shop/app.go:567:17
+# [ModelFinder]:       coupons.Coupon                      github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon:11:11
+# [ModelFinder.Field]: coupons.CouponProductThrough.Coupon github.com/Nigel2392/go-django/contrib/shop/coupons.CouponProductThrough.Coupon:12:0
+# [ModelFinder.Field]: coupons.Redemption.Coupon           github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Coupon:13:1
+text: Coupon
+locales:
+  de: "Gutschein"
+  en: "Coupon"
+  fr: "Code promo"
+  nl: "Kortingsbon"
+
+---
+
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:542:17
+# [GoFileFinder]: NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:579:17
+text: Constraints
+locales:
+  de: "Einschränkungen"
+  en: "Constraints"
+  fr: "Restrictions"
+  nl: "Beperkingen"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:655:36
+text: Payment Providers
+locales:
+  de: "Zahlungsanbieter"
+  en: "Payment Providers"
+  fr: "Prestataires de paiement"
+  nl: "Betaalproviders"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:827:35
+text: Invalid coupon code
+locales:
+  de: "Ungültiger Gutscheincode"
+  en: "Invalid coupon code"
+  fr: "Code promo non valide"
+  nl: "Ongeldige kortingscode"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:828:35
+text: No products in your cart match this coupon
+locales:
+  de: "Kein Produkt in Ihrem Warenkorb erfüllt die Bedingungen dieses Gutscheins"
+  en: "No products in your cart match this coupon"
+  fr: "Aucun produit de votre panier ne remplit les conditions de ce code promo"
+  nl: "Geen producten in uw winkelwagen komen in aanmerking voor deze kortingsbon"
+
+---
+
+# [GoFileFinder]:	NewAppConfig github.com/Nigel2392/go-django/contrib/shop/app.go:829:35
+text: This coupon has reached its usage limit
+locales:
+  de: "Dieser Gutschein wurde bereits so oft wie zulässig eingelöst"
+  en: "This coupon has reached its usage limit"
+  fr: "Ce code promo a atteint sa limite d’utilisation"
+  nl: "Deze kortingsbon heeft de gebruikslimiet bereikt"
+
+---
+
+# [ModelFinder]:       carts.Cart              github.com/Nigel2392/go-django/contrib/shop/carts.Cart:11:2
+# [ModelFinder.Field]: carts.CartItem.Cart     github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.Cart:1:1
+# [ModelFinder.Field]: coupons.Redemption.Cart github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Cart:13:3
+text: Cart
+locales:
+  de: "Warenkorb"
+  en: "Cart"
+  fr: "Panier"
+  nl: "Winkelwagen"
+
+---
+
+# [ModelFinder.Field]:	carts.Cart.Active github.com/Nigel2392/go-django/contrib/shop/carts.Cart.Active:2:3
+text: Active
+locales:
+  de: "Aktiv"
+  en: "Active"
+  fr: "Actif"
+  nl: Actief
+
+---
+
+# [ModelFinder.Field]:	carts.Cart.CartItems github.com/Nigel2392/go-django/contrib/shop/carts.Cart.CartItems:2:5
+text: Cart Items
+locales:
+  de: "Warenkorbartikel"
+  en: "Cart Items"
+  fr: "Articles du panier"
+  nl: "Winkelwagenartikelen"
+
+---
+
+# [ModelFinder.Field]:	carts.Cart.Redemptions github.com/Nigel2392/go-django/contrib/shop/carts.Cart.Redemptions:2:6
+text: Redemptions
+locales:
+  de: "Einlösungen"
+  en: "Redemptions"
+  fr: "Utilisations"
+  nl: "Inwisselingen"
+
+---
+
+# [ModelFinder]:	carts.CartItem github.com/Nigel2392/go-django/contrib/shop/carts.CartItem:11:1
+text: CartItem
+locales:
+  de: "Warenkorbartikel"
+  en: "CartItem"
+  fr: "Article du panier"
+  nl: "Winkelwagenartikel"
+
+---
+
+# [ModelFinder.Field]: carts.CartItem.Amount   github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.Amount:1:3
+# [ModelFinder.Field]: orders.OrderItem.Amount github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Amount:4:4
+# [ModelFinder.Field]: payments.Payment.Amount github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Amount:7:7
+text: Amount
+locales:
+  de: "Anzahl"
+  en: "Amount"
+  fr: "Quantité"
+  nl: "Aantal"
+
+---
+
+# [ModelFinder.Field]: carts.CartItem.Product               github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.Product:1:2
+# [ModelFinder.Field]: coupons.CouponProductThrough.Product github.com/Nigel2392/go-django/contrib/shop/coupons.CouponProductThrough.Product:12:1
+# [ModelFinder.Field]: orders.OrderItem.Product             github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Product:4:1
+# [ModelFinder]:       products.Product                     github.com/Nigel2392/go-django/contrib/shop/products.Product:11:8
+# [ModelFinder]:       dbsupplier.Product                   github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product:13:1
+text: Product
+locales:
+  de: "Produkt"
+  en: "Product"
+  fr: "Produit"
+  nl: "Product"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.Code github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.Code:11:2
+text: Code
+locales:
+  de: "Code"
+  en: "Code"
+  fr: "Code"
+  nl: "Code"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.CreatedBy github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.CreatedBy:11:13
+text: Created By
+locales:
+  de: "Erstellt von"
+  en: "Created By"
+  fr: "Créé par"
+  nl: "Aangemaakt door"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.IsPercentage github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.IsPercentage:11:6
+text: Is Percentage
+locales:
+  de: "Prozentual"
+  en: "Is Percentage"
+  fr: "En pourcentage"
+  nl: "Procentueel"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.MaxDiscount github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.MaxDiscount:11:7
+text: Max Discount
+locales:
+  de: "Maximaler Rabatt"
+  en: "Max Discount"
+  fr: "Remise maximale"
+  nl: "Maximale korting"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.MinOrderAmount github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.MinOrderAmount:11:8
+text: Min Order Amount
+locales:
+  de: "Mindestbestellwert"
+  en: "Min Order Amount"
+  fr: "Montant minimum de commande"
+  nl: "Minimaal bestelbedrag"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.RedemptionSet github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.RedemptionSet:11:14
+text: Redemption Set
+locales:
+  de: "Einlösungen"
+  en: "Redemption Set"
+  fr: "Utilisations"
+  nl: "Inwisselingen"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.ShortDescription github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ShortDescription:11:3
+text: Short Description
+locales:
+  de: "Kurzbeschreibung"
+  en: "Short Description"
+  fr: "Description courte"
+  nl: "Korte beschrijving"
+
+---
+
+# [ModelFinder.Field]: coupons.Coupon.Title     github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.Title:11:1
+# [ModelFinder.Field]: products.Product.Title   github.com/Nigel2392/go-django/contrib/shop/products.Product.Title:8:2
+# [GoFileFinder]:                               github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:102:13
+# [ModelFinder.Field]: dbsupplier.Product.Title github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Title:1:2
+text: Title
+locales:
+  de: "Titel"
+  en: "Title"
+  fr: "Titre"
+  nl: Titel
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.UsageCount github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.UsageCount:11:5
+text: Usage Count
+locales:
+  de: "Anzahl der Einlösungen"
+  en: "Usage Count"
+  fr: "Nombre d’utilisations"
+  nl: "Aantal keer gebruikt"
+
+---
+
+# [ModelFinder.Field]:	coupons.Coupon.UsageLimit github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.UsageLimit:11:4
+text: Usage Limit
+locales:
+  de: "Nutzungslimit"
+  en: "Usage Limit"
+  fr: "Limite d’utilisation"
+  nl: "Gebruikslimiet"
+
+---
+
+# [ModelFinder]:	coupons.CouponProductThrough github.com/Nigel2392/go-django/contrib/shop/coupons.CouponProductThrough:11:12
+text: CouponProductThrough
+locales:
+  de: "Gutschein-Produkt-Zuordnung"
+  en: "CouponProductThrough"
+  fr: "Association entre un code promo et un produit"
+  nl: "Koppeling tussen kortingsbon en product"
+
+---
+
+# [ModelFinder]:	coupons.Redemption github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption:11:13
+text: Redemption
+locales:
+  de: "Einlösung"
+  en: "Redemption"
+  fr: "Utilisation du code promo"
+  nl: "Inwisseling"
+
+---
+
+# [ModelFinder.Field]: coupons.Redemption.Customer github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Customer:13:2
+# [ModelFinder]:       customers.Customer          github.com/Nigel2392/go-django/contrib/shop/customers.Customer:11:14
+# [ModelFinder.Field]: orders.Order.Customer       github.com/Nigel2392/go-django/contrib/shop/orders.Order.Customer:5:4
+text: Customer
+locales:
+  de: "Kunde"
+  en: "Customer"
+  fr: "Client"
+  nl: "Klant"
+
+---
+
+# [ModelFinder.Field]:	coupons.Redemption.DiscountAmount github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.DiscountAmount:13:5
+text: Discount Amount
+locales:
+  de: "Rabattbetrag"
+  en: "Discount Amount"
+  fr: "Montant de la remise"
+  nl: "Kortingsbedrag"
+
+---
+
+# [ModelFinder.Field]:	coupons.Redemption.Invalidated github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Invalidated:13:6
+text: Invalidated
+locales:
+  de: "Ungültig gemacht"
+  en: "Invalidated"
+  fr: "Invalidé"
+  nl: "Ongeldig gemaakt"
+
+---
+
+# [ModelFinder.Field]: coupons.Redemption.Order github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Order:13:4
+# [ModelFinder]:       orders.Order             github.com/Nigel2392/go-django/contrib/shop/orders.Order:11:5
+# [ModelFinder.Field]: orders.OrderItem.Order   github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Order:4:7
+# [ModelFinder.Field]: payments.Payment.Order   github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Order:7:1
+text: Order
+locales:
+  de: "Bestellung"
+  en: "Order"
+  fr: "Commande"
+  nl: "Bestelling"
+
+---
+
+# [ModelFinder.Field]:	coupons.Redemption.RedeemedAt github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.RedeemedAt:13:7
+text: Redeemed At
+locales:
+  de: "Eingelöst am"
+  en: "Redeemed At"
+  fr: "Utilisé le"
+  nl: "Ingewisseld op"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:54:26
+text: Length
+locales:
+  de: "Länge"
+  en: "Length"
+  fr: "Longueur"
+  nl: "Lengte"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:55:26
+text: Value
+locales:
+  de: "Wert"
+  en: "Value"
+  fr: "Valeur"
+  nl: "Waarde"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:56:26
+text: Refresh
+locales:
+  de: "Aktualisieren"
+  en: "Refresh"
+  fr: "Actualiser"
+  nl: "Vernieuwen"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:57:26
+text: Preview
+locales:
+  de: "Vorschau"
+  en: "Preview"
+  fr: "Aperçu"
+  nl: "Voorbeeld"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:58:26
+text: Random
+locales:
+  de: "Zufällig"
+  en: "Random"
+  fr: "Aléatoire"
+  nl: "Willekeurig"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:59:26
+text: Static
+locales:
+  de: "Fest"
+  en: "Static"
+  fr: "Fixe"
+  nl: "Vast"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:60:26
+text: Year
+locales:
+  de: "Jahr"
+  en: "Year"
+  fr: "Année"
+  nl: "Jaar"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:61:26
+text: Month
+locales:
+  de: "Monat"
+  en: "Month"
+  fr: "Mois"
+  nl: "Maand"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:62:26
+text: Weekday
+locales:
+  de: "Wochentag"
+  en: "Weekday"
+  fr: "Jour de la semaine"
+  nl: "Weekdag"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:63:26
+text: Day
+locales:
+  de: "Tag"
+  en: "Day"
+  fr: "Jour"
+  nl: "Dag"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:64:26
+text: Hour
+locales:
+  de: "Stunde"
+  en: "Hour"
+  fr: "Heure"
+  nl: "Uur"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:65:26
+text: Minute
+locales:
+  de: "Minute"
+  en: "Minute"
+  fr: "Minute"
+  nl: "Minuut"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:66:26
+text: UUID
+locales:
+  de: "UUID"
+  en: "UUID"
+  fr: "UUID"
+  nl: "UUID"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:68:30
+text: Random String, requires length
+locales:
+  de: "Zufällige Zeichenfolge, Länge erforderlich"
+  en: "Random String, requires length"
+  fr: "Chaîne aléatoire, longueur requise"
+  nl: "Willekeurige tekenreeks, lengte vereist"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:69:30
+text: Static String, requires custom input
+locales:
+  de: "Feste Zeichenfolge, Eingabe erforderlich"
+  en: "Static String, requires custom input"
+  fr: "Chaîne fixe, saisie requise"
+  nl: "Vaste tekenreeks, invoer vereist"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:70:30
+text: Current Year
+locales:
+  de: "Aktuelles Jahr"
+  en: "Current Year"
+  fr: "Année en cours"
+  nl: "Huidig jaar"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:71:30
+text: Current Month
+locales:
+  de: "Aktueller Monat"
+  en: "Current Month"
+  fr: "Mois en cours"
+  nl: "Huidige maand"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:72:30
+text: Current Weekday
+locales:
+  de: "Aktueller Wochentag"
+  en: "Current Weekday"
+  fr: "Jour actuel de la semaine"
+  nl: "Huidige weekdag"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:73:30
+text: Current day of the month
+locales:
+  de: "Aktueller Tag des Monats"
+  en: "Current day of the month"
+  fr: "Jour actuel du mois"
+  nl: "Huidige dag van de maand"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:74:30
+text: Current hour
+locales:
+  de: "Aktuelle Stunde"
+  en: "Current hour"
+  fr: "Heure actuelle"
+  nl: "Huidig uur"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:75:30
+text: Current minute
+locales:
+  de: "Aktuelle Minute"
+  en: "Current minute"
+  fr: "Minute actuelle"
+  nl: "Huidige minuut"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:76:30
+text: Dash delimiter
+locales:
+  de: "Bindestrich als Trennzeichen"
+  en: "Dash delimiter"
+  fr: "Tiret comme séparateur"
+  nl: "Koppelteken als scheidingsteken"
+
+---
+
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:77:30
+text: Random UUID, requires length
+locales:
+  de: "Zufällige UUID, Länge erforderlich"
+  en: "Random UUID, requires length"
+  fr: "UUID aléatoire, longueur requise"
+  nl: "Willekeurige UUID, lengte vereist"
+
+---
+
+# [ModelFinder.Field]:	customers.Customer.FirstSeen github.com/Nigel2392/go-django/contrib/shop/customers.Customer.FirstSeen:14:5
+text: First Seen
+locales:
+  de: "Erstmals erfasst am"
+  en: "First Seen"
+  fr: "Première apparition"
+  nl: "Voor het eerst geregistreerd op"
+
+---
+
+# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:52:25
+text: The email address of the user.
+locales:
+  de: "Die E-Mail-Adresse des Benutzers."
+  en: "The email address of the user."
+  fr: "L’adresse e-mail de l’utilisateur."
+  nl: Het e-mailadres van de gebruiker.
+
+---
+
+# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:62:25
+text: The first name of the user.
+locales:
+  de: "Der Vorname des Benutzers."
+  en: "The first name of the user."
+  fr: "Le prénom de l’utilisateur."
+  nl: De voornaam van de gebruiker.
+
+---
+
+# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:72:25
+text: The last name of the user.
+locales:
+  de: "Der Nachname des Benutzers."
+  en: "The last name of the user."
+  fr: "Le nom de famille de l’utilisateur."
+  nl: De achternaam van de gebruiker.
+
+---
+
+# [ModelFinder.Field]: models.Category.Children github.com/Nigel2392/go-django/contrib/shop/models.Category.Children:9:4
+# [GoFileFinder]:      *Category.FieldDefs      github.com/Nigel2392/go-django/contrib/shop/models/models_category.go:104:23
+text: Child Categories.
+locales:
+  de: "Unterkategorien."
+  en: "Child Categories."
+  fr: "Sous-catégories."
+  nl: "Subcategorieën."
+
+---
+
+# [ModelFinder.Field]:	models.Category.Name github.com/Nigel2392/go-django/contrib/shop/models.Category.Name:9:1
+text: Name
+locales:
+  de: "Name"
+  en: "Name"
+  fr: "Nom"
+  nl: "Naam"
+
+---
+
+# [ModelFinder.Field]:	models.Category.ParentCategory github.com/Nigel2392/go-django/contrib/shop/models.Category.ParentCategory:9:3
+text: Parent Category
+locales:
+  de: "Übergeordnete Kategorie"
+  en: "Parent Category"
+  fr: "Catégorie parente"
+  nl: "Bovenliggende categorie"
+
+---
+
+# [ModelFinder.Field]: models.Category.Slug    github.com/Nigel2392/go-django/contrib/shop/models.Category.Slug:9:2
+# [ModelFinder.Field]: products.Product.Slug   github.com/Nigel2392/go-django/contrib/shop/products.Product.Slug:8:3
+# [ModelFinder.Field]: dbsupplier.Product.Slug github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Slug:1:3
+text: Slug
+locales:
+  de: "URL-Kurzname"
+  en: "Slug"
+  fr: "Identifiant d’URL"
+  nl: Slug
+
+---
+
+# [GoFileFinder]:	*Category.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/models_category.go:105:23
+text: Subcategories bound to this category.
+locales:
+  de: "Dieser Kategorie zugeordnete Unterkategorien."
+  en: "Subcategories bound to this category."
+  fr: "Sous-catégories rattachées à cette catégorie."
+  nl: "Subcategorieën die aan deze categorie zijn gekoppeld."
+
+---
+
+# [ModelFinder.Field]:	orders.Order.Completed github.com/Nigel2392/go-django/contrib/shop/orders.Order.Completed:5:2
+text: Completed
+locales:
+  de: "Abgeschlossen"
+  en: "Completed"
+  fr: "Terminé"
+  nl: "Voltooid"
+
+---
+
+# [ModelFinder.Field]: orders.Order.OrderItems github.com/Nigel2392/go-django/contrib/shop/orders.Order.OrderItems:5:6
+# [GoFileFinder]:      *Order.EditPanels       github.com/Nigel2392/go-django/contrib/shop/orders/models_order.go:89:13
+text: Order Items
+locales:
+  de: "Bestellpositionen"
+  en: "Order Items"
+  fr: "Articles de la commande"
+  nl: "Bestelregels"
+
+---
+
+# [ModelFinder.Field]:	orders.Order.Processed github.com/Nigel2392/go-django/contrib/shop/orders.Order.Processed:5:3
+text: Processed
+locales:
+  de: "Verarbeitet"
+  en: "Processed"
+  fr: "Traité"
+  nl: "Verwerkt"
+
+---
+
+# [ModelFinder.Field]: orders.Order.State     github.com/Nigel2392/go-django/contrib/shop/orders.Order.State:5:1
+# [ModelFinder.Field]: payments.Payment.State github.com/Nigel2392/go-django/contrib/shop/payments.Payment.State:7:6
+text: State
+locales:
+  de: "Status"
+  en: "State"
+  fr: "Statut"
+  nl: "Status"
+
+---
+
+# [ModelFinder]:	orders.OrderItem github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem:11:4
+text: OrderItem
+locales:
+  de: "Bestellposition"
+  en: "OrderItem"
+  fr: "Article de la commande"
+  nl: "Bestelregel"
+
+---
+
+# [ModelFinder.Field]:	orders.OrderItem.ItemPrice github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.ItemPrice:4:2
+text: Item Price
+locales:
+  de: "Artikelpreis"
+  en: "Item Price"
+  fr: "Prix de l’article"
+  nl: "Artikelprijs"
+
+---
+
+# [ModelFinder.Field]: orders.OrderItem.Supplier   github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Supplier:4:5
+# [ModelFinder.Field]: products.Product.Supplier   github.com/Nigel2392/go-django/contrib/shop/products.Product.Supplier:8:11
+# [GoFileFinder]:                                  github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:122:13
+# [ModelFinder.Field]: dbsupplier.Product.Supplier github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Supplier:1:6
+text: Supplier
+locales:
+  de: "Lieferant"
+  en: "Supplier"
+  fr: "Fournisseur"
+  nl: "Leverancier"
+
+---
+
+# [ModelFinder.Field]:	orders.OrderItem.SupplierData github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.SupplierData:4:6
+text: Supplier Data
+locales:
+  de: "Lieferantendaten"
+  en: "Supplier Data"
+  fr: "Données du fournisseur"
+  nl: "Leveranciersgegevens"
+
+---
+
+# [ModelFinder.Field]: orders.OrderItem.TaxRate   github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.TaxRate:4:3
+# [ModelFinder.Field]: products.Product.TaxRate   github.com/Nigel2392/go-django/contrib/shop/products.Product.TaxRate:8:8
+# [ModelFinder.Field]: dbsupplier.Product.TaxRate github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.TaxRate:1:8
+text: Tax Rate
+locales:
+  de: "Steuersatz"
+  en: "Tax Rate"
+  fr: "Taux de taxe"
+  nl: "Belastingtarief"
+
+---
+
+# [ModelFinder]:	orders.OrderState github.com/Nigel2392/go-django/contrib/shop/orders.OrderState:11:3
+text: OrderState
+locales:
+  de: "Bestellstatus"
+  en: "OrderState"
+  fr: "Statut de commande"
+  nl: "Bestelstatus"
+
+---
+
+# [ModelFinder.Field]:	orders.OrderState.Action github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.Action:3:2
+text: Action
+locales:
+  de: "Aktion"
+  en: "Action"
+  fr: "Action"
+  nl: "Actie"
+
+---
+
+# [ModelFinder.Field]: orders.OrderState.Label        github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.Label:3:1
+# [ModelFinder.Field]: payments.ProviderAccount.Label github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Label:6:2
+text: Label
+locales:
+  de: "Bezeichnung"
+  en: "Label"
+  fr: "Libellé"
+  nl: "Label"
+
+---
+
+# [ModelFinder.Field]:	orders.OrderState.WorkflowID github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.WorkflowID:3:3
+text: Workflow ID
+locales:
+  de: "Workflow-ID"
+  en: "Workflow ID"
+  fr: "ID du flux de travail"
+  nl: "Workflow-ID"
+
+---
+
+# [ModelFinder]:	orders.SupplierModel github.com/Nigel2392/go-django/contrib/shop/orders.SupplierModel:11:10
+text: SupplierModel
+locales:
+  de: "Lieferantenmodell"
+  en: "SupplierModel"
+  fr: "Modèle de fournisseur"
+  nl: "Leveranciersmodel"
+
+---
+
+# [ModelFinder.Field]: orders.SupplierModel.Enabled     github.com/Nigel2392/go-django/contrib/shop/orders.SupplierModel.Enabled:10:1
+# [ModelFinder.Field]: payments.ProviderAccount.Enabled github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Enabled:6:3
+text: Enabled
+locales:
+  de: "Aktiviert"
+  en: "Enabled"
+  fr: "Activé"
+  nl: "Ingeschakeld"
+
+---
+
+# [GoFileFinder]:	*Order.EditPanels github.com/Nigel2392/go-django/contrib/shop/orders/models_order.go:84:13
+text: Product Details
+locales:
+  de: "Produktdetails"
+  en: "Product Details"
+  fr: "Informations sur le produit"
+  nl: "Productgegevens"
+
+---
+
+# [GoFileFinder]:	*Order.EditPanels github.com/Nigel2392/go-django/contrib/shop/orders/models_order.go:105:13
+text: Payment Details
+locales:
+  de: "Zahlungsdetails"
+  en: "Payment Details"
+  fr: "Détails du paiement"
+  nl: "Betaalgegevens"
+
+---
+
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:42:30
+text: Order Accepted
+locales:
+  de: "Bestellung angenommen"
+  en: "Order Accepted"
+  fr: "Commande acceptée"
+  nl: "Bestelling geaccepteerd"
+
+---
+
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:43:30
+text: Order Pending
+locales:
+  de: "Bestellung ausstehend"
+  en: "Order Pending"
+  fr: "Commande en attente"
+  nl: "Bestelling in afwachting"
+
+---
+
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:44:30
+text: Order Rejected
+locales:
+  de: "Bestellung abgelehnt"
+  en: "Order Rejected"
+  fr: "Commande refusée"
+  nl: "Bestelling afgewezen"
+
+---
+
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:45:30
+text: Order Workflow
+locales:
+  de: "Bestellablauf"
+  en: "Order Workflow"
+  fr: "Flux de traitement de la commande"
+  nl: "Bestelworkflow"
+
+---
+
+# [ModelFinder]:	payments.Payment github.com/Nigel2392/go-django/contrib/shop/payments.Payment:11:7
+text: Payment
+locales:
+  de: "Zahlung"
+  en: "Payment"
+  fr: "Paiement"
+  nl: "Betaling"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.Account github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Account:7:2
+text: Account
+locales:
+  de: "Konto"
+  en: "Account"
+  fr: "Compte"
+  nl: "Account"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.AuthorizationRef github.com/Nigel2392/go-django/contrib/shop/payments.Payment.AuthorizationRef:7:12
+text: Authorization Ref
+locales:
+  de: "Autorisierungsreferenz"
+  en: "Authorization Ref"
+  fr: "Référence d’autorisation"
+  nl: "Autorisatiereferentie"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.CaptureRef github.com/Nigel2392/go-django/contrib/shop/payments.Payment.CaptureRef:7:13
+text: Capture Ref
+locales:
+  de: "Einzugsreferenz"
+  en: "Capture Ref"
+  fr: "Référence de capture"
+  nl: "Referentie van de afschrijving"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.CheckoutURL github.com/Nigel2392/go-django/contrib/shop/payments.Payment.CheckoutURL:7:5
+text: Checkout URL
+locales:
+  de: "URL der Zahlungsseite"
+  en: "Checkout URL"
+  fr: "URL de la page de paiement"
+  nl: "URL van de betaalpagina"
+
+---
+
+# [ModelFinder.Field]: payments.Payment.Currency         github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Currency:7:9
+# [ModelFinder.Field]: payments.ProviderAccount.Currency github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Currency:6:5
+text: Currency
+locales:
+  de: "Währung"
+  en: "Currency"
+  fr: "Devise"
+  nl: "Valuta"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.Fee github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Fee:7:8
+text: Fee
+locales:
+  de: "Gebühr"
+  en: "Fee"
+  fr: "Frais"
+  nl: "Kosten"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.OperationKey github.com/Nigel2392/go-django/contrib/shop/payments.Payment.OperationKey:7:14
+text: Operation Key
+locales:
+  de: "Vorgangsschlüssel"
+  en: "Operation Key"
+  fr: "Clé de l’opération"
+  nl: "Bewerkingssleutel"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.OperationVersion github.com/Nigel2392/go-django/contrib/shop/payments.Payment.OperationVersion:7:15
+text: Operation Version
+locales:
+  de: "Vorgangsversion"
+  en: "Operation Version"
+  fr: "Version de l’opération"
+  nl: "Versie van de bewerking"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.Operations github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Operations:7:16
+text: Operations
+locales:
+  de: "Vorgänge"
+  en: "Operations"
+  fr: "Opérations"
+  nl: "Bewerkingen"
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.Provider github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Provider:7:3
+text: Provider
+locales:
+  de: "Anbieter"
+  en: "Provider"
+  fr: "Prestataire"
+  nl: Provider
+
+---
+
+# [ModelFinder.Field]:	payments.Payment.TransactionID github.com/Nigel2392/go-django/contrib/shop/payments.Payment.TransactionID:7:4
+text: Transaction ID
+locales:
+  de: "Transaktions-ID"
+  en: "Transaction ID"
+  fr: "ID de la transaction"
+  nl: "Transactie-ID"
+
+---
+
+# [ModelFinder]:	payments.ProviderAccount github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount:11:6
+text: ProviderAccount
+locales:
+  de: "Anbieterkonto"
+  en: "ProviderAccount"
+  fr: "Compte du prestataire"
+  nl: "Provideraccount"
+
+---
+
+# [ModelFinder.Field]:	payments.ProviderAccount.CredentialRef github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.CredentialRef:6:4
+text: Credential Ref
+locales:
+  de: "Referenz der Zugangsdaten"
+  en: "Credential Ref"
+  fr: "Référence des identifiants"
+  nl: "Verwijzing naar de inloggegevens"
+
+---
+
+# [ModelFinder.Field]:	payments.ProviderAccount.Driver github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Driver:6:1
+text: Driver
+locales:
+  de: "Treiber"
+  en: "Driver"
+  fr: "Pilote"
+  nl: "Driver"
+
+---
+
+# [ModelFinder.Field]:	payments.ProviderAccount.FixedFee github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.FixedFee:6:6
+text: Fixed Fee
+locales:
+  de: "Feste Gebühr"
+  en: "Fixed Fee"
+  fr: "Frais fixes"
+  nl: "Vaste kosten"
+
+---
+
+# [ModelFinder.Field]:	payments.ProviderAccount.PercentageFee github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.PercentageFee:6:7
+text: Percentage Fee
+locales:
+  de: "Prozentuale Gebühr"
+  en: "Percentage Fee"
+  fr: "Frais proportionnels"
+  nl: "Procentuele kosten"
+
+---
+
+# [ModelFinder.Field]:	products.Product.AdditionalFee github.com/Nigel2392/go-django/contrib/shop/products.Product.AdditionalFee:8:7
+text: Additional Fee
+locales:
+  de: "Zusatzgebühr"
+  en: "Additional Fee"
+  fr: "Frais supplémentaires"
+  nl: "Extra kosten"
+
+---
+
+# [ModelFinder.Field]: products.Product.DiscountPrice   github.com/Nigel2392/go-django/contrib/shop/products.Product.DiscountPrice:8:9
+# [ModelFinder.Field]: dbsupplier.Product.DiscountPrice github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.DiscountPrice:1:9
+text: Discount Price
+locales:
+  de: "Rabattpreis"
+  en: "Discount Price"
+  fr: "Prix remisé"
+  nl: "Kortingsprijs"
+
+---
+
+# [ModelFinder.Field]: products.Product.Image   github.com/Nigel2392/go-django/contrib/shop/products.Product.Image:8:1
+# [ModelFinder.Field]: dbsupplier.Product.Image github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Image:1:1
+text: Image
+locales:
+  de: "Bild"
+  en: "Image"
+  fr: "Image"
+  nl: Afbeelding
+
+---
+
+# [ModelFinder.Field]: products.Product.Price   github.com/Nigel2392/go-django/contrib/shop/products.Product.Price:8:6
+# [GoFileFinder]:                               github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:110:13
+# [ModelFinder.Field]: dbsupplier.Product.Price github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Price:1:7
+text: Price
+locales:
+  de: "Preis"
+  en: "Price"
+  fr: "Prix"
+  nl: "Prijs"
+
+---
+
+# [ModelFinder.Field]: products.Product.Ranking   github.com/Nigel2392/go-django/contrib/shop/products.Product.Ranking:8:10
+# [ModelFinder.Field]: dbsupplier.Product.Ranking github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Ranking:1:10
+text: Ranking
+locales:
+  de: "Rang"
+  en: "Ranking"
+  fr: "Classement"
+  nl: "Rangschikking"
+
+---
+
+# [ModelFinder.Field]:	products.Product.SpecificContentType github.com/Nigel2392/go-django/contrib/shop/products.Product.SpecificContentType:8:13
+text: Specific Content Type
+locales:
+  de: "Konkreter Inhaltstyp"
+  en: "Specific Content Type"
+  fr: "Type de contenu spécifique"
+  nl: "Specifiek inhoudstype"
+
+---
+
+# [ModelFinder.Field]:	products.Product.SpecificID github.com/Nigel2392/go-django/contrib/shop/products.Product.SpecificID:8:12
+text: Specific ID
+locales:
+  de: "Konkrete ID"
+  en: "Specific ID"
+  fr: "ID spécifique"
+  nl: "Specifiek ID"
+
+---
+
+# [GoFileFinder]:	*productsLogDefinition.GetLabel github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:38:31
+text: '%s was added'
+locales:
+  de: "%s wurde hinzugefügt"
+  en: "%s was added"
+  fr: "%s a été ajouté"
+  nl: "%s is toegevoegd"
+
+---
+
+# [GoFileFinder]:	*productsLogDefinition.GetLabel github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:43:31
+text: '%s was changed'
+locales:
+  de: "%s wurde geändert"
+  en: "%s was changed"
+  fr: "%s a été modifié"
+  nl: "%s is gewijzigd"
+
+---
+
+# [GoFileFinder]: *productsLogDefinition.GetLabel      github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:48:30
+# [GoFileFinder]: *productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:137:30
+text: Unknown shop log entry type
+locales:
+  de: "Unbekannter Typ für Shop-Protokolleintrag"
+  en: "Unknown shop log entry type"
+  fr: "Type d’entrée inconnu dans le journal de la boutique"
+  nl: "Onbekend type winkellogboekvermelding"
+
+---
+
+# [GoFileFinder]:	*productsLogDefinition.GetActions github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:60:39
+text: Edit Product
+locales:
+  de: "Produkt bearbeiten"
+  en: "Edit Product"
+  fr: "Modifier le produit"
+  nl: "Product bewerken"
+
+---
+
+# [GoFileFinder]:	*productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:91:31
+text: '%q with id %v was added'
+locales:
+  de: "%q mit der ID %v wurde hinzugefügt"
+  en: "%q with id %v was added"
+  fr: "L’élément %q (ID %v) a été ajouté"
+  nl: "%q met ID %v is toegevoegd"
+
+---
+
+# [GoFileFinder]:	*productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:96:35
+text: '%q with id %v was edited'
+locales:
+  de: "%q mit der ID %v wurde bearbeitet"
+  en: "%q with id %v was edited"
+  fr: "L’élément %q (ID %v) a été modifié"
+  nl: "%q met ID %v is bewerkt"
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:180:26
+text: This image should depict the product you are selling.
+locales:
+  de: "Dieses Bild sollte das zum Verkauf angebotene Produkt zeigen."
+  en: "This image should depict the product you are selling."
+  fr: "Cette image doit représenter le produit que vous vendez."
+  nl: "Deze afbeelding moet het product tonen dat u verkoopt."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:187:26
+text: The name of your product as visible to users.
+locales:
+  de: "Der Produktname, den Benutzer sehen."
+  en: "The name of your product as visible to users."
+  fr: "Le nom du produit visible par les utilisateurs."
+  nl: "De productnaam die gebruikers zien."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:198:26
+text: The path part of this product in the browsers' search bar.
+locales:
+  de: "Der Teil der URL, der dieses Produkt in der Adressleiste des Browsers identifiziert."
+  en: "The path part of this product in the browsers' search bar."
+  fr: "La partie de l’URL qui identifie ce produit dans la barre d’adresse du navigateur."
+  nl: "Het deel van de URL dat dit product aanduidt in de adresbalk van de browser."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:211:29
+text: The category this product falls under.
+locales:
+  de: "Die Kategorie, der dieses Produkt zugeordnet ist."
+  en: "The category this product falls under."
+  fr: "La catégorie à laquelle appartient ce produit."
+  nl: "De categorie waaronder dit product valt."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:221:22
+text: Describe your product
+locales:
+  de: "Beschreiben Sie Ihr Produkt"
+  en: "Describe your product"
+  fr: "Décrivez votre produit"
+  nl: "Beschrijf uw product"
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:232:26
+text: The price you are selling this product for.
+locales:
+  de: "Der Preis, zu dem Sie dieses Produkt verkaufen."
+  en: "The price you are selling this product for."
+  fr: "Le prix auquel vous vendez ce produit."
+  nl: "De prijs waarvoor u dit product verkoopt."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:244:26
+text: The fee to add to the price per product.
+locales:
+  de: "Die Gebühr, die pro Produkt zum Preis hinzukommt."
+  en: "The fee to add to the price per product."
+  fr: "Les frais à ajouter au prix de chaque produit."
+  nl: "De kosten die per product bij de prijs komen."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:256:26
+text: The additional tax fee to add to the purchase price.
+locales:
+  de: "Die zusätzliche Steuer, die auf den Kaufpreis aufgeschlagen wird."
+  en: "The additional tax fee to add to the purchase price."
+  fr: "La taxe supplémentaire à ajouter au prix d’achat."
+  nl: "De extra belasting die bij de aankoopprijs komt."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:268:26
+text: The discount price you are selling this product for. (Precedence over price)
+locales:
+  de: "Der reduzierte Verkaufspreis dieses Produkts. Er hat Vorrang vor dem regulären Preis."
+  en: "The discount price you are selling this product for. (Precedence over price)"
+  fr: "Le prix de vente remisé de ce produit. Il prévaut sur le prix normal."
+  nl: "De verlaagde verkoopprijs van dit product. Deze gaat voor op de normale prijs."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:280:26
+text: How well this product ranks generally measured across all products. (1-10)
+locales:
+  de: "Wie gut dieses Produkt im Vergleich zu allen anderen Produkten abschneidet (1–10)."
+  en: "How well this product ranks generally measured across all products. (1-10)"
+  fr: "Le classement de ce produit par rapport à l’ensemble des produits (de 1 à 10)."
+  nl: "Hoe dit product scoort ten opzichte van alle andere producten (1–10)."
+
+---
+
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:288:25
+text: The supplier that handles delivery of this product.
+locales:
+  de: "Der Lieferant, der dieses Produkt ausliefert."
+  en: "The supplier that handles delivery of this product."
+  fr: "Le fournisseur chargé de livrer ce produit."
+  nl: "De leverancier die dit product bezorgt."
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:77:35
+text: Initialised
+locales:
+  de: "Initialisiert"
+  en: "Initialised"
+  fr: "Initialisé"
+  nl: "Geïnitialiseerd"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:78:35
+text: Pending
+locales:
+  de: "Ausstehend"
+  en: "Pending"
+  fr: "En attente"
+  nl: "In afwachting"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:79:35
+text: Cancelled
+locales:
+  de: "Storniert"
+  en: "Cancelled"
+  fr: "Annulé"
+  nl: "Geannuleerd"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:80:35
+text: Expired
+locales:
+  de: "Abgelaufen"
+  en: "Expired"
+  fr: "Expiré"
+  nl: "Verlopen"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:81:35
+text: Denied
+locales:
+  de: "Abgelehnt"
+  en: "Denied"
+  fr: "Refusé"
+  nl: "Geweigerd"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:82:35
+text: Failure
+locales:
+  de: "Fehlgeschlagen"
+  en: "Failure"
+  fr: "Échec"
+  nl: "Mislukt"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:83:35
+text: Check Amount
+locales:
+  de: "Betrag prüfen"
+  en: "Check Amount"
+  fr: "Vérifier le montant"
+  nl: "Bedrag controleren"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:84:35
+text: Partial Payment
+locales:
+  de: "Teilzahlung"
+  en: "Partial Payment"
+  fr: "Paiement partiel"
+  nl: "Gedeeltelijke betaling"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:85:35
+text: Manual Verify
+locales:
+  de: "Manuell prüfen"
+  en: "Manual Verify"
+  fr: "Vérification manuelle"
+  nl: "Handmatig controleren"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:86:35
+text: Authorize
+locales:
+  de: "Autorisiert"
+  en: "Authorize"
+  fr: "Autorisé"
+  nl: "Geautoriseerd"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:87:35
+text: Partly Captured
+locales:
+  de: "Teilweise eingezogen"
+  en: "Partly Captured"
+  fr: "Partiellement capturé"
+  nl: "Gedeeltelijk afgeschreven"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:88:35
+text: Paid
+locales:
+  de: "Bezahlt"
+  en: "Paid"
+  fr: "Payé"
+  nl: "Betaald"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:89:35
+text: Chargeback
+locales:
+  de: "Rückbuchung"
+  en: "Chargeback"
+  fr: "Rétrofacturation"
+  nl: "Terugboeking"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:90:35
+text: Refunding
+locales:
+  de: "Rückerstattung läuft"
+  en: "Refunding"
+  fr: "Remboursement en cours"
+  nl: "Terugbetaling in behandeling"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:91:35
+text: Refunded
+locales:
+  de: "Rückerstattet"
+  en: "Refunded"
+  fr: "Remboursé"
+  nl: "Terugbetaald"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:92:35
+text: Partial Refund
+locales:
+  de: "Teilweise rückerstattet"
+  en: "Partial Refund"
+  fr: "Remboursement partiel"
+  nl: "Gedeeltelijk terugbetaald"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_order.go:37:21
+text: Order List
+locales:
+  de: "Bestellliste"
+  en: "Order List"
+  fr: "Liste des commandes"
+  nl: "Bestellijst"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_order.go:87:13
+text: Order ID
+locales:
+  de: "Bestell-ID"
+  en: "Order ID"
+  fr: "ID de la commande"
+  nl: "Bestel-ID"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_order.go:90:28
+text: Payment IDs
+locales:
+  de: "Zahlungs-IDs"
+  en: "Payment IDs"
+  fr: "ID des paiements"
+  nl: "Betaal-ID’s"
+
+---
+
+# [GoFileFinder]: ViewAddOrder  github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_order.go:195:22
+# [GoFileFinder]: ViewEditOrder github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_order.go:344:22
+text: Change order
+locales:
+  de: "Bestellung bearbeiten"
+  en: "Change order"
+  fr: "Modifier la commande"
+  nl: "Bestelling wijzigen"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:42:21
+text: Product List
+locales:
+  de: "Produktliste"
+  en: "Product List"
+  fr: "Liste des produits"
+  nl: "Productlijst"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:106:13
+text: Product ID
+locales:
+  de: "Produkt-ID"
+  en: "Product ID"
+  fr: "ID du produit"
+  nl: "Product-ID"
+
+---
+
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:114:13
+text: Discount
+locales:
+  de: "Rabatt"
+  en: "Discount"
+  fr: "Remise"
+  nl: "Korting"
+
+---
+
+# [GoFileFinder]:	ViewAddNewProductSupplier github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:196:23
+text: Choose product supplier
+locales:
+  de: "Produktlieferant auswählen"
+  en: "Choose product supplier"
+  fr: "Choisir le fournisseur du produit"
+  nl: "Leverancier van het product kiezen"
+
+---
+
+# [GoFileFinder]:	ViewAddNewProductSupplier github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:197:23
+text: Sets up any extra fields that the supplier might require on a per-product basis
+locales:
+  de: "Richtet zusätzliche Felder ein, die der Lieferant pro Produkt benötigt."
+  en: "Sets up any extra fields that the supplier might require on a per-product basis"
+  fr: "Configure les champs supplémentaires que le fournisseur peut exiger pour chaque produit."
+  nl: "Stelt de extra velden in die de leverancier per product nodig kan hebben."
+
+---
+
+# [GoFileFinder]:	ViewAddProduct github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:286:22
+text: Add new product
+locales:
+  de: "Neues Produkt hinzufügen"
+  en: "Add new product"
+  fr: "Ajouter un nouveau produit"
+  nl: "Nieuw product toevoegen"
+
+---
+
+# [GoFileFinder]:	ViewEditProduct github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:459:22
+text: Change product
+locales:
+  de: "Produkt bearbeiten"
+  en: "Change product"
+  fr: "Modifier le produit"
+  nl: "Product wijzigen"
+
+---
+
+# [ModelFinder]:	translations.Locale github.com/Nigel2392/go-django/contrib/translations.Locale:3:1
+text: Locale
+locales:
+  de: "Spracheinstellung"
+  en: "Locale"
+  fr: "Paramètres régionaux"
+  nl: Taal
+
+---
+
+# [ModelFinder.Field]:	translations.Locale.LanguageTag github.com/Nigel2392/go-django/contrib/translations.Locale.LanguageTag:1:0
+text: Language Tag
+locales:
+  de: "Sprach-Tag"
+  en: "Language Tag"
+  fr: "Balise de langue"
+  nl: "Taaltag"
+
+---
+
+# [ModelFinder.Field]:	dbsupplier.Product.SupplierID github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.SupplierID:1:11
+text: Supplier ID
+locales:
+  de: "Lieferanten-ID"
+  en: "Supplier ID"
+  fr: "ID du fournisseur"
+  nl: "Leveranciers-ID"
+

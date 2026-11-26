@@ -7,7 +7,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/editor"
 	_ "github.com/Nigel2392/go-django/contrib/editor/features"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -19,12 +18,22 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/shopspring/decimal"
+	"golang.org/x/text/currency"
 )
 
+type Price struct {
+	Unit   currency.Unit
+	Amount decimal.Decimal
+}
+
+type ProductModel interface {
+	specific.Model
+	ProductPrice(ctx context.Context) Price
+}
+
 type ProductQuery struct {
-	*queries.WrappedQuerySet[*Product, *ProductQuery, *specific.SpecificQuerySet[*Product, supplier.ProductModel, *queries.QuerySet[*Product]]]
+	*queries.WrappedQuerySet[*Product, *ProductQuery, *specific.SpecificQuerySet[*Product, ProductModel, *queries.QuerySet[*Product]]]
 }
 
 func Query() *ProductQuery {
@@ -32,14 +41,14 @@ func Query() *ProductQuery {
 	productQuerySet.WrappedQuerySet = queries.WrapQuerySet[*Product](
 		specific.GetSpecificQuerySet(
 			queries.GetQuerySet(&Product{}),
-			specific.SpecificQuerySetOptions[*Product, supplier.ProductModel]{},
+			specific.SpecificQuerySetOptions[*Product, ProductModel]{},
 		),
 		productQuerySet,
 	)
 	return productQuerySet
 }
 
-func (qs *ProductQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Product, *ProductQuery, *specific.SpecificQuerySet[*Product, supplier.ProductModel, *queries.QuerySet[*Product]]]) *ProductQuery {
+func (qs *ProductQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Product, *ProductQuery, *specific.SpecificQuerySet[*Product, ProductModel, *queries.QuerySet[*Product]]]) *ProductQuery {
 	return &ProductQuery{
 		WrappedQuerySet: wrapped,
 	}
@@ -71,6 +80,8 @@ func (qs *ProductQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Product,
 //		)
 //	}
 
+type SupplierValue string
+
 type Product struct {
 	specific.Specific[*Product]
 	Image         *mediafiles.SimpleStoredObject `json:"image,omitempty"`
@@ -82,7 +93,7 @@ type Product struct {
 	AdditionalFee decimal.Decimal                `json:"additional_fee,omitempty"`
 	TaxRate       decimal.Decimal                `json:"tax_rate,omitempty"`
 	DiscountPrice decimal.Decimal                `json:"discount_price,omitempty"`
-	Supplier      supplier.SupplierValue         `json:"supplier,omitempty"`
+	Supplier      SupplierValue                  `json:"supplier,omitempty"`
 	Category      *models.Category               `json:"category,omitempty"`
 	Editor        *editor.EditorJSBlockData      `json:"editor,omitempty"`
 	Coupons       *queries.RelM2M[attrs.Definer, attrs.Definer]
@@ -272,24 +283,11 @@ func (m *Product) FieldDefs(ctx context.Context) attrs.Definitions {
 				},
 			}
 		}, key...),
-		fattrs.Field(m, "Supplier", &m.Supplier, func() fattrs.PtrFieldConfig[*Product, supplier.SupplierValue] {
-			return fattrs.PtrFieldConfig[*Product, supplier.SupplierValue]{
-				Config: attrs.Config{
-					HelpText:   trans.S("The supplier that handles delivery of this product."),
-					IsEmbedded: embedded,
-					ReadOnly:   true,
-					FormField: func(opts ...func(fields.Field)) fields.Field {
-						var widget = options.NewSelectInput(nil, func(ctx context.Context) []widgets.Option {
-							var wo = make([]widgets.Option, 0)
-							for _, backend := range supplier.IterBackends(true) {
-								wo = append(wo, widgets.NewOption(backend.InternalName(), backend.Label(ctx), backend.InternalName()))
-							}
-							return wo
-						})
-
-						return fields.CharField(append(opts, fields.Widget(widget))...)
-					},
-				},
+		fattrs.Field(m, "Supplier", &m.Supplier, func() fattrs.PtrFieldConfig[*Product, SupplierValue] {
+			return fattrs.PtrFieldConfig[*Product, SupplierValue]{
+				HelpText:   trans.S("The supplier that handles delivery of this product."),
+				IsEmbedded: embedded,
+				ReadOnly:   true,
 			}
 		}, key...),
 		fattrs.Field(m, "SpecificID", &m.SpecificID, func() fattrs.PtrFieldConfig[*Product, string] {

@@ -2,6 +2,7 @@ package translations
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"slices"
@@ -10,8 +11,121 @@ import (
 	"testing/fstest"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/urfave/cli/v2"
 )
+
+func TestMakeTranslationsDirectoryScopeAndCatalogReuse(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, dir := range []string{"shop", "outside"} {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, content := range map[string]string{
+		"go.mod": "module example.com/project\n",
+		"shop/checkout.go": fmt.Sprintf(`package shop
+import (
+	%q
+	_ "example.com/project/outside"
+)
+func Checkout() {
+	trans.S("Checkout fixture")
+	trans.S("C Type")
+}`, trans.PACKAGE_PATH),
+		"outside/help.go": fmt.Sprintf(`package outside
+import %q
+var Help = trans.S("Imported source only")
+`, trans.PACKAGE_PATH),
+		translationsFile: `generator: project
+---
+text: Checkout fixture
+locales: {nl: Afrekenen}
+---
+text: Old project entry only
+locales: {nl: Oude tekst}
+`,
+	} {
+		if err := os.WriteFile(name, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hookCatalog := fstest.MapFS{
+		"extension.html": {Data: []byte(`{{ T "Registered asset" }}`)},
+		translationsFile: {Data: []byte(`generator: extension
+---
+text: Registered asset
+locales: {nl: Extensie-element}
+---
+text: Hook catalog entry only
+locales: {nl: Alleen in catalogus}
+`)},
+	}
+	app := initTestCatalogApp(t, hookCatalog)
+	outside := apps.NewAppConfig("outside")
+	outside.ModelObjects = []attrs.Definer{&finderModel{}}
+	django.Global.Apps = orderedmap.NewOrderedMap[string, django.AppConfig]()
+	django.Global.Apps.Set("outside", outside)
+	if err := app.Initialize(django.Global.Settings); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"Old project entry only", "Hook catalog entry only"} {
+		if len(app.translations["nl"][name]) == 0 {
+			t.Errorf("%q was unavailable in the loaded Dutch catalog", name)
+		}
+	}
+
+	runTranslationsCommand(t, "-dir", "./shop", "-locales", "nl", "-locales", "en", "-locales", "de", "-locales", "fr")
+	data, err := os.ReadFile(translationsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := readTranslationsYAML(strings.NewReader(string(data)), &FileTranslationsHeader{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byText := make(map[string]Translation, len(entries))
+	for _, entry := range entries {
+		if _, exists := byText[entry.Text]; exists {
+			t.Errorf("generated catalog contains duplicate entry %q", entry.Text)
+		}
+		byText[entry.Text] = entry
+	}
+	for _, name := range []string{"Imported source only", "Old project entry only", "Hook catalog entry only"} {
+		if _, exists := byText[name]; exists {
+			t.Errorf("generated catalog unexpectedly contains %q", name)
+		}
+	}
+	for _, tc := range []struct{ text, dutch string }{
+		{"Checkout fixture", "Afrekenen"},
+		{"C Type", "Inhoudstype"},
+		{"Registered asset", "Extensie-element"},
+		{"Display title", ""},
+	} {
+		entry, exists := byText[tc.text]
+		if !exists || entry.Locales == nil {
+			t.Errorf("generated catalog missing translations for %q", tc.text)
+			continue
+		}
+		for _, locale := range []string{"nl", "en", "de", "fr"} {
+			want := ""
+			if locale == "nl" {
+				want = tc.dutch
+			}
+			if got, _ := entry.Locales.Get(locale); !slices.Equal(got, []string{want}) {
+				t.Errorf("%q in %s = %q, want %q", tc.text, locale, got, want)
+			}
+		}
+	}
+	for _, source := range []string{"example.com/project/shop/checkout.go:", "extension.html:", ".finderModel.Title:"} {
+		if !strings.Contains(string(data), source) {
+			t.Errorf("generated catalog missing source %q", source)
+		}
+	}
+}
 
 func TestMakeTranslationsCommandPreservesLayeredCatalog(t *testing.T) {
 	t.Chdir(t.TempDir())

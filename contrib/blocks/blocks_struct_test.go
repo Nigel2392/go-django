@@ -25,6 +25,36 @@ func NewSimpleStructBlock() *blocks.StructBlock {
 	return b
 }
 
+func TestStructBlockValueRetainsDataUntilBound(t *testing.T) {
+	block := blocks.NewStructBlock()
+	block.AddField("name", blocks.CharBlock())
+
+	for _, name := range []string{"database", "JSON"} {
+		t.Run(name, func(t *testing.T) {
+			raw := []byte(`{"name":"saved"}`)
+			var value blocks.StructBlockValue
+			var err error
+			if name == "database" {
+				err = value.Scan(raw)
+			} else {
+				err = value.UnmarshalJSON(raw)
+			}
+			if err != nil || !value.HasData() {
+				t.Fatalf("expected pending block data: %v", err)
+			}
+
+			clear(raw)
+			if err := value.BindToBlock(block); err != nil {
+				t.Fatal(err)
+			}
+			field, ok := value.V["name"].(blocks.BoundBlockValue)
+			if !ok || field.Data() != "saved" {
+				t.Fatalf("unexpected decoded field: %#v", value.V["name"])
+			}
+		})
+	}
+}
+
 func must[T any](t T, err error) T {
 	if err != nil {
 		panic(err)

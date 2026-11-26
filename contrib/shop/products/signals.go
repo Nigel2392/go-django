@@ -1,20 +1,19 @@
 package products
 
 import (
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 )
 
 type ProductCreatedSignal struct {
 	signals.BaseSignal
 	Product  *Product
-	Specific supplier.ProductModel
+	Specific ProductModel
 }
 
 type ProductUpdatedSignal struct {
 	signals.BaseSignal
 	Product  signals.Changed[*Product]
-	Specific signals.Changed[supplier.ProductModel]
+	Specific signals.Changed[ProductModel]
 }
 
 type productSignalManager struct {

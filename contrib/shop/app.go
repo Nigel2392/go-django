@@ -13,7 +13,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/contrib/admin/searches"
-	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/settings"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
@@ -23,7 +22,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -32,6 +30,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/static"
@@ -48,6 +47,9 @@ import (
 
 //go:embed assets/**
 var assetFilesystem embed.FS
+
+//go:embed translations.yml
+var translationsFS embed.FS
 
 const APPVAR_SHOP_CURRENCY = "SHOP_CURRENCY"
 
@@ -73,6 +75,10 @@ func (a *ShopAppConfig) OnReady() error {
 	return nil
 }
 
+func (a *ShopAppConfig) TranslationsFS(settings django.Settings) []fs.FS {
+	return []fs.FS{translationsFS}
+}
+
 var SHOP = &ShopAppConfig{
 	DBRequiredAppConfig: apps.NewDBAppConfig("shop"),
 	ADMIN_ROUTE: admin.AdminSite.Route.Any(
@@ -84,6 +90,10 @@ func NewAppConfig() (django.AppConfig, error) {
 	if SHOP == nil || SHOP.IsReady() {
 		return SHOP, nil
 	}
+
+	supplierType := contenttypes.NewContentType(&orders.SupplierModel{}).TypeName()
+	contenttypes.RegisterAlias("github.com/Nigel2392/go-django/contrib/shop/supplier.SupplierModel", supplierType)
+	contenttypes.RegisterAlias("github.com/Nigel2392/go-django/contrib/shop/products/supplier.SupplierModel", supplierType)
 
 	tplFS, err := fs.Sub(assetFilesystem, "assets/templates")
 	if err != nil {
@@ -118,21 +128,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		"shop/admin/icons/funnel.svg",
 	)
 
-	products.Signals.Created.Listen(context.Background(), handlers.ProductsSignalsCreated)
-	products.Signals.Updated.Listen(context.Background(), handlers.ProductsSignalsUpdated)
-
-	auditlogs.RegisterDefinition("shop:product:add", products.NewShopLogDefinition())
-	auditlogs.RegisterDefinition("shop:product:edit", products.NewShopLogDefinition())
-
-	carts.Signals.Created.Listen(context.Background(), handlers.CartsSignalsCreated)
-	carts.Signals.Cleared.Listen(context.Background(), handlers.CartsSignalsCleared)
-	carts.Signals.Item.Add.Listen(context.Background(), handlers.CartsSignalsItemAdd)
-	carts.Signals.Item.Remove.Listen(context.Background(), handlers.CartsSignalsItemRemoved)
-
-	auditlogs.RegisterDefinition("shop:carts:create", auditlogs.SimpleDefinition())
-	auditlogs.RegisterDefinition("shop:carts:clear", auditlogs.SimpleDefinition())
-	auditlogs.RegisterDefinition("shop:carts:items:add", auditlogs.SimpleDefinition())
-	auditlogs.RegisterDefinition("shop:carts:items:remove", auditlogs.SimpleDefinition())
+	handlers.RegisterAuditLogs()
 
 	SHOP.ModelObjects = []attrs.Definer{
 		// Cart
@@ -155,7 +151,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		&models.Category{},
 
 		// Suppliers
-		&supplier.SupplierModel{},
+		&orders.SupplierModel{},
 
 		// Coupons
 		&coupons.Coupon{},
@@ -850,7 +846,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		// always run the sync on startup
 		// /mostly/ handled in DB
 		return errors.Join(
-			supplier.Suppliers().Sync(),
+			orders.SuppliersQuery().Sync(),
 		)
 	}
 

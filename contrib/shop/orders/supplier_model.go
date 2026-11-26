@@ -1,4 +1,4 @@
-package supplier
+package orders
 
 import (
 	"context"

@@ -20,6 +20,9 @@ func init() {
 	attrs.RegisterModel(&Page{})
 	attrs.RegisterModel(&BlogPage{})
 	attrs.RegisterModel(&BlogPageCategory{})
+	attrs.RegisterModel(&ProxyOptionsModel{})
+	attrs.RegisterModel(&ControlledProxyPage{})
+	attrs.RegisterModel(&ControlledProxyEmbedder{})
 
 	var db, err = drivers.Open(context.Background(), "sqlite3", "file:queries_memory?mode=memory&cache=shared")
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -29,9 +30,10 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/djester"
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
@@ -51,6 +53,7 @@ import (
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/text/currency"
 )
 
@@ -92,8 +95,8 @@ type testAdminSupplierProduct struct {
 	SKU string
 }
 
-func (p *testAdminSupplierProduct) ProductPrice(ctx context.Context) supplier.Price {
-	return supplier.Price{
+func (p *testAdminSupplierProduct) ProductPrice(ctx context.Context) products.Price {
+	return products.Price{
 		Unit:   currency.EUR,
 		Amount: p.Price,
 	}
@@ -156,7 +159,7 @@ func seedAdminProduct(t *testing.T, cat *models.Category, sup string, title, slu
 			Slug:          slug,
 			Category:      cat,
 			Editor:        &editor.EditorJSBlockData{},
-			Supplier:      supplier.SupplierValue(sup),
+			Supplier:      products.SupplierValue(sup),
 			Price:         decimal.RequireFromString(price),
 			TaxRate:       decimal.RequireFromString("21.00"),
 			DiscountPrice: decimal.RequireFromString(discount),
@@ -207,7 +210,7 @@ func TestAdminProductViews(t *testing.T) {
 		GetPluralLabel: func(ctx context.Context) string { return "Admin Product Test Users" },
 	})
 
-	supplier.Register(&supplier.Supplier{
+	orders.RegisterSupplier(&orders.Supplier{
 		Order: 1,
 		Name:  "alpha_supplier",
 		HTMLIcon: func(ctx context.Context) template.HTML {
@@ -219,14 +222,14 @@ func TestAdminProductViews(t *testing.T) {
 		TextDescription: func(ctx context.Context) string {
 			return "Primary alpha product supplier"
 		},
-		ProductModel: func(ctx context.Context) supplier.ProductModel {
+		ProductModel: func(ctx context.Context) products.ProductModel {
 			return &testAdminSupplierProduct{}
 		},
 		AddPanel:  testProductPanels,
 		EditPanel: testProductPanels,
 	})
 
-	supplier.Register(&supplier.Supplier{
+	orders.RegisterSupplier(&orders.Supplier{
 		Order: 2,
 		Name:  "beta_supplier",
 		TextLabel: func(ctx context.Context) string {
@@ -235,7 +238,7 @@ func TestAdminProductViews(t *testing.T) {
 		TextDescription: func(ctx context.Context) string {
 			return "Secondary beta product supplier"
 		},
-		ProductModel: func(ctx context.Context) supplier.ProductModel {
+		ProductModel: func(ctx context.Context) products.ProductModel {
 			return &testAdminSupplierProduct{}
 		},
 		AddPanel:  testProductPanels,
@@ -256,7 +259,7 @@ func TestAdminProductViews(t *testing.T) {
 				&AdminProductTestUser{},
 				&auditlogs.Entry{},
 				&models.Category{},
-				&supplier.SupplierModel{},
+				&orders.SupplierModel{},
 				&testAdminSupplierProduct{},
 				&products.Product{},
 				&carts.Cart{},
@@ -265,6 +268,9 @@ func TestAdminProductViews(t *testing.T) {
 				&coupons.CouponProductThrough{},
 				&customers.Customer{},
 				&orders.Order{},
+				&orders.OrderItem{},
+				&payments.ProviderAccount{},
+				&payments.Payment{},
 				&coupons.Redemption{},
 			)
 			tables.IfNotExists = true
@@ -334,6 +340,23 @@ func TestAdminProductViews(t *testing.T) {
 		},
 		Tests: []djester.Test{
 			&djester.BasicTest{
+				Label: "Legacy supplier content types resolve to the orders model",
+				Function: func(d *djester.Tester, t *testing.T) {
+					for _, name := range []string{
+						"github.com/Nigel2392/go-django/contrib/shop/supplier.SupplierModel",
+						"github.com/Nigel2392/go-django/contrib/shop/products/supplier.SupplierModel",
+					} {
+						definition := contenttypes.DefinitionForType(name)
+						if definition == nil {
+							t.Fatalf("content type %q did not resolve", name)
+						}
+						if _, ok := definition.Object().(*orders.SupplierModel); !ok {
+							t.Fatalf("content type %q resolved to %T", name, definition.Object())
+						}
+					}
+				},
+			},
+			&djester.BasicTest{
 				Label: "Seed categories, users, and initial products",
 				Function: func(d *djester.Tester, t *testing.T) {
 					_, err := queries.GetQuerySet(&AdminProductTestUser{}).ExplicitSave().Create(&AdminProductTestUser{
@@ -358,6 +381,42 @@ func TestAdminProductViews(t *testing.T) {
 
 					_, seededProd1 = seedAdminProduct(t, catHardware, "alpha_supplier", "Ultrawide Monitor", "ultrawide-monitor", "SKU-MON-01", "499.99", "449.99")
 					_, _ = seedAdminProduct(t, catAudio, "beta_supplier", "Condenser Microphone", "condenser-microphone", "SKU-MIC-02", "149.50", "0.00")
+				},
+			},
+			&djester.BasicTest{
+				Label: "Order edit loads the order and displays payment attempts",
+				Function: func(d *djester.Tester, t *testing.T) {
+					customer, err := queries.GetQuerySet(&customers.Customer{}).Create(&customers.Customer{
+						Email:     drivers.MustParseEmail("order-admin@example.test"),
+						FirstName: "Order",
+						LastName:  "Customer",
+					})
+					require.NoError(t, err)
+					req := httptest.NewRequest(http.MethodPost, "/checkout", nil).WithContext(t.Context())
+					order, _, err := orders.CreateOrder(req, customer, nil, &carts.CartItem{Product: seededProd1, Amount: 2})
+					require.NoError(t, err)
+					payment, err := queries.GetQuerySet(&payments.Payment{}).Create(&payments.Payment{
+						Order: order, Provider: "<admin-test-payment>", State: paystate.STATUS_INIT,
+						Amount: decimal.NewFromInt(25), Currency: "EUR",
+					})
+					require.NoError(t, err)
+
+					login, err := d.Login("admin_user")
+					require.NoError(t, err)
+					login.Body.Close()
+					defer d.Logout()
+					editURL := django.Reverse("admin:apps:model:edit", "shop", "orders", order.ID)
+					resp, err := d.Get(editURL, nil, nil)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					doc, err := resp.DOM()
+					require.NoError(t, err)
+					require.Contains(t, doc.Text(), "Payment "+payment.ID.String())
+					require.Contains(t, doc.Text(), "<admin-test-payment>")
+					require.Zero(t, doc.Find("admin-test-payment").Length())
+					action, ok := doc.Find("form.admin-form").Attr("action")
+					require.True(t, ok)
+					require.Equal(t, editURL, action)
 				},
 			},
 			&djester.BasicTest{
@@ -474,25 +533,25 @@ func TestAdminProductViews(t *testing.T) {
 					defer d.Logout()
 
 					// Mark beta_supplier as disabled in DB and insert an unregistered supplier row
-					_, err = queries.GetQuerySet(&supplier.SupplierModel{}).
+					_, err = queries.GetQuerySet(&orders.SupplierModel{}).
 						Select("Enabled").
 						Filter("InternalName", "beta_supplier").
-						Update(&supplier.SupplierModel{Enabled: false})
+						Update(&orders.SupplierModel{Enabled: false})
 					asserter.Assert(err == nil, "Failed to disable beta_supplier: %v", err)
 					defer func() {
-						_, _ = queries.GetQuerySet(&supplier.SupplierModel{}).
+						_, _ = queries.GetQuerySet(&orders.SupplierModel{}).
 							Select("Enabled").
 							Filter("InternalName", "beta_supplier").
-							Update(&supplier.SupplierModel{Enabled: true})
+							Update(&orders.SupplierModel{Enabled: true})
 					}()
 
-					_, err = queries.GetQuerySet(&supplier.SupplierModel{}).ExplicitSave().Create(&supplier.SupplierModel{
+					_, err = queries.GetQuerySet(&orders.SupplierModel{}).ExplicitSave().Create(&orders.SupplierModel{
 						InternalName: "legacy_unregistered",
 						Enabled:      false,
 					})
 					asserter.Assert(err == nil, "Failed to insert legacy_unregistered supplier: %v", err)
 					defer func() {
-						_, _ = queries.GetQuerySet(&supplier.SupplierModel{}).Filter("InternalName", "legacy_unregistered").Delete()
+						_, _ = queries.GetQuerySet(&orders.SupplierModel{}).Filter("InternalName", "legacy_unregistered").Delete()
 					}()
 
 					addSupplierURL := django.Reverse("admin:apps:model:add", "shop", "products")
@@ -599,7 +658,7 @@ func TestAdminProductViews(t *testing.T) {
 					asserter.AssertNotNil(createdSignals[0].Specific)
 					asserter.AssertEqual("Ergonomic Trackball", createdProd.Title)
 					asserter.AssertEqual("ergonomic-trackball", createdProd.Slug)
-					asserter.AssertEqual(supplier.SupplierValue("alpha_supplier"), createdProd.Supplier)
+					asserter.AssertEqual(products.SupplierValue("alpha_supplier"), createdProd.Supplier)
 					asserter.Assert(createdProd.Price.Equal(decimal.RequireFromString("89.95")), "Expected Price 89.95, got %s", createdProd.Price)
 
 					// Verify base Product and specific ProductModel in DB
@@ -608,7 +667,7 @@ func TestAdminProductViews(t *testing.T) {
 						Get()
 					asserter.Assert(err == nil, "Failed to query created Product from DB: %v", err)
 					asserter.AssertEqual("Ergonomic Trackball", dbProdRow.Object.Title)
-					asserter.AssertEqual(supplier.SupplierValue("alpha_supplier"), dbProdRow.Object.Supplier)
+					asserter.AssertEqual(products.SupplierValue("alpha_supplier"), dbProdRow.Object.Supplier)
 
 					specModel, err := dbProdRow.Object.Specific.Specific(t.Context(), true)
 					asserter.Assert(err == nil, "Failed to load Specific model for created Product: %v", err)

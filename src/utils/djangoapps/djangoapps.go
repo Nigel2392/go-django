@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/mux/v2"
+	"github.com/elliotchance/orderedmap/v2"
 )
 
 // AppConfig is the interface that must be implemented by all Django applications.
@@ -52,10 +53,32 @@ type BaseAppConfig interface {
 	Templates() *tpl.Config
 }
 
-var apps = make(map[reflect.Type]BaseAppConfig)
+var apps = struct {
+	objects *orderedmap.OrderedMap[reflect.Type, BaseAppConfig]
+	names   *orderedmap.OrderedMap[string, BaseAppConfig]
+}{
+	objects: orderedmap.NewOrderedMap[reflect.Type, BaseAppConfig](),
+	names:   orderedmap.NewOrderedMap[string, BaseAppConfig](),
+}
+
+func Apps(yield func(BaseAppConfig) bool) {
+	for head := apps.names.Front(); head != nil; head = head.Next() {
+		if !yield(head.Value) {
+			break
+		}
+	}
+}
 
 func RegisterModel(obj any, app BaseAppConfig) {
-	apps[reflect.TypeOf(obj)] = app
+	apps.objects.Set(reflect.TypeOf(obj), app)
+
+	appName := app.Name()
+	if !apps.names.Has(appName) {
+		apps.names.Set(appName, app)
+	}
+}
+func GetAppForName(name string) (BaseAppConfig, bool) {
+	return apps.names.Get(name)
 }
 
 func GetAppForModel(obj any) (BaseAppConfig, bool) {
@@ -68,6 +91,5 @@ func GetAppForModel(obj any) (BaseAppConfig, bool) {
 	default:
 		rt = reflect.TypeOf(obj)
 	}
-	c, ok := apps[rt]
-	return c, ok
+	return apps.objects.Get(rt)
 }

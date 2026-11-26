@@ -3,6 +3,7 @@ package translations
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -127,6 +128,49 @@ func TestMakeTranslationsCommandWithNoMatches(t *testing.T) {
 	}
 	if string(got) != existing {
 		t.Errorf("catalog contents = %q, want %q", got, existing)
+	}
+}
+
+func TestMakeTranslationsCommandGoPackagePaths(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	setTestDjango(t, django.Config(nil))
+	setTestTranslationsApp(t, &TranslationsAppConfig{finders: []Finder{&goTranslationsFinder{}}})
+
+	source := fmt.Sprintf("package catalogue\nimport %q\nfunc Display() { trans.S(\"Products\") }\n", trans.PACKAGE_PATH)
+	for name, contents := range map[string]string{
+		"go.mod":                        "module example.com/store\n",
+		"shop/products.go":              source,
+		"shop/admin/views.go":           source,
+		"shop/addon/go.mod":             "module \"example.com/addon/v2\" // nested module\n",
+		"shop/addon/catalog/prices.go":  source,
+		"shop/addon/catalog/ignored.go": source,
+	} {
+		if err := os.MkdirAll(filepath.Dir(name), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(name, []byte(contents), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	runTranslationsCommand(t, "-dir=shop", "-e=addon/catalog/ignored.go")
+
+	data, err := os.ReadFile(translationsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"example.com/store/shop/products.go:3:26",
+		"example.com/store/shop/admin/views.go:3:26",
+		"example.com/addon/v2/catalog/prices.go:3:26",
+	} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("catalog missing source %q:\n%s", want, data)
+		}
+	}
+	if strings.Contains(string(data), "ignored.go") {
+		t.Errorf("catalog includes an excluded Go file:\n%s", data)
 	}
 }
 

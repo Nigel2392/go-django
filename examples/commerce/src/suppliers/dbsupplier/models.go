@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
@@ -16,8 +15,8 @@ type Product struct {
 	SupplierID string
 }
 
-func (p *Product) ProductPrice(ctx context.Context) supplier.Price {
-	return supplier.Price{
+func (p *Product) ProductPrice(ctx context.Context) products.Price {
+	return products.Price{
 		Unit:   currency.EUR,
 		Amount: p.Price,
 	}

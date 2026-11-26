@@ -7,8 +7,10 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
+	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/Nigel2392/go-django/contrib/settings"
-	"github.com/Nigel2392/go-django/contrib/shop/products/supplier"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/internal/forms"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
@@ -95,7 +97,8 @@ func NewAppConfig() *DBSupplierAppConfig {
 		&Product{},
 	}
 
-	supplier.Register(CONFIG)
+	orders.RegisterSupplier(CONFIG)
+
 	settings.RegisterGroup(0, "suppliers", settings.SettingsGroup{
 		Label:       trans.S("Suppliers"),
 		Description: trans.S("Supplier specific settings"),
@@ -146,7 +149,7 @@ func (s *DBSupplierAppConfig) Description(ctx context.Context) string {
 	return trans.T(ctx, "Product storage from a database")
 }
 
-func (s *DBSupplierAppConfig) ProductType(ctx context.Context) supplier.ProductModel {
+func (s *DBSupplierAppConfig) ProductType(ctx context.Context) products.ProductModel {
 	return &Product{}
 }
 
@@ -202,4 +205,12 @@ func (s *DBSupplierAppConfig) ProductEditPanel(ctx context.Context) []admin.Pane
 			),
 		),
 	}
+}
+
+func (s *DBSupplierAppConfig) OrderBlock(ctx context.Context, order *orders.Order, orderItem *orders.OrderItem) (blocks.Block, error) {
+	return nil, nil
+}
+
+func (s *DBSupplierAppConfig) OrderAccepted(ctx context.Context, order *orders.Order, orderItem *orders.OrderItem) (*blocks.StructBlockValue, error) {
+	return nil, nil
 }

@@ -64,7 +64,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 		var matches = make([]Translation, 0)
 		var dirFsys []fs.FS
 		for _, dir := range stored.dir.List() {
-			dirFsys = append(dirFsys, os.DirFS(filepath.ToSlash(dir)))
+			dirFsys = append(dirFsys, translationSourceDir{FS: os.DirFS(filepath.ToSlash(dir)), root: dir})
 		}
 
 		var locales = stored.locs

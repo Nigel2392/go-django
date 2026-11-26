@@ -584,6 +584,19 @@ func finishOperation(ctx context.Context, id drivers.ULID, key string, result Op
 
 // CreateAttempt snapshots the server-calculated amount and the account's fee.
 func CreateAttempt(ctx context.Context, order attrs.Definer, accountID drivers.ULID, subtotal Money) (*Payment, error) {
+	return createAttempt(ctx, order, accountID, subtotal, drivers.ULID{})
+}
+
+// CreateAttemptWithID saves a new attempt under a caller-supplied ID. A repeat
+// checkout can look up that ID before it prepares another order.
+func CreateAttemptWithID(ctx context.Context, order attrs.Definer, accountID drivers.ULID, subtotal Money, id drivers.ULID) (*Payment, error) {
+	if id.IsZero() {
+		return nil, errors.New("payment attempt ID is required")
+	}
+	return createAttempt(ctx, order, accountID, subtotal, id)
+}
+
+func createAttempt(ctx context.Context, order attrs.Definer, accountID drivers.ULID, subtotal Money, id drivers.ULID) (*Payment, error) {
 	if order == nil {
 		return nil, errors.New("payment requires an order")
 	}
@@ -610,6 +623,7 @@ func CreateAttempt(ctx context.Context, order attrs.Definer, accountID drivers.U
 	return queries.GetQuerySet(&Payment{}).
 		WithContext(ctx).
 		Create(&Payment{
+			ID:       id,
 			Order:    order,
 			Account:  row.Object,
 			Provider: row.Object.Driver,
