@@ -385,7 +385,7 @@ func TestAdminProductViews(t *testing.T) {
 				},
 			},
 			&djester.BasicTest{
-				Label: "Order edit displays payment attempts and their lifecycle",
+				Label: "Order edit displays payment history and coupon allocations",
 				Function: func(d *djester.Tester, t *testing.T) {
 					customer, err := queries.GetQuerySet(&customers.Customer{}).Create(&customers.Customer{
 						Email:     drivers.MustParseEmail("order-admin@example.test"),
@@ -394,7 +394,53 @@ func TestAdminProductViews(t *testing.T) {
 					})
 					require.NoError(t, err)
 					req := httptest.NewRequest(http.MethodPost, "/checkout", nil).WithContext(t.Context())
-					order, _, err := orders.CreateOrder(req, customer, nil, &carts.CartItem{Product: seededProd1, Amount: 2})
+					cart, err := queries.GetQuerySet(&carts.Cart{}).Create(&carts.Cart{Active: true})
+					require.NoError(t, err)
+					_, err = queries.GetQuerySet(&carts.CartItem{}).Create(&carts.CartItem{
+						Cart:    cart,
+						Product: seededProd1,
+						Amount:  2,
+					})
+					require.NoError(t, err)
+					coupon, err := queries.GetQuerySet(&coupons.Coupon{}).Create(&coupons.Coupon{
+						Code:        "<SAVE-12>",
+						Title:       "Order discount",
+						MaxDiscount: decimal.RequireFromString("12.50"),
+					})
+					require.NoError(t, err)
+					couponIDs := []uint64{coupon.ID}
+					t.Cleanup(func() {
+						_, err := queries.GetQuerySet(&coupons.Redemption{}).Filter("Coupon__in", couponIDs).Delete()
+						require.NoError(t, err)
+						_, err = queries.GetQuerySet(&coupons.Coupon{}).Filter("ID__in", couponIDs).Delete()
+						require.NoError(t, err)
+					})
+					redemption, err := queries.GetQuerySet(&coupons.Redemption{}).Create(&coupons.Redemption{
+						Cart:   cart,
+						Coupon: coupon,
+					})
+					require.NoError(t, err)
+					priced, err := carts.
+						Query().
+						WithContext(t.Context()).
+						Filter("ID", cart.ID).
+						CalcOneWithProducts()
+					require.NoError(t, err)
+					order, _, err := orders.CreateOrderFromCart(req, customer, priced)
+					require.NoError(t, err)
+					legacyCoupon, err := queries.GetQuerySet(&coupons.Coupon{}).Create(&coupons.Coupon{
+						Code:        "LEGACY",
+						Title:       "Earlier discount",
+						MaxDiscount: decimal.NewFromInt(5),
+					})
+					require.NoError(t, err)
+					couponIDs = append(couponIDs, legacyCoupon.ID)
+					_, err = queries.GetQuerySet(&coupons.Redemption{}).Create(&coupons.Redemption{
+						Order:       order,
+						Customer:    customer,
+						Coupon:      legacyCoupon,
+						Invalidated: true,
+					})
 					require.NoError(t, err)
 					payment, err := queries.GetQuerySet(&payments.Payment{}).Create(&payments.Payment{
 						Order: order, Provider: "<admin-test-payment>", State: paystate.STATUS_INIT,
@@ -433,9 +479,37 @@ func TestAdminProductViews(t *testing.T) {
 					require.Equal(t, 2, events.Length())
 					require.Contains(t, events.Eq(0).Text(), "Payment prepared")
 					require.Contains(t, events.Eq(1).Text(), "Provider checkout failed to open")
+					require.Contains(t, doc.Text(), "Coupon <SAVE-12>")
+					require.Zero(t, doc.Find("save-12").Length())
+					require.Contains(t, doc.Find(".panel-alert ul li").Text(), "Ultrawide Monitor · 12.5 discount")
+					require.Contains(t, doc.Text(), "Coupon LEGACY")
+					require.Contains(t, doc.Text(), "Discount amount not recorded")
+					require.Contains(t, doc.Text(), "Reservation released")
 					action, ok := doc.Find("form.admin-form").Attr("action")
 					require.True(t, ok)
 					require.Equal(t, editURL, action)
+
+					// Submit the rendered inline form's fields along with Completed.
+					data := extractAdminFormValues(doc)
+					data["State"] = "order_pending"
+					data["Completed"] = "on"
+					saved, err := d.PostForm(editURL, nil, nil, data)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, saved.StatusCode)
+					savedDoc, err := saved.DOM()
+					require.NoError(t, err)
+					saved.Body.Close()
+					require.Empty(t, strings.TrimSpace(savedDoc.Find(".error-list").Text()))
+
+					row, err := queries.GetQuerySet(&orders.Order{}).Filter("ID", order.ID).Get()
+					require.NoError(t, err)
+					require.True(t, row.Object.Completed)
+					applied, err := queries.GetQuerySet(&coupons.Redemption{}).Filter("ID", redemption.ID).Get()
+					require.NoError(t, err)
+					require.True(t, applied.Object.Counted)
+					used, err := queries.GetQuerySet(&coupons.Coupon{}).Filter("ID", coupon.ID).Get()
+					require.NoError(t, err)
+					require.EqualValues(t, 1, used.Object.UsageCount)
 				},
 			},
 			&djester.BasicTest{

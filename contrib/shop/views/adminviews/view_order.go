@@ -325,6 +325,10 @@ func ViewEditOrder(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
+		if err := orders.ReconcileCouponRedemptions(ctx, p.ID); err != nil {
+			return err
+		}
+
 		return orders.Signals.Updated.Send(ctx, orders.OrderUpdatedSignal{
 			Request: r.WithContext(ctx),
 			Order:   p,

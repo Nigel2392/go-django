@@ -9,12 +9,14 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"golang.org/x/text/currency"
 )
 
 type PaymentOption struct {
-	AccountID drivers.ULID `json:"account_id"`
-	Label     string       `json:"label"`
+	AccountID         drivers.ULID `json:"account_id"`
+	Label             string       `json:"label"`
+	NoPaymentRequired bool         `json:"no_payment_required,omitempty"`
 	payments.Quote
 }
 
@@ -22,7 +24,7 @@ type PaymentsAPI struct {
 	Currency string
 }
 
-// PaymentOptions quotes enabled accounts in the shop currency for the active cart.
+// PaymentOptions quotes checkout in the shop currency for the active cart.
 func (c PaymentsAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
 	unit, err := currency.ParseISO(c.Currency)
 	if err != nil || unit.String() != c.Currency {
@@ -43,6 +45,28 @@ func (c PaymentsAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	subtotal := payments.Money{
+		Amount:   cart.Totals.Payable(),
+		Currency: c.Currency,
+	}
+	noFeeAccount := payments.ProviderAccount{
+		Currency: c.Currency,
+	}
+	quote, err := noFeeAccount.Quote(subtotal)
+	if len(cart.Items) > 0 && err == nil && quote.Total.IsZero() {
+		options := []PaymentOption{
+			{
+				Label:             trans.T(ctx, "No payment required"),
+				NoPaymentRequired: true,
+				Quote:             quote,
+			},
+		}
+		if err := api.Respond(w, options); err != nil {
+			logger.Warnf("error writing payment options: %v", err)
+		}
+		return
+	}
+
 	accounts, err := queries.
 		GetQuerySet(&payments.ProviderAccount{}).
 		WithContext(ctx).
@@ -56,11 +80,6 @@ func (c PaymentsAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subtotal := payments.Money{
-		Amount:   cart.Totals.Payable(),
-		Currency: c.Currency,
-	}
-
 	options := make([]PaymentOption, 0, len(accounts))
 	for _, row := range accounts {
 		account := row.Object
@@ -72,7 +91,11 @@ func (c PaymentsAPI) PaymentOptions(w http.ResponseWriter, r *http.Request) {
 			logger.Warnf("error quoting payment account %s: %v", account.ID, err)
 			continue
 		}
-		options = append(options, PaymentOption{AccountID: account.ID, Label: account.Label, Quote: quote})
+		options = append(options, PaymentOption{
+			AccountID: account.ID,
+			Label:     account.Label,
+			Quote:     quote,
+		})
 	}
 	if err := api.Respond(w, options); err != nil {
 		logger.Warnf("error writing payment options: %v", err)

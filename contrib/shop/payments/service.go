@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/shopspring/decimal"
+	"golang.org/x/text/currency"
 )
 
 var (
@@ -330,6 +331,9 @@ func operationPayment(ctx context.Context, id drivers.ULID, request OperationReq
 	if err != nil {
 		return nil, nil, err
 	}
+	if payment.IsFreeCheckout() {
+		return nil, nil, ErrUnsupportedOperation
+	}
 
 	provider, err := payment.Account.provider(ctx)
 	return payment, provider, err
@@ -495,6 +499,9 @@ func finishOperation(ctx context.Context, id drivers.ULID, key string, result Op
 	if err != nil {
 		return OperationResult{}, err
 	}
+	if payment.IsFreeCheckout() {
+		return OperationResult{}, ErrUnsupportedOperation
+	}
 
 	record, ok := payment.Operations.Data[key]
 	if !ok {
@@ -637,6 +644,41 @@ func CreateAttemptWithID(ctx context.Context, order attrs.Definer, accountID dri
 	return createAttempt(ctx, order, accountID, subtotal, id)
 }
 
+// CreateFreeCheckoutWithID records an order's zero-total checkout under the
+// same durable attempt ID that a paid checkout would use. Callers must first
+// verify that the amount due rounds to zero in the checkout currency.
+func CreateFreeCheckoutWithID(ctx context.Context, order attrs.Definer, code string, id drivers.ULID) (*Payment, error) {
+	if attrs.IsZero(order) || id.IsZero() {
+		return nil, errors.New("free checkout requires an order and attempt ID")
+	}
+	unit, err := currency.ParseISO(code)
+	if err != nil || unit.String() != code {
+		return nil, fmt.Errorf("invalid checkout currency %q", code)
+	}
+
+	return queries.
+		GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Create(&Payment{
+			ID:       id,
+			Order:    order,
+			Provider: freeCheckoutProvider,
+			Amount:   decimal.Zero,
+			Fee:      decimal.Zero,
+			Currency: code,
+			State:    paystate.STATUS_NO_PAYMENT_REQUIRED,
+			History: drivers.JSON[[]PaymentEvent]{
+				Data: []PaymentEvent{
+					{
+						At:    time.Now().UTC(),
+						Kind:  EventNoPaymentRequired,
+						State: paystate.STATUS_NO_PAYMENT_REQUIRED,
+					},
+				},
+			},
+		})
+}
+
 func createAttempt(ctx context.Context, order attrs.Definer, accountID drivers.ULID, subtotal Money, id drivers.ULID) (*Payment, error) {
 	if order == nil {
 		return nil, errors.New("payment requires an order")
@@ -691,6 +733,12 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 		return Checkout{}, err
 	}
 
+	if payment.IsFreeCheckout() {
+		return Checkout{
+			PaymentStatus: payment.status(),
+		}, nil
+	}
+
 	if payment.TransactionID.Valid {
 		return Checkout{PaymentStatus: payment.status(), URL: payment.CheckoutURL}, nil
 	}
@@ -729,8 +777,12 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 	payment.CheckoutURL, payment.State = checkout.URL, checkout.State
 	payment.AuthorizationRef = checkout.AuthorizationRef
 	payment.CaptureRef = checkout.CaptureRef
+	if checkout.ProviderFee != nil {
+		payment.ProviderFee = drivers.JSON[*Money]{Data: copyProviderFee(checkout.ProviderFee)}
+	}
 	version := payment.appendEvent(PaymentEvent{
-		Kind: EventCheckoutOpened,
+		Kind:        EventCheckoutOpened,
+		ProviderFee: copyProviderFee(checkout.ProviderFee),
 	})
 	ctx, tx, err := queries.StartTransaction(ctx)
 	if err != nil {
@@ -746,6 +798,7 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 			"State",
 			"AuthorizationRef",
 			"CaptureRef",
+			"ProviderFee",
 			"History",
 			"OperationVersion",
 			"UpdatedAt",
@@ -780,6 +833,7 @@ func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (
 		err = tx.Commit(ctx)
 	}
 
+	checkout.ProviderFee = copyProviderFee(payment.ProviderFee.Data)
 	return checkout, err
 }
 
@@ -837,6 +891,10 @@ func getAttempt(ctx context.Context, id drivers.ULID) (*Payment, error) {
 		return nil, err
 	}
 
+	if row.Object.IsFreeCheckout() {
+		return row.Object, nil
+	}
+
 	if row.Object.Account == nil || row.Object.Account.ID.IsZero() || row.Object.Account.Driver != row.Object.Provider {
 		return nil, errors.New("payment account is missing or its driver has changed")
 	}
@@ -854,6 +912,17 @@ func (payment *Payment) status() PaymentStatus {
 			Amount:   payment.Amount,
 			Currency: payment.Currency,
 		},
+		ProviderFee: copyProviderFee(payment.ProviderFee.Data),
+	}
+}
+
+func copyProviderFee(fee *Money) *Money {
+	if fee == nil {
+		return nil
+	}
+	return &Money{
+		Amount:   fee.Amount.Copy(),
+		Currency: fee.Currency,
 	}
 }
 
@@ -885,6 +954,13 @@ func (payment *Payment) validateStatus(status PaymentStatus) error {
 		return errors.New("provider status does not match payment")
 	}
 
+	if fee := status.ProviderFee; fee != nil {
+		unit, err := currency.ParseISO(fee.Currency)
+		if err != nil || unit.String() != fee.Currency || fee.Amount.IsNegative() {
+			return errors.New("provider processing fee requires a nonnegative amount and ISO currency")
+		}
+	}
+
 	return nil
 }
 
@@ -895,7 +971,10 @@ func applyStatus(ctx context.Context, payment *Payment, status PaymentStatus) (*
 
 	sameAuthorization := status.AuthorizationRef == "" || payment.AuthorizationRef == status.AuthorizationRef
 	sameCapture := status.CaptureRef == "" || payment.CaptureRef == status.CaptureRef
-	if payment.State == status.State && sameAuthorization && sameCapture {
+	sameStatus := payment.State == status.State && sameAuthorization && sameCapture
+	fee, savedFee := status.ProviderFee, payment.ProviderFee.Data
+	feeChanged := fee != nil && (savedFee == nil || fee.Currency != savedFee.Currency || !fee.Amount.Equal(savedFee.Amount))
+	if sameStatus && !feeChanged {
 		return payment, nil
 	}
 
@@ -922,9 +1001,17 @@ func applyStatus(ctx context.Context, payment *Payment, status PaymentStatus) (*
 	if status.CaptureRef != "" {
 		payment.CaptureRef = status.CaptureRef
 	}
-	version := payment.appendEvent(PaymentEvent{
+	event := PaymentEvent{
 		Kind: EventStatusUpdated,
-	})
+	}
+	if feeChanged {
+		payment.ProviderFee = drivers.JSON[*Money]{Data: copyProviderFee(fee)}
+		event.ProviderFee = copyProviderFee(fee)
+	}
+	if sameStatus {
+		event.Kind = EventProviderFeeUpdated
+	}
+	version := payment.appendEvent(event)
 
 	n, err := queries.
 		GetQuerySet(&Payment{}).
@@ -933,6 +1020,7 @@ func applyStatus(ctx context.Context, payment *Payment, status PaymentStatus) (*
 			"State",
 			"AuthorizationRef",
 			"CaptureRef",
+			"ProviderFee",
 			"History",
 			"OperationVersion",
 			"UpdatedAt",
@@ -955,19 +1043,23 @@ func applyStatus(ctx context.Context, payment *Payment, status PaymentStatus) (*
 		return nil, errors.New("payment status updated concurrently; retry reconciliation")
 	}
 
-	err = Signals.Update.Send(ctx, PaymentUpdatedSignal{
-		Payment:       payment,
-		PreviousState: prior,
-	})
-
-	if err != nil {
-		return nil, err
+	if !sameStatus {
+		err = Signals.Update.Send(ctx, PaymentUpdatedSignal{
+			Payment:       payment,
+			PreviousState: prior,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return payment, tx.Commit(ctx)
 }
 
 func canTransition(from, to paystate.PayState) bool {
+	if to == paystate.STATUS_NO_PAYMENT_REQUIRED {
+		return false
+	}
 	switch from {
 	case paystate.STATUS_INIT:
 		return true

@@ -14,14 +14,19 @@ import (
 )
 
 type Payment struct {
-	ID               drivers.ULID
-	Order            attrs.Definer
-	Account          *ProviderAccount
-	Provider         string
-	TransactionID    sql.NullString
-	CheckoutURL      string
-	Amount           decimal.Decimal
-	Fee              decimal.Decimal
+	ID            drivers.ULID
+	Order         attrs.Definer
+	Account       *ProviderAccount
+	Provider      string
+	TransactionID sql.NullString
+	CheckoutURL   string
+	Amount        decimal.Decimal
+
+	// Fee is the customer-facing payment fee included in Amount.
+	Fee decimal.Decimal
+
+	// ProviderFee is the latest merchant processing fee reported by the PSP.
+	ProviderFee      drivers.JSON[*Money]
 	Currency         string
 	State            paystate.PayState
 	CreatedAt        drivers.Timestamp
@@ -36,24 +41,39 @@ type Payment struct {
 
 // PaymentEvent is a recorded step in a payment attempt, in write order.
 type PaymentEvent struct {
-	At        time.Time
-	Kind      PaymentEventKind
-	State     paystate.PayState
-	RequestID string         `json:",omitempty"`
-	Operation OperationKind  `json:",omitempty"`
-	Phase     OperationState `json:",omitempty"`
-	Amount    *Money         `json:",omitempty"`
+	At          time.Time
+	Kind        PaymentEventKind
+	State       paystate.PayState
+	RequestID   string         `json:",omitempty"`
+	Operation   OperationKind  `json:",omitempty"`
+	Phase       OperationState `json:",omitempty"`
+	Amount      *Money         `json:",omitempty"`
+	ProviderFee *Money         `json:",omitempty"`
 }
 
 type PaymentEventKind string
 
 const (
-	EventPrepared       PaymentEventKind = "prepared"
-	EventCheckoutOpened PaymentEventKind = "checkout_opened"
-	EventCheckoutFailed PaymentEventKind = "checkout_failed"
-	EventStatusUpdated  PaymentEventKind = "status_updated"
-	EventOperation      PaymentEventKind = "operation"
+	EventPrepared           PaymentEventKind = "prepared"
+	EventCheckoutOpened     PaymentEventKind = "checkout_opened"
+	EventCheckoutFailed     PaymentEventKind = "checkout_failed"
+	EventStatusUpdated      PaymentEventKind = "status_updated"
+	EventProviderFeeUpdated PaymentEventKind = "provider_fee_updated"
+	EventNoPaymentRequired  PaymentEventKind = "no_payment_required"
+	EventOperation          PaymentEventKind = "operation"
 )
+
+const freeCheckoutProvider = "shop:free-checkout"
+
+// IsFreeCheckout reports whether this is the internal record for a zero-total order.
+func (m *Payment) IsFreeCheckout() bool {
+	return m.Provider == freeCheckoutProvider &&
+		m.State == paystate.STATUS_NO_PAYMENT_REQUIRED &&
+		(m.Account == nil || m.Account.ID.IsZero()) &&
+		!m.TransactionID.Valid &&
+		m.Amount.IsZero() &&
+		m.Fee.IsZero()
+}
 
 func (m *Payment) BeforeCreate(context.Context) error {
 	if m.ID.IsZero() {
@@ -85,6 +105,7 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		paymentField(m, "State", &m.State, attrs.Config{MaxLength: 40}),
 		paymentField(m, "Amount", &m.Amount, attrs.Config{Precision: 13, Scale: 4}),
 		paymentField(m, "Fee", &m.Fee, attrs.Config{Precision: 13, Scale: 4, Blank: true, Default: decimal.Zero}),
+		paymentField(m, "ProviderFee", &m.ProviderFee, attrs.Config{Null: true, Blank: true, ReadOnly: true}),
 		paymentField(m, "Currency", &m.Currency, attrs.Config{MaxLength: 3, Blank: true, Default: ""}),
 		paymentField(m, "CreatedAt", &m.CreatedAt, attrs.Config{AutoNowAdd: true}),
 		paymentField(m, "UpdatedAt", &m.UpdatedAt, attrs.Config{AutoNow: true}),

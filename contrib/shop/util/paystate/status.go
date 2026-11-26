@@ -60,6 +60,9 @@ const (
 	// The payment was successful.
 	STATUS_PAID PayState = "STATUS_PAID"
 
+	// The checkout amount was zero and did not require a payment.
+	STATUS_NO_PAYMENT_REQUIRED PayState = "STATUS_NO_PAYMENT_REQUIRED"
+
 	// Chargeback of a credit card payment.
 	STATUS_CHARGEBACK PayState = "STATUS_CHARGEBACK"
 
@@ -74,20 +77,21 @@ const (
 )
 
 var _statusTranslations = map[PayState]func(context.Context) string{
-	STATUS_INIT:             trans.S("Initialised"),
-	STATUS_PENDING:          trans.S("Pending"),
-	STATUS_CANCEL:           trans.S("Cancelled"),
-	STATUS_EXPIRED:          trans.S("Expired"),
-	STATUS_DENIED:           trans.S("Denied"),
-	STATUS_FAILURE:          trans.S("Failure"),
-	STATUS_PAID_CHECKAMOUNT: trans.S("Check Amount"),
-	STATUS_PARTIAL_PAYMENT:  trans.S("Partial Payment"),
-	STATUS_VERIFY:           trans.S("Manual Verify"),
-	STATUS_AUTHORIZE:        trans.S("Authorize"),
-	STATUS_PARTLY_CAPTURED:  trans.S("Partly Captured"),
-	STATUS_PAID:             trans.S("Paid"),
-	STATUS_CHARGEBACK:       trans.S("Chargeback"),
-	STATUS_REFUNDING:        trans.S("Refunding"),
-	STATUS_REFUND:           trans.S("Refunded"),
-	STATUS_PARTIAL_REFUND:   trans.S("Partial Refund"),
+	STATUS_INIT:                trans.S("Initialised"),
+	STATUS_PENDING:             trans.S("Pending"),
+	STATUS_CANCEL:              trans.S("Cancelled"),
+	STATUS_EXPIRED:             trans.S("Expired"),
+	STATUS_DENIED:              trans.S("Denied"),
+	STATUS_FAILURE:             trans.S("Failure"),
+	STATUS_PAID_CHECKAMOUNT:    trans.S("Check Amount"),
+	STATUS_PARTIAL_PAYMENT:     trans.S("Partial Payment"),
+	STATUS_VERIFY:              trans.S("Manual Verify"),
+	STATUS_AUTHORIZE:           trans.S("Authorize"),
+	STATUS_PARTLY_CAPTURED:     trans.S("Partly Captured"),
+	STATUS_PAID:                trans.S("Paid"),
+	STATUS_NO_PAYMENT_REQUIRED: trans.S("No payment required"),
+	STATUS_CHARGEBACK:          trans.S("Chargeback"),
+	STATUS_REFUNDING:           trans.S("Refunding"),
+	STATUS_REFUND:              trans.S("Refunded"),
+	STATUS_PARTIAL_REFUND:      trans.S("Partial Refund"),
 }

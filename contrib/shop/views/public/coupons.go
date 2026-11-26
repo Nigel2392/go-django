@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
@@ -51,7 +52,37 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// start transaction, all operations should be done atomically
+	couponQuery := queries.
+		GetQuerySet(&coupons.Coupon{}).
+		Filter(
+			expr.Q("Code", req.CouponCode),
+		)
+	// Identify the rows before starting the transaction. The first writes in
+	// the transaction can then lock those rows before any snapshot reads.
+	candidate, err := couponQuery.
+		WithContext(r.Context()).
+		Select("ID").
+		Get()
+	if err != nil {
+		laggy()
+		if !errors.Is(err, errors.NoRows) {
+			logger.Warnf("error fetching coupon with code %q: %v", req.CouponCode, err)
+		}
+		api.RespondError(w, http.StatusNotFound, a.ErrInvalid(r.Context()))
+		return
+	}
+
+	activeCart, err := cartQuery(r.Context(), r, false).
+		Select("ID").
+		Get()
+	if err != nil {
+		if !errors.Is(err, errors.NoRows) {
+			logger.Warnf("error fetching cart for coupon request: %v", err)
+		}
+		api.RespondError(w, http.StatusNotFound, a.ErrInvalid(r.Context()))
+		return
+	}
+
 	ctx, tx, err := queries.StartTransaction(r.Context())
 	if err != nil {
 		api.RespondError(w,
@@ -63,11 +94,38 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 
 	defer tx.Rollback(ctx)
 
-	// check if there is an actual coupon in the databsae for the code provided
-	couponRow, err := queries.
-		GetQuerySet(&coupons.Coupon{}).
+	// Acquire the same cart lock as checkout before reserving a coupon.
+	_, err = carts.
+		Query().
 		WithContext(ctx).
-		Filter("Code", req.CouponCode).
+		Filter(
+			expr.Q("ID", activeCart.Object.ID),
+			expr.Q("Active", true),
+		).
+		BulkUpdate(expr.As("Active", expr.Value(true)))
+	if err != nil {
+		logger.Warnf("error locking cart for coupon request: %v", err)
+		api.RespondError(w, http.StatusInternalServerError, "failed to redeem coupon")
+		return
+	}
+
+	couponQuery = couponQuery.
+		WithContext(ctx).
+		Filter(
+			expr.Q("ID", candidate.Object.ID),
+		)
+
+	// Serialize reservations and completion on the coupon row so checking
+	// capacity and reserving it are one transaction.
+	_, err = couponQuery.
+		BulkUpdate(expr.As("UsageCount", expr.Field("UsageCount")))
+	if err != nil {
+		logger.Warnf("error locking coupon for redemption: %v", err)
+		api.RespondError(w, http.StatusInternalServerError, "failed to redeem coupon")
+		return
+	}
+
+	couponRow, err := couponQuery.
 		Preload(queries.NoJoins("Products")).
 		Get()
 	if err != nil {
@@ -85,8 +143,7 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// usage count is a hard limit that will only be increased upon order completion
-	// i.e. we will not increase the usage count in this redeem view.
+	// Completion moves a reservation into UsageCount.
 	var coupon = couponRow.Object
 	if coupon.UsageLimit > 0 && coupon.UsageCount >= coupon.UsageLimit {
 		api.RespondError(w,
@@ -105,10 +162,12 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 			expr.Q("Coupon", coupon),
 		)
 
-	// check total redemptions count vs the usage limit
-	// if the coupon has defined a limit
 	if coupon.UsageLimit > 0 {
-		totalRedemptions, err := redemptionsQs.Count()
+		totalRedemptions, err := redemptionsQs.
+			Filter(
+				expr.Q("Counted", false),
+			).
+			Count()
 		if err != nil {
 			// induce lag into the API so enumerating hits on the coupon code is harder
 			laggy()
@@ -124,18 +183,19 @@ func (a RedemptionAPI) RedeemCode(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if uint64(totalRedemptions) >= coupon.UsageLimit {
+		if uint64(totalRedemptions) >= coupon.UsageLimit-coupon.UsageCount {
 			api.RespondError(w,
 				http.StatusNotFound,
 				a.ErrRedeemed(ctx),
 			)
 			return
 		}
-
-		// coupon redemption can be created
 	}
 
-	cartQ := cartQuery(ctx, r, true)
+	cartQ := cartQuery(ctx, r, true).
+		Filter(
+			expr.Q("ID", activeCart.Object.ID),
+		)
 	cartRow, err := cartQ.Get()
 	if err != nil {
 		if !errors.Is(err, errors.NoRows) {

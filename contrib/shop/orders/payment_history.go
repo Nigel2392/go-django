@@ -18,18 +18,29 @@ func paymentHistoryHTML(ctx context.Context, payment *payments.Payment) template
 	var html strings.Builder
 	escape := template.HTMLEscapeString
 
-	summary := fmt.Sprintf(
-		"%s · %s %s · %s",
-		payment.Provider,
-		payment.Amount,
-		payment.Currency,
-		paystate.PAYSTATE.StringOf(ctx, payment.State),
-	)
+	summary := fmt.Sprintf("%s %s · %s", payment.Amount, payment.Currency, paystate.PAYSTATE.StringOf(ctx, payment.State))
+	if !payment.IsFreeCheckout() {
+		summary = payment.Provider + " · " + summary
+	}
 
 	fmt.Fprintf(&html,
 		"<p>%s</p>",
 		escape(summary),
 	)
+
+	if payment.Currency != "" {
+		fmt.Fprintf(&html,
+			"<p>%s · %s</p>",
+			escape(trans.T(ctx, "Subtotal before payment fee: %s %s", payment.Amount.Sub(payment.Fee), payment.Currency)),
+			escape(trans.T(ctx, "Customer payment fee: %s %s", payment.Fee, payment.Currency)),
+		)
+	}
+	if fee := payment.ProviderFee.Data; fee != nil {
+		fmt.Fprintf(&html,
+			"<p>%s</p>",
+			escape(trans.T(ctx, "Provider processing fee: %s %s", fee.Amount, fee.Currency)),
+		)
+	}
 
 	recordedOperations := make(map[string]bool)
 	if len(payment.History.Data) > 0 {
@@ -39,12 +50,16 @@ func paymentHistoryHTML(ctx context.Context, payment *payments.Payment) template
 			switch event.Kind {
 			case payments.EventPrepared:
 				label = trans.T(ctx, "Payment prepared")
+			case payments.EventNoPaymentRequired:
+				label = trans.T(ctx, "Order placed without payment")
 			case payments.EventCheckoutOpened:
 				label = trans.T(ctx, "Provider checkout opened")
 			case payments.EventCheckoutFailed:
 				label = trans.T(ctx, "Provider checkout failed to open")
 			case payments.EventStatusUpdated:
 				label = trans.T(ctx, "Provider status updated")
+			case payments.EventProviderFeeUpdated:
+				label = trans.T(ctx, "Provider processing fee reported")
 			case payments.EventOperation:
 				label = paymentOperationLabel(ctx, event.Operation, event.Phase, event.Amount)
 				recordedOperations[event.RequestID] = true
@@ -63,6 +78,12 @@ func paymentHistoryHTML(ctx context.Context, payment *payments.Payment) template
 
 			if event.RequestID != "" {
 				fmt.Fprintf(&html, " · <code>%s</code>", escape(event.RequestID))
+			}
+			if fee := event.ProviderFee; fee != nil {
+				fmt.Fprintf(&html,
+					" · %s",
+					escape(trans.T(ctx, "Provider processing fee: %s %s", fee.Amount, fee.Currency)),
+				)
 			}
 
 			html.WriteString("</li>")

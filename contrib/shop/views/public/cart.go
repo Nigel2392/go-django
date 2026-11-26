@@ -547,12 +547,11 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 
 		r = r.WithContext(ctx)
 
-		// invalidate all redemptions that the user has tried to redeem
-		// ensures a log is kept of all users that TRIED to redeem
-		_, err = queries.GetQuerySet(&coupons.Redemption{}).
+		// Close the active cart before releasing its coupon reservations.
+		closed, err := q.
 			WithContext(ctx).
-			Filter("Cart", queries.Subquery(q.Limit(1).Select("ID"))).
-			BulkUpdate(expr.As("Invalidated", expr.Value(true)))
+			Filter("ID", cartRow.Object.ID).
+			BulkUpdate(expr.As("Active", expr.Value(false)))
 		if err != nil {
 			api.RespondError(w,
 				http.StatusInternalServerError,
@@ -561,10 +560,19 @@ func (c CartAPI) ClearCart(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// set the current users cart to inactive
-		_, err = q.WithContext(ctx).Select("Active").BulkUpdate(
-			expr.As("Active", expr.Value(false)),
-		)
+		if closed == 0 {
+			break
+		}
+
+		_, err = queries.
+			GetQuerySet(&coupons.Redemption{}).
+			WithContext(ctx).
+			Filter(
+				expr.Q("Cart", cartRow.Object.ID),
+				expr.Q("Order__isnull", true),
+				expr.Q("Invalidated", false),
+			).
+			BulkUpdate(expr.As("Invalidated", expr.Value(true)))
 		if err != nil {
 			api.RespondError(w,
 				http.StatusInternalServerError,

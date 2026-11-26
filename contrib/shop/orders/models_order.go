@@ -93,7 +93,8 @@ func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
 			paystate.STATUS_PARTLY_CAPTURED:
 			alertType = admin.ALERT_WARNING
 
-		case paystate.STATUS_PAID:
+		case paystate.STATUS_PAID,
+			paystate.STATUS_NO_PAYMENT_REQUIRED:
 			alertType = admin.ALERT_SUCCESS
 		}
 
@@ -115,39 +116,45 @@ func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
 		})
 	}
 
-	panels := []admin.Panel{
-		admin.TabbedPanel(
-			admin.PanelTab(
-				trans.S("Product Details"),
-				admin.FieldPanel("ID"),
-				admin.FieldPanel("State"),
-				admin.FieldPanel("Processed"),
-				admin.FieldPanel("Completed"),
-			),
-			admin.PanelTab(
-				trans.S("Order Items"),
-				&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
-					TargetType: &OrderItem{},
-					FieldName:  "OrderItems",
-					Classname:  "collapsible",
-					// SubClassname: "collapsed",
-					MinNum: 1,
-					// DisallowAdd:    true,
-					// DisallowRemove: true,
-					Panels: []admin.Panel{
-						admin.FieldPanel("ID"),
-						admin.FieldPanel("Amount"),
-					},
+	tabs := []admin.TabPanel{
+		admin.PanelTab(
+			trans.S("Product Details"),
+			admin.FieldPanel("ID"),
+			admin.FieldPanel("State"),
+			admin.FieldPanel("Processed"),
+			admin.FieldPanel("Completed"),
+		),
+		admin.PanelTab(
+			trans.S("Order Items"),
+			&admin.ModelFormPanel[*OrderItem, modelforms.ModelForm[*OrderItem]]{
+				TargetType: &OrderItem{},
+				FieldName:  "OrderItems",
+				Classname:  "collapsible",
+				// SubClassname: "collapsed",
+				MinNum: 1,
+				// DisallowAdd:    true,
+				// DisallowRemove: true,
+				Panels: []admin.Panel{
+					admin.FieldPanel("ID"),
+					admin.FieldPanel("Amount"),
 				},
-			),
-			admin.PanelTab(
-				trans.S("Payment Details"),
-				paymentPanels...,
-			),
+			},
+		),
+		admin.PanelTab(
+			trans.S("Payment Details"),
+			paymentPanels...,
 		),
 	}
 
-	return panels, nil
+	couponPanels, err := m.couponPanels(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "EditPanels/coupons")
+	}
+	if len(couponPanels) > 0 {
+		tabs = append(tabs, admin.PanelTab(trans.S("Coupons"), couponPanels...))
+	}
+
+	return []admin.Panel{admin.TabbedPanel(tabs...)}, nil
 }
 
 func (m *Order) FieldDefs(ctx context.Context) attrs.Definitions {

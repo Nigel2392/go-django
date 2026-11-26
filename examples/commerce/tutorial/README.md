@@ -58,15 +58,19 @@ Implement `payments.Provider` in your application's payment provider package and
 
 Implement `payments.Capturer`, `payments.Voider`, `payments.Refunder`, or `payments.Canceller` when your provider supports those operations. Keep the same `OperationRequest.RequestID` when retrying an operation. Use `payments.ResolveOperation` with the verified outcome when the provider reports it later. [Payment service](../../../contrib/shop/payments/service.go)
 
+Return `PaymentStatus.ProviderFee` when the provider reports a processing fee charged to your merchant account. The shop records its amount and currency on the payment and shows it separately from the customer payment fee set by `ProviderAccount.Quote`. [Provider interface](../../../contrib/shop/payments/payments.go)
+
 ## Connect checkout to the storefront
 
-For the built-in checkout, set `shop.APPVAR_SHOP_CHECKOUT_ORIGIN` to your public shop origin and optionally set `shop.APPVAR_SHOP_CHECKOUT_RETURN_PATH` to your order confirmation page. Use `django.Reverse("api:payments:checkout")` as the action of a POST form. Include the framework CSRF token and an `account_id` field with the ID from the payment options response. The buyer must be signed in with an email address on their user or linked customer record. The view also accepts a JSON body. It converts the cart once and returns a 303 to the provider. If the provider call fails, submit the same account again to resume the saved attempt. The return URL includes `payment_id` for looking up the payment. [Checkout handler](../../../contrib/shop/views/public/payment_checkout.go)
+For the built-in checkout, set `shop.APPVAR_SHOP_CHECKOUT_ORIGIN` to your public shop origin and optionally set `shop.APPVAR_SHOP_CHECKOUT_RETURN_PATH` to your order confirmation page. Use `django.Reverse("api:payments:checkout")` as the action of a POST form. Include the framework CSRF token and an `account_id` field with the ID from the payment options response. The buyer must be signed in with an email address on their user or linked customer record. The view also accepts a JSON body. For a payable balance, it converts the cart once and returns a 303 to the provider. If the provider call fails, submit the same account again to resume the saved attempt. The return URL includes `payment_id` for looking up the payment. [Checkout handler](../../../contrib/shop/views/public/payment_checkout.go)
+
+For a nonempty cart with a zero payable total, the payment options response contains one option with `no_payment_required: true`. Submit the form with an empty `account_id` or send `{}` as JSON. Checkout saves the order and a zero-value internal payment record, then redirects directly to your confirmation page with `order_id` and `payment_id`. A remaining balance from product fees still requires a payment account. [Payment options handler](../../../contrib/shop/views/public/payment_options.go)
 
 For a custom checkout, call the broker from your storefront handler.
 
-1. Resolve the customer and authorize access to the cart in your handler. Let the buyer select an eligible payment account. Issue one stable attempt ID for this checkout submission and keep it for retries.
-2. Call `broker.Broker.PrepareCheckout` with the authorized inputs. The broker prices the cart on the server, saves the order and product snapshots, and creates a payment attempt in the same transaction. `orders.Signals.Created` runs inside the order transaction. Use that context for database writes that should roll back with the order.
-3. Call `Broker.StartCheckout` after commit. Redirect the buyer to the returned checkout URL when the provider supplies one. Build the return and webhook URLs from your configured storefront origin. Use `django.Reverse("api:payments:webhook", account.ID)` for the webhook path.
+1. Resolve the customer and authorize access to the cart in your handler. Let the buyer select an eligible payment account when there is a payable balance. Issue one stable attempt ID for this checkout submission and keep it for retries.
+2. Call `broker.Broker.PrepareCheckout` with the authorized inputs. The broker prices the cart on the server and saves the order, its line pricing, applied coupon redemptions, and a payment attempt in one transaction. `orders.Signals.Created` runs after the discounts are saved and before commit. Use that context for database writes that should roll back with the order.
+3. After commit, check `prepared.Payment.IsFreeCheckout()`. A free checkout can go directly to your confirmation page. Otherwise, call `Broker.StartCheckout` and redirect the buyer to the returned checkout URL when the provider supplies one. Build the return and webhook URLs from your configured storefront origin. Use `django.Reverse("api:payments:webhook", account.ID)` for the webhook path.
 4. If checkout fails to open, retry the saved attempt using the same ID and URLs. If the submission response was lost, repeat preparation with the original customer, account, and attempt ID to recover the saved order and payment.
 5. Use `payments.Refresh` or the registered webhook endpoint to reconcile payment status. Use that verified status in your application's acceptance policy.
 
@@ -88,6 +92,8 @@ func (shippingPricer) CheckoutSubtotal(_ context.Context, cart *carts.CartRow) (
 Use the supplier's panels to add product fields. Use the shop's admin views for the existing product and order workflows. For a custom list, start with `generic.ListViewConfig` and pass your model, queryset, filters, and columns. For a custom edit form, `util/forms.NewAdminForm` binds a model and its panels to a request. [Product and order views](../../../contrib/shop/views/adminviews) · [List configuration](../../../contrib/shop/views/adminviews/generic/listview.go) · [Form helper](../../../contrib/shop/util/forms/forms.go)
 
 ## Extend the order lifecycle
+
+The order editor counts coupon uses when an order is marked complete and releases outstanding reservations when it is rejected. If your own workflow saves either transition, call `orders.ReconcileCouponRedemptions` with the saved order ID in the same transaction.
 
 Use `broker` for workflows that cross package boundaries. Keep order transitions and supplier capabilities in `orders`, and keep provider calls and payment status transitions in `payments`. Use `shared/relations/modelkeys` with deferred relations when two model packages need to refer to each other. [Deferred payment to order relation](../../../contrib/shop/payments/models_payment.go)
 

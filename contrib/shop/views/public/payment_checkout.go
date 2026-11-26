@@ -29,7 +29,7 @@ import (
 	"golang.org/x/text/currency"
 )
 
-// CheckoutAPI converts the caller's cart into an order and opens provider checkout.
+// CheckoutAPI converts the caller's cart into an order and opens provider checkout when payment is due.
 // Origin is the public shop origin used for verified callback destinations.
 // ReturnPath is a path on Origin and defaults to "/".
 type CheckoutAPI struct {
@@ -97,8 +97,7 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case err != nil,
-		accountID.UnmarshalText([]byte(request.AccountID)) != nil,
-		accountID.IsZero():
+		request.AccountID != "" && accountID.UnmarshalText([]byte(request.AccountID)) != nil:
 		api.RespondError(w, http.StatusBadRequest, "submit a valid payment account ID")
 		return
 	}
@@ -141,9 +140,6 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	returnURL := origin.ResolveReference(returnRef)
-	webhookURL := origin.ResolveReference(&url.URL{
-		Path: django.Reverse("api:payments:webhook", accountID),
-	})
 
 	switch {
 	case queries.IsTransactionContext(r.Context()),
@@ -162,28 +158,27 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 
 	defer tx.Rollback(ctx)
 
-	account, err := queries.
-		GetQuerySet(&payments.ProviderAccount{}).
+	checkoutRequest := r.WithContext(ctx)
+	cartQuery := carts.
+		Query().
 		WithContext(ctx).
+		CartsForRequest(checkoutRequest)
+	activeCartQuery := cartQuery.
 		Filter(
-			expr.Q("ID", accountID),
-			expr.Q("Enabled", true),
-			expr.Q("Currency", c.Currency),
-		).
-		Get()
+			expr.Q("Active", true),
+			expr.Or(
+				expr.Q("User", user),
+				expr.Q("User__isnull", true),
+			),
+		)
 
-	switch {
-	case errors.Is(err, dberrors.NoRows):
-		api.RespondError(w, http.StatusNotFound, "payment account is unavailable")
-		return
-
-	case err != nil:
+	// Lock the caller's active cart before the transaction takes its first
+	// read snapshot, so an overlapping coupon reservation is visible.
+	_, err = activeCartQuery.
+		BulkUpdate(expr.As("Active", expr.Value(true)))
+	if err != nil {
 		logger.Warnf("checkout preparation failed: %v", err)
 		api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-		return
-
-	case !payments.ProviderRegistered(account.Object.Driver):
-		api.RespondError(w, http.StatusNotFound, "payment account is unavailable")
 		return
 	}
 
@@ -255,19 +250,7 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	checkoutRequest := r.WithContext(ctx)
-	cartQuery := carts.
-		Query().
-		WithContext(ctx).
-		CartsForRequest(checkoutRequest)
-	active, err := cartQuery.
-		Filter(
-			expr.Q("Active", true),
-			expr.Or(
-				expr.Q("User", user),
-				expr.Q("User__isnull", true),
-			),
-		).
+	active, err := activeCartQuery.
 		Get()
 
 	var cart *carts.Cart
@@ -349,6 +332,14 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		AttemptID: cart.ID,
 	})
 	switch {
+	case errors.Is(err, broker.ErrCheckoutAccountRequired):
+		api.RespondError(w, http.StatusBadRequest, "select a payment account")
+		return
+
+	case errors.Is(err, broker.ErrCheckoutAccountUnavailable):
+		api.RespondError(w, http.StatusNotFound, "payment account is unavailable")
+		return
+
 	case errors.Is(err, broker.ErrCheckoutEmpty):
 		api.RespondError(w, http.StatusConflict, "cart is empty")
 		return
@@ -398,43 +389,10 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		redemptions := queries.
-			GetQuerySet(&coupons.Redemption{}).
-			WithContext(ctx)
-
-		if len(prepared.Cart.Coupons) != 0 {
-			ids := make([]uint64, len(prepared.Cart.Coupons))
-			for i, redemption := range prepared.Cart.Coupons {
-				ids[i] = redemption.ID
-			}
-
-			count, err := redemptions.
-				Filter(
-					expr.Q("Cart", cartID),
-					expr.Q("Invalidated", false),
-					expr.Q("Order__isnull", true),
-					expr.Q("ID__in", ids),
-				).
-				Select("Order", "Customer").
-				Update(&coupons.Redemption{
-					Order:    prepared.Order,
-					Customer: prepared.Order.Customer,
-				})
-
-			switch {
-			case err != nil:
-				logger.Warnf("checkout preparation failed: %v", err)
-				api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-				return
-
-			case count != int64(len(ids)):
-				api.RespondError(w, http.StatusConflict, "cart changed or already has a checkout")
-				return
-			}
-		}
-
 		// Release reservations for coupons that did not apply to the priced cart.
-		_, err = redemptions.
+		_, err = queries.
+			GetQuerySet(&coupons.Redemption{}).
+			WithContext(ctx).
 			Filter(
 				expr.Q("Cart", cartID),
 				expr.Q("Invalidated", false),
@@ -459,7 +417,18 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 
 	query := returnURL.Query()
 	query.Set("payment_id", prepared.Payment.ID.String())
+	if prepared.Payment.IsFreeCheckout() {
+		query.Set("order_id", prepared.Order.ID.String())
+		returnURL.RawQuery = query.Encode()
+		http.Redirect(w, r, returnURL.String(), http.StatusSeeOther)
+		return
+	}
+
 	returnURL.RawQuery = query.Encode()
+	webhookURL := origin.ResolveReference(&url.URL{
+		Path: django.Reverse("api:payments:webhook", prepared.Payment.Account.ID),
+	})
+
 	checkout, err := flow.StartCheckout(
 		r.Context(),
 		prepared.Order.Customer.ID,

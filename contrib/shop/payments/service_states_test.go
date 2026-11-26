@@ -18,6 +18,7 @@ func TestPaymentStateValidation(t *testing.T) {
 		{"valid", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: Money{p.Amount, "EUR"}}, true},
 		{"blank state", PaymentStatus{ProviderRef: "ref", Amount: Money{p.Amount, "EUR"}}, false},
 		{"unrecognized state", PaymentStatus{ProviderRef: "ref", State: "COMPLETED", Amount: Money{p.Amount, "EUR"}}, false},
+		{"internal free checkout state", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_NO_PAYMENT_REQUIRED, Amount: Money{p.Amount, "EUR"}}, false},
 		{"blank reference", PaymentStatus{State: paystate.STATUS_PAID, Amount: Money{p.Amount, "EUR"}}, false},
 		{"fractional mismatch", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: Money{decimal.RequireFromString("10.001"), "EUR"}}, false},
 	} {
@@ -31,7 +32,7 @@ func TestPaymentStateValidation(t *testing.T) {
 
 func TestTerminalPaymentStates(t *testing.T) {
 	states := []string{paystate.STATUS_INIT, paystate.STATUS_PENDING, paystate.STATUS_CANCEL, paystate.STATUS_EXPIRED, paystate.STATUS_DENIED, paystate.STATUS_FAILURE, paystate.STATUS_PAID_CHECKAMOUNT, paystate.STATUS_PARTIAL_PAYMENT, paystate.STATUS_VERIFY, paystate.STATUS_AUTHORIZE, paystate.STATUS_PARTLY_CAPTURED, paystate.STATUS_PAID, paystate.STATUS_CHARGEBACK, paystate.STATUS_REFUNDING, paystate.STATUS_REFUND, paystate.STATUS_PARTIAL_REFUND}
-	for _, from := range []string{paystate.STATUS_CANCEL, paystate.STATUS_EXPIRED, paystate.STATUS_DENIED, paystate.STATUS_FAILURE, paystate.STATUS_REFUND, paystate.STATUS_CHARGEBACK} {
+	for _, from := range []string{paystate.STATUS_CANCEL, paystate.STATUS_EXPIRED, paystate.STATUS_DENIED, paystate.STATUS_FAILURE, paystate.STATUS_REFUND, paystate.STATUS_CHARGEBACK, paystate.STATUS_NO_PAYMENT_REQUIRED} {
 		for _, to := range states {
 			t.Run(from+"/"+to, func(t *testing.T) {
 				if canTransition(from, to) {
@@ -56,6 +57,7 @@ func TestAllowedPaymentTransitions(t *testing.T) {
 		allowed  bool
 	}{
 		{paystate.STATUS_PENDING, paystate.STATUS_INIT, false},
+		{paystate.STATUS_INIT, paystate.STATUS_NO_PAYMENT_REQUIRED, false},
 		{paystate.STATUS_AUTHORIZE, paystate.STATUS_PENDING, false},
 		{paystate.STATUS_VERIFY, paystate.STATUS_INIT, false},
 		{paystate.STATUS_PARTIAL_PAYMENT, paystate.STATUS_PAID, true},

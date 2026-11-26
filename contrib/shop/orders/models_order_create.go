@@ -2,20 +2,47 @@ package orders
 
 import (
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"reflect"
+	"slices"
 
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
+var ErrCartRedemptionsChanged = stderrors.New("cart coupon redemptions changed during order creation")
+
 func CreateOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart, items ...*carts.CartItem) (*Order, []*OrderItem, error) {
+	return createOrder(r, customer, cart, nil, items)
+}
+
+// CreateOrderFromCart saves the priced cart as an order, including the line
+// totals and applied coupon redemptions. Use a row loaded by CalcOneWithProducts.
+func CreateOrderFromCart(r *http.Request, customer *customers.Customer, cart *carts.CartRow) (*Order, []*OrderItem, error) {
+	if cart == nil || cart.Object == nil || cart.Object.ID.IsZero() || len(cart.Items) == 0 {
+		return nil, nil, errors.ValueError.Wrap("a priced cart with items is required")
+	}
+	items := make([]*carts.CartItem, len(cart.Items))
+	for i, row := range cart.Items {
+		if row == nil {
+			return nil, nil, errors.NilPointer.Wrap("priced cart item is nil")
+		}
+		items[i] = row.CartItem
+	}
+	return createOrder(r, customer, cart.Object, cart, items)
+}
+
+func createOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart, pricedCart *carts.CartRow, items []*carts.CartItem) (*Order, []*OrderItem, error) {
 	if r == nil {
 		return nil, nil, errors.NilPointer.Wrap("request is nil")
 	}
@@ -130,7 +157,7 @@ func CreateOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart
 	}
 
 	var orderItems = make([]*OrderItem, 0, len(items))
-	for _, cartItem := range items {
+	for i, cartItem := range items {
 		contentType := cartItem.Product.SpecificContentType.TypeName()
 		pk := idConvMap[cartItem.Product]
 		specific := productModelMap[contentType][pk]
@@ -153,6 +180,13 @@ func CreateOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart
 			},
 		}
 
+		if pricedCart != nil {
+			line := pricedCart.Items[i]
+			orderItem.Pricing.Data = &OrderItemPricing{
+				Totals:            line.CalculatedPrice,
+				RedemptionAmounts: maps.Clone(line.RedemptionAmounts),
+			}
+		}
 		orderItems = append(orderItems, orderItem)
 	}
 
@@ -177,6 +211,36 @@ func CreateOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart
 		BulkCreate(orderItems)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "OrderQuery/CreateOrder/OrderItems")
+	}
+
+	if pricedCart != nil && len(pricedCart.RedemptionAmounts) != 0 {
+		redemptions := queries.
+			GetQuerySet(&coupons.Redemption{}).
+			WithContext(ctx)
+		// Consistent update order prevents competing conversions from locking
+		// the same reservations in different orders.
+		for _, id := range slices.Sorted(maps.Keys(pricedCart.RedemptionAmounts)) {
+			amount := pricedCart.RedemptionAmounts[id]
+			count, err := redemptions.
+				Filter(
+					expr.Q("ID", id),
+					expr.Q("Cart", cart.ID),
+					expr.Q("Invalidated", false),
+					expr.Q("Order__isnull", true),
+				).
+				Select("Order", "Customer", "DiscountAmount").
+				Update(&coupons.Redemption{
+					Order:          order,
+					Customer:       customer,
+					DiscountAmount: amount,
+				})
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "OrderQuery/CreateOrder/Redemptions")
+			}
+			if count != 1 {
+				return nil, nil, ErrCartRedemptionsChanged
+			}
+		}
 	}
 
 	err = Signals.Created.Send(ctx, OrderCreatedSignal{

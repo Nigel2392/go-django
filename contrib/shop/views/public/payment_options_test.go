@@ -13,6 +13,7 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/contrib/shop/broker"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
@@ -193,6 +194,8 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, line.Object.Product.Data.Product.Title)
 	require.IsType(t, &testCartSupplierProduct{}, line.Object.Product.Data.Specific)
+	require.NotNil(t, line.Object.Pricing.Data)
+	require.Len(t, line.Object.Pricing.Data.RedemptionAmounts, 2)
 
 	t.Run("retry reuses the saved order and prevents cross-customer access", func(t *testing.T) {
 		retry := flow
@@ -305,5 +308,20 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 		require.NotContains(t, failed.Data(), "error")
 		req := httptest.NewRequest(http.MethodGet, "/audit", nil)
 		require.Equal(t, "Payment operation needs reconciliation", auditlogs.Define(req, failed).Label())
+	})
+
+	t.Run("clearing the source cart preserves order redemptions", func(t *testing.T) {
+		response, err := d.PostJson(django.Reverse("api:carts:clear"), nil, nil, map[string]any{}, nil)
+		require.NoError(t, err)
+		response.Body.Close()
+		require.Equal(t, http.StatusOK, response.StatusCode)
+
+		for id, amount := range line.Object.Pricing.Data.RedemptionAmounts {
+			redemption, err := queries.GetQuerySet(&coupons.Redemption{}).Filter("ID", id).Get()
+			require.NoError(t, err)
+			require.Equal(t, order.ID, redemption.Object.Order.(*orders.Order).ID)
+			require.True(t, amount.Equal(redemption.Object.DiscountAmount))
+			require.False(t, redemption.Object.Invalidated)
+		}
 	})
 }

@@ -16,6 +16,8 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/customers"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
@@ -31,6 +33,7 @@ import (
 	"github.com/Nigel2392/mux/v2/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
 	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/require"
 )
 
 func testCouponRedemption(d *djester.Tester, t *testing.T, inCart, outsideCart *products.Product) {
@@ -389,6 +392,7 @@ func testCouponRedemptionCases(t *testing.T, mouse, keyboard, webcam *products.P
 			{name: "zero limit allows reuse across carts", used: 3, active: true},
 			{name: "active reservation on another cart fills limit", limit: 1, active: true, exhausted: true},
 			{name: "active reservation below limit", limit: 2, active: true},
+			{name: "completed uses and outstanding reservations together fill limit", limit: 2, used: 1, active: true, exhausted: true},
 			{name: "invalidated reservation on current cart releases limit", limit: 1, invalidated: true},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
@@ -445,6 +449,10 @@ func testCouponRedemptionCases(t *testing.T, mouse, keyboard, webcam *products.P
 				t.Fatalf("duplicate modified original redemption: before %+v, after %+v", before, after)
 			}
 		})
+	})
+
+	t.Run("order redemptions", func(t *testing.T) {
+		testOrderRedemptionLifecycle(t, mouse)
 	})
 
 	t.Run("product scope and applied totals", func(t *testing.T) {
@@ -550,6 +558,128 @@ func testCouponRedemptionCases(t *testing.T, mouse, keyboard, webcam *products.P
 				couponTestRedemptions(t, coupon, 1)
 			})
 		}
+	})
+}
+
+func testOrderRedemptionLifecycle(t *testing.T, product *products.Product) {
+	t.Helper()
+	ctx := t.Context()
+	customer, err := queries.GetQuerySet(&customers.Customer{}).Create(&customers.Customer{
+		Email:     drivers.MustParseEmail("redemptions@example.test"),
+		FirstName: "Coupon",
+		LastName:  "Customer",
+	})
+	require.NoError(t, err)
+
+	ordersQuery := queries.GetQuerySet(&orders.Order{})
+	redemptionsQuery := queries.GetQuerySet(&coupons.Redemption{})
+	prepare := func(t *testing.T, coupon *coupons.Coupon) (*orders.Order, *coupons.Redemption) {
+		t.Helper()
+		order, err := ordersQuery.Create(&orders.Order{
+			Customer: customer,
+			State:    "order_pending",
+		})
+		require.NoError(t, err)
+
+		reservation, err := redemptionsQuery.Create(&coupons.Redemption{
+			Coupon:   coupon,
+			Order:    order,
+			Customer: customer,
+		})
+		require.NoError(t, err)
+		return order, reservation
+	}
+
+	t.Run("completion moves a reservation into the usage count once", func(t *testing.T) {
+		coupon := newCouponTestCode(t, coupons.Coupon{
+			UsageLimit:  2,
+			MaxDiscount: decimal.NewFromInt(5),
+		})
+		order, reservation := prepare(t, coupon)
+		require.NoError(t, orders.ReconcileCouponRedemptions(ctx, order.ID))
+		row := couponTestRedemptions(t, coupon, 1)[0].Object
+		require.False(t, row.Counted)
+		require.False(t, row.Invalidated)
+
+		client := newCouponTestClient(t)
+		cart := client.cart(t, true, product)
+		assertCouponCart(t, client.redeem(t, coupon, http.StatusOK, ""), cart, "5")
+
+		txCtx, tx, err := queries.StartTransaction(ctx)
+		require.NoError(t, err)
+		defer tx.Rollback(txCtx)
+		_, err = ordersQuery.WithContext(txCtx).Filter("ID", order.ID).Select("Completed").Update(&orders.Order{
+			Completed: true,
+		})
+		require.NoError(t, err)
+		require.NoError(t, orders.ReconcileCouponRedemptions(txCtx, order.ID))
+		require.NoError(t, tx.Rollback(txCtx))
+		persisted, err := queries.GetQuerySet(&coupons.Coupon{}).Filter("ID", coupon.ID).Get()
+		require.NoError(t, err)
+		require.Zero(t, persisted.Object.UsageCount)
+		row = couponTestRedemptions(t, coupon, 2)[0].Object
+		require.False(t, row.Counted)
+
+		_, err = ordersQuery.Filter("ID", order.ID).Select("Completed").Update(&orders.Order{
+			Completed: true,
+		})
+		require.NoError(t, err)
+		require.NoError(t, orders.ReconcileCouponRedemptions(ctx, order.ID))
+		require.NoError(t, orders.ReconcileCouponRedemptions(ctx, order.ID))
+
+		row = couponTestRedemptions(t, coupon, 2)[0].Object
+		require.Equal(t, reservation.ID, row.ID)
+		require.True(t, row.Counted)
+		require.False(t, row.Invalidated)
+		require.True(t, row.DiscountAmount.IsZero(), "historical discount amount is unknown")
+		persisted, err = queries.GetQuerySet(&coupons.Coupon{}).Filter("ID", coupon.ID).Get()
+		require.NoError(t, err)
+		require.EqualValues(t, 1, persisted.Object.UsageCount)
+
+		_, err = redemptionsQuery.Filter("Cart", cart.ID).Select("Invalidated").Update(&coupons.Redemption{
+			Invalidated: true,
+		})
+		require.NoError(t, err)
+		client = newCouponTestClient(t)
+		cart = client.cart(t, true, product)
+		assertCouponCart(t, client.redeem(t, coupon, http.StatusOK, ""), cart, "5")
+
+		client = newCouponTestClient(t)
+		client.cart(t, true, product)
+		client.redeem(t, coupon, http.StatusNotFound, couponLimit)
+	})
+
+	t.Run("rejection releases only outstanding reservations", func(t *testing.T) {
+		coupon := newCouponTestCode(t, coupons.Coupon{
+			UsageLimit:  2,
+			MaxDiscount: decimal.NewFromInt(5),
+		})
+		order, reservation := prepare(t, coupon)
+		other, used := prepare(t, coupon)
+		_, err := ordersQuery.Filter("ID", other.ID).Select("Completed").Update(&orders.Order{
+			Completed: true,
+		})
+		require.NoError(t, err)
+		require.NoError(t, orders.ReconcileCouponRedemptions(ctx, other.ID))
+		_, err = ordersQuery.Filter("ID__in", []drivers.ULID{order.ID, other.ID}).Select("State").Update(&orders.Order{
+			State: "order_rejected",
+		})
+		require.NoError(t, err)
+		require.NoError(t, orders.ReconcileCouponRedemptions(ctx, order.ID))
+		require.NoError(t, orders.ReconcileCouponRedemptions(ctx, other.ID))
+
+		rows := couponTestRedemptions(t, coupon, 2)
+		require.Equal(t, reservation.ID, rows[0].Object.ID)
+		require.True(t, rows[0].Object.Invalidated)
+		require.False(t, rows[0].Object.Counted)
+		require.Equal(t, order.ID, rows[0].Object.Order.(*orders.Order).ID)
+		require.Equal(t, used.ID, rows[1].Object.ID)
+		require.False(t, rows[1].Object.Invalidated)
+		require.True(t, rows[1].Object.Counted)
+
+		client := newCouponTestClient(t)
+		cart := client.cart(t, true, product)
+		assertCouponCart(t, client.redeem(t, coupon, http.StatusOK, ""), cart, "5")
 	})
 }
 

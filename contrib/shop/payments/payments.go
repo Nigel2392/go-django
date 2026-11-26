@@ -37,6 +37,9 @@ type PaymentStatus struct {
 	// Amount is the confirmed order-currency amount when paid and the original
 	// order-currency amount in other states.
 	Amount Money
+	// ProviderFee is the processing fee reported by the PSP in its own currency.
+	// An omitted fee leaves any previously reported fee in place.
+	ProviderFee *Money
 }
 
 type Checkout struct {
@@ -182,6 +185,9 @@ var providers sync.Map
 func RegisterProvider(key string, factory ProviderFactory) {
 	if key == "" || factory == nil {
 		panic("payments: provider key and factory are required")
+	}
+	if key == freeCheckoutProvider {
+		panic("payments: reserved provider key " + key)
 	}
 
 	if _, loaded := providers.LoadOrStore(key, factory); loaded {

@@ -330,6 +330,73 @@ func testServiceFailures(t *testing.T, ctx context.Context, psp *servicePSP, acc
 		account.PercentageFee = decimal.Zero
 		queries.GetQuerySet(&ProviderAccount{}).Filter("ID", account.ID).Select("FixedFee", "PercentageFee").Update(account)
 	})
+	t.Run("free checkout persists the zero total without using a provider", func(t *testing.T) {
+		order, err := queries.GetQuerySet(&Order{}).Create(&Order{ID: drivers.NewULID()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := drivers.NewULID()
+		for _, tc := range []struct {
+			name  string
+			order attrs.Definer
+			code  string
+			id    drivers.ULID
+		}{
+			{"missing order", (*Order)(nil), "EUR", id},
+			{"missing ID", order, "EUR", drivers.ULID{}},
+			{"invalid currency code", order, "EURO", id},
+			{"noncanonical currency", order, "eur", id},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				if _, err := CreateFreeCheckoutWithID(ctx, tc.order, tc.code, tc.id); err == nil {
+					t.Fatal("invalid free checkout was accepted")
+				}
+			})
+		}
+
+		p, err := CreateFreeCheckoutWithID(ctx, order, "EUR", id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p.ID != id || !p.IsFreeCheckout() || p.Currency != "EUR" {
+			t.Fatalf("unexpected free checkout: %+v", p)
+		}
+
+		beforeCreates, beforeGets, beforeOps := psp.creates, psp.gets, psp.calls
+		for range 2 {
+			checkout, err := Start(ctx, id, "", "")
+			if err != nil || checkout.State != paystate.STATUS_NO_PAYMENT_REQUIRED ||
+				!checkout.Amount.Amount.IsZero() || checkout.Amount.Currency != "EUR" ||
+				checkout.ProviderRef != "" || checkout.URL != "" || checkout.ProviderFee != nil {
+				t.Fatalf("unexpected free checkout replay: %+v, %v", checkout, err)
+			}
+
+			saved, err := Refresh(ctx, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !saved.IsFreeCheckout() || saved.Account != nil || saved.ProviderFee.Data != nil || len(saved.History.Data) != 1 {
+				t.Fatalf("unexpected stored free checkout: %+v", saved)
+			}
+			event := saved.History.Data[0]
+			if event.Kind != EventNoPaymentRequired || event.State != paystate.STATUS_NO_PAYMENT_REQUIRED || event.At.IsZero() {
+				t.Fatalf("unexpected free checkout event: %+v", event)
+			}
+		}
+
+		for _, kind := range []string{"refund", "void", "capture", "cancel"} {
+			_, err := invokeServiceOperation(ctx, id, kind, OperationRequest{RequestID: "free"}, refund("", "1").Amount)
+			if !errors.Is(err, ErrUnsupportedOperation) {
+				t.Fatalf("%s returned %v, want ErrUnsupportedOperation", kind, err)
+			}
+		}
+		if _, err := ResolveOperation(ctx, id, "free", OperationResult{State: OperationFailed}); !errors.Is(err, ErrUnsupportedOperation) {
+			t.Fatalf("ResolveOperation returned %v, want ErrUnsupportedOperation", err)
+		}
+		if psp.creates != beforeCreates || psp.gets != beforeGets || psp.calls != beforeOps {
+			t.Fatal("the payment provider was contacted for a free checkout")
+		}
+	})
 	t.Run("start failures preserve an unopened payment", func(t *testing.T) {
 		p := seed(paystate.STATUS_INIT)
 		p.TransactionID = sql.NullString{}
@@ -398,6 +465,99 @@ func testServiceFailures(t *testing.T, ctx context.Context, psp *servicePSP, acc
 			if err != nil || got.AuthorizationRef != "auth" || got.CaptureRef != "capture" {
 				t.Fatal("resource references lost", err)
 			}
+		}
+	})
+	t.Run("provider processing fee is a separate payment snapshot", func(t *testing.T) {
+		p := seed(paystate.STATUS_INIT)
+		p.TransactionID = sql.NullString{}
+		p.Fee = decimal.RequireFromString("0.65")
+		save(p, "TransactionID", "Fee")
+
+		initialFee := &Money{Amount: decimal.RequireFromString("0.375"), Currency: "USD"}
+		psp.status = PaymentStatus{
+			ProviderRef: "provider-fee-checkout",
+			State:       paystate.STATUS_PENDING,
+			Amount:      Money{Amount: p.Amount, Currency: p.Currency},
+			ProviderFee: initialFee,
+		}
+		started, err := Start(ctx, p.ID, "https://return", "https://callback")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if started.ProviderFee == nil || started.ProviderFee == initialFee {
+			t.Fatalf("checkout did not return an independent provider fee: %+v", started.ProviderFee)
+		}
+		replayed, err := Start(ctx, p.ID, "https://return", "https://callback")
+		if err != nil || replayed.ProviderFee == nil || !replayed.ProviderFee.Amount.Equal(initialFee.Amount) {
+			t.Fatalf("checkout replay did not return the saved fee: %+v, %v", replayed.ProviderFee, err)
+		}
+
+		checkFee := func(want string, wantEvents int) *Payment {
+			t.Helper()
+			got, err := getAttempt(ctx, p.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fee := got.ProviderFee.Data
+			if fee == nil || fee.Currency != "USD" || !fee.Amount.Equal(decimal.RequireFromString(want)) {
+				t.Fatalf("stored provider fee: got %+v, want %s USD", fee, want)
+			}
+			if !got.Amount.Equal(p.Amount) || !got.Fee.Equal(p.Fee) || got.Currency != p.Currency {
+				t.Fatalf("provider fee changed buyer's payment: %+v", got)
+			}
+			if len(got.History.Data) != wantEvents {
+				t.Fatalf("wrong event count: got %d, want %d", len(got.History.Data), wantEvents)
+			}
+			return got
+		}
+
+		got := checkFee("0.375", 1)
+		opened := got.History.Data[0]
+		if opened.Kind != EventCheckoutOpened || opened.ProviderFee == nil || !opened.ProviderFee.Amount.Equal(initialFee.Amount) {
+			t.Fatalf("checkout event did not record fee: %+v", opened)
+		}
+
+		psp.status.ProviderFee = &Money{Amount: decimal.Zero, Currency: "USD"}
+		for range 2 {
+			if err := reconcileWebhook(ctx, account, psp.status); err != nil {
+				t.Fatal(err)
+			}
+		}
+		got = checkFee("0", 2)
+		change := got.History.Data[1]
+		if change.Kind != EventProviderFeeUpdated || change.ProviderFee == nil || !change.ProviderFee.Amount.IsZero() {
+			t.Fatalf("fee-only reconciliation lost explicit zero: %+v", change)
+		}
+
+		psp.status.State = paystate.STATUS_PAID
+		psp.status.ProviderFee = nil
+		if _, err := Refresh(ctx, p.ID); err != nil {
+			t.Fatal(err)
+		}
+		got = checkFee("0", 3)
+		if got.State != paystate.STATUS_PAID || got.History.Data[2].ProviderFee != nil {
+			t.Fatalf("omitted fee changed history: %+v", got.History.Data)
+		}
+
+		psp.status.State = paystate.STATUS_PENDING
+		psp.status.ProviderFee = initialFee
+		if _, err := Refresh(ctx, p.ID); err != nil {
+			t.Fatal(err)
+		}
+		if checkFee("0", 3).State != paystate.STATUS_PAID {
+			t.Fatal("stale provider status rolled back state")
+		}
+
+		psp.status.State = paystate.STATUS_PAID
+		for _, badFee := range []*Money{
+			{Amount: decimal.NewFromInt(-1), Currency: "USD"},
+			{Amount: decimal.NewFromInt(1), Currency: "USDX"},
+		} {
+			psp.status.ProviderFee = badFee
+			if _, err := Refresh(ctx, p.ID); err == nil {
+				t.Fatalf("invalid provider fee accepted: %+v", badFee)
+			}
+			checkFee("0", 3)
 		}
 	})
 	t.Run("provider failure to resolve and missing transaction", func(t *testing.T) {

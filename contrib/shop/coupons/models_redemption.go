@@ -19,6 +19,7 @@ type Redemption struct {
 	Order          attrs.Definer
 	DiscountAmount decimal.Decimal
 	Invalidated    bool
+	Counted        bool // Included in the coupon's UsageCount.
 	RedeemedAt     time.Time
 }
 
@@ -93,8 +94,8 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "DiscountAmount", &m.DiscountAmount, func() fattrs.PtrFieldConfig[*Redemption, decimal.Decimal] {
 			return fattrs.PtrFieldConfig[*Redemption, decimal.Decimal]{
 				Config: attrs.Config{
-					Precision: 13,
-					Scale:     4,
+					Precision: 19,
+					Scale:     10,
 					ReadOnly:  true,
 					Null:      false,
 					Blank:     false,
@@ -106,6 +107,15 @@ func (m *Redemption) FieldDefs(ctx context.Context) attrs.Definitions {
 				Config: attrs.Config{
 					ReadOnly: true,
 					Blank:    true,
+				},
+			}
+		}),
+		fattrs.Field(m, "Counted", &m.Counted, func() fattrs.PtrFieldConfig[*Redemption, bool] {
+			return fattrs.PtrFieldConfig[*Redemption, bool]{
+				Config: attrs.Config{
+					ReadOnly: true,
+					Blank:    true,
+					Default:  false,
 				},
 			}
 		}),

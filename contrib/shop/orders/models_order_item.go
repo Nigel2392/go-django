@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -22,6 +23,7 @@ type OrderItem struct {
 	ID           drivers.ULID
 	Order        *Order
 	Product      drivers.JSON[ProductData]
+	Pricing      drivers.JSON[*OrderItemPricing]
 	Supplier     products.SupplierValue // product also embeds this, but we cannot query the JSON easily
 	SupplierData *blocks.StructBlockValue
 	ItemPrice    decimal.Decimal
@@ -29,6 +31,13 @@ type OrderItem struct {
 	Amount       int
 
 	supplierBlock blocks.Block `json:"-"`
+}
+
+// OrderItemPricing captures the totals and coupon allocations used at checkout.
+// The map is keyed by coupon redemption ID.
+type OrderItemPricing struct {
+	Totals            price.Totals
+	RedemptionAmounts map[uint64]decimal.Decimal
 }
 
 func (m *OrderItem) AfterQuery(ctx context.Context) (err error) {
@@ -71,6 +80,13 @@ func (m *OrderItem) FieldDefs(ctx context.Context) attrs.Definitions {
 			return fattrs.PtrFieldConfig[*OrderItem, drivers.JSON[ProductData]]{
 				Null:  false,
 				Blank: false,
+			}
+		}),
+		fattrs.Field(m, "Pricing", &m.Pricing, func() fattrs.PtrFieldConfig[*OrderItem, drivers.JSON[*OrderItemPricing]] {
+			return fattrs.PtrFieldConfig[*OrderItem, drivers.JSON[*OrderItemPricing]]{
+				Null:     true,
+				Blank:    true,
+				ReadOnly: true,
 			}
 		}),
 		fattrs.Field(m, "ItemPrice", &m.ItemPrice, func() fattrs.PtrFieldConfig[*OrderItem, decimal.Decimal] {

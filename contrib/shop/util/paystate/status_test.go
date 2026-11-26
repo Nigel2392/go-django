@@ -18,6 +18,7 @@ var testStatusTranslationsTable = [][2]PayState{
 	{STATUS_AUTHORIZE, "Authorize"},
 	{STATUS_PARTLY_CAPTURED, "Partly Captured"},
 	{STATUS_PAID, "Paid"},
+	{STATUS_NO_PAYMENT_REQUIRED, "No payment required"},
 	{STATUS_CHARGEBACK, "Chargeback"},
 	{STATUS_REFUNDING, "Refunding"},
 	{STATUS_REFUND, "Refunded"},

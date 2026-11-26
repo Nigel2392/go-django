@@ -218,6 +218,7 @@ func clearCartQueryTables(t *testing.T) {
 		&coupons.Coupon{},
 		&carts.CartItem{},
 		&carts.Cart{},
+		&Order{},
 	}
 	for _, m := range modelsToClear {
 		if _, err := queries.GetQuerySet(m).Delete(); err != nil {
@@ -747,8 +748,8 @@ func TestCartQuery(t *testing.T) {
 		// Item 1 (Mid): receives remaining 18 from pool -> price 32, fee 5, tax (37)*0.21 = 7.77
 		cp1 := seedCoupon(t, "FIXED15", "Fixed 15", false, "15.00")
 		cp2 := seedCoupon(t, "FIXED25", "Fixed 25", false, "25.00")
-		_ = seedRedemption(t, cart, cp1, customer, false)
-		_ = seedRedemption(t, cart, cp2, customer, false)
+		r1 := seedRedemption(t, cart, cp1, customer, false)
+		r2 := seedRedemption(t, cart, cp2, customer, false)
 
 		_, rows := collectCalc(t, carts.Query().Filter("ID", cart.ID))
 		if len(rows) != 1 {
@@ -772,6 +773,11 @@ func TestCartQuery(t *testing.T) {
 		assertTotalsEqual(t, "cart.Totals", price.Totals{
 			TotalPrice: d("32"), TotalFee: d("5"), TotalTax: d("7.77"), TotalDiscount: d("40"), LeftOverDiscount: d("0"),
 		}, cr.Totals)
+		assertDecimalEqual(t, "cart coupon 15", d("15"), cr.RedemptionAmounts[r1.ID])
+		assertDecimalEqual(t, "cart coupon 25", d("25"), cr.RedemptionAmounts[r2.ID])
+		assertDecimalEqual(t, "cheap coupon 25", d("22"), cr.Items[0].RedemptionAmounts[r2.ID])
+		assertDecimalEqual(t, "mid coupon 25", d("3"), cr.Items[1].RedemptionAmounts[r2.ID])
+		assertDecimalEqual(t, "mid coupon 15", d("15"), cr.Items[1].RedemptionAmounts[r1.ID])
 	})
 
 	t.Run("Calc: Cart-wide percentage coupons stack and cap at 100%", func(t *testing.T) {
@@ -802,8 +808,8 @@ func TestCartQuery(t *testing.T) {
 
 			cp1 := seedCoupon(t, "PCT700", "70% off", true, "70.00")
 			cp2 := seedCoupon(t, "PCT600", "60% off", true, "60.00")
-			_ = seedRedemption(t, cart, cp1, customer, false)
-			_ = seedRedemption(t, cart, cp2, customer, false)
+			r1 := seedRedemption(t, cart, cp1, customer, false)
+			r2 := seedRedemption(t, cart, cp2, customer, false)
 
 			_, rows := collectCalc(t, carts.Query().Filter("ID", cart.ID))
 			cr := rows[0]
@@ -811,6 +817,8 @@ func TestCartQuery(t *testing.T) {
 			assertTotalsEqual(t, "cart.Totals", price.Totals{
 				TotalPrice: d("0"), TotalFee: d("5"), TotalTax: d("1.05"), TotalDiscount: d("50"), LeftOverDiscount: d("0"),
 			}, cr.Totals)
+			assertDecimalEqual(t, "70% redemption", d("35"), cr.RedemptionAmounts[r1.ID])
+			assertDecimalEqual(t, "remaining 30% redemption", d("15"), cr.RedemptionAmounts[r2.ID])
 		})
 	})
 
@@ -974,6 +982,55 @@ func TestCartQuery(t *testing.T) {
 		assertTotalsEqual(t, "cart", price.Totals{
 			TotalPrice: d("50"), TotalFee: d("5"), TotalTax: d("11.55"), TotalDiscount: d("0"), LeftOverDiscount: d("0"),
 		}, cr.Totals)
+	})
+
+	t.Run("Calc: Orders consume their reservations and capped percentages allocate by redemption ID", func(t *testing.T) {
+		clearCartQueryTables(t)
+
+		cart := seedCart(t, "sess-order-redemptions", nil, true, time.Now())
+		_ = seedCartItem(t, cart, prodMid, 1)
+		assigned := seedRedemption(t, cart, seedCoupon(t, "ASSIGN25", "Assigned fixed 25", false, "25.00"), customer, false)
+		order, err := queries.GetQuerySet(&Order{}).Create(&Order{ID: drivers.NewULID()})
+		if err != nil {
+			t.Fatalf("failed to create order: %v", err)
+		}
+		_, err = queries.
+			GetQuerySet(&coupons.Redemption{}).
+			Filter("ID", assigned.ID).
+			Select("Order").
+			Update(&coupons.Redemption{Order: order})
+		if err != nil {
+			t.Fatalf("failed to assign redemption to order: %v", err)
+		}
+		first := seedRedemption(t, cart, seedCoupon(t, "PCT100A", "First 100%", true, "100"), customer, false)
+		second := seedRedemption(t, cart, seedCoupon(t, "PCT100B", "Second 100%", true, "100"), customer, false)
+
+		_, rows := collectCalc(t, carts.Query().Filter("ID", cart.ID))
+		cr := rows[0]
+		assertDecimalEqual(t, "first 100% discount", d("50"), cr.RedemptionAmounts[first.ID])
+		if len(cr.RedemptionAmounts) != 1 || len(cr.Items[0].RedemptionAmounts) != 1 {
+			t.Fatalf("expected one allocated coupon, got %+v", cr.RedemptionAmounts)
+		}
+		if _, ok := cr.Items[0].RedemptionAmounts[second.ID]; ok || len(cr.Coupons) != 2 {
+			t.Fatalf("expected only the unassigned coupons to be eligible and the second to be unused: %+v", cr)
+		}
+		assertDecimalEqual(t, "cart discount", d("50"), cr.Totals.TotalDiscount)
+	})
+
+	t.Run("Calc: Percentage allocations retain fractional precision on each line", func(t *testing.T) {
+		clearCartQueryTables(t)
+
+		cart := seedCart(t, "sess-fractional-redemptions", nil, true, time.Now())
+		prodFractional := seedProduct(t, cat, "Fractional price", "fractional-price", "SKU-FRAC", "19.9999", "0", "0")
+		_ = seedCartItem(t, cart, prodFractional, 1)
+		_ = seedCartItem(t, cart, prodMid, 1)
+		redemption := seedRedemption(t, cart, seedCoupon(t, "FRACPCT", "Fractional percentage", true, "7.1234"), customer, false)
+
+		_, rows := collectCalc(t, carts.Query().Filter("ID", cart.ID))
+		cr := rows[0]
+		assertDecimalEqual(t, "fractional product discount", d("1.4246728766"), cr.Items[0].RedemptionAmounts[redemption.ID])
+		assertDecimalEqual(t, "mid product discount", d("3.5617"), cr.Items[1].RedemptionAmounts[redemption.ID])
+		assertDecimalEqual(t, "cart discount", cr.Totals.TotalDiscount, cr.RedemptionAmounts[redemption.ID])
 	})
 
 	t.Run("Calc: Multiple carts in one query keep items and redemptions strictly isolated", func(t *testing.T) {

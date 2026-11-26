@@ -13,6 +13,7 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/editor"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
@@ -151,6 +152,9 @@ func setupOrderTestEnv(t *testing.T) {
 					&orders.Order{},
 					&payments.Payment{},
 					&orders.OrderItem{},
+					&coupons.Coupon{},
+					&coupons.CouponProductThrough{},
+					&coupons.Redemption{},
 				}
 				return cfg
 			}),
@@ -174,6 +178,9 @@ func setupOrderTestEnv(t *testing.T) {
 		&orders.Order{},
 		&payments.Payment{},
 		&orders.OrderItem{},
+		&coupons.Coupon{},
+		&coupons.CouponProductThrough{},
+		&coupons.Redemption{},
 	)
 	tables.IfNotExists = true
 	tables.Create()
@@ -249,6 +256,9 @@ func seedTestCartItem(t *testing.T, cart *carts.Cart, prod *products.Product, am
 
 func clearOrderAndCartTables(t *testing.T) {
 	t.Helper()
+	if _, err := queries.GetQuerySet(&coupons.Redemption{}).Delete(); err != nil {
+		t.Fatalf("failed to clear Redemption table: %v", err)
+	}
 	if _, err := queries.GetQuerySet(&payments.Payment{}).Delete(); err != nil {
 		t.Fatalf("failed to clear Payment table: %v", err)
 	}
