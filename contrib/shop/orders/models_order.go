@@ -116,6 +116,19 @@ func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
 		})
 	}
 
+	couponPanels, err := m.couponPanels(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "EditPanels/coupons")
+	}
+	if len(couponPanels) == 0 {
+		couponPanels = []admin.Panel{
+			&admin.AlertPanel{
+				Type: admin.ALERT_INFO,
+				HTML: trans.S("No coupons redeemed for this order."),
+			},
+		}
+	}
+
 	tabs := []admin.TabPanel{
 		admin.PanelTab(
 			trans.S("Product Details"),
@@ -144,14 +157,10 @@ func (m *Order) EditPanels(ctx context.Context) ([]admin.Panel, error) {
 			trans.S("Payment Details"),
 			paymentPanels...,
 		),
-	}
-
-	couponPanels, err := m.couponPanels(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "EditPanels/coupons")
-	}
-	if len(couponPanels) > 0 {
-		tabs = append(tabs, admin.PanelTab(trans.S("Coupons"), couponPanels...))
+		admin.PanelTab(
+			trans.S("Redeemed Coupons"),
+			couponPanels...,
+		),
 	}
 
 	return []admin.Panel{admin.TabbedPanel(tabs...)}, nil

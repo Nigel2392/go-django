@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"strings"
+	"time"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
@@ -18,7 +19,7 @@ func (m *Order) couponPanels(ctx context.Context) ([]admin.Panel, error) {
 	redemptions, err := queries.
 		GetQuerySet(&coupons.Redemption{}).
 		WithContext(ctx).
-		Select("*", "Coupon.Code").
+		Select("*", "Coupon.Code", "Coupon.Title").
 		Filter(
 			expr.Q("Order", m.ID),
 		).
@@ -58,9 +59,27 @@ func (m *Order) couponPanels(ctx context.Context) ([]admin.Panel, error) {
 		status := admin.ALERT_INFO
 		var html strings.Builder
 		escape := template.HTMLEscapeString
-		if redemption.Invalidated {
+		if redemption.Coupon != nil && redemption.Coupon.Title != "" {
+			fmt.Fprintf(&html, "<p>%s</p>", escape(redemption.Coupon.Title))
+		}
+
+		var state string
+		switch {
+		case redemption.Invalidated:
 			status = admin.ALERT_WARNING
-			fmt.Fprintf(&html, "<p>%s</p>", escape(trans.T(ctx, "Reservation released")))
+			state = trans.T(ctx, "Reservation released")
+		case redemption.Counted:
+			status = admin.ALERT_SUCCESS
+			state = trans.T(ctx, "Counted toward coupon usage")
+		default:
+			state = trans.T(ctx, "Reserved for this order")
+		}
+		fmt.Fprintf(&html, "<p>%s</p>", escape(state))
+
+		if !redemption.RedeemedAt.IsZero() {
+			at := redemption.RedeemedAt.UTC()
+			fmt.Fprintf(&html, `<p>%s <time datetime="%s">%s</time></p>`,
+				escape(trans.T(ctx, "Redeemed at")), at.Format(time.RFC3339), at.Format("2006-01-02 15:04:05 UTC"))
 		}
 
 		if redemption.DiscountAmount.IsPositive() {

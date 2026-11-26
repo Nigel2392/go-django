@@ -385,7 +385,7 @@ func TestAdminProductViews(t *testing.T) {
 				},
 			},
 			&djester.BasicTest{
-				Label: "Order edit displays payment history and coupon allocations",
+				Label: "Order edit displays redeemed coupons and payment history",
 				Function: func(d *djester.Tester, t *testing.T) {
 					customer, err := queries.GetQuerySet(&customers.Customer{}).Create(&customers.Customer{
 						Email:     drivers.MustParseEmail("order-admin@example.test"),
@@ -394,6 +394,31 @@ func TestAdminProductViews(t *testing.T) {
 					})
 					require.NoError(t, err)
 					req := httptest.NewRequest(http.MethodPost, "/checkout", nil).WithContext(t.Context())
+					login, err := d.Login("admin_user")
+					require.NoError(t, err)
+					login.Body.Close()
+					defer d.Logout()
+					getOrderEdit := func(editURL string) *goquery.Document {
+						t.Helper()
+						resp, err := d.Get(editURL, nil, nil)
+						require.NoError(t, err)
+						defer resp.Body.Close()
+						require.Equal(t, http.StatusOK, resp.StatusCode)
+						doc, err := resp.DOM()
+						require.NoError(t, err)
+						return doc
+					}
+
+					emptyOrder, _, err := orders.CreateOrder(req, customer, nil, &carts.CartItem{
+						Product: seededProd1,
+						Amount:  1,
+					})
+					require.NoError(t, err)
+					emptyEditURL := django.Reverse("admin:apps:model:edit", "shop", "orders", emptyOrder.ID)
+					emptyDoc := getOrderEdit(emptyEditURL)
+					require.Contains(t, emptyDoc.Text(), "Redeemed Coupons")
+					require.Contains(t, emptyDoc.Text(), "No coupons redeemed for this order.")
+
 					cart, err := queries.GetQuerySet(&carts.Cart{}).Create(&carts.Cart{Active: true})
 					require.NoError(t, err)
 					_, err = queries.GetQuerySet(&carts.CartItem{}).Create(&carts.CartItem{
@@ -415,9 +440,11 @@ func TestAdminProductViews(t *testing.T) {
 						_, err = queries.GetQuerySet(&coupons.Coupon{}).Filter("ID__in", couponIDs).Delete()
 						require.NoError(t, err)
 					})
+					redeemedAt := time.Date(2025, time.March, 4, 5, 6, 7, 0, time.UTC)
 					redemption, err := queries.GetQuerySet(&coupons.Redemption{}).Create(&coupons.Redemption{
-						Cart:   cart,
-						Coupon: coupon,
+						Cart:       cart,
+						Coupon:     coupon,
+						RedeemedAt: redeemedAt,
 					})
 					require.NoError(t, err)
 					priced, err := carts.
@@ -462,16 +489,8 @@ func TestAdminProductViews(t *testing.T) {
 					})
 					require.NoError(t, err)
 
-					login, err := d.Login("admin_user")
-					require.NoError(t, err)
-					login.Body.Close()
-					defer d.Logout()
 					editURL := django.Reverse("admin:apps:model:edit", "shop", "orders", order.ID)
-					resp, err := d.Get(editURL, nil, nil)
-					require.NoError(t, err)
-					require.Equal(t, http.StatusOK, resp.StatusCode)
-					doc, err := resp.DOM()
-					require.NoError(t, err)
+					doc := getOrderEdit(editURL)
 					require.Contains(t, doc.Text(), "Payment "+payment.ID.String())
 					require.Contains(t, doc.Text(), "<admin-test-payment>")
 					require.Zero(t, doc.Find("admin-test-payment").Length())
@@ -479,7 +498,11 @@ func TestAdminProductViews(t *testing.T) {
 					require.Equal(t, 2, events.Length())
 					require.Contains(t, events.Eq(0).Text(), "Payment prepared")
 					require.Contains(t, events.Eq(1).Text(), "Provider checkout failed to open")
+					require.Contains(t, doc.Text(), "Redeemed Coupons")
 					require.Contains(t, doc.Text(), "Coupon <SAVE-12>")
+					require.Contains(t, doc.Text(), "Order discount")
+					require.Contains(t, doc.Text(), "Reserved for this order")
+					require.Equal(t, 1, doc.Find(`time[datetime="`+redeemedAt.Format(time.RFC3339)+`"]`).Length())
 					require.Zero(t, doc.Find("save-12").Length())
 					require.Contains(t, doc.Find(".panel-alert ul li").Text(), "Ultrawide Monitor · 12.5 discount")
 					require.Contains(t, doc.Text(), "Coupon LEGACY")
@@ -510,6 +533,8 @@ func TestAdminProductViews(t *testing.T) {
 					used, err := queries.GetQuerySet(&coupons.Coupon{}).Filter("ID", coupon.ID).Get()
 					require.NoError(t, err)
 					require.EqualValues(t, 1, used.Object.UsageCount)
+					completedDoc := getOrderEdit(editURL)
+					require.Contains(t, completedDoc.Text(), "Counted toward coupon usage")
 				},
 			},
 			&djester.BasicTest{
