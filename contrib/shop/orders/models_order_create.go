@@ -142,6 +142,7 @@ func CreateOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart
 		orderItem := &OrderItem{
 			Order:     order,
 			ItemPrice: cartItem.Product.Price,
+			TaxRate:   cartItem.Product.TaxRate,
 			Amount:    int(cartItem.Amount),
 			Supplier:  cartItem.Product.Supplier,
 			Product: drivers.JSON[ProductData]{

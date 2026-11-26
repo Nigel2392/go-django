@@ -54,6 +54,12 @@ func (qs *CartQuery) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Cart, *Cart
 }
 
 func (qs *CartQuery) CartForRequest(r *http.Request) *CartQuery {
+	return qs.CartsForRequest(r).Filter("Active", true).OrderBy("CreatedAt")
+}
+
+// CartsForRequest scopes carts to the session or authenticated user,
+// including inactive carts.
+func (qs *CartQuery) CartsForRequest(r *http.Request) *CartQuery {
 	if r == nil {
 		return qs.
 			Clone().
@@ -81,10 +87,7 @@ func (qs *CartQuery) CartForRequest(r *http.Request) *CartQuery {
 			Filter(expr.Q("Active", true).And(expr.Q("Active", false)))
 	}
 
-	return qs.
-		Clone().
-		Filter(baseQ.And(expr.Q("Active", true))).
-		OrderBy("CreatedAt")
+	return qs.Clone().Filter(baseQ)
 }
 
 func (qs *CartQuery) PreloadProducts(productFields ...string) *CartQuery {

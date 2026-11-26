@@ -55,6 +55,9 @@ import (
 type CartTestUser struct {
 	ID              int `attrs:"primary"`
 	Name            string
+	Email           string
+	FirstName       string
+	LastName        string
 	LoggedIn        bool
 	IsAdministrator bool
 }
@@ -222,11 +225,13 @@ func TestCartsAPI(t *testing.T) {
 
 	d := &djester.Tester{
 		Settings: map[string]any{
-			django.APPVAR_ALLOWED_HOSTS:  []string{"*"},
-			django.APPVAR_DISABLE_NOSURF: true,
-			django.APPVAR_DEBUG:          true,
-			django.APPVAR_DATABASE:       db,
-			shop.APPVAR_SHOP_CURRENCY:    "EUR",
+			django.APPVAR_ALLOWED_HOSTS:           []string{"*"},
+			django.APPVAR_DISABLE_NOSURF:          true,
+			django.APPVAR_DEBUG:                   true,
+			django.APPVAR_DATABASE:                db,
+			shop.APPVAR_SHOP_CURRENCY:             "EUR",
+			shop.APPVAR_SHOP_CHECKOUT_ORIGIN:      "https://merchant.example.test",
+			shop.APPVAR_SHOP_CHECKOUT_RETURN_PATH: "/order/thanks",
 		},
 		Flags: []django.AppFlag{
 			django.FlagSkipCmds,
@@ -255,6 +260,13 @@ func TestCartsAPI(t *testing.T) {
 					Name:            "shop_user",
 					LoggedIn:        true,
 					IsAdministrator: false,
+				},
+				"checkout_user": &CartTestUser{
+					ID: 72, Name: "checkout_user", Email: "buyer@example.test",
+					FirstName: "Test", LastName: "Buyer", LoggedIn: true,
+				},
+				"other_checkout_user": &CartTestUser{
+					ID: 73, Name: "other_checkout_user", Email: "other-buyer@example.test", LoggedIn: true,
 				},
 			},
 		},
@@ -709,6 +721,12 @@ func TestCartsAPI(t *testing.T) {
 				Label: "Coupon redemption cases",
 				Function: func(_ *djester.Tester, t *testing.T) {
 					testCouponRedemptionCases(t, prod1, prod2, prodNotInCart)
+				},
+			},
+			&djester.BasicTest{
+				Label: "Pay for the active cart through the checkout endpoint",
+				Function: func(d *djester.Tester, t *testing.T) {
+					testPaymentCheckout(d, t, prod1, prod2)
 				},
 			},
 		},

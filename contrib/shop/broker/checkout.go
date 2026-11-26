@@ -46,6 +46,8 @@ type CheckoutRequest struct {
 type PreparedCheckout struct {
 	Order   *orders.Order
 	Payment *payments.Payment
+	// Cart is the priced cart on initial preparation. It is nil on retries.
+	Cart *carts.CartRow
 }
 
 // PrepareCheckout snapshots an active cart and saves the order and its first
@@ -119,7 +121,7 @@ func (b Broker) PrepareCheckout(r *http.Request, request CheckoutRequest) (*Prep
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	return &PreparedCheckout{Order: order, Payment: attempt}, nil
+	return &PreparedCheckout{Order: order, Payment: attempt, Cart: cart}, nil
 }
 
 // StartCheckout opens provider checkout for a committed attempt owned by the

@@ -53,6 +53,11 @@ var translationsFS embed.FS
 
 const APPVAR_SHOP_CURRENCY = "SHOP_CURRENCY"
 
+const (
+	APPVAR_SHOP_CHECKOUT_ORIGIN      = "SHOP_CHECKOUT_ORIGIN"
+	APPVAR_SHOP_CHECKOUT_RETURN_PATH = "SHOP_CHECKOUT_RETURN_PATH"
+)
+
 type ShopAppConfig struct {
 	*apps.DBRequiredAppConfig
 	ADMIN_ROUTE *mux.Route
@@ -826,17 +831,25 @@ func NewAppConfig() (django.AppConfig, error) {
 
 		/*
 			api:payments:options	   GET   	   -> [][public.PaymentOption]
+			api:payments:checkout      POST         -> [public.PaymentCheckoutRequest] -> provider redirect
 			api:payments:webhook, <ID> POST -> ??? -> [payments.Provider.HandleWebhook]
 		*/
 		var paymentsHandler = func(w http.ResponseWriter, r *http.Request) {
 			payments.ServeWebhook(w, r, mux.Vars(r).Get("account"))
 		}
 
+		currency := djangoapps.CONFIG.Get(APPVAR_SHOP_CURRENCY, "")
 		p := public.PaymentsAPI{
-			Currency: djangoapps.CONFIG.Get(APPVAR_SHOP_CURRENCY, ""),
+			Currency: currency,
+		}
+		checkout := public.CheckoutAPI{
+			Currency:   currency,
+			Origin:     djangoapps.CONFIG.Get(APPVAR_SHOP_CHECKOUT_ORIGIN, ""),
+			ReturnPath: djangoapps.CONFIG.Get(APPVAR_SHOP_CHECKOUT_RETURN_PATH, "/"),
 		}
 		pay := baseApiRoute.Get("/payments", nil, "payments")
 		pay.Get("/options", http.HandlerFunc(p.PaymentOptions), "options")
+		pay.Post("/checkout", http.HandlerFunc(checkout.Checkout), "checkout")
 		pay.Post("/webhook/<<account>>", http.HandlerFunc(paymentsHandler), "webhook")
 
 		goldcrest.Register(django.HOOK_SETUP_NOSURF, 0, django.NosurfSetupHook(func(_ *django.Application, h *nosurf.CSRFHandler) {

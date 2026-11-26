@@ -60,6 +60,10 @@ Implement `payments.Capturer`, `payments.Voider`, `payments.Refunder`, or `payme
 
 ## Connect checkout to the storefront
 
+For the built-in checkout, set `shop.APPVAR_SHOP_CHECKOUT_ORIGIN` to your public shop origin and optionally set `shop.APPVAR_SHOP_CHECKOUT_RETURN_PATH` to your order confirmation page. Use `django.Reverse("api:payments:checkout")` as the action of a POST form. Include the framework CSRF token and an `account_id` field with the ID from the payment options response. The buyer must be signed in with an email address on their user or linked customer record. The view also accepts a JSON body. It converts the cart once and returns a 303 to the provider. If the provider call fails, submit the same account again to resume the saved attempt. The return URL includes `payment_id` for looking up the payment. [Checkout handler](../../../contrib/shop/views/public/payment_checkout.go)
+
+For a custom checkout, call the broker from your storefront handler.
+
 1. Resolve the customer and authorize access to the cart in your handler. Let the buyer select an eligible payment account. Issue one stable attempt ID for this checkout submission and keep it for retries.
 2. Call `broker.Broker.PrepareCheckout` with the authorized inputs. The broker prices the cart on the server, saves the order and product snapshots, and creates a payment attempt in the same transaction. `orders.Signals.Created` runs inside the order transaction. Use that context for database writes that should roll back with the order.
 3. Call `Broker.StartCheckout` after commit. Redirect the buyer to the returned checkout URL when the provider supplies one. Build the return and webhook URLs from your configured storefront origin. Use `django.Reverse("api:payments:webhook", account.ID)` for the webhook path.
@@ -118,4 +122,4 @@ go test -tags "testing_auth test sqlite" ./contrib/shop/... ./examples/commerce/
 | [`util/paystate`](../../../contrib/shop/util/paystate) | Use the normalized payment states shared by provider adapters and the admin. |
 | [`views/adminviews`](../../../contrib/shop/views/adminviews) | See how the stock admin handles supplier selection, order editing, and coupon generation. |
 | [`views/adminviews/generic`](../../../contrib/shop/views/adminviews/generic) | Reuse list view configuration, filters, and pagination controls. |
-| [`views/public`](../../../contrib/shop/views/public) | Use the cart, coupon redemption, and payment options HTTP handlers. |
+| [`views/public`](../../../contrib/shop/views/public) | Use the cart, coupon redemption, payment options, and checkout HTTP handlers. |

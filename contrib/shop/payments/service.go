@@ -22,6 +22,7 @@ var (
 	ErrInvalidWebhook       = errors.New("invalid payment webhook")
 	ErrUnsupportedOperation = errors.New("payment provider does not support operation")
 	ErrOperationPending     = errors.New("payment operation requires reconciliation")
+	ErrNonPositiveTotal     = errors.New("payment total must be positive")
 )
 
 type OperationRecord struct {
@@ -617,7 +618,7 @@ func createAttempt(ctx context.Context, order attrs.Definer, accountID drivers.U
 	}
 
 	if !quote.Total.IsPositive() {
-		return nil, errors.New("payment total must be positive")
+		return nil, ErrNonPositiveTotal
 	}
 
 	return queries.GetQuerySet(&Payment{}).
