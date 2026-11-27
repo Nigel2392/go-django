@@ -13,7 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/elliotchance/orderedmap/v2"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 )
 
 type finderModel struct {
@@ -38,13 +38,13 @@ func TestModelTranslationsFinder(t *testing.T) {
 		t.Fatalf("Find without apps = (%v, %v), want no matches", got, err)
 	}
 
-	django.Global.Apps = orderedmap.NewOrderedMap[string, django.AppConfig]()
+	djangoapps.ResetRegistry()
 	pages := apps.NewAppConfig("pages")
 	pages.ModelObjects = []attrs.Definer{&finderModel{}}
-	django.Global.Apps.Set("pages", pages)
 	private := apps.NewAppConfig("private")
 	private.ModelObjects = []attrs.Definer{&excludedFinderModel{}}
-	django.Global.Apps.Set("private", private)
+	djangoapps.RegisterApp("pages", pages)
+	djangoapps.RegisterApp("private", private)
 	got, err := finder.Find(nil, func(path string) bool {
 		return strings.HasSuffix(path, ".excludedFinderModel") || strings.HasSuffix(path, ".Internal")
 	})

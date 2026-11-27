@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/djester/quest"
@@ -64,10 +65,10 @@ type testOrderSupplierProduct struct {
 	SKU string
 }
 
-func (p *testOrderSupplierProduct) ProductPrice(ctx context.Context) products.Price {
-	return products.Price{
-		Unit:   currency.EUR,
-		Amount: p.Price,
+func (p *testOrderSupplierProduct) ProductPrice(ctx context.Context) price.Money {
+	return price.Money{
+		Currency: currency.EUR,
+		Amount:   p.Price,
 	}
 }
 

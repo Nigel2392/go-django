@@ -125,7 +125,7 @@ func NewAppConfig() django.AppConfig {
 			}
 		}
 
-		for app := range djangoapps.Apps {
+		for _, app := range djangoapps.Apps {
 			translatorFs, ok := app.(AppTranslationFilesystemDefiner)
 			if !ok {
 				continue

@@ -126,6 +126,13 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Preload(fields ...any) CONV {
 	return w.embedder
 }
 
+func (w *WrappedQuerySet[T, CONV, ORIG]) SelectRelated(fields ...string) CONV {
+	w = w.clone()
+	w.setup()
+	w.AbstractQuerySet = w.AbstractQuerySet.SelectRelated(fields...)
+	return w.embedder
+}
+
 func (w *WrappedQuerySet[T, CONV, ORIG]) Filter(key interface{}, vals ...interface{}) CONV {
 	w = w.clone()
 	w.setup()

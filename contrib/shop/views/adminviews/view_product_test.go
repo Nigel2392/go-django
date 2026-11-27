@@ -33,6 +33,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/djester"
@@ -96,10 +97,10 @@ type testAdminSupplierProduct struct {
 	SKU string
 }
 
-func (p *testAdminSupplierProduct) ProductPrice(ctx context.Context) products.Price {
-	return products.Price{
-		Unit:   currency.EUR,
-		Amount: p.Price,
+func (p *testAdminSupplierProduct) ProductPrice(ctx context.Context) price.Money {
+	return price.Money{
+		Currency: currency.EUR,
+		Amount:   p.Price,
 	}
 }
 
@@ -282,6 +283,9 @@ func TestAdminProductViews(t *testing.T) {
 			_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
 			_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
 			_, _ = queries.GetQuerySet(&products.Product{}).Delete()
+			if err := orders.SuppliersQuery().Sync(); err != nil {
+				return err
+			}
 			return nil
 		}
 		return cfg
@@ -476,12 +480,12 @@ func TestAdminProductViews(t *testing.T) {
 							Data: []payments.PaymentEvent{
 								{
 									At:    time.Unix(1, 0).UTC(),
-									Kind:  payments.EventPrepared,
-									State: paystate.STATUS_INIT,
+									Kind:  payments.EventCheckoutOpened,
+									State: paystate.STATUS_PENDING,
 								},
 								{
 									At:    time.Unix(2, 0).UTC(),
-									Kind:  payments.EventCheckoutFailed,
+									Kind:  payments.EventStatusUpdated,
 									State: paystate.STATUS_INIT,
 								},
 							},
@@ -496,8 +500,8 @@ func TestAdminProductViews(t *testing.T) {
 					require.Zero(t, doc.Find("admin-test-payment").Length())
 					events := doc.Find(".panel-alert ol li")
 					require.Equal(t, 2, events.Length())
-					require.Contains(t, events.Eq(0).Text(), "Payment prepared")
-					require.Contains(t, events.Eq(1).Text(), "Provider checkout failed to open")
+					require.Contains(t, events.Eq(0).Text(), "Provider checkout opened")
+					require.Contains(t, events.Eq(1).Text(), "Provider status updated")
 					require.Contains(t, doc.Text(), "Redeemed Coupons")
 					require.Contains(t, doc.Text(), "Coupon <SAVE-12>")
 					require.Contains(t, doc.Text(), "Order discount")

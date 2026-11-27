@@ -1,3 +1,6 @@
+//go:build test
+// +build test
+
 package migrator_test
 
 import (
@@ -44,9 +47,7 @@ func TestMigrator(t *testing.T) {
 		t.Fatalf("failed to initialize app: %v", err)
 	}
 
-	// db, _ = drivers.Open(context.Background(),"sqlite3", "file:./migrator_test.db")
-	// tmpDir = t.TempDir()
-	var tmpDir = "./migrations"
+	var tmpDir = t.TempDir()
 	var editor = testsql.NewTestMigrationEngine(t)
 	var engine = migrator.NewMigrationEngine(
 		tmpDir,
@@ -55,8 +56,6 @@ func TestMigrator(t *testing.T) {
 	// editor = sqlite.NewSQLiteSchemaEditor(db)
 	engine.SchemaEditor = editor
 	engine.MigrationLog = &migrator.MigrationEngineConsoleLog{}
-
-	os.RemoveAll(tmpDir)
 
 	// MakeMigrations
 	if err := engine.MakeMigrations(context.Background()); err != nil {
@@ -430,7 +429,7 @@ func TestMigratorBroad(t *testing.T) {
 		t.Fatalf("App initialization failed: %v", err)
 	}
 
-	var tmpDir = "./migrations"
+	var tmpDir = t.TempDir()
 	var editor = testsql.NewTestMigrationEngine(t)
 	var engine = migrator.NewMigrationEngine(
 		tmpDir,
@@ -441,8 +440,6 @@ func TestMigratorBroad(t *testing.T) {
 	engine.MigrationLog = &migrator.MigrationEngineConsoleLog{
 		Prefix: "TestMigratorBroad",
 	}
-
-	os.RemoveAll(tmpDir)
 
 	t.Logf("Migration directory: %s, proceeding to \"makemigrations\"", tmpDir)
 

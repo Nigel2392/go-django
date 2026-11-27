@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	autherrors "github.com/Nigel2392/go-django/contrib/auth/auth_errors"
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -25,7 +24,7 @@ func AppMiddleware(next http.Handler) http.Handler {
 			appName = appNameSlice[0]
 		}
 
-		var djangoApp, ok = django.Global.Apps.Get(appName)
+		var djangoApp, ok = djangoapps.GetAppForName(appName)
 		if !ok {
 			logger.Errorf(
 				"AdminSite.Route.Use: app %q not found in django.Global.Apps, falling back to AdminSite",

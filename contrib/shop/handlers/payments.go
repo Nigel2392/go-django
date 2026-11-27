@@ -22,31 +22,13 @@ func registerPaymentAudits() {
 		entry := paymentAudit(s.Payment, logger.INF)
 		entry.data["request_id"] = s.RequestID
 		entry.data["refund_amount"] = s.Amount.Amount.String()
-		entry.data["refund_currency"] = s.Amount.Currency
+		entry.data["refund_currency"] = s.Amount.Currency.String()
 		return entry
 	})
-	listenAudit(payments.Signals.Void, "shop:payments:void", paymentVoidedDefinition{}, func(s payments.PaymentVoidedSignal) auditEvent {
+	listenAudit(payments.Signals.Cancel, "shop:payments:cancel", paymentCancelledDefinition{}, func(s payments.PaymentCancelledSignal) auditEvent {
 		entry := paymentAudit(s.Payment, logger.INF)
 		entry.data["request_id"] = s.RequestID
 		return entry
-	})
-	listenAudit(payments.Signals.Capture, "shop:payments:capture", paymentCapturedDefinition{}, func(s payments.PaymentOperationSignal) auditEvent {
-		return paymentOperationAudit(s, logger.INF)
-	})
-	listenAudit(payments.Signals.Cancel, "shop:payments:cancel", paymentCancelledDefinition{}, func(s payments.PaymentOperationSignal) auditEvent {
-		return paymentOperationAudit(s, logger.INF)
-	})
-	listenAudit(payments.Signals.OperationRequested, "shop:payments:operation:requested", paymentOperationRequestedDefinition{}, func(s payments.PaymentOperationSignal) auditEvent {
-		return paymentOperationAudit(s, logger.INF)
-	})
-	listenAudit(payments.Signals.OperationPending, "shop:payments:operation:pending", paymentOperationPendingDefinition{}, func(s payments.PaymentOperationSignal) auditEvent {
-		return paymentOperationAudit(s, logger.DBG)
-	})
-	listenAudit(payments.Signals.OperationFailed, "shop:payments:operation:failed", paymentOperationFailedDefinition{}, func(s payments.PaymentOperationSignal) auditEvent {
-		if s.Operation.Phase == payments.OperationUncertain {
-			return paymentOperationAudit(s, logger.WRN)
-		}
-		return paymentOperationAudit(s, logger.ERR)
 	})
 }
 
@@ -77,16 +59,4 @@ func paymentAudit(payment *payments.Payment, level logger.LogLevel) auditEvent {
 		}
 	}
 	return auditEvent{object: payment, level: level, data: data}
-}
-
-func paymentOperationAudit(s payments.PaymentOperationSignal, level logger.LogLevel) auditEvent {
-	entry := paymentAudit(s.Payment, level)
-	entry.data["request_id"] = s.RequestID
-	entry.data["operation"] = s.Operation.Kind
-	entry.data["phase"] = s.Operation.Phase
-	if s.Operation.Amount.Currency != "" {
-		entry.data["operation_amount"] = s.Operation.Amount.Amount.String()
-		entry.data["operation_currency"] = s.Operation.Amount.Currency
-	}
-	return entry
 }

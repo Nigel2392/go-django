@@ -1,10 +1,13 @@
 package price
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/text/currency"
 )
 
 // Helper to easily create decimals in tests
@@ -662,4 +665,87 @@ func TestPrice_Calculate(t *testing.T) {
 				"LeftOverDiscount: want %s, got %s", tt.wantCalcPrice.LeftOverDiscount, gotCalcPrice.LeftOverDiscount)
 		})
 	}
+}
+
+func TestQuoteFee(t *testing.T) {
+	subtotal := Money{Amount: d("10.005"), Currency: currency.EUR}
+	q, err := subtotal.Quote(decimal.Zero, decimal.Zero)
+	require.NoError(t, err)
+	require.True(t, q.Subtotal.Equal(d("10.01")))
+	require.True(t, q.Fee.IsZero())
+	require.True(t, q.Total.Equal(d("10.01")))
+	require.Equal(t, currency.EUR, q.Currency)
+
+	withFee, err := QuoteFee(Money{Amount: d("10"), Currency: currency.EUR}, d("0.50"), d("2.5"))
+	require.NoError(t, err)
+	require.True(t, withFee.Subtotal.Equal(d("10")))
+	require.True(t, withFee.Fee.Equal(d("0.75")))
+	require.True(t, withFee.Total.Equal(d("10.75")))
+	require.Equal(t, currency.EUR, withFee.Currency)
+
+	zeroRounded, err := QuoteFee(Money{Amount: d("0.004"), Currency: currency.EUR}, d("1.00"), d("5"))
+	require.NoError(t, err)
+	require.True(t, zeroRounded.Subtotal.IsZero())
+	require.True(t, zeroRounded.Fee.IsZero())
+	require.True(t, zeroRounded.Total.IsZero())
+
+	jpyQuote, err := QuoteFee(Money{Amount: d("100.4"), Currency: currency.JPY}, d("10"), d("2.5"))
+	require.NoError(t, err)
+	require.True(t, jpyQuote.Subtotal.Equal(d("100")))
+	require.True(t, jpyQuote.Fee.Equal(d("13")))
+	require.True(t, jpyQuote.Total.Equal(d("113")))
+	require.Equal(t, currency.JPY, jpyQuote.Currency)
+
+	for _, tc := range []struct {
+		name     string
+		subtotal Money
+		fixed    decimal.Decimal
+		pct      decimal.Decimal
+	}{
+		{"missing currency", Money{Amount: d("10")}, decimal.Zero, decimal.Zero},
+		{"negative amount", Money{Amount: d("-1"), Currency: currency.EUR}, decimal.Zero, decimal.Zero},
+		{"negative fixed fee", Money{Amount: d("10"), Currency: currency.EUR}, d("-0.01"), decimal.Zero},
+		{"negative percentage fee", Money{Amount: d("10"), Currency: currency.EUR}, decimal.Zero, d("-1")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := QuoteFee(tc.subtotal, tc.fixed, tc.pct)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestMoneyAndQuoteJSON(t *testing.T) {
+	origMoney := Money{Amount: d("12.34"), Currency: currency.EUR}
+	rawMoney, err := json.Marshal(origMoney)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"amount":"12.34","currency":"EUR"}`, string(rawMoney))
+
+	var decodedMoney Money
+	require.NoError(t, json.Unmarshal(rawMoney, &decodedMoney))
+	require.True(t, origMoney.Amount.Equal(decodedMoney.Amount))
+	require.Equal(t, currency.EUR, decodedMoney.Currency)
+
+	zeroMoneyBytes, err := json.Marshal(Money{})
+	require.NoError(t, err)
+	var decodedZeroMoney Money
+	require.NoError(t, json.Unmarshal(zeroMoneyBytes, &decodedZeroMoney))
+	require.Equal(t, currency.Unit{}, decodedZeroMoney.Currency)
+	require.True(t, decodedZeroMoney.Amount.IsZero())
+
+	require.Error(t, json.Unmarshal([]byte(`{"amount":"10","currency":"EURO"}`), &decodedMoney))
+	require.Error(t, json.Unmarshal([]byte(`{"amount":"10","currency":"eur"}`), &decodedMoney))
+
+	origQuote := Quote{Subtotal: d("10.00"), Fee: d("0.75"), Total: d("10.75"), Currency: currency.EUR}
+	rawQuote, err := json.Marshal(origQuote)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"subtotal":"10","fee":"0.75","total":"10.75","currency":"EUR"}`, string(rawQuote))
+
+	var decodedQuote Quote
+	require.NoError(t, json.Unmarshal(rawQuote, &decodedQuote))
+	require.True(t, origQuote.Subtotal.Equal(decodedQuote.Subtotal))
+	require.True(t, origQuote.Fee.Equal(decodedQuote.Fee))
+	require.True(t, origQuote.Total.Equal(decodedQuote.Total))
+	require.Equal(t, currency.EUR, decodedQuote.Currency)
+
+	require.Error(t, json.Unmarshal([]byte(`{"subtotal":"10","fee":"0","total":"10","currency":"INVALID"}`), &decodedQuote))
 }

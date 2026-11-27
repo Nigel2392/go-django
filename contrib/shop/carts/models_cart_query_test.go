@@ -84,10 +84,10 @@ type testCartSupplierProduct struct {
 	SKU string
 }
 
-func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) products.Price {
-	return products.Price{
-		Unit:   currency.EUR,
-		Amount: p.Price,
+func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) price.Money {
+	return price.Money{
+		Currency: currency.EUR,
+		Amount:   p.Price,
 	}
 }
 
@@ -1231,6 +1231,48 @@ func TestCartQuery(t *testing.T) {
 		}
 		if n != 0 || seq != nil {
 			t.Fatalf("expected n=0 and seq=nil on error, got n=%d seq=%v", n, seq)
+		}
+	})
+
+	t.Run("SetCustomer attaches and updates customer on cart and preloads on CalcOne", func(t *testing.T) {
+		clearCartQueryTables(t)
+
+		cart := seedCart(t, "sess-set-customer", nil, true, time.Now())
+		if _, err := carts.SetCustomer(t.Context(), cart, carts.CustomerDetails{Email: "not-an-email"}); !errors.Is(err, carts.ErrInvalidCustomerEmail) {
+			t.Fatalf("expected ErrInvalidCustomerEmail, got %v", err)
+		}
+
+		cust, err := carts.SetCustomer(t.Context(), cart, carts.CustomerDetails{
+			Email:     "guest@example.com",
+			FirstName: "Guest",
+			LastName:  "Buyer",
+		})
+		if err != nil {
+			t.Fatalf("SetCustomer failed: %v", err)
+		}
+		if cust == nil || cust.ID.IsZero() || cust.Email == nil || cust.Email.Address != "guest@example.com" {
+			t.Fatalf("unexpected customer: %+v", cust)
+		}
+
+		updated, err := carts.SetCustomer(t.Context(), &carts.Cart{ID: cart.ID}, carts.CustomerDetails{
+			Email:     "guest-updated@example.com",
+			FirstName: "Updated",
+			LastName:  "Guest",
+			User:      user1,
+		})
+		if err != nil {
+			t.Fatalf("SetCustomer update failed: %v", err)
+		}
+		if updated.ID != cust.ID || updated.Email.Address != "guest-updated@example.com" || updated.FirstName != "Updated" {
+			t.Fatalf("expected in-place customer update, got %+v", updated)
+		}
+
+		row, err := carts.Query().WithContext(t.Context()).Filter("ID", cart.ID).CalcOne()
+		if err != nil {
+			t.Fatalf("CalcOne failed: %v", err)
+		}
+		if row.Object.Customer == nil || row.Object.Customer.ID != cust.ID || row.Object.Customer.Email == nil || row.Object.Customer.Email.Address != "guest-updated@example.com" {
+			t.Fatalf("expected CalcOne to preload Customer, got %+v", row.Object.Customer)
 		}
 	})
 }

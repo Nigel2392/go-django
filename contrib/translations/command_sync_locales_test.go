@@ -19,7 +19,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/utils/djangoapps"
-	"github.com/elliotchance/orderedmap/v2"
 	"golang.org/x/text/language"
 )
 
@@ -136,8 +135,8 @@ func setupLocaleDatabase(t *testing.T) (drivers.Database, *TranslationsAppConfig
 	setTestDjango(t, django.Config(map[string]any{django.APPVAR_DATABASE: db}))
 	setTestTranslationsApp(t, nil)
 	cfg := NewAppConfig().(*TranslationsAppConfig)
-	django.Global.Apps = orderedmap.NewOrderedMap[string, django.AppConfig]()
-	django.Global.Apps.Set(cfg.Name(), cfg)
+	djangoapps.ResetRegistry()
+	djangoapps.RegisterApp(cfg.Name(), cfg)
 	registered := &Locale{}
 	if models := cfg.Models(); len(models) != 1 {
 		t.Fatalf("translations app models = %v, want Locale", models)

@@ -20,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/models"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	_ "github.com/Nigel2392/go-django/contrib/shop/shared/relations/modelkeys"
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
@@ -84,10 +85,10 @@ type generatorTestSupplierProduct struct {
 	SKU string
 }
 
-func (p *generatorTestSupplierProduct) ProductPrice(ctx context.Context) products.Price {
-	return products.Price{
-		Unit:   currency.EUR,
-		Amount: p.Price,
+func (p *generatorTestSupplierProduct) ProductPrice(ctx context.Context) price.Money {
+	return price.Money{
+		Currency: currency.EUR,
+		Amount:   p.Price,
 	}
 }
 

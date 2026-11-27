@@ -32,25 +32,25 @@ func (i InternalOrderState) Label(ctx context.Context) string {
 }
 
 const (
-	orderStateAccepted InternalOrderState = "order_accepted"
-	orderStatePending  InternalOrderState = "order_pending"
-	orderStateRejected InternalOrderState = "order_rejected"
-	orderStateWorkflow InternalOrderState = "order_workflow"
+	OrderStateAccepted InternalOrderState = "order_accepted"
+	OrderStatePending  InternalOrderState = "order_pending"
+	OrderStateRejected InternalOrderState = "order_rejected"
+	OrderStateWorkflow InternalOrderState = "order_workflow"
 )
 
 var orderStateLabels = map[InternalOrderState]trans.Lazy{
-	orderStateAccepted: trans.L("Order Accepted"),
-	orderStatePending:  trans.L("Order Pending"),
-	orderStateRejected: trans.L("Order Rejected"),
-	orderStateWorkflow: trans.L("Order Workflow"),
+	OrderStateAccepted: trans.L("Order Accepted"),
+	OrderStatePending:  trans.L("Order Pending"),
+	OrderStateRejected: trans.L("Order Rejected"),
+	OrderStateWorkflow: trans.L("Order Workflow"),
 }
 
 func stateActionOptions(ctx context.Context) []widgets.Option {
 	return []widgets.Option{
-		&widgets.FormOption{OptLabel: orderStateLabels[orderStateAccepted], OptValue: string(orderStateAccepted)},
-		&widgets.FormOption{OptLabel: orderStateLabels[orderStatePending], OptValue: string(orderStatePending)},
-		&widgets.FormOption{OptLabel: orderStateLabels[orderStateRejected], OptValue: string(orderStateRejected)},
-		// &widgets.FormOption{OptLabel: orderStateLabels[orderStateWorkflow], OptValue: string(orderStateWorkflow)},
+		&widgets.FormOption{OptLabel: orderStateLabels[OrderStateAccepted], OptValue: string(OrderStateAccepted)},
+		&widgets.FormOption{OptLabel: orderStateLabels[OrderStatePending], OptValue: string(OrderStatePending)},
+		&widgets.FormOption{OptLabel: orderStateLabels[OrderStateRejected], OptValue: string(OrderStateRejected)},
+		// &widgets.FormOption{OptLabel: orderStateLabels[OrderStateWorkflow], OptValue: string(OrderStateWorkflow)},
 	}
 }
 
@@ -75,9 +75,9 @@ func (m *OrderState) FieldDefs(ctx context.Context) attrs.Definitions {
 		fattrs.Field(m, "Action", &m.Action, func() fattrs.PtrFieldConfig[*OrderState, InternalOrderState] {
 			return fattrs.PtrFieldConfig[*OrderState, InternalOrderState]{
 				Options: []attrs.Option{
-					{Label: orderStateLabels[orderStateAccepted], Val: string(orderStateAccepted)},
-					{Label: orderStateLabels[orderStatePending], Val: string(orderStatePending)},
-					{Label: orderStateLabels[orderStateRejected], Val: string(orderStateRejected)},
+					{Label: orderStateLabels[OrderStateAccepted], Val: string(OrderStateAccepted)},
+					{Label: orderStateLabels[OrderStatePending], Val: string(OrderStatePending)},
+					{Label: orderStateLabels[OrderStateRejected], Val: string(OrderStateRejected)},
 				},
 				FormWidget: func(fc attrs.Config) widgets.Widget {
 					return options.NewSelectInput(

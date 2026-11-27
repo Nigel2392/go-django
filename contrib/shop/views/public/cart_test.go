@@ -30,6 +30,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	"github.com/Nigel2392/go-django/djester"
@@ -80,10 +81,10 @@ type testCartSupplierProduct struct {
 	SKU string
 }
 
-func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) products.Price {
-	return products.Price{
-		Unit:   currency.EUR,
-		Amount: p.Price,
+func (p *testCartSupplierProduct) ProductPrice(ctx context.Context) price.Money {
+	return price.Money{
+		Currency: currency.EUR,
+		Amount:   p.Price,
 	}
 }
 
@@ -313,29 +314,29 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Failed to listen to Created signal: %v", err)
 
 					// First GET /api/carts -> creates new cart
-					var cartResp public.CartResponse
+					var cartResp api.DataResponse[public.CartResponse]
 					resp, err := d.Get(django.Reverse("api:carts"), nil, nil)
 					asserter.Assert(err == nil, "GET /api/carts failed: %v", err)
 					asserter.AssertEqual(http.StatusOK, resp.StatusCode)
 					asserter.Assert(resp.JSON(&cartResp) == nil, "Failed to decode CartResponse JSON")
 					resp.Body.Close()
-					asserter.AssertNotNil(cartResp.Cart)
-					asserter.Assert(!cartResp.Cart.ID.IsZero(), "Expected non-zero cart ID")
-					asserter.Assert(cartResp.Cart.Active, "Expected cart to be active")
-					asserter.AssertEqual(0, len(cartResp.Items))
+					asserter.AssertNotNil(cartResp.Data.Cart)
+					asserter.Assert(!cartResp.Data.Cart.ID.IsZero(), "Expected non-zero cart ID")
+					asserter.Assert(cartResp.Data.Cart.Active, "Expected cart to be active")
+					asserter.AssertEqual(0, len(cartResp.Data.Items))
 					asserter.AssertEqual(1, createdSignals)
 
-					firstCartID := cartResp.Cart.ID
+					firstCartID := cartResp.Data.Cart.ID
 
 					// Second GET /api/carts in same session -> returns existing cart without creating a new one
-					var cartResp2 public.CartResponse
+					var cartResp2 api.DataResponse[public.CartResponse]
 					resp2, err := d.Get(django.Reverse("api:carts"), nil, nil)
 					asserter.Assert(err == nil, "Second GET /api/carts failed: %v", err)
 					asserter.AssertEqual(http.StatusOK, resp2.StatusCode)
 					asserter.Assert(resp2.JSON(&cartResp2) == nil, "Failed to decode second CartResponse JSON")
 					resp2.Body.Close()
-					asserter.AssertNotNil(cartResp2.Cart)
-					asserter.AssertEqual(firstCartID, cartResp2.Cart.ID)
+					asserter.AssertNotNil(cartResp2.Data.Cart)
+					asserter.AssertEqual(firstCartID, cartResp2.Data.Cart.ID)
 					asserter.AssertEqual(1, createdSignals)
 				},
 			},
@@ -705,6 +706,83 @@ func TestCartsAPI(t *testing.T) {
 					asserter.AssertNotNil(clearResp2.Cart)
 					asserter.Assert(clearResp2.Cart.Active, "Expected new active cart")
 					asserter.AssertEqual(0, len(clearedCarts))
+				},
+			},
+			&djester.BasicTest{
+				Label: "SetCustomer sets and updates customer details on active cart and rejects invalid emails",
+				Function: func(d *djester.Tester, t *testing.T) {
+					asserter := djester.Asserter(t, true)
+					_, _ = d.Logout()
+					_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
+					_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
+					customerURL := django.Reverse("api:carts:customer")
+
+					// 1. Invalid JSON -> 400 Bad Request
+					var errResp api.ErrorResponse
+					resp, err := d.PostJson(customerURL, nil, nil, bytes.NewBufferString("{bad"), &errResp)
+					asserter.Assert(err == nil, "POST invalid JSON failed: %v", err)
+					resp.Body.Close()
+					asserter.AssertEqual(http.StatusBadRequest, resp.StatusCode)
+
+					// 2. Empty or invalid email -> 422 Unprocessable Entity
+					for _, badEmail := range []string{"", "not-an-email", "a@"} {
+						errResp = api.ErrorResponse{}
+						resp, err = d.PostJson(customerURL, nil, nil, public.CartCustomerRequest{
+							Email:     badEmail,
+							FirstName: "Guest",
+							LastName:  "Shopper",
+						}, &errResp)
+						asserter.Assert(err == nil, "POST bad email %q failed: %v", badEmail, err)
+						resp.Body.Close()
+						asserter.AssertEqual(http.StatusUnprocessableEntity, resp.StatusCode)
+						asserter.Assert(strings.Contains(errResp.Message, "valid customer email"), "Unexpected error message: %q", errResp.Message)
+					}
+
+					// 3. Valid guest customer details -> creates customer and attaches to active cart
+					var cartResp1 public.CartResponse
+					r1, err := d.PostJson(customerURL, nil, nil, public.CartCustomerRequest{
+						Email:     "guest-cart@example.test",
+						FirstName: "Guest",
+						LastName:  "One",
+					}, &cartResp1)
+					asserter.Assert(err == nil, "POST valid customer failed: %v", err)
+					r1.Body.Close()
+					asserter.AssertEqual(http.StatusOK, r1.StatusCode)
+					asserter.AssertNotNil(cartResp1.Cart)
+					asserter.AssertNotNil(cartResp1.Cart.Customer)
+					asserter.Assert(!cartResp1.Cart.Customer.ID.IsZero(), "Expected non-zero customer ID")
+					asserter.AssertEqual("guest-cart@example.test", cartResp1.Cart.Customer.Email.Address)
+					asserter.AssertEqual("Guest", cartResp1.Cart.Customer.FirstName)
+					asserter.AssertEqual("One", cartResp1.Cart.Customer.LastName)
+
+					custID := cartResp1.Cart.Customer.ID
+
+					// 4. Updating customer details on the same active cart reuses and updates the Customer row
+					var cartResp2 public.CartResponse
+					r2, err := d.PostJson(customerURL, nil, nil, public.CartCustomerRequest{
+						Email:     "guest-updated@example.test",
+						FirstName: "Updated",
+						LastName:  "Guest",
+					}, &cartResp2)
+					asserter.Assert(err == nil, "POST updated customer failed: %v", err)
+					r2.Body.Close()
+					asserter.AssertEqual(http.StatusOK, r2.StatusCode)
+					asserter.AssertNotNil(cartResp2.Cart)
+					asserter.AssertEqual(cartResp1.Cart.ID, cartResp2.Cart.ID)
+					asserter.AssertNotNil(cartResp2.Cart.Customer)
+					asserter.AssertEqual(custID, cartResp2.Cart.Customer.ID)
+					asserter.AssertEqual("guest-updated@example.test", cartResp2.Cart.Customer.Email.Address)
+					asserter.AssertEqual("Updated", cartResp2.Cart.Customer.FirstName)
+					asserter.AssertEqual("Guest", cartResp2.Cart.Customer.LastName)
+
+					dbCust, err := queries.GetQuerySet(&customers.Customer{}).Filter("ID", custID).Get()
+					asserter.Assert(err == nil, "Failed to query updated customer from DB: %v", err)
+					asserter.AssertEqual("guest-updated@example.test", dbCust.Object.Email.Address)
+					asserter.AssertEqual("Updated", dbCust.Object.FirstName)
+					asserter.AssertEqual("Guest", dbCust.Object.LastName)
+
+					_, _ = queries.GetQuerySet(&carts.CartItem{}).Delete()
+					_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
 				},
 			},
 			&djester.BasicTest{

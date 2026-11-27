@@ -71,44 +71,6 @@ func (paymentRefundedDefinition) GetActions(r *http.Request, entry auditlogs.Log
 	return paymentAuditActions(r, entry)
 }
 
-type paymentVoidedDefinition struct{}
-
-func (paymentVoidedDefinition) TypeLabel(r *http.Request, _ string) string {
-	return trans.T(r.Context(), "Payment authorization voided")
-}
-
-func (d paymentVoidedDefinition) GetLabel(r *http.Request, entry auditlogs.LogEntry) string {
-	return d.TypeLabel(r, entry.Type())
-}
-
-func (paymentVoidedDefinition) FormatMessage(r *http.Request, entry auditlogs.LogEntry) any {
-	return trans.T(r.Context(), "The authorization for payment %v was voided for request %v.",
-		entry.ObjectID(), entry.Data()["request_id"])
-}
-
-func (paymentVoidedDefinition) GetActions(r *http.Request, entry auditlogs.LogEntry) []auditlogs.LogEntryAction {
-	return paymentAuditActions(r, entry)
-}
-
-type paymentCapturedDefinition struct{}
-
-func (paymentCapturedDefinition) TypeLabel(r *http.Request, _ string) string {
-	return trans.T(r.Context(), "Payment captured")
-}
-
-func (d paymentCapturedDefinition) GetLabel(r *http.Request, entry auditlogs.LogEntry) string {
-	return d.TypeLabel(r, entry.Type())
-}
-
-func (paymentCapturedDefinition) FormatMessage(r *http.Request, entry auditlogs.LogEntry) any {
-	return trans.T(r.Context(), "Payment %v was captured for request %v.",
-		entry.ObjectID(), entry.Data()["request_id"])
-}
-
-func (paymentCapturedDefinition) GetActions(r *http.Request, entry auditlogs.LogEntry) []auditlogs.LogEntryAction {
-	return paymentAuditActions(r, entry)
-}
-
 type paymentCancelledDefinition struct{}
 
 func (paymentCancelledDefinition) TypeLabel(r *http.Request, _ string) string {
@@ -128,75 +90,7 @@ func (paymentCancelledDefinition) GetActions(r *http.Request, entry auditlogs.Lo
 	return paymentAuditActions(r, entry)
 }
 
-type paymentOperationRequestedDefinition struct{}
-
-func (paymentOperationRequestedDefinition) TypeLabel(r *http.Request, _ string) string {
-	return trans.T(r.Context(), "Payment operation requested")
-}
-
-func (d paymentOperationRequestedDefinition) GetLabel(r *http.Request, entry auditlogs.LogEntry) string {
-	return d.TypeLabel(r, entry.Type())
-}
-
-func (paymentOperationRequestedDefinition) FormatMessage(r *http.Request, entry auditlogs.LogEntry) any {
-	return trans.T(r.Context(), "Operation %v was requested for payment %v under request %v.",
-		entry.Data()["operation"], entry.ObjectID(), entry.Data()["request_id"])
-}
-
-func (paymentOperationRequestedDefinition) GetActions(r *http.Request, entry auditlogs.LogEntry) []auditlogs.LogEntryAction {
-	return paymentAuditActions(r, entry)
-}
-
-type paymentOperationPendingDefinition struct{}
-
-func (paymentOperationPendingDefinition) TypeLabel(r *http.Request, _ string) string {
-	return trans.T(r.Context(), "Payment operation pending")
-}
-
-func (d paymentOperationPendingDefinition) GetLabel(r *http.Request, entry auditlogs.LogEntry) string {
-	return d.TypeLabel(r, entry.Type())
-}
-
-func (paymentOperationPendingDefinition) FormatMessage(r *http.Request, entry auditlogs.LogEntry) any {
-	return trans.T(r.Context(), "Operation %v for payment %v is awaiting confirmation under request %v.",
-		entry.Data()["operation"], entry.ObjectID(), entry.Data()["request_id"])
-}
-
-func (paymentOperationPendingDefinition) GetActions(r *http.Request, entry auditlogs.LogEntry) []auditlogs.LogEntryAction {
-	return paymentAuditActions(r, entry)
-}
-
-type paymentOperationFailedDefinition struct{}
-
-func (paymentOperationFailedDefinition) TypeLabel(r *http.Request, _ string) string {
-	return trans.T(r.Context(), "Payment operation failed")
-}
-
-func (d paymentOperationFailedDefinition) GetLabel(r *http.Request, entry auditlogs.LogEntry) string {
-	if paymentOutcomeUncertain(entry) {
-		return trans.T(r.Context(), "Payment operation needs reconciliation")
-	}
-	return d.TypeLabel(r, entry.Type())
-}
-
-func (paymentOperationFailedDefinition) FormatMessage(r *http.Request, entry auditlogs.LogEntry) any {
-	if paymentOutcomeUncertain(entry) {
-		return trans.T(r.Context(), "Operation %v for payment %v has an uncertain outcome under request %v.",
-			entry.Data()["operation"], entry.ObjectID(), entry.Data()["request_id"])
-	}
-	return trans.T(r.Context(), "Operation %v failed for payment %v under request %v.",
-		entry.Data()["operation"], entry.ObjectID(), entry.Data()["request_id"])
-}
-
-func (paymentOperationFailedDefinition) GetActions(r *http.Request, entry auditlogs.LogEntry) []auditlogs.LogEntryAction {
-	return paymentAuditActions(r, entry)
-}
-
 func paymentAuditActions(r *http.Request, entry auditlogs.LogEntry) []auditlogs.LogEntryAction {
 	actions := orderAuditActions(r, entry.Data()["order_id"])
 	return append(actions, shopListAuditAction(r, &payments.Payment{}, "payments", trans.T(r.Context(), "View payments"))...)
-}
-
-func paymentOutcomeUncertain(entry auditlogs.LogEntry) bool {
-	return attrs.ToString(entry.Data()["phase"]) == string(payments.OperationUncertain)
 }

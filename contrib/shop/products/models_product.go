@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/editor"
 	_ "github.com/Nigel2392/go-django/contrib/editor/features"
 	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -19,17 +20,11 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/shopspring/decimal"
-	"golang.org/x/text/currency"
 )
-
-type Price struct {
-	Unit   currency.Unit
-	Amount decimal.Decimal
-}
 
 type ProductModel interface {
 	specific.Model
-	ProductPrice(ctx context.Context) Price
+	ProductPrice(ctx context.Context) price.Money
 }
 
 type ProductQuery struct {

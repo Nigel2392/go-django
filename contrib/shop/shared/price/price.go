@@ -1,8 +1,133 @@
 package price
 
-import "github.com/shopspring/decimal"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/shopspring/decimal"
+	"golang.org/x/text/currency"
+)
 
 var decimal100 = decimal.NewFromInt(100)
+
+// Money pairs a decimal amount with a developer-controlled ISO currency unit.
+type Money struct {
+	Amount   decimal.Decimal
+	Currency currency.Unit
+}
+
+type moneyJSON struct {
+	Amount   decimal.Decimal `json:"amount"`
+	Currency string          `json:"currency"`
+}
+
+func (m Money) MarshalJSON() ([]byte, error) {
+	return json.Marshal(moneyJSON{
+		Amount:   m.Amount,
+		Currency: formatCurrencyUnit(m.Currency),
+	})
+}
+
+func (m *Money) UnmarshalJSON(data []byte) error {
+	var raw moneyJSON
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	unit, err := parseCurrencyUnit(raw.Currency)
+	if err != nil {
+		return err
+	}
+	m.Amount = raw.Amount
+	m.Currency = unit
+	return nil
+}
+
+// Quote adds a customer-facing payment fee to m and rounds both subtotal and fee to the currency's scale.
+func (m Money) Quote(fixedFee, percentageFee decimal.Decimal) (Quote, error) {
+	return QuoteFee(m, fixedFee, percentageFee)
+}
+
+// Quote represents a currency-rounded subtotal, payment fee, and total in a developer-controlled currency unit.
+type Quote struct {
+	Subtotal decimal.Decimal
+	Fee      decimal.Decimal
+	Total    decimal.Decimal
+	Currency currency.Unit
+}
+
+type quoteJSON struct {
+	Subtotal decimal.Decimal `json:"subtotal"`
+	Fee      decimal.Decimal `json:"fee"`
+	Total    decimal.Decimal `json:"total"`
+	Currency string          `json:"currency"`
+}
+
+func (q Quote) MarshalJSON() ([]byte, error) {
+	return json.Marshal(quoteJSON{
+		Subtotal: q.Subtotal,
+		Fee:      q.Fee,
+		Total:    q.Total,
+		Currency: formatCurrencyUnit(q.Currency),
+	})
+}
+
+func (q *Quote) UnmarshalJSON(data []byte) error {
+	var raw quoteJSON
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	unit, err := parseCurrencyUnit(raw.Currency)
+	if err != nil {
+		return err
+	}
+	q.Subtotal = raw.Subtotal
+	q.Fee = raw.Fee
+	q.Total = raw.Total
+	q.Currency = unit
+	return nil
+}
+
+// QuoteFee rounds subtotal.Amount to subtotal.Currency's standard ISO scale and adds
+// fixedFee + base * percentageFee / 100 (rounded to scale) when the rounded base is positive.
+func QuoteFee(subtotal Money, fixedFee, percentageFee decimal.Decimal) (Quote, error) {
+	if subtotal.Currency == (currency.Unit{}) {
+		return Quote{}, errors.New("currency unit is required")
+	}
+	if subtotal.Amount.IsNegative() || fixedFee.IsNegative() || percentageFee.IsNegative() {
+		return Quote{}, errors.New("amount and fees must be nonnegative")
+	}
+	scale, _ := currency.Standard.Rounding(subtotal.Currency)
+	base := subtotal.Amount.Round(int32(scale))
+	fee := decimal.Zero
+	if base.IsPositive() {
+		fee = fixedFee.Add(base.Mul(percentageFee).Shift(-2)).Round(int32(scale))
+	}
+	return Quote{
+		Subtotal: base,
+		Fee:      fee,
+		Total:    base.Add(fee),
+		Currency: subtotal.Currency,
+	}, nil
+}
+
+func formatCurrencyUnit(unit currency.Unit) string {
+	if unit == (currency.Unit{}) {
+		return ""
+	}
+	return unit.String()
+}
+
+func parseCurrencyUnit(code string) (currency.Unit, error) {
+	if code == "" {
+		return currency.Unit{}, nil
+	}
+	unit, err := currency.ParseISO(code)
+	if err != nil || unit.String() != code {
+		return currency.Unit{}, fmt.Errorf("invalid ISO currency %q", code)
+	}
+	return unit, nil
+}
 
 type AmountValue struct {
 	Amount       decimal.Decimal

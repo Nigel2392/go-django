@@ -61,9 +61,31 @@ var apps = struct {
 	names:   orderedmap.NewOrderedMap[string, BaseAppConfig](),
 }
 
-func Apps(yield func(BaseAppConfig) bool) {
+// ResetRegistry clears all registered apps and models for a new application.
+func ResetRegistry() {
+	apps.names = orderedmap.NewOrderedMap[string, BaseAppConfig]()
+	apps.objects = orderedmap.NewOrderedMap[reflect.Type, BaseAppConfig]()
+}
+
+func Count() int {
+	if apps.names == nil {
+		return 0
+	}
+
+	return apps.names.Len()
+}
+
+func Keys(yield func(string) bool) {
+	for h := apps.names.Front(); h != nil; h = h.Next() {
+		if !yield(h.Key) {
+			break
+		}
+	}
+}
+
+func Apps(yield func(string, BaseAppConfig) bool) {
 	for head := apps.names.Front(); head != nil; head = head.Next() {
-		if !yield(head.Value) {
+		if !yield(head.Key, head.Value) {
 			break
 		}
 	}
@@ -72,11 +94,15 @@ func Apps(yield func(BaseAppConfig) bool) {
 func RegisterModel(obj any, app BaseAppConfig) {
 	apps.objects.Set(reflect.TypeOf(obj), app)
 
-	appName := app.Name()
-	if !apps.names.Has(appName) {
+	if appName := app.Name(); !apps.names.Has(appName) {
 		apps.names.Set(appName, app)
 	}
 }
+
+func RegisterApp(name string, app BaseAppConfig) {
+	apps.names.Set(name, app)
+}
+
 func GetAppForName(name string) (BaseAppConfig, bool) {
 	return apps.names.Get(name)
 }

@@ -4,24 +4,36 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/fattrs"
-	"github.com/shopspring/decimal"
 	"golang.org/x/text/currency"
 )
 
-// ProviderAccount configures one merchant account. CredentialRef identifies
-// a secret resolved by the provider factory.
+var (
+	_ migrator.IndexDefiner = (*ProviderAccount)(nil)
+)
+
+// ProviderAccount tracks which registered PSP backends are enabled in the database.
+// Configuration, fees, and credentials stay in Go code via the ProviderBackend registry.
 type ProviderAccount struct {
-	ID            drivers.ULID
-	Driver        string
-	Label         string
-	Enabled       bool
-	CredentialRef string `json:"-"`
-	Currency      string
-	FixedFee      decimal.Decimal
-	PercentageFee decimal.Decimal
+	ID           drivers.ULID
+	InternalName string
+	Enabled      bool
+}
+
+func (a *ProviderAccount) UniqueTogether() [][]string {
+	return [][]string{
+		{"InternalName"},
+	}
+}
+
+func (a *ProviderAccount) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
+	return []migrator.Index{
+		{Identifier: "provider_account_internal_name_idx", Fields: []string{"InternalName"}, Unique: true},
+	}
 }
 
 func (a *ProviderAccount) BeforeCreate(context.Context) error {
@@ -34,13 +46,21 @@ func (a *ProviderAccount) BeforeCreate(context.Context) error {
 func (a *ProviderAccount) FieldDefs(ctx context.Context) attrs.Definitions {
 	return attrs.Make(ctx, a,
 		paymentField(a, "ID", &a.ID, attrs.Config{Primary: true, ReadOnly: true}),
-		paymentField(a, "Driver", &a.Driver, attrs.Config{MaxLength: 75}),
-		paymentField(a, "Label", &a.Label, attrs.Config{MaxLength: 100}),
-		paymentField(a, "Enabled", &a.Enabled, attrs.Config{Blank: true}),
-		paymentField(a, "CredentialRef", &a.CredentialRef, attrs.Config{MaxLength: 255, Blank: true}),
-		paymentField(a, "Currency", &a.Currency, attrs.Config{MaxLength: 3}),
-		paymentField(a, "FixedFee", &a.FixedFee, attrs.Config{Precision: 13, Scale: 4, Blank: true}),
-		paymentField(a, "PercentageFee", &a.PercentageFee, attrs.Config{Precision: 9, Scale: 4, Blank: true}),
+		fattrs.Field(a, "InternalName", &a.InternalName, func() fattrs.PtrFieldConfig[*ProviderAccount, string] {
+			return fattrs.PtrFieldConfig[*ProviderAccount, string]{
+				Config: attrs.Config{
+					MinLength: 2,
+					MaxLength: 75,
+					Attributes: map[string]interface{}{
+						attrs.AttrUniqueKey: true,
+					},
+				},
+				IsZero: func(s string) bool {
+					return s == ""
+				},
+			}
+		}),
+		paymentField(a, "Enabled", &a.Enabled, attrs.Config{Blank: true, Default: true}),
 	)
 }
 
@@ -50,27 +70,41 @@ func paymentField[M attrs.Definer, V any](model M, name string, value *V, config
 	})
 }
 
-type Quote struct {
-	Subtotal decimal.Decimal `json:"subtotal"`
-	Fee      decimal.Decimal `json:"fee"`
-	Total    decimal.Decimal `json:"total"`
-	Currency string          `json:"currency"`
+// Provider resolves this account's adapter, including optional capabilities.
+func (a *ProviderAccount) Provider(ctx context.Context) (Provider, error) {
+	return a.provider(ctx)
 }
 
-// Quote adds the account's customer-facing fee to the discounted, tax-inclusive cart total.
-func (a *ProviderAccount) Quote(subtotal Money) (Quote, error) {
-	unit, err := currency.ParseISO(subtotal.Currency)
-	if err != nil || unit.String() != subtotal.Currency || a.Currency != subtotal.Currency {
-		return Quote{}, fmt.Errorf("payment account does not support currency %q", subtotal.Currency)
+func (a *ProviderAccount) provider(ctx context.Context) (Provider, error) {
+	if a == nil {
+		return nil, fmt.Errorf("payment provider \"\" is unavailable")
 	}
-	if subtotal.Amount.IsNegative() || a.FixedFee.IsNegative() || a.PercentageFee.IsNegative() {
-		return Quote{}, fmt.Errorf("payment amount and fees must be nonnegative")
+	backend, ok := RetrieveProvider(a.InternalName)
+	if !ok {
+		return nil, fmt.Errorf("payment provider %q is unavailable", a.InternalName)
 	}
-	scale, _ := currency.Standard.Rounding(unit)
-	base := subtotal.Amount.Round(int32(scale))
-	fee := decimal.Zero
-	if base.IsPositive() {
-		fee = a.FixedFee.Add(base.Mul(a.PercentageFee).Shift(-2)).Round(int32(scale))
+	return backend.Provider(ctx, a)
+}
+
+// Quote adds the registered backend's customer-facing fee to the discounted, tax-inclusive cart total.
+func (a *ProviderAccount) Quote(ctx context.Context, subtotal price.Money) (price.Quote, error) {
+	if a == nil {
+		return price.Quote{}, fmt.Errorf("payment provider \"\" is unavailable")
 	}
-	return Quote{Subtotal: base, Fee: fee, Total: base.Add(fee), Currency: subtotal.Currency}, nil
+	backend, ok := RetrieveProvider(a.InternalName)
+	if !ok {
+		return price.Quote{}, fmt.Errorf("payment provider %q is unavailable", a.InternalName)
+	}
+	return quoteBackend(ctx, backend, subtotal)
+}
+
+func quoteBackend(ctx context.Context, backend ProviderBackend, subtotal price.Money) (price.Quote, error) {
+	if backend == nil {
+		return price.Quote{}, fmt.Errorf("payment provider is unavailable")
+	}
+	unit := backend.Currency(ctx)
+	if unit == (currency.Unit{}) || subtotal.Currency == (currency.Unit{}) || unit != subtotal.Currency {
+		return price.Quote{}, fmt.Errorf("payment account does not support currency %q", subtotal.Currency)
+	}
+	return price.QuoteFee(subtotal, backend.FixedFee(ctx), backend.PercentageFee(ctx))
 }

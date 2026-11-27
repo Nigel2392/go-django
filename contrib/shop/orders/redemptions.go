@@ -55,7 +55,7 @@ func ReconcileCouponRedemptions(ctx context.Context, orderID drivers.ULID) error
 			expr.Q("Counted", false),
 		)
 	switch {
-	case order.Object.State == orderStateRejected:
+	case order.Object.State == OrderStateRejected:
 		_, err = pending.
 			BulkUpdate(expr.As("Invalidated", expr.Value(true)))
 		if err != nil {

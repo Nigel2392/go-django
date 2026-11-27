@@ -37,10 +37,10 @@ var runChecksCommand = &command.Cmd[any]{
 		}
 
 		var groups = make([][]checks.Message, 0, Global.Apps.Len())
-		for h := Global.Apps.Front(); h != nil; h = h.Next() {
+		for _, app := range Global.Apps.Iter {
 			groups = append(
 				groups,
-				h.Value.Check(context, Global.Settings),
+				app.Check(context, Global.Settings),
 			)
 		}
 

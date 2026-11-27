@@ -32,6 +32,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/go-telepath/telepath"
@@ -513,7 +514,7 @@ func (a *AdminApplication) Check(ctx context.Context, settings django.Settings) 
 			))
 		}
 
-		var _, ok = django.Global.Apps.Get(app.Name)
+		var _, ok = djangoapps.GetAppForName(app.Name)
 		if !ok {
 			messages = append(messages, checks.Criticalf(
 				"admin.app_not_registered",

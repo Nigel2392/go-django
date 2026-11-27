@@ -43,7 +43,6 @@ import (
 	"github.com/Nigel2392/mux/v2/hosts"
 	"github.com/Nigel2392/mux/v2/middleware"
 	"github.com/Nigel2392/mux/v2/middleware/authentication"
-	"github.com/elliotchance/orderedmap/v2"
 	"github.com/justinas/nosurf"
 	"github.com/pkg/errors"
 )
@@ -87,6 +86,24 @@ type AppConfig interface {
 	Initialize(settings Settings) error
 }
 
+type appsStruct struct{}
+
+func (a appsStruct) Len() int {
+	return djangoapps.Count()
+}
+
+func (a appsStruct) Keys(yield func(string) bool) {
+	djangoapps.Keys(yield)
+}
+
+func (a appsStruct) Iter(yield func(string, AppConfig) bool) {
+	for appName, app := range djangoapps.Apps {
+		if !yield(appName, app.(AppConfig)) {
+			break
+		}
+	}
+}
+
 // The global application struct.
 //
 // This is a singleton object.
@@ -100,7 +117,7 @@ type AppConfig interface {
 // The application object should only be initialized once by calling `(*Application).Initialize()`
 type Application struct {
 	Settings    Settings
-	Apps        *orderedmap.OrderedMap[string, AppConfig]
+	Apps        appsStruct
 	apps        []func() (AppConfig, error)
 	Mux         *mux.Mux
 	Log         logger.Log
@@ -130,7 +147,7 @@ const (
 )
 
 func GetApp[T AppConfig](name string) T {
-	var app, ok = Global.Apps.Get(name)
+	var app, ok = djangoapps.GetAppForName(name)
 	assert.True(ok, "App %s not found", name)
 	a, ok := app.(T)
 	assert.True(ok, "Invalid app type: %T", app)
@@ -157,8 +174,8 @@ func GetIP(r *http.Request) string {
 
 func App(opts ...Option) *Application {
 	if Global == nil {
+		djangoapps.ResetRegistry()
 		Global = &Application{
-			Apps: orderedmap.NewOrderedMap[string, AppConfig](),
 			apps: make([]func() (AppConfig, error), 0),
 			Mux:  mux.New(),
 			Commands: command.NewRegistry(
@@ -192,9 +209,9 @@ func App(opts ...Option) *Application {
 }
 
 func (a *Application) App(name string) AppConfig {
-	var app, ok = a.Apps.Get(name)
+	var app, ok = djangoapps.GetAppForName(name)
 	assert.True(ok, "App %s not found", name)
-	return app
+	return app.(AppConfig)
 }
 
 // Config returns the value of the key from the settings
@@ -250,7 +267,7 @@ func (a *Application) newAppRegisterFunc(appType any) func() (AppConfig, error) 
 		var appName = app.Name()
 		assert.Truthy(appName, "App name cannot be empty")
 
-		var _, ok = a.Apps.Get(appName)
+		var _, ok = djangoapps.GetAppForName(appName)
 		assert.False(ok, "App %s already registered", appName)
 
 		return app, err
@@ -401,7 +418,7 @@ func (a *Application) Task(description string, fn func(*Application) error) erro
 }
 
 func (a *Application) AppInstalled(name string) bool {
-	_, ok := a.Apps.Get(name)
+	_, ok := djangoapps.GetAppForName(name)
 	return ok
 }
 
@@ -749,7 +766,7 @@ func (a *Application) Initialize() error {
 			return fmt.Errorf("Initialize: %w", err)
 		}
 
-		a.Apps.Set(app.Name(), app)
+		djangoapps.RegisterApp(app.Name(), app)
 	}
 
 	// Lock the dbtype registry to prevent any changes
@@ -768,8 +785,7 @@ func (a *Application) Initialize() error {
 	// actually setting up the models themselves.
 	// This is done to ensure that all models are registered
 	// and lazy / deferred relations can be resolved
-	for h := a.Apps.Front(); h != nil; h = h.Next() {
-		var app = h.Value
+	for _, app := range a.Apps.Iter {
 		var models = app.Models()
 		for _, model := range models {
 			djangoapps.RegisterModel(model, app)
@@ -800,13 +816,12 @@ func (a *Application) Initialize() error {
 	}
 
 	// First app loop to initialze and register commands
-	for h := a.Apps.Front(); h != nil; h = h.Next() {
-		var app = h.Value
+	for _, app := range a.Apps.Iter {
 		var deps = app.Dependencies()
 
 		if !a.Flagged(FlagSkipDepsCheck) {
 			for _, dep := range deps {
-				var _, ok = a.Apps.Get(dep)
+				var _, ok = djangoapps.GetAppForName(dep)
 				if !ok {
 					return errors.Errorf("Dependency %q not found for app %q", dep, app.Name())
 				}
@@ -883,22 +898,22 @@ func (a *Application) Initialize() error {
 
 	// Second app loop to build routing and templates
 	var groups = make([][]checks.Message, 0, a.Apps.Len())
-	for h := a.Apps.Front(); h != nil; h = h.Next() {
+	for _, app := range a.Apps.Iter {
 
 		// This basically ensures that each route in the app (and subroutes)
 		// get assigned a middleware to set up the app- specific request context variables.
-		h.Value.BuildRouting(a.Mux.Namespace(mux.NamespaceOptions{
+		app.BuildRouting(a.Mux.Namespace(mux.NamespaceOptions{
 			OnRouteServe: func(r *http.Request) *http.Request {
 				return r.WithContext(djangoapps.ContextWithApp(
-					r.Context(), h.Value,
+					r.Context(), app,
 				))
 			},
 		}))
 
-		var processors = h.Value.Processors()
+		var processors = app.Processors()
 		tpl.RequestProcessors(processors...)
 
-		var templates = h.Value.Templates()
+		var templates = app.Templates()
 		if templates != nil {
 			tpl.Add(*templates)
 		}
@@ -906,7 +921,7 @@ func (a *Application) Initialize() error {
 		if !a.Flagged(FlagSkipChecks) {
 			groups = append(
 				groups,
-				h.Value.Check(c, a.Settings),
+				app.Check(c, a.Settings),
 			)
 		}
 	}
@@ -922,8 +937,7 @@ func (a *Application) Initialize() error {
 
 	// Third app loop to call OnReady() for each app, AFTER
 	// all apps have been fully setup.
-	for h := a.Apps.Front(); h != nil; h = h.Next() {
-		var app = h.Value
+	for _, app := range a.Apps.Iter {
 		if err := app.OnReady(); err != nil {
 			return err
 		}

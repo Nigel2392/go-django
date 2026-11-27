@@ -18,7 +18,6 @@ import (
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/settings"
 	"github.com/Nigel2392/go-django/contrib/shop"
-	"github.com/Nigel2392/go-django/contrib/shop/broker"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/customers"
@@ -38,9 +37,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
 	"github.com/shopspring/decimal"
+	"golang.org/x/text/currency"
 )
 
-const shopCurrency = "EUR"
+var shopCurrency = currency.EUR
 
 var _ orders.SupplierBackend = (*dbsupplier.DBSupplierAppConfig)(nil)
 var _ products.ProductModel = (*dbsupplier.Product)(nil)
@@ -81,35 +81,27 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	selection, err := seedCheckout(ctx)
+	opts, err := seedCheckout(ctx)
 	if err != nil {
 		return err
 	}
-	flow := broker.Broker{Currency: shopCurrency}
 	req := httptest.NewRequest(http.MethodPost, "/checkout", nil).WithContext(ctx)
-	prepared, err := flow.PrepareCheckout(req, selection)
+	result, err := orders.CheckoutCart(req, opts)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Prepared order %s with payment %s for %s %s\n",
-		prepared.Order.ID, prepared.Payment.ID, prepared.Payment.Currency, prepared.Payment.Amount.StringFixed(2))
+		result.Order.ID, result.Payment.ID, result.Payment.Currency, result.Payment.Amount.StringFixed(2))
+	fmt.Printf("Opened checkout in %s at %s\n", result.Checkout.State, result.Checkout.URL)
 
-	const origin = "https://merchant.example.test"
-	webhook := origin + django.Reverse("api:payments:webhook", selection.AccountID)
-	checkout, err := flow.StartCheckout(ctx, selection.Customer.ID, prepared.Payment.ID, origin+"/checkout/return", webhook)
+	if err := provider.MarkPaid(result.Checkout.ProviderRef); err != nil {
+		return err
+	}
+	payment, err := payments.Refresh(ctx, result.Payment.ID)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Opened checkout in %s at %s\n", checkout.State, checkout.URL)
-
-	if err := provider.MarkPaid(checkout.ProviderRef); err != nil {
-		return err
-	}
-	payment, err := payments.Refresh(ctx, prepared.Payment.ID)
-	if err != nil {
-		return err
-	}
-	order, err := orders.Query().WithContext(ctx).Filter("ID", prepared.Order.ID).Get()
+	order, err := orders.Query().WithContext(ctx).Filter("ID", result.Order.ID).Get()
 	if err != nil {
 		return err
 	}
@@ -137,14 +129,14 @@ func tutorialSchema() *apps.DBRequiredAppConfig {
 	return config
 }
 
-func seedCheckout(ctx context.Context) (broker.CheckoutRequest, error) {
-	var selection broker.CheckoutRequest
+func seedCheckout(ctx context.Context) (orders.CheckoutOptions, error) {
+	var opts orders.CheckoutOptions
 	category, err := queries.GetQuerySet(&models.Category{}).WithContext(ctx).Create(&models.Category{
 		Name: "Books",
 		Slug: "books",
 	})
 	if err != nil {
-		return selection, err
+		return opts, err
 	}
 	product := &dbsupplier.Product{
 		Product: &products.Product{
@@ -159,38 +151,51 @@ func seedCheckout(ctx context.Context) (broker.CheckoutRequest, error) {
 	}
 	product.Instance = product
 	if _, err := queries.GetQuerySet(&dbsupplier.Product{}).WithContext(ctx).Create(product); err != nil {
-		return selection, err
+		return opts, err
 	}
 	if _, err := queries.GetQuerySet(&products.Product{}).WithContext(ctx).Create(product.Product); err != nil {
-		return selection, err
+		return opts, err
 	}
 
-	customer, err := queries.GetQuerySet(&customers.Customer{}).WithContext(ctx).Create(&customers.Customer{
-		FirstName: "Sam", LastName: "Example", Email: drivers.MustParseEmail("sam@example.test"),
-	})
-	if err != nil {
-		return selection, err
-	}
 	cart, err := queries.GetQuerySet(&carts.Cart{}).WithContext(ctx).Create(&carts.Cart{
 		Session: "tutorial", Active: true,
 	})
 	if err != nil {
-		return selection, err
+		return opts, err
 	}
 	if _, err := queries.GetQuerySet(&carts.CartItem{}).WithContext(ctx).Create(&carts.CartItem{
 		Cart: cart, Product: product.Product, Amount: 2,
 	}); err != nil {
-		return selection, err
+		return opts, err
+	}
+	if _, err := carts.SetCustomer(ctx, cart, carts.CustomerDetails{
+		FirstName: "Sam",
+		LastName:  "Example",
+		Email:     "sam@example.test",
+	}); err != nil {
+		return opts, err
 	}
 
-	account, err := queries.GetQuerySet(&payments.ProviderAccount{}).WithContext(ctx).Create(&payments.ProviderAccount{
-		Driver: paymentproviders.DemoDriver, Label: "Tutorial provider", Enabled: true,
-		Currency: shopCurrency, FixedFee: decimal.RequireFromString("0.50"),
-	})
-	if err != nil {
-		return selection, err
+	if err := payments.ProvidersQuery().WithContext(ctx).Sync(); err != nil {
+		return opts, err
 	}
-	return broker.CheckoutRequest{
-		Customer: customer, CartID: cart.ID, AccountID: account.ID, AttemptID: drivers.NewULID(),
+	account, err := queries.GetQuerySet(&payments.ProviderAccount{}).
+		WithContext(ctx).
+		Filter("InternalName", paymentproviders.DemoDriver).
+		Get()
+	if err != nil {
+		return opts, err
+	}
+	const origin = "https://merchant.example.test"
+	return orders.CheckoutOptions{
+		Cart:      cart,
+		AccountID: account.Object.ID,
+		Currency:  shopCurrency,
+		ReturnURL: func(paymentID, _ drivers.ULID) string {
+			return origin + "/checkout/return?payment_id=" + paymentID.String()
+		},
+		WebhookURL: func(a *payments.ProviderAccount) string {
+			return origin + django.Reverse("api:payments:webhook", a.ID)
+		},
 	}, nil
 }

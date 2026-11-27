@@ -1,31 +1,24 @@
 package public
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"mime"
 	"net/http"
-	"net/mail"
 	"net/url"
 	"strings"
 
-	"github.com/Nigel2392/go-django/contrib/auth/users"
-	"github.com/Nigel2392/go-django/contrib/shop/broker"
-	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons"
-	"github.com/Nigel2392/go-django/contrib/shop/customers"
+	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	dberrors "github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"golang.org/x/text/currency"
 )
 
@@ -33,9 +26,19 @@ import (
 // Origin is the public shop origin used for verified callback destinations.
 // ReturnPath is a path on Origin and defaults to "/".
 type CheckoutAPI struct {
-	Currency   string
-	Origin     string
-	ReturnPath string
+	Currency    currency.Unit
+	GetCurrency func(context.Context) currency.Unit
+	Origin      string
+	ReturnPath  string
+}
+
+func (c CheckoutAPI) resolveCurrency(ctx context.Context) currency.Unit {
+	if c.GetCurrency != nil {
+		if unit := c.GetCurrency(ctx); unit != (currency.Unit{}) {
+			return unit
+		}
+	}
+	return c.Currency
 }
 
 type PaymentCheckoutRequest struct {
@@ -47,12 +50,6 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		api.RespondError(w, http.StatusMethodNotAllowed, "checkout requires POST")
-		return
-	}
-
-	user, ok := authentication.Retrieve(r).(users.User)
-	if !ok || attrs.IsZero(user) || !user.IsAuthenticated() {
-		api.RespondError(w, http.StatusUnauthorized, "sign in to check out")
 		return
 	}
 
@@ -102,7 +99,7 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	unit, currencyErr := currency.ParseISO(c.Currency)
+	unit := c.resolveCurrency(r.Context())
 	origin, originErr := url.Parse(c.Origin)
 	returnPath := c.ReturnPath
 	if returnPath == "" {
@@ -112,8 +109,7 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 	returnRef, pathErr := url.Parse(returnPath)
 	var configError string
 	switch {
-	case currencyErr != nil,
-		unit.String() != c.Currency:
+	case unit == (currency.Unit{}):
 		configError = "invalid shop currency"
 
 	case originErr != nil,
@@ -139,8 +135,6 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	returnURL := origin.ResolveReference(returnRef)
-
 	switch {
 	case queries.IsTransactionContext(r.Context()),
 		!queries.IsCommitContext(r.Context()):
@@ -149,204 +143,55 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, tx, err := queries.StartTransaction(r.Context())
-	if err != nil {
-		logger.Warnf("checkout preparation failed: %v", err)
-		api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-		return
+	buildReturnURL := func(paymentID, orderID drivers.ULID) string {
+		u := origin.ResolveReference(returnRef)
+		query := u.Query()
+		if !paymentID.IsZero() {
+			query.Set("payment_id", paymentID.String())
+		}
+		if !orderID.IsZero() {
+			query.Set("order_id", orderID.String())
+		}
+		u.RawQuery = query.Encode()
+		return u.String()
 	}
 
-	defer tx.Rollback(ctx)
-
-	checkoutRequest := r.WithContext(ctx)
-	cartQuery := carts.
-		Query().
-		WithContext(ctx).
-		CartsForRequest(checkoutRequest)
-	activeCartQuery := cartQuery.
-		Filter(
-			expr.Q("Active", true),
-			expr.Or(
-				expr.Q("User", user),
-				expr.Q("User__isnull", true),
-			),
-		)
-
-	// Lock the caller's active cart before the transaction takes its first
-	// read snapshot, so an overlapping coupon reservation is visible.
-	_, err = activeCartQuery.
-		BulkUpdate(expr.As("Active", expr.Value(true)))
-	if err != nil {
-		logger.Warnf("checkout preparation failed: %v", err)
-		api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-		return
-	}
-
-	customersQuery := queries.
-		GetQuerySet(&customers.Customer{}).
-		WithContext(ctx).
-		Filter(
-			expr.Q("User", user),
-		)
-
-	existing, err := customersQuery.
-		OrderBy("FirstSeen", "ID").
-		First()
-
-	var customer *customers.Customer
-	switch {
-	case err == nil:
-		customer = existing.Object
-		switch {
-		case customer.Email == nil,
-			customer.Email.Address == "":
-			api.RespondError(w, http.StatusUnprocessableEntity, "a customer email address is required")
-			return
-		}
-
-	case errors.Is(err, dberrors.NoRows):
-		defs := attrs.Define(ctx, user)
-		values := make(map[string]string, 3)
-		names := []string{
-			"Email",
-			"FirstName",
-			"LastName",
-		}
-
-		for _, name := range names {
-			field, ok := defs.Field(name)
-			if !ok {
-				continue
-			}
-			data := field.GetValue()
-			if !attrs.IsZero(data) {
-				values[name] = attrs.ToString(data)
-			}
-		}
-
-		address, err := mail.ParseAddress(values["Email"])
-		if err != nil {
-			api.RespondError(w, http.StatusUnprocessableEntity, "a customer email address is required")
-			return
-		}
-
-		customer, err = customersQuery.
-			Create(&customers.Customer{
-				User:      user,
-				Email:     (*drivers.Email)(address),
-				FirstName: values["FirstName"],
-				LastName:  values["LastName"],
-			})
-
-		if err != nil {
-			logger.Warnf("checkout preparation failed: %v", err)
-			api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-			return
-		}
-
-	default:
-		logger.Warnf("checkout preparation failed: %v", err)
-		api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-		return
-	}
-
-	active, err := activeCartQuery.
-		Get()
-
-	var cart *carts.Cart
-	switch {
-	case err == nil:
-		hasItems, err := queries.
-			GetQuerySet(&carts.CartItem{}).
-			WithContext(ctx).
-			Filter(
-				expr.Q("Cart", active.Object.ID),
-			).
-			Exists()
-
-		if err != nil {
-			logger.Warnf("checkout preparation failed: %v", err)
-			api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-			return
-		}
-
-		if hasItems {
-			cart = active.Object
-		}
-
-	case errors.Is(err, dberrors.MultipleRows):
-		api.RespondError(w, http.StatusConflict, "cart changed or already has a checkout")
-		return
-
-	case !errors.Is(err, dberrors.NoRows):
-		logger.Warnf("checkout preparation failed: %v", err)
-		api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-		return
-	}
-
-	if cart == nil {
-		attempts := queries.
-			GetQuerySet(&payments.Payment{}).
-			WithContext(ctx).
-			Filter(
-				expr.Q("Order.Customer", customer.ID),
-			).
-			Select("ID")
-		converted, err := cartQuery.
-			Filter(
-				expr.Q("Active", false),
-				expr.Q("ID__in", queries.Subquery(attempts)),
-				expr.Or(
-					expr.Q("User", user),
-					expr.Q("User__isnull", true),
-				),
-			).
-			OrderBy("-CreatedAt", "-ID").
-			First()
-
-		switch {
-		case errors.Is(err, dberrors.NoRows) && active != nil:
-			api.RespondError(w, http.StatusConflict, "cart is empty")
-			return
-
-		case errors.Is(err, dberrors.NoRows):
-			api.RespondError(w, http.StatusNotFound, "cart not found")
-			return
-
-		case err != nil:
-			logger.Warnf("checkout preparation failed: %v", err)
-			api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-			return
-		}
-		cart = converted.Object
-	}
-
-	flow := broker.Broker{
-		Currency: c.Currency,
-	}
-	// Use the cart ID as the durable ID of its first payment attempt.
-	prepared, err := flow.PrepareCheckout(checkoutRequest, broker.CheckoutRequest{
-		Customer:  customer,
-		CartID:    cart.ID,
-		AccountID: accountID,
-		AttemptID: cart.ID,
+	result, err := orders.CheckoutCart(r, orders.CheckoutOptions{
+		AccountID:   accountID,
+		Currency:    c.Currency,
+		GetCurrency: c.GetCurrency,
+		ReturnURL:   buildReturnURL,
+		WebhookURL: func(account *payments.ProviderAccount) string {
+			return origin.ResolveReference(&url.URL{
+				Path: django.Reverse("api:payments:webhook", account.ID),
+			}).String()
+		},
 	})
+
 	switch {
-	case errors.Is(err, broker.ErrCheckoutAccountRequired):
+	case errors.Is(err, orders.ErrCheckoutAccountRequired):
 		api.RespondError(w, http.StatusBadRequest, "select a payment account")
 		return
 
-	case errors.Is(err, broker.ErrCheckoutAccountUnavailable):
+	case errors.Is(err, orders.ErrCheckoutAccountUnavailable):
 		api.RespondError(w, http.StatusNotFound, "payment account is unavailable")
 		return
 
-	case errors.Is(err, broker.ErrCheckoutEmpty):
+	case errors.Is(err, dberrors.NoRows):
+		api.RespondError(w, http.StatusNotFound, "cart not found")
+		return
+
+	case errors.Is(err, orders.ErrCheckoutEmpty):
 		api.RespondError(w, http.StatusConflict, "cart is empty")
 		return
 
-	case errors.Is(err, broker.ErrCheckoutConflict),
+	case errors.Is(err, orders.ErrCheckoutConflict),
 		errors.Is(err, dberrors.MultipleRows):
 		api.RespondError(w, http.StatusConflict, "cart changed or already has a checkout")
+		return
+
+	case errors.Is(err, orders.ErrCustomerRequired):
+		api.RespondError(w, http.StatusUnprocessableEntity, "a customer email address is required")
 		return
 
 	case errors.Is(err, payments.ErrNonPositiveTotal):
@@ -354,95 +199,18 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case err != nil:
-		logger.Warnf("checkout preparation failed: %v", err)
-		api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-		return
-	}
-
-	if prepared.Cart != nil {
-		cartID := prepared.Cart.Object.ID
-		count, err := queries.
-			GetQuerySet(&carts.Cart{}).
-			WithContext(ctx).
-			Filter(
-				expr.Q("ID", cartID),
-				expr.Q("Active", true),
-				expr.Or(
-					expr.Q("User", user),
-					expr.Q("User__isnull", true),
-				),
-			).
-			Select("Active", "User").
-			Update(&carts.Cart{
-				User:   user,
-				Active: false,
-			})
-
-		switch {
-		case err != nil:
-			logger.Warnf("checkout preparation failed: %v", err)
-			api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-			return
-
-		case count != 1:
-			api.RespondError(w, http.StatusConflict, "cart changed or already has a checkout")
-			return
-		}
-
-		// Release reservations for coupons that did not apply to the priced cart.
-		_, err = queries.
-			GetQuerySet(&coupons.Redemption{}).
-			WithContext(ctx).
-			Filter(
-				expr.Q("Cart", cartID),
-				expr.Q("Invalidated", false),
-				expr.Q("Order__isnull", true),
-			).
-			Select("Invalidated").
-			Update(&coupons.Redemption{
-				Invalidated: true,
-			})
-		if err != nil && !errors.Is(err, dberrors.NoRows) {
-			logger.Warnf("checkout preparation failed: %v", err)
-			api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-			return
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		logger.Warnf("checkout preparation failed: %v", err)
-		api.RespondError(w, http.StatusInternalServerError, "could not prepare checkout")
-		return
-	}
-
-	query := returnURL.Query()
-	query.Set("payment_id", prepared.Payment.ID.String())
-	if prepared.Payment.IsFreeCheckout() {
-		query.Set("order_id", prepared.Order.ID.String())
-		returnURL.RawQuery = query.Encode()
-		http.Redirect(w, r, returnURL.String(), http.StatusSeeOther)
-		return
-	}
-
-	returnURL.RawQuery = query.Encode()
-	webhookURL := origin.ResolveReference(&url.URL{
-		Path: django.Reverse("api:payments:webhook", prepared.Payment.Account.ID),
-	})
-
-	checkout, err := flow.StartCheckout(
-		r.Context(),
-		prepared.Order.Customer.ID,
-		prepared.Payment.ID,
-		returnURL.String(),
-		webhookURL.String(),
-	)
-	if err != nil {
-		logger.Warnf("provider checkout failed for payment %s", prepared.Payment.ID)
+		logger.Warnf("provider checkout failed: %v", err)
 		api.RespondError(w, http.StatusBadGateway, "could not open provider checkout")
 		return
 	}
 
-	switch checkout.State {
+	if result.Free {
+		http.Redirect(w, r, buildReturnURL(result.Payment.ID, result.Order.ID), http.StatusSeeOther)
+		return
+	}
+
+	returnURL := buildReturnURL(result.Payment.ID, drivers.ULID{})
+	switch result.Checkout.State {
 	case paystate.STATUS_PAID,
 		paystate.STATUS_CANCEL,
 		paystate.STATUS_EXPIRED,
@@ -451,11 +219,11 @@ func (c CheckoutAPI) Checkout(w http.ResponseWriter, r *http.Request) {
 		paystate.STATUS_REFUND,
 		paystate.STATUS_PARTIAL_REFUND,
 		paystate.STATUS_CHARGEBACK:
-		http.Redirect(w, r, returnURL.String(), http.StatusSeeOther)
+		http.Redirect(w, r, returnURL, http.StatusSeeOther)
 		return
 	}
 
-	redirect, err := url.Parse(checkout.URL)
+	redirect, err := url.Parse(result.Checkout.URL)
 	switch {
 	case err != nil,
 		redirect.Scheme != "https",

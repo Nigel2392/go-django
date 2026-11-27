@@ -5,11 +5,27 @@ export type Timestamp = string;
 /** Decimal values use the server's default string JSON representation. */
 export type Decimal = string;
 
-export interface ErrorResponse {
+export interface Response {
+    status_code: number;
+}
+
+export interface ErrorResponse extends Response {
     message: string;
 }
 
-export type APIPromise<T> = Promise<T | ErrorResponse>
+export interface DataResponse<T> extends Response {
+    data: T
+}
+
+export function isErrorResponse(resp: any): resp is ErrorResponse {
+    return resp.status_code >= 400;
+}
+
+export function isResponseT<T>(resp: any): resp is T {
+    return resp.status_code == 200 && resp.data != undefined;
+}
+
+export type APIPromise<T> = Promise<DataResponse<T> | ErrorResponse>
 
 export interface Totals {
     total_price: Decimal;
@@ -19,8 +35,25 @@ export interface Totals {
     left_over_discount: Decimal;
 }
 
+export interface EmailAddress {
+    Name: string;
+    Address: string;
+}
+
+/** These model fields have no JSON tags, so their Go casing is preserved. */
+export interface Customer {
+    ID: ULID;
+    Email: EmailAddress | null;
+    FirstName: string;
+    LastName: string;
+    User?: unknown;
+    FirstSeen: Timestamp;
+    Orders?: unknown;
+}
+
 export interface Cart {
     id: ULID;
+    customer?: Customer | null;
     created_at: Timestamp;
     active: boolean;
 }
@@ -121,6 +154,12 @@ export interface CartResponse {
     items: CartItem[] | null;
 }
 
+export interface CartCustomerRequest {
+    email: string;
+    first_name: string;
+    last_name: string;
+}
+
 export interface CartItemRequest {
     product_id: ULID;
     amount: number;
@@ -183,6 +222,10 @@ export interface ShopAPI {
     };
     clearCart: {
         request: undefined;
+        response: CartRow;
+    };
+    setCustomer: {
+        request: CartCustomerRequest;
         response: CartRow;
     };
     addCartItem: {

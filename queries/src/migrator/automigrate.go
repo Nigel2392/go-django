@@ -80,8 +80,8 @@ func (a *AutoMigrateConfig) apps() []string {
 		return a.Apps
 	}
 	var apps = make([]string, 0, django.Global.Apps.Len())
-	for head := django.Global.Apps.Front(); head != nil; head = head.Next() {
-		apps = append(apps, head.Key)
+	for app := range django.Global.Apps.Keys {
+		apps = append(apps, app)
 	}
 	a.Apps = apps
 	return apps
@@ -181,7 +181,7 @@ func AutoMigrate(ctx context.Context, opts ...AutoMigrateOption) (madeMigrations
 }
 
 func initAutoMigrateConfig(ctx context.Context, opts []AutoMigrateOption) (c *AutoMigrateConfig, engine *MigrationEngine, err error) {
-	if django.Global == nil || django.Global.Apps == nil || django.Global.Apps.Len() == 0 {
+	if django.Global == nil || django.Global.Apps.Len() == 0 {
 		return nil, nil, errors.Wrap(
 			errs.ErrInvalidValue,
 			"Django application has not been initialized, or does not contain any apps.",

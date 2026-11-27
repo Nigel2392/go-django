@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
-import { CartRow, CartItemRequest, CartItemResponse, RedemptionRequest, PaymentOption, APIPromise } from "./api";
+import { CartRow, CartCustomerRequest, CartItemRequest, CartItemResponse, RedemptionRequest, PaymentOption, APIPromise, DataResponse } from "./api";
 
 type ShopElement = HTMLElement & {
     SHOP: ShopController;
@@ -11,6 +11,7 @@ export class ShopController extends Controller<ShopElement> {
             data-controller="shop"
             data-shop-get-cart-url-value="{{ url "api:carts" }}"
             data-shop-clear-cart-url-value="{{ url "api:carts:clear" }}"
+            data-shop-set-customer-url-value="{{ url "api:carts:customer" }}"
             data-shop-add-cart-item-url-value="{{ url "api:carts:add_item" }}"
             data-shop-remove-cart-item-url-value="{{ url "api:carts:remove_item" }}"
             data-shop-redeem-coupon-url-value="{{ url "api:coupons:redeem" }}"
@@ -23,6 +24,7 @@ export class ShopController extends Controller<ShopElement> {
     static values = {
         getCartUrl:        {type: String, default: "/api/carts"},
         clearCartUrl:      {type: String, default: "/api/carts/clear"},
+        setCustomerUrl:    {type: String, default: "/api/carts/customer"},
         addCartItemUrl:    {type: String, default: "/api/carts/items/add"},
         removeCartItemUrl: {type: String, default: "/api/carts/items/remove"},
         redeemCouponUrl:   {type: String, default: "/api/coupons/redeem"},
@@ -32,6 +34,7 @@ export class ShopController extends Controller<ShopElement> {
 
     declare getCartUrlValue:        string;
     declare clearCartUrlValue:      string;
+    declare setCustomerUrlValue:    string;
     declare addCartItemUrlValue:    string;
     declare removeCartItemUrlValue: string;
     declare redeemCouponUrlValue:   string;
@@ -40,6 +43,7 @@ export class ShopController extends Controller<ShopElement> {
 
     declare hasGetCartUrlValue:        boolean;
     declare hasClearCartUrlValue:      boolean;
+    declare hasSetCustomerUrlValue:    boolean;
     declare hasAddCartItemUrlValue:    boolean;
     declare hasRemoveCartItemUrlValue: boolean;
     declare hasRedeemCouponUrlValue:   boolean;
@@ -79,6 +83,10 @@ export class ShopController extends Controller<ShopElement> {
 
     async clearCart(): APIPromise<CartRow> {
         return this.request<CartRow>(this.clearCartUrlValue, "POST");
+    }
+
+    async setCustomer(req: CartCustomerRequest): APIPromise<CartRow> {
+        return this.request<CartRow>(this.setCustomerUrlValue, "POST", req);
     }
 
     async addCartItem(req: CartItemRequest): APIPromise<CartItemResponse> {
@@ -122,15 +130,16 @@ export class ShopController extends Controller<ShopElement> {
         });
 
         if (!response.ok) {
-            const data = await response.json().catch(() => null);
+            const data = await response.json().catch((): any => null);
 
             return {
+                status_code: response.status,
                 message: typeof data?.message === "string"
                     ? data.message
                     : `Shop request failed (HTTP ${response.status})`,
             };
         }
 
-        return response.json() as Promise<T>;
+        return response.json() as Promise<DataResponse<T>>;
     }
 }

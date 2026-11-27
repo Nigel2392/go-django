@@ -2,6 +2,7 @@ package public
 
 import (
 	"context"
+	stderrors "errors"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/auth/users"
@@ -13,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux/v2/middleware/authentication"
 	"github.com/Nigel2392/mux/v2/middleware/sessions"
@@ -21,6 +23,12 @@ import (
 type CartItemRequest struct {
 	ProductID string `json:"product_id"`
 	Amount    int    `json:"amount"`
+}
+
+type CartCustomerRequest struct {
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }
 
 type CartResponse struct {
@@ -112,6 +120,86 @@ func (c CartAPI) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
 
 	err = api.Respond(w, cart)
 	if err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to encode the cart response: %v", err,
+		)
+	}
+}
+
+func (c CartAPI) SetCustomer(w http.ResponseWriter, r *http.Request) {
+	request := CartCustomerRequest{}
+	if err := api.Decode(r, &request); err != nil {
+		api.RespondError(w,
+			http.StatusBadRequest,
+			"failed to read or decode request body: %v", err,
+		)
+		return
+	}
+
+	if err := ensureCartSession(r); err != nil {
+		api.RespondError(w, http.StatusServiceUnavailable, "cart session unavailable")
+		return
+	}
+
+	ctx, tx, err := queries.StartTransaction(r.Context())
+	if err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to start transaction: %v", err,
+		)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	cart, _, err := c.getOrCreateCart(r.WithContext(ctx), true)
+	if err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to get or create the cart: %v", err,
+		)
+		return
+	}
+
+	var authUser users.User
+	if u, ok := authentication.Retrieve(r).(users.User); ok && !attrs.IsZero(u) && u.IsAuthenticated() {
+		authUser = u
+	} else if u, ok := authentication.UserFromContext(ctx).(users.User); ok && !attrs.IsZero(u) && u.IsAuthenticated() {
+		authUser = u
+	}
+
+	customer, err := carts.SetCustomer(ctx, cart.Object, carts.CustomerDetails{
+		Email:     request.Email,
+		FirstName: request.FirstName,
+		LastName:  request.LastName,
+		User:      authUser,
+	})
+	switch {
+	case stderrors.Is(err, carts.ErrInvalidCustomerEmail):
+		api.RespondError(w,
+			http.StatusUnprocessableEntity,
+			"a valid customer email address is required",
+		)
+		return
+	case err != nil:
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to save customer details: %v", err,
+		)
+		return
+	}
+
+	cart.Object.Customer = customer
+
+	if err := tx.Commit(ctx); err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to commit the changes to the database: %v", err,
+		)
+		return
+	}
+
+	if err := api.Respond(w, cart); err != nil {
 		api.RespondError(w,
 			http.StatusInternalServerError,
 			"failed to encode the cart response: %v", err,

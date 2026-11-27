@@ -3,9 +3,12 @@
 package payments
 
 import (
+	"testing"
+
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/shopspring/decimal"
-	"testing"
+	"golang.org/x/text/currency"
 )
 
 func TestPaymentStateValidation(t *testing.T) {
@@ -15,12 +18,14 @@ func TestPaymentStateValidation(t *testing.T) {
 		status PaymentStatus
 		valid  bool
 	}{
-		{"valid", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: Money{p.Amount, "EUR"}}, true},
-		{"blank state", PaymentStatus{ProviderRef: "ref", Amount: Money{p.Amount, "EUR"}}, false},
-		{"unrecognized state", PaymentStatus{ProviderRef: "ref", State: "COMPLETED", Amount: Money{p.Amount, "EUR"}}, false},
-		{"internal free checkout state", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_NO_PAYMENT_REQUIRED, Amount: Money{p.Amount, "EUR"}}, false},
-		{"blank reference", PaymentStatus{State: paystate.STATUS_PAID, Amount: Money{p.Amount, "EUR"}}, false},
-		{"fractional mismatch", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: Money{decimal.RequireFromString("10.001"), "EUR"}}, false},
+		{"valid", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: price.Money{Amount: p.Amount, Currency: currency.EUR}}, true},
+		{"blank state", PaymentStatus{ProviderRef: "ref", Amount: price.Money{Amount: p.Amount, Currency: currency.EUR}}, false},
+		{"unrecognized state", PaymentStatus{ProviderRef: "ref", State: "COMPLETED", Amount: price.Money{Amount: p.Amount, Currency: currency.EUR}}, false},
+		{"internal free checkout state", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_NO_PAYMENT_REQUIRED, Amount: price.Money{Amount: p.Amount, Currency: currency.EUR}}, false},
+		{"blank reference", PaymentStatus{State: paystate.STATUS_PAID, Amount: price.Money{Amount: p.Amount, Currency: currency.EUR}}, false},
+		{"fractional mismatch", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: price.Money{Amount: decimal.RequireFromString("10.001"), Currency: currency.EUR}}, false},
+		{"currency mismatch", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: price.Money{Amount: p.Amount, Currency: currency.USD}}, false},
+		{"missing currency", PaymentStatus{ProviderRef: "ref", State: paystate.STATUS_PAID, Amount: price.Money{Amount: p.Amount}}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if (p.validateStatus(tc.status) == nil) != tc.valid {

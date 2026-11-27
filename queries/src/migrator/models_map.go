@@ -36,10 +36,10 @@ func getModelByApp(appName, modelName string) (attrs.Definer, bool) {
 var _, _ = core.OnModelsReady.Listen(context.Background(), func(ctx context.Context, s signals.Signal[any], a any) error {
 	var app = a.(*django.Application)
 	var apps = app.Apps
-	for head := apps.Front(); head != nil; head = head.Next() {
-		var (
-			app = head.Value
-		)
+	clear(modelMap)
+	clear(modelsByApp)
+
+	for appName, app := range apps.Iter {
 
 		var models = app.Models()
 		for _, model := range models {
@@ -51,12 +51,12 @@ var _, _ = core.OnModelsReady.Listen(context.Background(), func(ctx context.Cont
 				modelMap[typ] = app
 			}
 
-			if _, ok := modelsByApp[head.Key]; !ok {
-				modelsByApp[head.Key] = make(map[string]attrs.Definer)
+			if _, ok := modelsByApp[appName]; !ok {
+				modelsByApp[appName] = make(map[string]attrs.Definer)
 			}
 
-			if _, ok := modelsByApp[head.Key][typ.Name()]; !ok {
-				modelsByApp[head.Key][typ.Name()] = model
+			if _, ok := modelsByApp[appName][typ.Name()]; !ok {
+				modelsByApp[appName][typ.Name()] = model
 			}
 		}
 	}

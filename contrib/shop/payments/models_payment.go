@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/relations/modelkeys"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/shopspring/decimal"
+	"golang.org/x/text/currency"
 )
 
 type Payment struct {
@@ -20,23 +22,33 @@ type Payment struct {
 	Provider      string
 	TransactionID sql.NullString
 	CheckoutURL   string
+	State         paystate.PayState
 	Amount        decimal.Decimal
 
 	// Fee is the customer-facing payment fee included in Amount.
 	Fee decimal.Decimal
 
+	// RefundedAmount is the cumulative refunded amount in the payment's Currency.
+	RefundedAmount decimal.Decimal
+
 	// ProviderFee is the latest merchant processing fee reported by the PSP.
-	ProviderFee      drivers.JSON[*Money]
-	Currency         string
-	State            paystate.PayState
-	CreatedAt        drivers.Timestamp
-	UpdatedAt        drivers.Timestamp
-	AuthorizationRef string
-	CaptureRef       string
-	OperationKey     string
-	OperationVersion uint64
-	Operations       drivers.JSON[map[string]OperationRecord]
-	History          drivers.JSON[[]PaymentEvent]
+	ProviderFee drivers.JSON[*price.Money]
+	Currency    string
+	CreatedAt   drivers.Timestamp
+	UpdatedAt   drivers.Timestamp
+	History     drivers.JSON[[]PaymentEvent]
+}
+
+// CurrencyUnit parses the snapshotted ISO currency code stored on the Payment.
+func (m *Payment) CurrencyUnit() currency.Unit {
+	if m == nil || m.Currency == "" {
+		return currency.Unit{}
+	}
+	unit, err := currency.ParseISO(m.Currency)
+	if err != nil || unit.String() != m.Currency {
+		return currency.Unit{}
+	}
+	return unit
 }
 
 // PaymentEvent is a recorded step in a payment attempt, in write order.
@@ -44,23 +56,21 @@ type PaymentEvent struct {
 	At          time.Time
 	Kind        PaymentEventKind
 	State       paystate.PayState
-	RequestID   string         `json:",omitempty"`
-	Operation   OperationKind  `json:",omitempty"`
-	Phase       OperationState `json:",omitempty"`
-	Amount      *Money         `json:",omitempty"`
-	ProviderFee *Money         `json:",omitempty"`
+	RequestID   string       `json:",omitempty"`
+	ProviderRef string       `json:",omitempty"`
+	Amount      *price.Money `json:",omitempty"`
+	ProviderFee *price.Money `json:",omitempty"`
 }
 
 type PaymentEventKind string
 
 const (
-	EventPrepared           PaymentEventKind = "prepared"
 	EventCheckoutOpened     PaymentEventKind = "checkout_opened"
-	EventCheckoutFailed     PaymentEventKind = "checkout_failed"
 	EventStatusUpdated      PaymentEventKind = "status_updated"
 	EventProviderFeeUpdated PaymentEventKind = "provider_fee_updated"
 	EventNoPaymentRequired  PaymentEventKind = "no_payment_required"
-	EventOperation          PaymentEventKind = "operation"
+	EventRefunded           PaymentEventKind = "refunded"
+	EventCancelled          PaymentEventKind = "cancelled"
 )
 
 const freeCheckoutProvider = "shop:free-checkout"
@@ -105,15 +115,11 @@ func (m *Payment) FieldDefs(ctx context.Context) attrs.Definitions {
 		paymentField(m, "State", &m.State, attrs.Config{MaxLength: 40}),
 		paymentField(m, "Amount", &m.Amount, attrs.Config{Precision: 13, Scale: 4}),
 		paymentField(m, "Fee", &m.Fee, attrs.Config{Precision: 13, Scale: 4, Blank: true, Default: decimal.Zero}),
+		paymentField(m, "RefundedAmount", &m.RefundedAmount, attrs.Config{Precision: 13, Scale: 4, Blank: true, Default: decimal.Zero}),
 		paymentField(m, "ProviderFee", &m.ProviderFee, attrs.Config{Null: true, Blank: true, ReadOnly: true}),
 		paymentField(m, "Currency", &m.Currency, attrs.Config{MaxLength: 3, Blank: true, Default: ""}),
 		paymentField(m, "CreatedAt", &m.CreatedAt, attrs.Config{AutoNowAdd: true}),
 		paymentField(m, "UpdatedAt", &m.UpdatedAt, attrs.Config{AutoNow: true}),
-		paymentField(m, "AuthorizationRef", &m.AuthorizationRef, attrs.Config{MaxLength: 255, Blank: true, Default: ""}),
-		paymentField(m, "CaptureRef", &m.CaptureRef, attrs.Config{MaxLength: 255, Blank: true, Default: ""}),
-		paymentField(m, "OperationKey", &m.OperationKey, attrs.Config{MaxLength: 128, Blank: true, Default: ""}),
-		paymentField(m, "OperationVersion", &m.OperationVersion, attrs.Config{Null: true, Blank: true, Default: uint64(0)}),
-		paymentField(m, "Operations", &m.Operations, attrs.Config{Null: true, Blank: true}),
 		paymentField(m, "History", &m.History, attrs.Config{Null: true, Blank: true, ReadOnly: true}),
 	)
 }

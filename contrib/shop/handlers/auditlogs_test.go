@@ -32,16 +32,11 @@ func TestShopAuditDefinitions(t *testing.T) {
 		"shop:orders:update":                "Order updated",
 		"shop:orders:accept":                "Order accepted",
 		"shop:orders:process":               "Order processed",
-		"shop:orders:complete":              "Order completed",
-		"shop:payments:start":               "Payment started",
-		"shop:payments:update":              "Payment status updated",
-		"shop:payments:refund":              "Payment refunded",
-		"shop:payments:void":                "Payment authorization voided",
-		"shop:payments:capture":             "Payment captured",
-		"shop:payments:cancel":              "Payment cancelled",
-		"shop:payments:operation:requested": "Payment operation requested",
-		"shop:payments:operation:pending":   "Payment operation pending",
-		"shop:payments:operation:failed":    "Payment operation failed",
+		"shop:orders:complete":    "Order completed",
+		"shop:payments:start":     "Payment started",
+		"shop:payments:update":    "Payment status updated",
+		"shop:payments:refund":    "Payment refunded",
+		"shop:payments:cancel":    "Payment cancelled",
 	} {
 		t.Run(kind, func(t *testing.T) {
 			def := auditlogs.DefinitionForType(kind)
@@ -56,7 +51,6 @@ func TestShopAuditDefinitions(t *testing.T) {
 					"title": "Fixture", "state": paystate.STATUS_PAID, "previous_state": paystate.STATUS_PENDING,
 					"line_count": 1, "cart_id": "cart-fixture", "amount": "12", "currency": "EUR",
 					"refund_amount": "2", "refund_currency": "EUR", "request_id": "request-fixture",
-					"operation": payments.OperationRefund, "phase": payments.OperationFailed,
 				}},
 			}
 			require.Equal(t, title, def.TypeLabel(req, kind))

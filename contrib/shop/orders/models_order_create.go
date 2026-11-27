@@ -55,7 +55,7 @@ func createOrder(r *http.Request, customer *customers.Customer, cart *carts.Cart
 	defer tx.Rollback(ctx)
 
 	order := attrs.Setup[*Order](ctx, &Order{
-		State:    orderStatePending,
+		State:    OrderStatePending,
 		Customer: customer,
 	})
 

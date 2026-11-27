@@ -7,6 +7,8 @@ import (
 
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
+	"github.com/shopspring/decimal"
+	"golang.org/x/text/currency"
 )
 
 const DemoDriver = "tutorial"
@@ -21,8 +23,16 @@ type Demo struct {
 
 func RegisterDemo() *Demo {
 	demo := &Demo{checkouts: make(map[string]payments.Checkout)}
-	payments.RegisterProvider(DemoDriver, func(context.Context, *payments.ProviderAccount) (payments.Provider, error) {
-		return demo, nil
+	payments.RegisterProvider(&payments.PSP{
+		Name: DemoDriver,
+		TextLabel: func(context.Context) string {
+			return "Tutorial provider"
+		},
+		CurrencyUnit:   currency.EUR,
+		FixedFeeAmount: decimal.RequireFromString("0.50"),
+		Factory: func(context.Context, *payments.ProviderAccount) (payments.Provider, error) {
+			return demo, nil
+		},
 	})
 	return demo
 }

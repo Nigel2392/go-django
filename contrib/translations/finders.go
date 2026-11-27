@@ -505,17 +505,15 @@ type godjangoModelsFinder struct {
 }
 
 func (f *godjangoModelsFinder) Find(fsys fs.FS, isExcluded func(filename string) bool) ([]Translation, error) {
-	var apps = django.Global.Apps
-	if apps == nil {
+	if django.Global.Apps.Len() == 0 {
 		return nil, nil
 	}
 
 	var matches []Translation
 	var lineNum int
-	for head := apps.Front(); head != nil; head = head.Next() {
+	for _, app := range django.Global.Apps.Iter {
 		lineNum++
 
-		var app = head.Value
 		var models = app.Models()
 		var col int
 

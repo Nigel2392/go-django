@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -23,650 +23,154 @@ import (
 var (
 	ErrInvalidWebhook       = errors.New("invalid payment webhook")
 	ErrUnsupportedOperation = errors.New("payment provider does not support operation")
-	ErrOperationPending     = errors.New("payment operation requires reconciliation")
 	ErrNonPositiveTotal     = errors.New("payment total must be positive")
 )
 
-type OperationRecord struct {
-	PreviousState string
-	Kind          OperationKind
-	Resource      string
-	Amount        Money
-	Phase         OperationState
-	Result        OperationResult
-}
-
-// appendEvent advances the row version used by all writers of the history.
-func (p *Payment) appendEvent(event PaymentEvent) expr.ClauseExpression {
+func (p *Payment) appendEvent(event PaymentEvent) {
 	event.At = time.Now().UTC()
 	event.State = p.State
 	p.History.Null = false
 	p.History.Data = append(p.History.Data, event)
-
-	version := p.OperationVersion
-	p.OperationVersion++
-	if version == 0 {
-		return expr.Or(
-			expr.Q("OperationVersion", version),
-			expr.Q("OperationVersion__isnull", true),
-		)
-	}
-	return expr.Q("OperationVersion", version)
 }
 
-func (p *Payment) appendOperationEvent(key string, record OperationRecord) expr.ClauseExpression {
-	event := PaymentEvent{
-		Kind:      EventOperation,
-		RequestID: key,
-		Operation: record.Kind,
-		Phase:     record.Phase,
+// OpenCheckout quotes subtotal and opens checkout with the PSP without writing to the database.
+func OpenCheckout(ctx context.Context, account *ProviderAccount, attemptID drivers.ULID, subtotal price.Money, returnURL, webhookURL string) (price.Quote, Checkout, error) {
+	if attemptID.IsZero() {
+		return price.Quote{}, Checkout{}, errors.New("payment attempt ID is required")
 	}
-	if record.Amount.Currency != "" {
-		event.Amount = &record.Amount
+	if account == nil || account.ID.IsZero() {
+		return price.Quote{}, Checkout{}, errors.New("payment account is required")
 	}
-	return p.appendEvent(event)
-}
+	if !account.Enabled {
+		return price.Quote{}, Checkout{}, errors.New("payment account is disabled")
+	}
 
-func Refund(ctx context.Context, id drivers.ULID, request RefundRequest) (OperationResult, error) {
-	payment, provider, err := operationPayment(ctx, id, request.OperationRequest)
+	quote, err := account.Quote(ctx, subtotal)
 	if err != nil {
-		return OperationResult{}, err
+		return price.Quote{}, Checkout{}, err
+	}
+	if !quote.Total.IsPositive() {
+		return price.Quote{}, Checkout{}, ErrNonPositiveTotal
 	}
 
-	refunder, ok := provider.(Refunder)
-	if !ok {
-		return OperationResult{}, ErrUnsupportedOperation
-	}
-
-	request.OperationRequest, err = bindOperationReference(
-		request.OperationRequest,
-		operationReferences(payment, provider).Refund,
-	)
+	provider, err := account.Provider(ctx)
 	if err != nil {
-		return OperationResult{}, err
+		return price.Quote{}, Checkout{}, err
 	}
 
-	if err = request.Validate(); err != nil {
-		return OperationResult{}, err
-	}
-
-	record := OperationRecord{
-		Kind:     OperationRefund,
-		Resource: request.ProviderRef,
-		Amount:   request.Amount,
-	}
-
-	result, replay, err := replayOperation(
-		payment,
-		request.RequestID,
-		record,
-	)
-	if replay || err != nil {
-		return result, err
-	}
-
-	if payment.State != paystate.STATUS_PAID && payment.State != paystate.STATUS_PARTIAL_REFUND {
-		return OperationResult{}, errors.New("payment is not refundable")
-	}
-
-	refunded := decimal.Zero
-	for _, op := range payment.Operations.Data {
-		if op.Kind == OperationRefund && op.Phase == OperationSucceeded {
-			refunded = refunded.Add(op.Amount.Amount)
-		}
-	}
-
-	if request.Amount.Currency != payment.Currency || refunded.Add(request.Amount.Amount).GreaterThan(payment.Amount) {
-		return OperationResult{}, errors.New("refund exceeds payment balance or currency differs")
-	}
-
-	err = reserveOperation(ctx, payment, request.RequestID, record, paystate.STATUS_REFUNDING)
-	if err != nil {
-		return OperationResult{}, err
-	}
-
-	result, err = refunder.RefundPayment(ctx, request)
-	if err != nil {
-		return OperationResult{}, failOperation(ctx, payment, request.RequestID, err)
-	}
-
-	return finishOperation(ctx, id, request.RequestID, result)
-}
-
-func Void(ctx context.Context, id drivers.ULID, request OperationRequest) error {
-	payment, provider, err := operationPayment(ctx, id, request)
-	if err != nil {
-		return err
-	}
-
-	voider, ok := provider.(Voider)
-	if !ok {
-		return ErrUnsupportedOperation
-	}
-
-	request, err = bindOperationReference(
-		request,
-		operationReferences(payment, provider).Void,
-	)
-	if err != nil {
-		return err
-	}
-
-	record := OperationRecord{
-		Kind:     OperationVoid,
-		Resource: request.ProviderRef,
-	}
-
-	_, replay, err := replayOperation(
-		payment,
-		request.RequestID,
-		record,
-	)
-	if replay || err != nil {
-		return err
-	}
-
-	if payment.State != paystate.STATUS_AUTHORIZE {
-		return errors.New("payment is not authorized")
-	}
-
-	err = reserveOperation(
-		ctx, payment,
-		request.RequestID,
-		record,
-		payment.State,
-	)
-	if err != nil {
-		return err
-	}
-
-	if err = voider.VoidPayment(ctx, request); err != nil {
-		return failOperation(ctx, payment, request.RequestID, err)
-	}
-
-	_, err = finishOperation(ctx, id, request.RequestID, OperationResult{
-		ProviderRef: request.ProviderRef,
-		State:       OperationSucceeded,
-		Status:      OperationStatusVoided,
+	checkout, err := provider.CreatePayment(ctx, CreatePaymentRequest{
+		AttemptID:  attemptID,
+		Amount:     price.Money{Amount: quote.Total, Currency: quote.Currency},
+		ReturnURL:  returnURL,
+		WebhookURL: webhookURL,
 	})
-	return err
+	if err != nil {
+		return price.Quote{}, Checkout{}, err
+	}
+	if err := validateStatus(quote.Total, quote.Currency, "", checkout.PaymentStatus); err != nil {
+		return price.Quote{}, Checkout{}, err
+	}
+
+	checkout.ProviderFee = copyProviderFee(checkout.ProviderFee)
+	return quote, checkout, nil
 }
 
-func Capture(ctx context.Context, id drivers.ULID, request OperationRequest) (OperationResult, error) {
-	payment, provider, err := operationPayment(ctx, id, request)
-	if err != nil {
-		return OperationResult{}, err
+// RecordPayment persists a successfully opened checkout attempt and emits Signals.Start.
+func RecordPayment(ctx context.Context, order attrs.Definer, account *ProviderAccount, id drivers.ULID, quote price.Quote, checkout Checkout) (*Payment, error) {
+	if order == nil || attrs.IsZero(order) {
+		return nil, errors.New("payment requires an order")
 	}
-
-	capturer, ok := provider.(Capturer)
-	if !ok {
-		return OperationResult{}, ErrUnsupportedOperation
+	if account == nil || account.ID.IsZero() || account.InternalName == "" {
+		return nil, errors.New("payment requires an account")
 	}
-
-	request, err = bindOperationReference(
-		request,
-		operationReferences(payment, provider).Capture,
-	)
-	if err != nil {
-		return OperationResult{}, err
-	}
-
-	record := OperationRecord{
-		Kind:     OperationCapture,
-		Resource: request.ProviderRef,
-	}
-
-	result, replay, err := replayOperation(
-		payment,
-		request.RequestID,
-		record,
-	)
-	if replay || err != nil {
-		return result, err
-	}
-
-	if payment.State != paystate.STATUS_AUTHORIZE {
-		return OperationResult{}, errors.New(
-			"payment is not authorized")
-	}
-
-	err = reserveOperation(
-		ctx, payment,
-		request.RequestID,
-		record,
-		payment.State,
-	)
-	if err != nil {
-		return OperationResult{}, err
-	}
-
-	result, err = capturer.CapturePayment(ctx, request)
-	if err != nil {
-		return OperationResult{}, failOperation(
-			ctx, payment,
-			request.RequestID,
-			err,
-		)
-	}
-
-	return finishOperation(ctx, id, request.RequestID, result)
-}
-
-func Cancel(ctx context.Context, id drivers.ULID, request OperationRequest) error {
-	payment, provider, err := operationPayment(ctx, id, request)
-	if err != nil {
-		return err
-	}
-
-	canceller, ok := provider.(Canceller)
-	if !ok {
-		return ErrUnsupportedOperation
-	}
-
-	request, err = bindOperationReference(
-		request,
-		operationReferences(payment, provider).Cancel,
-	)
-	if err != nil {
-		return err
-	}
-
-	record := OperationRecord{
-		Kind:     OperationCancel,
-		Resource: request.ProviderRef,
-	}
-
-	_, replay, err := replayOperation(
-		payment,
-		request.RequestID,
-		record,
-	)
-	if replay || err != nil {
-		return err
-	}
-
-	if payment.State != paystate.STATUS_INIT && payment.State != paystate.STATUS_PENDING && payment.State != paystate.STATUS_VERIFY {
-		return errors.New("payment cannot be cancelled")
-	}
-
-	err = reserveOperation(
-		ctx, payment,
-		request.RequestID,
-		record,
-		payment.State,
-	)
-	if err != nil {
-		return err
-	}
-
-	if err = canceller.CancelPayment(ctx, request); err != nil {
-		return failOperation(ctx, payment, request.RequestID, err)
-	}
-
-	_, err = finishOperation(ctx, id, request.RequestID, OperationResult{
-		ProviderRef: request.ProviderRef,
-		State:       OperationSucceeded,
-		Status:      OperationStatusCancelled,
-	})
-	return err
-}
-
-func operationPayment(ctx context.Context, id drivers.ULID, request OperationRequest) (*Payment, Provider, error) {
-	if !queries.IsCommitContext(ctx) {
-		return nil, nil, errors.New(
-			"payment operations require commits")
-	}
-
-	if queries.IsTransactionContext(ctx) {
-		return nil, nil, errors.New(
-			"payment operations require a context outside an existing transaction")
-	}
-
-	if strings.TrimSpace(request.RequestID) == "" || len(request.RequestID) > 128 {
-		return nil, nil, errors.New(
-			"operation request ID is required and must fit 128 bytes")
-	}
-
-	payment, err := getAttempt(ctx, id)
-	if err != nil {
-		return nil, nil, err
-	}
-	if payment.IsFreeCheckout() {
-		return nil, nil, ErrUnsupportedOperation
-	}
-
-	provider, err := payment.Account.provider(ctx)
-	return payment, provider, err
-}
-
-func operationReferences(payment *Payment, provider Provider) OperationReferences {
-	if resolver, ok := provider.(OperationReferenceResolver); ok {
-		return resolver.OperationReferences(payment.status())
-	}
-
-	ref := payment.TransactionID.String
-	return OperationReferences{
-		Refund:  ref,
-		Void:    ref,
-		Capture: ref,
-		Cancel:  ref,
-	}
-}
-
-func bindOperationReference(request OperationRequest, resource string) (OperationRequest, error) {
-	if resource == "" || (request.ProviderRef != "" && request.ProviderRef != resource) {
-		return request, errors.New("operation resource does not match payment")
-	}
-
-	request.ProviderRef = resource
-	return request, nil
-}
-
-func replayOperation(payment *Payment, key string, record OperationRecord) (OperationResult, bool, error) {
-	if old, ok := payment.Operations.Data[key]; ok {
-		if old.Kind != record.Kind || old.Resource != record.Resource || old.Amount.Currency != record.Amount.Currency || !old.Amount.Amount.Equal(record.Amount.Amount) {
-			return OperationResult{}, false, errors.New("operation request ID already has a different payload")
-		}
-
-		if old.Phase == OperationSucceeded {
-			return old.Result, true, nil
-		}
-
-		return old.Result, false, ErrOperationPending
-	}
-
-	if payment.OperationKey != "" {
-		return OperationResult{}, false, ErrOperationPending
-	}
-
-	return OperationResult{}, false, nil
-}
-
-// reserveOperation commits the durable request before the adapter is called.
-func reserveOperation(ctx context.Context, payment *Payment, key string, record OperationRecord, state string) error {
-	ctx, tx, err := queries.StartTransaction(ctx)
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback(ctx)
-	priorState := payment.State
-	record.PreviousState = priorState
-	record.Phase = OperationRequested
-	payment.State = state
-	if payment.Operations.Data == nil {
-		payment.Operations.Data = make(map[string]OperationRecord)
-	}
-
-	payment.Operations.Null = false
-	payment.Operations.Data[key] = record
-	payment.OperationKey = key
-	version := payment.appendOperationEvent(key, record)
-
-	n, err := queries.
-		GetQuerySet(&Payment{}).
-		WithContext(ctx).
-		Select("Operations", "History", "OperationKey", "OperationVersion", "State", "UpdatedAt").
-		Filter(
-			expr.Q("ID", payment.ID),
-			expr.Q("State", priorState),
-			expr.Or(
-				expr.Q("OperationKey", ""),
-				expr.Q("OperationKey__isnull", true),
-			),
-			version,
-		).
-		Update(payment)
-	if err != nil {
-		return err
-	}
-
-	if n != 1 {
-		return errors.New("payment changed concurrently")
-	}
-
-	err = Signals.OperationRequested.Send(ctx, PaymentOperationSignal{
-		Payment:   payment,
-		RequestID: key,
-		Operation: record,
-	})
-	if err == nil && priorState != payment.State {
-		err = Signals.Update.Send(ctx, PaymentUpdatedSignal{Payment: payment, PreviousState: priorState})
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
-}
-
-// A failed response may follow a successful remote mutation. Keep the reservation.
-func failOperation(ctx context.Context, payment *Payment, key string, cause error) error {
-	record := payment.Operations.Data[key]
-	record.Phase = OperationUncertain
-	record.Result = OperationResult{}
-	payment.Operations.Data[key] = record
-	version := payment.appendOperationEvent(key, record)
-
-	count, saveErr := queries.
-		GetQuerySet(&Payment{}).
-		WithContext(ctx).
-		Select("Operations", "History", "OperationVersion", "UpdatedAt").
-		Filter(
-			expr.Q("ID", payment.ID),
-			expr.Q("OperationKey", key),
-			version,
-		).
-		Update(payment)
-	if saveErr != nil {
-		return errors.Join(cause, saveErr)
-	}
-	if count != 1 {
-		return errors.Join(cause, errors.New("operation updated concurrently"))
-	}
-
-	signalErr := Signals.OperationFailed.Send(ctx, PaymentOperationSignal{
-		Payment:   payment,
-		RequestID: key,
-		Operation: record,
-		Error:     cause,
-	})
-
-	return errors.Join(cause, signalErr)
-}
-
-// ResolveOperation records a server-verified PSP outcome after an ambiguous or
-// asynchronous result. Call only after provider reconciliation or operator review.
-// A failed outcome releases the reservation without claiming money moved.
-func ResolveOperation(ctx context.Context, id drivers.ULID, requestID string, result OperationResult) (OperationResult, error) {
-	if result.State != OperationSucceeded && result.State != OperationFailed {
-		return OperationResult{}, errors.New("reconciliation requires a terminal outcome")
-	}
-
-	return finishOperation(ctx, id, requestID, result)
-}
-
-func finishOperation(ctx context.Context, id drivers.ULID, key string, result OperationResult) (OperationResult, error) {
-	ctx, tx, err := queries.StartTransaction(ctx)
-	if err != nil {
-		return OperationResult{}, err
-	}
-
-	defer tx.Rollback(ctx)
-
-	payment, err := getAttempt(ctx, id)
-	if err != nil {
-		return OperationResult{}, err
-	}
-	if payment.IsFreeCheckout() {
-		return OperationResult{}, ErrUnsupportedOperation
-	}
-
-	record, ok := payment.Operations.Data[key]
-	if !ok {
-		return OperationResult{}, errors.New("unknown payment operation")
-	}
-
-	if record.Phase == OperationSucceeded || record.Phase == OperationFailed {
-		if result.State != record.Phase {
-			return OperationResult{}, errors.New("operation already has a different terminal outcome")
-		}
-
-		return record.Result, nil
-	}
-
-	if payment.OperationKey != key {
-		return OperationResult{}, errors.New("payment operation reservation changed")
-	}
-
-	if result.State != OperationSucceeded && result.State != OperationFailed {
-		result.State = OperationPending
-	}
-
-	if result.State == OperationSucceeded && strings.TrimSpace(result.ProviderRef) == "" {
-		return OperationResult{}, errors.New("successful operation requires a provider reference")
-	}
-
-	record.Result = result
-	record.Phase = result.State
-	payment.Operations.Data[key] = record
-	prior := payment.State
-
-	if result.State == OperationFailed && record.PreviousState != "" {
-		payment.State = record.PreviousState
-	}
-
-	if result.State == OperationSucceeded {
-		switch record.Kind {
-		case OperationVoid, OperationCancel:
-			payment.State = paystate.STATUS_CANCEL
-
-		case OperationCapture:
-			payment.State = paystate.STATUS_PAID
-			payment.CaptureRef = result.ProviderRef
-
-		case OperationRefund:
-			refunded := decimal.Zero
-			for _, op := range payment.Operations.Data {
-				if op.Kind == OperationRefund && op.Phase == OperationSucceeded {
-					refunded = refunded.Add(op.Amount.Amount)
-				}
-			}
-
-			payment.State = paystate.STATUS_PARTIAL_REFUND
-			if refunded.Equal(payment.Amount) {
-				payment.State = paystate.STATUS_REFUND
-			}
-		}
-	}
-
-	if result.State != OperationPending {
-		payment.OperationKey = ""
-	}
-	version := payment.appendOperationEvent(key, record)
-
-	n, err := queries.
-		GetQuerySet(&Payment{}).
-		WithContext(ctx).
-		Select("Operations", "History", "OperationVersion", "OperationKey", "State", "CaptureRef", "UpdatedAt").
-		Filter(
-			expr.Q("ID", id),
-			expr.Q("OperationKey", key),
-			version,
-		).
-		Update(payment)
-	if err != nil {
-		return OperationResult{}, err
-	}
-
-	if n != 1 {
-		return OperationResult{}, errors.New("operation updated concurrently")
-	}
-
-	sig := PaymentOperationSignal{Payment: payment, RequestID: key, Operation: record}
-	switch result.State {
-	case OperationPending:
-		err = Signals.OperationPending.Send(ctx, sig)
-
-	case OperationFailed:
-		err = Signals.OperationFailed.Send(ctx, sig)
-
-	case OperationSucceeded:
-		switch record.Kind {
-		case OperationRefund:
-			err = Signals.Refund.Send(ctx, PaymentRefundedSignal{
-				Payment:   payment,
-				RequestID: key,
-				Amount:    record.Amount,
-				Result:    result,
-			})
-
-		case OperationVoid:
-			err = Signals.Void.Send(ctx, PaymentVoidedSignal{
-				Payment:   payment,
-				RequestID: key,
-			})
-
-		case OperationCapture:
-			err = Signals.Capture.Send(ctx, sig)
-
-		case OperationCancel:
-			err = Signals.Cancel.Send(ctx, sig)
-		}
-	}
-
-	if err == nil && prior != payment.State {
-		err = Signals.Update.Send(ctx, PaymentUpdatedSignal{
-			Payment:       payment,
-			PreviousState: prior,
-		})
-	}
-
-	if err != nil {
-		return result, fmt.Errorf("payment operation signal: %w", err)
-	}
-
-	return result, tx.Commit(ctx)
-}
-
-// CreateAttempt snapshots the server-calculated amount and the account's fee.
-func CreateAttempt(ctx context.Context, order attrs.Definer, accountID drivers.ULID, subtotal Money) (*Payment, error) {
-	return createAttempt(ctx, order, accountID, subtotal, drivers.ULID{})
-}
-
-// CreateAttemptWithID saves a new attempt under a caller-supplied ID. A repeat
-// checkout can look up that ID before it prepares another order.
-func CreateAttemptWithID(ctx context.Context, order attrs.Definer, accountID drivers.ULID, subtotal Money, id drivers.ULID) (*Payment, error) {
 	if id.IsZero() {
 		return nil, errors.New("payment attempt ID is required")
 	}
-	return createAttempt(ctx, order, accountID, subtotal, id)
-}
-
-// CreateFreeCheckoutWithID records an order's zero-total checkout under the
-// same durable attempt ID that a paid checkout would use. Callers must first
-// verify that the amount due rounds to zero in the checkout currency.
-func CreateFreeCheckoutWithID(ctx context.Context, order attrs.Definer, code string, id drivers.ULID) (*Payment, error) {
-	if attrs.IsZero(order) || id.IsZero() {
-		return nil, errors.New("free checkout requires an order and attempt ID")
+	if quote.Currency == (currency.Unit{}) || quote.Fee.IsNegative() {
+		return nil, errors.New("invalid payment quote")
 	}
-	unit, err := currency.ParseISO(code)
-	if err != nil || unit.String() != code {
-		return nil, fmt.Errorf("invalid checkout currency %q", code)
+	if !quote.Total.IsPositive() {
+		return nil, ErrNonPositiveTotal
+	}
+	if err := validateStatus(quote.Total, quote.Currency, "", checkout.PaymentStatus); err != nil {
+		return nil, err
 	}
 
-	return queries.
-		GetQuerySet(&Payment{}).
+	ctx, tx, err := queries.StartTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	var providerFee drivers.JSON[*price.Money]
+	if checkout.ProviderFee != nil {
+		providerFee = drivers.JSON[*price.Money]{Data: copyProviderFee(checkout.ProviderFee)}
+	}
+
+	payment, err := queries.GetQuerySet(&Payment{}).
 		WithContext(ctx).
 		Create(&Payment{
-			ID:       id,
-			Order:    order,
-			Provider: freeCheckoutProvider,
-			Amount:   decimal.Zero,
-			Fee:      decimal.Zero,
-			Currency: code,
-			State:    paystate.STATUS_NO_PAYMENT_REQUIRED,
+			ID:             id,
+			Order:          order,
+			Account:        account,
+			Provider:       account.InternalName,
+			TransactionID:  sql.NullString{String: checkout.ProviderRef, Valid: true},
+			CheckoutURL:    checkout.URL,
+			State:          checkout.State,
+			Amount:         quote.Total,
+			Fee:            quote.Fee,
+			RefundedAmount: decimal.Zero,
+			ProviderFee:    providerFee,
+			Currency:       quote.Currency.String(),
+			History: drivers.JSON[[]PaymentEvent]{
+				Data: []PaymentEvent{
+					{
+						At:          time.Now().UTC(),
+						Kind:        EventCheckoutOpened,
+						State:       checkout.State,
+						ProviderRef: checkout.ProviderRef,
+						ProviderFee: copyProviderFee(checkout.ProviderFee),
+					},
+				},
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := Signals.Start.Send(ctx, PaymentStartedSignal{Payment: payment}); err != nil {
+		return nil, err
+	}
+
+	return payment, tx.Commit(ctx)
+}
+
+// CreateFreePayment records a zero-total order checkout without contacting a payment provider.
+func CreateFreePayment(ctx context.Context, order attrs.Definer, unit currency.Unit, id drivers.ULID) (*Payment, error) {
+	if order == nil || attrs.IsZero(order) || id.IsZero() {
+		return nil, errors.New("free checkout requires an order and attempt ID")
+	}
+	if unit == (currency.Unit{}) {
+		return nil, errors.New("free checkout requires a currency unit")
+	}
+
+	ctx, tx, err := queries.StartTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	payment, err := queries.GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Create(&Payment{
+			ID:             id,
+			Order:          order,
+			Provider:       freeCheckoutProvider,
+			State:          paystate.STATUS_NO_PAYMENT_REQUIRED,
+			Amount:         decimal.Zero,
+			Fee:            decimal.Zero,
+			RefundedAmount: decimal.Zero,
+			Currency:       unit.String(),
 			History: drivers.JSON[[]PaymentEvent]{
 				Data: []PaymentEvent{
 					{
@@ -677,181 +181,11 @@ func CreateFreeCheckoutWithID(ctx context.Context, order attrs.Definer, code str
 				},
 			},
 		})
-}
-
-func createAttempt(ctx context.Context, order attrs.Definer, accountID drivers.ULID, subtotal Money, id drivers.ULID) (*Payment, error) {
-	if order == nil {
-		return nil, errors.New("payment requires an order")
-	}
-
-	row, err := queries.
-		GetQuerySet(&ProviderAccount{}).
-		WithContext(ctx).
-		Filter("ID", accountID).
-		Filter("Enabled", true).
-		Get()
 	if err != nil {
 		return nil, err
 	}
 
-	quote, err := row.Object.Quote(subtotal)
-	if err != nil {
-		return nil, err
-	}
-
-	if !quote.Total.IsPositive() {
-		return nil, ErrNonPositiveTotal
-	}
-
-	return queries.GetQuerySet(&Payment{}).
-		WithContext(ctx).
-		Create(&Payment{
-			ID:       id,
-			Order:    order,
-			Account:  row.Object,
-			Provider: row.Object.Driver,
-			Amount:   quote.Total,
-			Fee:      quote.Fee,
-			Currency: quote.Currency,
-			State:    paystate.STATUS_INIT,
-			History: drivers.JSON[[]PaymentEvent]{
-				Data: []PaymentEvent{
-					{
-						At:    time.Now().UTC(),
-						Kind:  EventPrepared,
-						State: paystate.STATUS_INIT,
-					},
-				},
-			},
-		})
-}
-
-// Start opens checkout. Retry with the same attempt ID and URLs if the request fails.
-func Start(ctx context.Context, id drivers.ULID, returnURL, webhookURL string) (Checkout, error) {
-	payment, err := getAttempt(ctx, id)
-	if err != nil {
-		return Checkout{}, err
-	}
-
-	if payment.IsFreeCheckout() {
-		return Checkout{
-			PaymentStatus: payment.status(),
-		}, nil
-	}
-
-	if payment.TransactionID.Valid {
-		return Checkout{PaymentStatus: payment.status(), URL: payment.CheckoutURL}, nil
-	}
-
-	if !payment.Account.Enabled {
-		return Checkout{}, errors.New("payment account is disabled")
-	}
-
-	provider, err := payment.Account.provider(ctx)
-	if err != nil {
-		return Checkout{}, errors.Join(err, recordCheckoutFailure(ctx, payment))
-	}
-
-	checkout, err := provider.CreatePayment(ctx, CreatePaymentRequest{
-		AttemptID: id,
-		Amount: Money{
-			Amount:   payment.Amount,
-			Currency: payment.Currency,
-		},
-		ReturnURL:  returnURL,
-		WebhookURL: webhookURL,
-	})
-	if err != nil {
-		return Checkout{}, errors.Join(err, recordCheckoutFailure(ctx, payment))
-	}
-
-	if err := payment.validateStatus(checkout.PaymentStatus); err != nil {
-		return Checkout{}, errors.Join(err, recordCheckoutFailure(ctx, payment))
-	}
-
-	payment.TransactionID = sql.NullString{
-		String: checkout.ProviderRef,
-		Valid:  true,
-	}
-
-	payment.CheckoutURL, payment.State = checkout.URL, checkout.State
-	payment.AuthorizationRef = checkout.AuthorizationRef
-	payment.CaptureRef = checkout.CaptureRef
-	if checkout.ProviderFee != nil {
-		payment.ProviderFee = drivers.JSON[*Money]{Data: copyProviderFee(checkout.ProviderFee)}
-	}
-	version := payment.appendEvent(PaymentEvent{
-		Kind:        EventCheckoutOpened,
-		ProviderFee: copyProviderFee(checkout.ProviderFee),
-	})
-	ctx, tx, err := queries.StartTransaction(ctx)
-	if err != nil {
-		return Checkout{}, err
-	}
-
-	defer tx.Rollback(ctx)
-	n, err := queries.GetQuerySet(&Payment{}).
-		WithContext(ctx).
-		Select(
-			"TransactionID",
-			"CheckoutURL",
-			"State",
-			"AuthorizationRef",
-			"CaptureRef",
-			"ProviderFee",
-			"History",
-			"OperationVersion",
-			"UpdatedAt",
-		).
-		Filter(
-			expr.Q("ID", id),
-			expr.Q("TransactionID__isnull", true),
-			version,
-		).
-		Update(payment)
-
-	if err == nil && n == 0 {
-		payment, err = getAttempt(ctx, id)
-		if err == nil && payment.TransactionID.Valid {
-			return Checkout{
-				PaymentStatus: payment.status(),
-				URL:           payment.CheckoutURL,
-			}, nil
-		}
-		if err == nil {
-			err = errors.New("payment changed concurrently; retry checkout")
-		}
-	}
-
-	if err == nil {
-		err = Signals.Start.Send(ctx, PaymentStartedSignal{
-			Payment: payment,
-		})
-	}
-
-	if err == nil {
-		err = tx.Commit(ctx)
-	}
-
-	checkout.ProviderFee = copyProviderFee(payment.ProviderFee.Data)
-	return checkout, err
-}
-
-func recordCheckoutFailure(ctx context.Context, payment *Payment) error {
-	version := payment.appendEvent(PaymentEvent{
-		Kind: EventCheckoutFailed,
-	})
-	_, err := queries.
-		GetQuerySet(&Payment{}).
-		WithContext(ctx).
-		Select("History", "OperationVersion", "UpdatedAt").
-		Filter(
-			expr.Q("ID", payment.ID),
-			expr.Q("TransactionID__isnull", true),
-			version,
-		).
-		Update(payment)
-	return err
+	return payment, tx.Commit(ctx)
 }
 
 // Refresh reconciles an attempt with the provider. It also works on disabled accounts.
@@ -860,24 +194,291 @@ func Refresh(ctx context.Context, id drivers.ULID) (*Payment, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if !payment.TransactionID.Valid {
 		return payment, nil
 	}
 
-	provider, err := payment.Account.provider(ctx)
+	provider, err := payment.Account.Provider(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := provider.GetPayment(
-		ctx, payment.TransactionID.String,
-	)
+	status, err := provider.GetPayment(ctx, payment.TransactionID.String)
 	if err != nil {
 		return nil, err
 	}
 
 	return applyStatus(ctx, payment, status)
+}
+
+// ServeWebhook dispatches a provider callback using the account in the webhook URL.
+func ServeWebhook(w http.ResponseWriter, request *http.Request, accountID string) {
+	ctx := request.Context()
+	var id drivers.ULID
+	if err := id.UnmarshalText([]byte(accountID)); err != nil {
+		http.NotFound(w, request)
+		return
+	}
+
+	account, err := queries.
+		GetQuerySet(&ProviderAccount{}).
+		WithContext(ctx).
+		Filter("ID", id).
+		Get()
+	if dberrors.Is(err, dberrors.NoRows) {
+		http.NotFound(w, request)
+		return
+	}
+	if err != nil {
+		http.Error(w, "payment account unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	provider, err := account.Object.Provider(ctx)
+	if err != nil {
+		http.Error(w, "payment provider unavailable", http.StatusServiceUnavailable)
+		return
+	}
+
+	body, err := io.ReadAll(http.MaxBytesReader(w, request.Body, 1<<20))
+	if err != nil {
+		http.Error(w, "invalid webhook body", http.StatusBadRequest)
+		return
+	}
+
+	result, err := provider.HandleWebhook(ctx, WebhookRequest{
+		Method: request.Method,
+		Header: request.Header,
+		URL:    request.URL,
+		Body:   body,
+	})
+	if errors.Is(err, ErrInvalidWebhook) {
+		http.Error(w, "invalid webhook", http.StatusBadRequest)
+		return
+	}
+	if err == nil {
+		err = reconcileWebhook(ctx, account.Object, result.Payment)
+	}
+	if err != nil {
+		http.Error(w, "payment reconciliation failed", http.StatusServiceUnavailable)
+		return
+	}
+
+	if result.Acknowledge != nil {
+		result.Acknowledge(w)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// Refund issues a partial or full refund through the PSP's native Refunder capability.
+func Refund(ctx context.Context, id drivers.ULID, requestID string, amount decimal.Decimal) (RefundResult, error) {
+	payment, provider, err := operationPayment(ctx, id, requestID)
+	if err != nil {
+		return RefundResult{}, err
+	}
+
+	refunder, ok := provider.(Refunder)
+	if !ok {
+		return RefundResult{}, ErrUnsupportedOperation
+	}
+
+	for _, event := range payment.History.Data {
+		if event.RequestID == requestID {
+			if event.Kind == EventRefunded && event.Amount != nil && event.Amount.Amount.Equal(amount) {
+				return RefundResult{ProviderRef: event.ProviderRef}, nil
+			}
+			return RefundResult{}, errors.New("operation request ID already used with a different payload")
+		}
+	}
+
+	if payment.State != paystate.STATUS_PAID && payment.State != paystate.STATUS_PARTIAL_REFUND {
+		return RefundResult{}, errors.New("payment is not refundable")
+	}
+
+	unit := payment.CurrencyUnit()
+	if !amount.IsPositive() {
+		return RefundResult{}, errors.New("refund amount must be positive")
+	}
+	scale, _ := currency.Standard.Rounding(unit)
+	if !amount.Equal(amount.Round(int32(scale))) {
+		return RefundResult{}, errors.New("refund amount exceeds currency precision")
+	}
+
+	newRefunded := payment.RefundedAmount.Add(amount)
+	if newRefunded.GreaterThan(payment.Amount) {
+		return RefundResult{}, errors.New("refund exceeds remaining payment balance")
+	}
+
+	refundMoney := price.Money{Amount: amount, Currency: unit}
+	result, err := refunder.RefundPayment(ctx, RefundRequest{
+		ProviderRef: payment.TransactionID.String,
+		RequestID:   requestID,
+		Amount:      refundMoney,
+	})
+	if err != nil {
+		return RefundResult{}, err
+	}
+
+	ctx, tx, err := queries.StartTransaction(ctx)
+	if err != nil {
+		return RefundResult{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	priorState := payment.State
+	priorRefunded := payment.RefundedAmount
+	payment.RefundedAmount = newRefunded
+	payment.State = paystate.STATUS_PARTIAL_REFUND
+	if newRefunded.Equal(payment.Amount) {
+		payment.State = paystate.STATUS_REFUND
+	}
+	amountCopy := refundMoney
+	payment.appendEvent(PaymentEvent{
+		Kind:        EventRefunded,
+		RequestID:   requestID,
+		ProviderRef: result.ProviderRef,
+		Amount:      &amountCopy,
+	})
+
+	n, err := queries.GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Select("RefundedAmount", "State", "History", "UpdatedAt").
+		Filter(
+			expr.Q("ID", payment.ID),
+			expr.Q("State", priorState),
+			expr.Q("RefundedAmount", priorRefunded),
+		).
+		Update(payment)
+	if err != nil {
+		return RefundResult{}, err
+	}
+	if n != 1 {
+		return RefundResult{}, errors.New("payment changed concurrently")
+	}
+
+	if err := Signals.Refund.Send(ctx, PaymentRefundedSignal{
+		Payment:   payment,
+		RequestID: requestID,
+		Amount:    refundMoney,
+		Result:    result,
+	}); err != nil {
+		return RefundResult{}, err
+	}
+	if priorState != payment.State {
+		if err := Signals.Update.Send(ctx, PaymentUpdatedSignal{
+			Payment:       payment,
+			PreviousState: priorState,
+		}); err != nil {
+			return RefundResult{}, err
+		}
+	}
+
+	return result, tx.Commit(ctx)
+}
+
+// Cancel cancels an unsettled payment through the PSP's native Canceller capability.
+func Cancel(ctx context.Context, id drivers.ULID, requestID string) error {
+	payment, provider, err := operationPayment(ctx, id, requestID)
+	if err != nil {
+		return err
+	}
+
+	canceller, ok := provider.(Canceller)
+	if !ok {
+		return ErrUnsupportedOperation
+	}
+
+	for _, event := range payment.History.Data {
+		if event.RequestID == requestID {
+			if event.Kind == EventCancelled {
+				return nil
+			}
+			return errors.New("operation request ID already used with a different payload")
+		}
+	}
+
+	if payment.State != paystate.STATUS_INIT && payment.State != paystate.STATUS_PENDING && payment.State != paystate.STATUS_VERIFY {
+		return errors.New("payment cannot be cancelled")
+	}
+
+	if err := canceller.CancelPayment(ctx, CancelRequest{
+		ProviderRef: payment.TransactionID.String,
+		RequestID:   requestID,
+	}); err != nil {
+		return err
+	}
+
+	ctx, tx, err := queries.StartTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	priorState := payment.State
+	payment.State = paystate.STATUS_CANCEL
+	payment.appendEvent(PaymentEvent{
+		Kind:      EventCancelled,
+		RequestID: requestID,
+	})
+
+	n, err := queries.GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Select("State", "History", "UpdatedAt").
+		Filter(
+			expr.Q("ID", payment.ID),
+			expr.Q("State", priorState),
+		).
+		Update(payment)
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return errors.New("payment changed concurrently")
+	}
+
+	if err := Signals.Cancel.Send(ctx, PaymentCancelledSignal{
+		Payment:   payment,
+		RequestID: requestID,
+	}); err != nil {
+		return err
+	}
+	if priorState != payment.State {
+		if err := Signals.Update.Send(ctx, PaymentUpdatedSignal{
+			Payment:       payment,
+			PreviousState: priorState,
+		}); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
+func operationPayment(ctx context.Context, id drivers.ULID, requestID string) (*Payment, Provider, error) {
+	if !queries.IsCommitContext(ctx) {
+		return nil, nil, errors.New("payment operations require commits")
+	}
+	if queries.IsTransactionContext(ctx) {
+		return nil, nil, errors.New("payment operations require a context outside an existing transaction")
+	}
+	if strings.TrimSpace(requestID) == "" || len(requestID) > 128 {
+		return nil, nil, errors.New("operation request ID is required and must fit 128 bytes")
+	}
+
+	payment, err := getAttempt(ctx, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	if payment.IsFreeCheckout() {
+		return nil, nil, ErrUnsupportedOperation
+	}
+	if !payment.TransactionID.Valid || strings.TrimSpace(payment.TransactionID.String) == "" {
+		return nil, nil, errors.New("payment has no provider transaction reference")
+	}
+
+	provider, err := payment.Account.Provider(ctx)
+	return payment, provider, err
 }
 
 func getAttempt(ctx context.Context, id drivers.ULID) (*Payment, error) {
@@ -894,39 +495,47 @@ func getAttempt(ctx context.Context, id drivers.ULID) (*Payment, error) {
 	if row.Object.IsFreeCheckout() {
 		return row.Object, nil
 	}
-
-	if row.Object.Account == nil || row.Object.Account.ID.IsZero() || row.Object.Account.Driver != row.Object.Provider {
+	if row.Object.Account == nil || row.Object.Account.ID.IsZero() || row.Object.Account.InternalName != row.Object.Provider {
 		return nil, errors.New("payment account is missing or its driver has changed")
+	}
+	if row.Object.CurrencyUnit() == (currency.Unit{}) {
+		return nil, errors.New("payment currency is invalid")
 	}
 
 	return row.Object, nil
 }
 
-func (payment *Payment) status() PaymentStatus {
-	return PaymentStatus{
-		ProviderRef:      payment.TransactionID.String,
-		State:            payment.State,
-		AuthorizationRef: payment.AuthorizationRef,
-		CaptureRef:       payment.CaptureRef,
-		Amount: Money{
-			Amount:   payment.Amount,
-			Currency: payment.Currency,
-		},
-		ProviderFee: copyProviderFee(payment.ProviderFee.Data),
+func reconcileWebhook(ctx context.Context, account *ProviderAccount, status PaymentStatus) error {
+	if status.ProviderRef == "" {
+		return ErrInvalidWebhook
 	}
-}
 
-func copyProviderFee(fee *Money) *Money {
-	if fee == nil {
-		return nil
+	row, err := queries.
+		GetQuerySet(&Payment{}).
+		WithContext(ctx).
+		Filter("Account", account.ID).
+		Filter("TransactionID", status.ProviderRef).
+		Get()
+	if err != nil {
+		return err
 	}
-	return &Money{
-		Amount:   fee.Amount.Copy(),
-		Currency: fee.Currency,
+	if row.Object.Provider != account.InternalName {
+		return errors.New("payment account's driver has changed")
 	}
+
+	_, err = applyStatus(ctx, row.Object, status)
+	return err
 }
 
 func (payment *Payment) validateStatus(status PaymentStatus) error {
+	existingRef := ""
+	if payment.TransactionID.Valid {
+		existingRef = payment.TransactionID.String
+	}
+	return validateStatus(payment.Amount, payment.CurrencyUnit(), existingRef, status)
+}
+
+func validateStatus(expectedAmount decimal.Decimal, expectedUnit currency.Unit, expectedRef string, status PaymentStatus) error {
 	switch status.State {
 	case paystate.STATUS_INIT,
 		paystate.STATUS_PENDING,
@@ -949,15 +558,16 @@ func (payment *Payment) validateStatus(status PaymentStatus) error {
 	}
 
 	if status.ProviderRef == "" || status.State == "" ||
-		(payment.TransactionID.Valid && status.ProviderRef != payment.TransactionID.String) ||
-		status.Amount.Currency != payment.Currency || !status.Amount.Amount.Equal(payment.Amount) {
+		(expectedRef != "" && status.ProviderRef != expectedRef) ||
+		expectedUnit == (currency.Unit{}) ||
+		status.Amount.Currency != expectedUnit ||
+		!status.Amount.Amount.Equal(expectedAmount) {
 		return errors.New("provider status does not match payment")
 	}
 
 	if fee := status.ProviderFee; fee != nil {
-		unit, err := currency.ParseISO(fee.Currency)
-		if err != nil || unit.String() != fee.Currency || fee.Amount.IsNegative() {
-			return errors.New("provider processing fee requires a nonnegative amount and ISO currency")
+		if fee.Currency == (currency.Unit{}) || fee.Amount.IsNegative() {
+			return errors.New("provider processing fee requires a nonnegative amount and currency unit")
 		}
 	}
 
@@ -969,86 +579,55 @@ func applyStatus(ctx context.Context, payment *Payment, status PaymentStatus) (*
 		return nil, err
 	}
 
-	sameAuthorization := status.AuthorizationRef == "" || payment.AuthorizationRef == status.AuthorizationRef
-	sameCapture := status.CaptureRef == "" || payment.CaptureRef == status.CaptureRef
-	sameStatus := payment.State == status.State && sameAuthorization && sameCapture
+	sameStatus := payment.State == status.State
 	fee, savedFee := status.ProviderFee, payment.ProviderFee.Data
 	feeChanged := fee != nil && (savedFee == nil || fee.Currency != savedFee.Currency || !fee.Amount.Equal(savedFee.Amount))
 	if sameStatus && !feeChanged {
 		return payment, nil
 	}
-
-	if payment.State != status.State && !canTransition(payment.State, status.State) {
+	if !sameStatus && !canTransition(payment.State, status.State) {
 		return payment, nil
-	}
-
-	if payment.OperationKey != "" {
-		return nil, ErrOperationPending
 	}
 
 	ctx, tx, err := queries.StartTransaction(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	defer tx.Rollback(ctx)
+
 	prior := payment.State
 	payment.State = status.State
-	if status.AuthorizationRef != "" {
-		payment.AuthorizationRef = status.AuthorizationRef
-	}
-
-	if status.CaptureRef != "" {
-		payment.CaptureRef = status.CaptureRef
-	}
-	event := PaymentEvent{
-		Kind: EventStatusUpdated,
-	}
+	event := PaymentEvent{Kind: EventStatusUpdated}
 	if feeChanged {
-		payment.ProviderFee = drivers.JSON[*Money]{Data: copyProviderFee(fee)}
+		payment.ProviderFee = drivers.JSON[*price.Money]{Data: copyProviderFee(fee)}
 		event.ProviderFee = copyProviderFee(fee)
 	}
 	if sameStatus {
 		event.Kind = EventProviderFeeUpdated
 	}
-	version := payment.appendEvent(event)
+	payment.appendEvent(event)
 
 	n, err := queries.
 		GetQuerySet(&Payment{}).
 		WithContext(ctx).
-		Select(
-			"State",
-			"AuthorizationRef",
-			"CaptureRef",
-			"ProviderFee",
-			"History",
-			"OperationVersion",
-			"UpdatedAt",
-		).
+		Select("State", "ProviderFee", "History", "UpdatedAt").
 		Filter(
 			expr.Q("ID", payment.ID),
 			expr.Q("State", prior),
-			version,
-			expr.Or(
-				expr.Q("OperationKey", ""),
-				expr.Q("OperationKey__isnull", true),
-			),
 		).
 		Update(payment)
 	if err != nil {
 		return nil, err
 	}
-
 	if n == 0 {
 		return nil, errors.New("payment status updated concurrently; retry reconciliation")
 	}
 
 	if !sameStatus {
-		err = Signals.Update.Send(ctx, PaymentUpdatedSignal{
+		if err := Signals.Update.Send(ctx, PaymentUpdatedSignal{
 			Payment:       payment,
 			PreviousState: prior,
-		})
-		if err != nil {
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -1077,99 +656,12 @@ func canTransition(from, to paystate.PayState) bool {
 	}
 }
 
-// ServeWebhook dispatches a provider callback using the account in the webhook URL.
-func ServeWebhook(w http.ResponseWriter, request *http.Request, accountID string) {
-	ctx := request.Context()
-	var id drivers.ULID
-	if err := id.UnmarshalText([]byte(accountID)); err != nil {
-		http.NotFound(w, request)
-		return
+func copyProviderFee(fee *price.Money) *price.Money {
+	if fee == nil {
+		return nil
 	}
-
-	account, err := queries.
-		GetQuerySet(&ProviderAccount{}).
-		WithContext(ctx).
-		Filter("ID", id).
-		Get()
-	if dberrors.Is(err, dberrors.NoRows) {
-		http.NotFound(w, request)
-		return
+	return &price.Money{
+		Amount:   fee.Amount.Copy(),
+		Currency: fee.Currency,
 	}
-
-	if err != nil {
-		http.Error(w,
-			"payment account unavailable",
-			http.StatusServiceUnavailable)
-		return
-	}
-
-	provider, err := account.Object.provider(ctx)
-	if err != nil {
-		http.Error(w,
-			"payment provider unavailable",
-			http.StatusServiceUnavailable)
-		return
-	}
-
-	body, err := io.ReadAll(http.MaxBytesReader(w, request.Body, 1<<20))
-	if err != nil {
-		http.Error(w,
-			"invalid webhook body",
-			http.StatusBadRequest)
-		return
-	}
-
-	result, err := provider.HandleWebhook(ctx, WebhookRequest{
-		Method: request.Method,
-		Header: request.Header,
-		URL:    request.URL,
-		Body:   body,
-	})
-	if errors.Is(err, ErrInvalidWebhook) {
-		http.Error(w,
-			"invalid webhook",
-			http.StatusBadRequest)
-		return
-	}
-
-	if err == nil {
-		err = reconcileWebhook(ctx, account.Object, result.Payment)
-	}
-
-	if err != nil {
-		http.Error(w,
-			"payment reconciliation failed",
-			http.StatusServiceUnavailable)
-		return
-	}
-
-	if result.Acknowledge != nil {
-		result.Acknowledge(w)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func reconcileWebhook(ctx context.Context, account *ProviderAccount, status PaymentStatus) error {
-	if status.ProviderRef == "" {
-		return ErrInvalidWebhook
-	}
-
-	row, err := queries.
-		GetQuerySet(&Payment{}).
-		WithContext(ctx).
-		Filter("Account", account.ID).
-		Filter("TransactionID", status.ProviderRef).
-		Get()
-	if err != nil {
-		return err
-	}
-
-	if row.Object.Provider != account.Driver {
-		return errors.New("payment account's driver has changed")
-	}
-
-	_, err = applyStatus(ctx, row.Object, status)
-	return err
 }

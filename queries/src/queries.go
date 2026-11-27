@@ -740,6 +740,7 @@ type AbstractQuerySet[MODEL any, QS AbstractQuerySet[MODEL, QS]] interface {
 	Distinct() QS
 	Select(fields ...any) QS
 	Preload(fields ...any) QS
+	SelectRelated(fields ...string) QS
 	Filter(key interface{}, vals ...interface{}) QS
 	GroupBy(fields ...any) QS
 	Limit(n int) QS

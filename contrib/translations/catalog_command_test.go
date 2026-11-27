@@ -1,3 +1,6 @@
+//go:build test
+// +build test
+
 package translations
 
 import (
@@ -14,7 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/elliotchance/orderedmap/v2"
+	"github.com/Nigel2392/go-django/src/utils/djangoapps"
 	"github.com/urfave/cli/v2"
 )
 
@@ -67,8 +70,8 @@ locales: {nl: Alleen in catalogus}
 	app := initTestCatalogApp(t, hookCatalog)
 	outside := apps.NewAppConfig("outside")
 	outside.ModelObjects = []attrs.Definer{&finderModel{}}
-	django.Global.Apps = orderedmap.NewOrderedMap[string, django.AppConfig]()
-	django.Global.Apps.Set("outside", outside)
+	djangoapps.ResetRegistry()
+	djangoapps.RegisterApp("outside", outside)
 	if err := app.Initialize(django.Global.Settings); err != nil {
 		t.Fatal(err)
 	}

@@ -11,12 +11,11 @@ import (
 	"testing"
 
 	auditlogs "github.com/Nigel2392/go-django/contrib/reports/audit_logs"
-	"github.com/Nigel2392/go-django/contrib/shop/broker"
 	"github.com/Nigel2392/go-django/contrib/shop/carts"
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
-	"github.com/Nigel2392/go-django/contrib/shop/customers"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	"github.com/Nigel2392/go-django/djester"
@@ -28,12 +27,15 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/currency"
 )
 
 type testPaymentProvider struct {
-	requests []payments.CreatePaymentRequest
-	status   payments.PaymentStatus
-	startErr error
+	requests  []payments.CreatePaymentRequest
+	refunds   []payments.RefundRequest
+	status    payments.PaymentStatus
+	startErr  error
+	refundErr error
 }
 
 func (p *testPaymentProvider) CreatePayment(ctx context.Context, req payments.CreatePaymentRequest) (payments.Checkout, error) {
@@ -59,29 +61,49 @@ func (p *testPaymentProvider) HandleWebhook(_ context.Context, req payments.Webh
 	return payments.WebhookResult{Payment: p.status}, nil
 }
 
-type checkoutPricerFunc func(context.Context, *carts.CartRow) (payments.Money, error)
-
-func (fn checkoutPricerFunc) CheckoutSubtotal(ctx context.Context, cart *carts.CartRow) (payments.Money, error) {
-	return fn(ctx, cart)
+func (p *testPaymentProvider) RefundPayment(ctx context.Context, req payments.RefundRequest) (payments.RefundResult, error) {
+	if queries.IsTransactionContext(ctx) {
+		return payments.RefundResult{}, errors.New("provider refund called inside a database transaction")
+	}
+	p.refunds = append(p.refunds, req)
+	if p.refundErr != nil {
+		return payments.RefundResult{}, p.refundErr
+	}
+	return payments.RefundResult{ProviderRef: "refund-" + req.RequestID}, nil
 }
 
 func testPaymentOptions(d *djester.Tester, t *testing.T) {
 	ctx := t.Context()
 	provider := &testPaymentProvider{}
-	payments.RegisterProvider("checkout-test", func(context.Context, *payments.ProviderAccount) (payments.Provider, error) {
-		return provider, nil
+	payments.RegisterProvider(&payments.PSP{
+		Name:              "checkout-test",
+		TextLabel:         func(context.Context) string { return "Test checkout" },
+		CurrencyUnit:      currency.EUR,
+		FixedFeeAmount:    decimal.RequireFromString("0.25"),
+		PercentageFeeRate: decimal.NewFromInt(2),
+		Factory: func(context.Context, *payments.ProviderAccount) (payments.Provider, error) {
+			return provider, nil
+		},
+	})
+	payments.RegisterProvider(&payments.PSP{
+		Name:           "checkout-test-alt",
+		TextLabel:      func(context.Context) string { return "Alternative checkout" },
+		CurrencyUnit:   currency.EUR,
+		FixedFeeAmount: decimal.RequireFromString("0.50"),
+		Factory: func(context.Context, *payments.ProviderAccount) (payments.Provider, error) {
+			return provider, nil
+		},
 	})
 	account, err := queries.GetQuerySet(&payments.ProviderAccount{}).Create(&payments.ProviderAccount{
-		Driver: "checkout-test", Label: "Test checkout", Enabled: true, Currency: "EUR",
-		FixedFee: decimal.RequireFromString("0.25"), PercentageFee: decimal.NewFromInt(2),
-		CredentialRef: "test-secret-ref",
+		InternalName: "checkout-test",
+		Enabled:      true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	other, err := queries.GetQuerySet(&payments.ProviderAccount{}).Create(&payments.ProviderAccount{
-		Driver: "checkout-test", Label: "Alternative checkout", Enabled: true, Currency: "EUR",
-		FixedFee: decimal.RequireFromString("0.50"),
+		InternalName: "checkout-test-alt",
+		Enabled:      true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -103,93 +125,123 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 	if len(options) != 2 || options[1].AccountID != account.ID || options[0].AccountID != other.ID {
 		t.Fatalf("unexpected payment options: %+v", options)
 	}
-	if !options[0].Fee.Equal(decimal.RequireFromString("0.50")) {
-		t.Fatalf("unexpected alternative fee: %s", options[0].Fee)
+	if !options[0].Fee.Equal(decimal.RequireFromString("0.50")) || options[0].Currency != currency.EUR {
+		t.Fatalf("unexpected alternative quote: %+v", options[0])
 	}
 	option := options[1]
 	if !option.Subtotal.Equal(decimal.RequireFromString("24.19")) ||
 		!option.Fee.Equal(decimal.RequireFromString("0.73")) ||
-		!option.Total.Equal(decimal.RequireFromString("24.92")) {
+		!option.Total.Equal(decimal.RequireFromString("24.92")) ||
+		option.Currency != currency.EUR {
 		t.Fatalf("unexpected payment quote: %+v", option)
 	}
 
-	customer, err := queries.GetQuerySet(&customers.Customer{}).Create(&customers.Customer{
-		Email: drivers.MustParseEmail("checkout@example.test"), FirstName: "Test", LastName: "Customer",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	cartResponse, err := d.Get(django.Reverse("api:carts"), nil, nil)
+	var activeCart public.CartResponse
+	customerResp, err := d.PostJson(django.Reverse("api:carts:customer"), nil, nil, public.CartCustomerRequest{
+		Email:     "checkout@example.test",
+		FirstName: "Test",
+		LastName:  "Customer",
+	}, &activeCart)
 	require.NoError(t, err)
-	defer cartResponse.Body.Close()
-	require.Equal(t, http.StatusOK, cartResponse.StatusCode)
-	var activeCart struct {
-		Cart *carts.Cart `json:"cart"`
-	}
-	require.NoError(t, cartResponse.JSON(&activeCart))
+	defer customerResp.Body.Close()
+	require.Equal(t, http.StatusOK, customerResp.StatusCode)
 	require.NotNil(t, activeCart.Cart)
+	require.NotNil(t, activeCart.Cart.Customer)
+	customer := activeCart.Cart.Customer
 
-	flow := broker.Broker{Currency: "EUR"}
 	req := httptest.NewRequest(http.MethodPost, "/checkout", nil).WithContext(ctx)
-	selection := broker.CheckoutRequest{
-		Customer: customer, CartID: activeCart.Cart.ID, AccountID: account.ID, AttemptID: drivers.NewULID(),
-	}
 	const returnURL = "https://merchant.example.test/return"
 	webhookPath := django.Reverse("api:payments:webhook", account.ID)
 	webhookURL := "https://merchant.example.test" + webhookPath
+	baseOpts := orders.CheckoutOptions{
+		Cart:      activeCart.Cart,
+		AccountID: account.ID,
+		Currency:  currency.EUR,
+		ReturnURL: func(paymentID, _ drivers.ULID) string {
+			return returnURL + "?payment_id=" + paymentID.String()
+		},
+		WebhookURL: func(*payments.ProviderAccount) string {
+			return webhookURL
+		},
+	}
 
-	t.Run("invalid account rolls back the order and its lines", func(t *testing.T) {
-		bad := selection
+	t.Run("invalid account leaves cart active with zero orders and payments", func(t *testing.T) {
+		bad := baseOpts
 		bad.AccountID = drivers.NewULID()
-		_, err := flow.PrepareCheckout(req, bad)
+		_, err := orders.CheckoutCart(req, bad)
+		require.ErrorIs(t, err, orders.ErrCheckoutAccountUnavailable)
 		require.ErrorIs(t, err, dberrors.NoRows)
 		for _, count := range []func() (int64, error){
 			queries.GetQuerySet(&orders.Order{}).Filter("Customer", customer.ID).Count,
 			queries.GetQuerySet(&orders.OrderItem{}).Count,
-			queries.GetQuerySet(&payments.Payment{}).Filter("ID", selection.AttemptID).Count,
+			queries.GetQuerySet(&payments.Payment{}).Count,
 		} {
 			n, err := count()
 			require.NoError(t, err)
 			require.Zero(t, n)
 		}
+		persistedCart, err := queries.GetQuerySet(&carts.Cart{}).Filter("ID", activeCart.Cart.ID).Get()
+		require.NoError(t, err)
+		require.True(t, persistedCart.Object.Active)
 		require.Empty(t, provider.requests)
 	})
 
-	t.Run("custom pricing participates in the caller transaction", func(t *testing.T) {
-		ctx, tx, err := queries.StartTransaction(t.Context())
-		require.NoError(t, err)
-		defer tx.Rollback(ctx)
+	t.Run("custom pricer and PSP error leave cart active with zero orders and payments", func(t *testing.T) {
+		lostResponse := errors.New("provider response lost")
+		provider.startErr = lostResponse
+		defer func() { provider.startErr = nil }()
 
-		custom := broker.Broker{Pricer: checkoutPricerFunc(func(ctx context.Context, cart *carts.CartRow) (payments.Money, error) {
-			require.True(t, queries.IsTransactionContext(ctx))
+		custom := baseOpts
+		custom.Pricer = func(ctx context.Context, cart *carts.CartRow) (price.Money, error) {
+			require.False(t, queries.IsTransactionContext(ctx))
 			require.Len(t, cart.Items, 1)
 			require.False(t, cart.Items[0].CartItem.Product.ID.IsZero())
 			require.NotEmpty(t, cart.Items[0].CartItem.Product.Title)
 			require.True(t, cart.Totals.Payable().Round(2).Equal(option.Subtotal))
-			return payments.Money{Amount: decimal.NewFromInt(31), Currency: "EUR"}, nil
-		})}
-		prepared, err := custom.PrepareCheckout(req.WithContext(ctx), selection)
+			return price.Money{Amount: decimal.NewFromInt(31), Currency: currency.EUR}, nil
+		}
+
+		_, err := orders.CheckoutCart(req, custom)
+		require.ErrorIs(t, err, lostResponse)
+		require.Len(t, provider.requests, 1)
+		require.True(t, provider.requests[0].Amount.Amount.Equal(decimal.RequireFromString("31.87")))
+		require.Equal(t, currency.EUR, provider.requests[0].Amount.Currency)
+		provider.requests = nil
+
+		for _, count := range []func() (int64, error){
+			queries.GetQuerySet(&orders.Order{}).Filter("Customer", customer.ID).Count,
+			queries.GetQuerySet(&orders.OrderItem{}).Count,
+			queries.GetQuerySet(&payments.Payment{}).Count,
+		} {
+			n, err := count()
+			require.NoError(t, err)
+			require.Zero(t, n)
+		}
+		persistedCart, err := queries.GetQuerySet(&carts.Cart{}).Filter("ID", activeCart.Cart.ID).Get()
 		require.NoError(t, err)
-		require.True(t, prepared.Payment.Amount.Equal(decimal.RequireFromString("31.87")))
-		_, err = custom.StartCheckout(ctx, customer.ID, selection.AttemptID, returnURL, webhookURL)
-		require.ErrorContains(t, err, "committed payment attempt")
-		require.Empty(t, provider.requests)
-		require.NoError(t, tx.Rollback(ctx))
-		_, err = queries.GetQuerySet(&orders.Order{}).Filter("ID", prepared.Order.ID).Get()
-		require.ErrorIs(t, err, dberrors.NoRows)
-		_, err = queries.GetQuerySet(&payments.Payment{}).Filter("ID", prepared.Payment.ID).Get()
-		require.ErrorIs(t, err, dberrors.NoRows)
+		require.True(t, persistedCart.Object.Active)
 	})
 
-	prepared, err := flow.PrepareCheckout(req, selection)
+	result, err := orders.CheckoutCart(req, baseOpts)
 	require.NoError(t, err)
-	order, attempt := prepared.Order, prepared.Payment
-	require.Equal(t, selection.AttemptID, attempt.ID)
-	require.Equal(t, paystate.STATUS_INIT, attempt.State)
-	require.Empty(t, provider.requests)
+	require.NotNil(t, result)
+	require.False(t, result.Free)
+	order, attempt := result.Order, result.Payment
+	require.NotNil(t, order)
+	require.NotNil(t, attempt)
+	require.Equal(t, paystate.STATUS_PENDING, attempt.State)
+	require.True(t, attempt.TransactionID.Valid)
+	require.Equal(t, "test-reference", attempt.TransactionID.String)
+	require.Equal(t, "https://checkout.example.test/pay", result.Checkout.URL)
+	require.Len(t, provider.requests, 1)
+	require.Equal(t, attempt.ID, provider.requests[0].AttemptID)
 	if !attempt.Fee.Equal(option.Fee) || !attempt.Amount.Equal(option.Total) {
 		t.Fatalf("checkout amount differs from cart quote: %+v", attempt)
 	}
+	persistedCart, err := queries.GetQuerySet(&carts.Cart{}).Filter("ID", activeCart.Cart.ID).Get()
+	require.NoError(t, err)
+	require.False(t, persistedCart.Object.Active)
+
 	line, err := queries.GetQuerySet(&orders.OrderItem{}).Filter("Order", order.ID).Get()
 	require.NoError(t, err)
 	require.NotEmpty(t, line.Object.Product.Data.Product.Title)
@@ -197,49 +249,13 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 	require.NotNil(t, line.Object.Pricing.Data)
 	require.Len(t, line.Object.Pricing.Data.RedemptionAmounts, 2)
 
-	t.Run("retry reuses the saved order and prevents cross-customer access", func(t *testing.T) {
-		retry := flow
-		retry.Pricer = checkoutPricerFunc(func(context.Context, *carts.CartRow) (payments.Money, error) {
-			return payments.Money{}, errors.New("saved attempt should skip repricing")
-		})
-		replayed, err := retry.PrepareCheckout(req, selection)
-		require.NoError(t, err)
-		require.Equal(t, order.ID, replayed.Order.ID)
-		require.Equal(t, attempt.ID, replayed.Payment.ID)
+	t.Run("re-checking out an already converted cart returns ErrCheckoutConflict", func(t *testing.T) {
+		_, err := orders.CheckoutCart(req, baseOpts)
+		require.ErrorIs(t, err, orders.ErrCheckoutConflict)
 		n, err := queries.GetQuerySet(&orders.Order{}).Filter("Customer", customer.ID).Count()
 		require.NoError(t, err)
 		require.EqualValues(t, 1, n)
-
-		changed := selection
-		changed.AccountID = other.ID
-		_, err = flow.PrepareCheckout(req, changed)
-		require.ErrorIs(t, err, broker.ErrCheckoutConflict)
-		changed = selection
-		changed.Customer = &customers.Customer{ID: drivers.NewULID()}
-		_, err = flow.PrepareCheckout(req, changed)
-		require.ErrorIs(t, err, broker.ErrCheckoutConflict)
-		_, err = flow.StartCheckout(ctx, changed.Customer.ID, attempt.ID, returnURL, webhookURL)
-		require.ErrorIs(t, err, dberrors.NoRows)
-		require.Empty(t, provider.requests)
-	})
-
-	t.Run("retry after provider error uses the same payment attempt", func(t *testing.T) {
-		lostResponse := errors.New("provider response lost")
-		provider.startErr = lostResponse
-		_, err := flow.StartCheckout(ctx, customer.ID, attempt.ID, returnURL, webhookURL)
-		require.ErrorIs(t, err, lostResponse)
-		saved, err := queries.GetQuerySet(&payments.Payment{}).Filter("ID", attempt.ID).Get()
-		require.NoError(t, err)
-		require.False(t, saved.Object.TransactionID.Valid)
-		provider.startErr = nil
-		for range 2 {
-			checkout, err := flow.StartCheckout(ctx, customer.ID, attempt.ID, returnURL, webhookURL)
-			require.NoError(t, err)
-			require.NotEmpty(t, checkout.URL)
-		}
-		require.Len(t, provider.requests, 2)
-		require.Equal(t, provider.requests[0], provider.requests[1])
-		require.Equal(t, attempt.ID, provider.requests[0].AttemptID)
+		require.Len(t, provider.requests, 1)
 	})
 
 	account.Enabled = false
@@ -280,34 +296,41 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 		t.Fatalf("unexpected order payment history: %+v", history)
 	}
 
-	t.Run("audit committed checkout and reconciliation", func(t *testing.T) {
+	refundAmt := decimal.RequireFromString("5.00")
+	refundRes, err := payments.Refund(ctx, attempt.ID, "refund-demo", refundAmt)
+	require.NoError(t, err)
+	require.Equal(t, "refund-refund-demo", refundRes.ProviderRef)
+	require.Len(t, provider.refunds, 1)
+	require.Equal(t, "test-reference", provider.refunds[0].ProviderRef)
+	require.Equal(t, "refund-demo", provider.refunds[0].RequestID)
+	require.True(t, provider.refunds[0].Amount.Amount.Equal(refundAmt))
+	require.Equal(t, currency.EUR, provider.refunds[0].Amount.Currency)
+
+	t.Run("audit committed checkout, reconciliation, and refund", func(t *testing.T) {
 		lookup := func(kind, objectID string) *auditlogs.Entry {
 			t.Helper()
-			entry, err := queries.GetQuerySet(&auditlogs.Entry{}).Filter("Type", kind).Get()
+			rows, err := queries.GetQuerySet(&auditlogs.Entry{}).Filter("Type", kind).OrderBy("-ID").All()
 			require.NoError(t, err)
-			require.Equal(t, objectID, attrs.ToString(entry.Object.ObjectID()))
-			return entry.Object
+			for _, entry := range rows {
+				if attrs.ToString(entry.Object.ObjectID()) == objectID {
+					return entry.Object
+				}
+			}
+			t.Fatalf("audit entry %s for object %s not found", kind, objectID)
+			return nil
 		}
 		created := lookup("shop:orders:create", order.ID.String())
 		require.Equal(t, logger.INF, created.Level())
 		started := lookup("shop:payments:start", attempt.ID.String())
 		require.Equal(t, order.ID.String(), started.Data()["order_id"])
 		require.Equal(t, paystate.STATUS_PENDING, started.Data()["state"])
-		paid := lookup("shop:payments:update", attempt.ID.String())
-		require.Equal(t, paystate.STATUS_PAID, paid.Data()["state"])
-		require.Equal(t, paystate.STATUS_PENDING, paid.Data()["previous_state"])
-		operation := payments.PaymentOperationSignal{
-			Payment: updated, RequestID: "refund-demo",
-			Operation: payments.OperationRecord{Kind: payments.OperationRefund, Phase: payments.OperationUncertain},
-			Error:     errors.New("raw provider response"),
-		}
-		require.NoError(t, payments.Signals.OperationFailed.Send(t.Context(), operation))
-		failed := lookup("shop:payments:operation:failed", attempt.ID.String())
-		require.Equal(t, logger.WRN, failed.Level())
-		require.Equal(t, string(payments.OperationUncertain), failed.Data()["phase"])
-		require.NotContains(t, failed.Data(), "error")
-		req := httptest.NewRequest(http.MethodGet, "/audit", nil)
-		require.Equal(t, "Payment operation needs reconciliation", auditlogs.Define(req, failed).Label())
+		updatedEntry := lookup("shop:payments:update", attempt.ID.String())
+		require.Equal(t, paystate.STATUS_PARTIAL_REFUND, updatedEntry.Data()["state"])
+		require.Equal(t, paystate.STATUS_PAID, updatedEntry.Data()["previous_state"])
+		refunded := lookup("shop:payments:refund", attempt.ID.String())
+		require.Equal(t, logger.INF, refunded.Level())
+		require.Equal(t, "refund-demo", refunded.Data()["request_id"])
+		require.Equal(t, "5", refunded.Data()["refund_amount"])
 	})
 
 	t.Run("clearing the source cart preserves order redemptions", func(t *testing.T) {

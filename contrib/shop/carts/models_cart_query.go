@@ -228,20 +228,21 @@ func (qs *CartQuery) calc(includeProductDetails bool) (int, iter.Seq2[*CartRow, 
 
 	defer tx.Rollback(ctx)
 
-	qs = qs.Clone().WithContext(ctx)
-
 	productFields := []any{"*", "Product.ID", "Product.Price", "Product.AdditionalFee", "Product.TaxRate"}
 	if includeProductDetails {
 		productFields = []any{"*", "Product.*"}
 	}
-	qs = qs.Preload(queries.Preload{
-		Path:    "CartItems",
-		NoJoins: true,
-		QuerySet: queries.
-			GetQuerySet[attrs.Definer](&CartItem{}).
-			Select(productFields...).
-			OrderBy("Product.Price", "ID"),
-	})
+
+	qs = qs.WithContext(ctx).
+		SelectRelated("Customer").
+		Preload(queries.Preload{
+			Path:    "CartItems",
+			NoJoins: true,
+			QuerySet: queries.
+				GetQuerySet[attrs.Definer](&CartItem{}).
+				Select(productFields...).
+				OrderBy("Product.Price", "ID"),
+		})
 
 	n, cartRows, err := qs.IterAll()
 	if err != nil {

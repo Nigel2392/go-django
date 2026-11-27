@@ -99,8 +99,8 @@ func initMigTestApp(t *testing.T, db drivers.Database, appConfigs ...func() djan
 	if err := app.Initialize(); err != nil {
 		t.Fatalf("failed to initialize django app: %v", err)
 	}
-	for head := app.Apps.Front(); head != nil; head = head.Next() {
-		registerModelsContentTypes(head.Value.Models()...)
+	for _, head := range app.Apps.Iter {
+		registerModelsContentTypes(head.Models()...)
 	}
 }
 
