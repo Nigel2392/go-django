@@ -8,7 +8,7 @@ The `coupons` package (`contrib/shop/coupons`) and its `generators` subpackage (
 
 ### `Coupon` (`coupons/models_coupon.go`)
 
-`CouponCode` is a `string` alias (`type CouponCode string`) with package-level length bounds:
+`CouponCode` is a defined string type (`type CouponCode string`) with package-level length variables:
 - `MIN_CODE_LENGTH int64 = 6`
 - `MAX_CODE_LENGTH int64 = 32`
 
@@ -47,7 +47,7 @@ Represents a coupon reservation on a cart and, once converted, an applied discou
 | `Cart` | `attrs.Definer` | Column `cart_id`, read-only, `Null: true`, `Blank: true`, `ReverseAlias: "Redemptions"`, deferred FK to `modelkeys.CartModelKey` |
 | `Order` | `attrs.Definer` | Column `order_id`, read-only, `Null: true`, `Blank: true`, `ReverseAlias: "Redemptions"`, deferred FK to `modelkeys.OrderModelKey` |
 | `DiscountAmount` | `decimal.Decimal` | `Precision: 19`, `Scale: 10`, read-only, `Null: false`, `Blank: false` |
-| `Invalidated` | `bool` | Read-only, `Blank: true`; `true` when released (e.g., order rejected) |
+| `Invalidated` | `bool` | Read-only, `Blank: true`; `true` when released (e.g., cart cleared, unapplied coupon at checkout, or order rejected) |
 | `Counted` | `bool` | Read-only, `Blank: true`, `Default: false`; `true` once included in `Coupon.UsageCount` |
 | `RedeemedAt` | `time.Time` | Read-only |
 
@@ -88,7 +88,7 @@ func GenerateCouponCode(ctx context.Context, parts []CodePart) (code string, err
 
 - Builds a candidate code from `parts` and validates length against `coupons.MIN_CODE_LENGTH` (6) and `coupons.MAX_CODE_LENGTH` (32).
 - Checks `coupons.Coupon` existence in the database (`Filter("Code", code).Exists()`).
-- If the code already exists and `parts` contains at least one dynamic part (`CPT_RANDOM` or `CPT_UUID`), it retries until a unique code is found; if all parts are static, it returns `ErrCouponExists`.
+- If the code already exists and `parts` contains at least one dynamic part (`CPT_RANDOM` with `Length > 0`, or `CPT_UUID`), it retries until a unique code is found; if all parts are static, it returns `ErrCouponExists`.
 - Sentinel errors (`errs.Error`): `ErrInvalidPartType`, `ErrCouponCodeTooShort`, `ErrCouponCodeTooLong`, `ErrCouponExists`.
 
 ### `CouponGeneratorWidget` (`coupons/generators/widget.go`)
@@ -106,7 +106,7 @@ Handled by `public.RedemptionAPI.RedeemCode` in `contrib/shop/views/public/coupo
 ### Request & Anti-Enumeration
 
 - Decodes `RedemptionRequest{ CouponCode string `json:"coupon_code"` }` via `api.Decode`. Returns `400 Bad Request` on decode failure.
-- To make coupon code enumeration harder, failed lookups/queries invoke `laggy()` (random sleep between `5ms` and `100ms`) before returning `404 Not Found`.
+- To make coupon code enumeration harder, failed coupon lookups and unexpected redemption query errors invoke `laggy()` (random sleep between `5ms` and `100ms`) before returning `404 Not Found`.
 
 ### Transactional Reservation & `UsageLimit` Accounting
 
@@ -132,7 +132,7 @@ Handled by `public.RedemptionAPI.RedeemCode` in `contrib/shop/views/public/coupo
 
 ## Discount Calculation Rules (`CartQuery.Calc()`)
 
-Implemented in `contrib/shop/carts/models_cart_query.go`. `Calc()` and `CalcOne()` / `CalcOneWithProducts()` load cart items ordered by `Product.Price, ID` (ascending item price) and load active cart redemptions (`Invalidated == false`, `Cart__in`, `Order__isnull == true`) with `Coupon` and `Coupon.Products`.
+Implemented in `contrib/shop/carts/models_cart_query.go`. `Calc()` and `CalcOne()` / `CalcOneWithProducts()` preload `Customer` (`SelectRelated("Customer")`), load cart items ordered by `Product.Price, ID` (ascending item price), and load active cart redemptions (`Invalidated == false`, `Cart__in`, `Order__isnull == true`) with `Coupon` and `Coupon.Products`.
 
 ### 1. Grouping Redemptions
 
@@ -161,7 +161,7 @@ Each of the four groups (`cartCouponsFixed`, `cartCouponsPercentage`, and per-pr
 
 ### 4. Percentage Discounts & 100% Cap
 
-- After fixed discounts are applied to the line, percentage discounts apply to the **post-fixed-discount** line total (`calculatedPrice.TotalPrice`, `calculatedPrice.TotalFee`) when `item.Amount > 0`.
+- After fixed discounts are applied to the line, percentage discounts apply to the **post-fixed-discount** `calculatedPrice.TotalPrice` (preserving `calculatedPrice.TotalFee` and recalculating tax on both) when `item.Amount > 0`.
 - Product-specific percentage coupons (`cartItemCouponsPercentage[productID]`) are processed first, followed by cart-wide percentage coupons (`cartCouponsPercentage`).
 - Cumulative percentage is capped at `100` (`percentage = decimal.Min(100, percentage + redemption.Coupon.MaxDiscount)`).
 - Each coupon's attributed `applied` amount is computed from cumulative `calculatedPrice.TotalPrice * percentage / 100 - previousCumulativeDiscount` so allocations sum cleanly even when division rounds.
@@ -192,6 +192,7 @@ func ReconcileCouponRedemptions(ctx context.Context, orderID drivers.ULID) error
 Accounts for coupon redemptions on a saved order. It requires a writable transaction (`queries.IsCommitContext(ctx)`), starts/joins a transaction, and locks the `Order` row (`BulkUpdate(expr.As("Completed", expr.Field("Completed")))`) before reading `State` and `Completed`.
 
 It operates on pending redemptions (`Order = orderID`, `Invalidated = false`, `Counted = false`):
-- **Rejected orders (`order.State == orderStateRejected`)**: marks pending redemptions `Invalidated = true`, releasing their reserved capacity.
+- **Rejected orders (`order.State == orders.OrderStateRejected`)**: marks pending redemptions `Invalidated = true`, releasing their reserved capacity.
 - **Completed orders (`order.Completed == true`)**: iterates pending redemptions ordered by `Coupon, ID`; for each redemption, locks the `Coupon` row (`BulkUpdate(expr.As("UsageCount", expr.Field("UsageCount")))`), sets `Counted = true` on the redemption, and if updated (`count == 1`), increments `Coupon.UsageCount` by `1`.
 - Idempotent: calling `ReconcileCouponRedemptions` again after redemptions are marked `Invalidated` or `Counted` is a no-op.
+- Called automatically by both the admin order editor (`view_order.go`) and the built-in `orders.Signals.Completed` fulfillment workflow (`orders/supplier_workflow.go`).

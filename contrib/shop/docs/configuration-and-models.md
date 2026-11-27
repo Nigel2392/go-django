@@ -28,25 +28,26 @@ type ShopAppConfig struct {
 - `NewAppConfig() (django.AppConfig, error)`: Configures `SHOP` (returning early if `SHOP == nil || SHOP.IsReady()`):
   - Registers `contenttypes` aliases for legacy `SupplierModel` paths.
   - Declares dependencies: `[]string{"session", "admin", "editor", "blocks", "revisions", "settings"}`.
+  - Registers CLI commands in `SHOP.Cmd`: `sync-psp` (`command_sync_psp.go`, runs `payments.ProvidersQuery().WithContext(ctx).Sync()`) and `sync-suppliers` (`command_sync_suppliers.go`, runs `orders.SuppliersQuery().WithContext(ctx).Sync()`).
   - Registers embedded static assets (`assets/static`), templates (`assets/templates`), and the `shop/admin/icons/funnel.svg` icon.
   - Calls `handlers.RegisterAuditLogs()`.
   - Registers all 14 models in `SHOP.ModelObjects`.
-  - Configures `SHOP.ADMIN_MENU`, the `products.Product` admin chooser, `admin.RegisterApp("shop", ...)`, and admin extension route `admin:ext:shop:generate_coupon` (`POST /shop/coupon/generate`).
-  - In `SHOP.Ready`: mounts `/api/carts*`, `/api/coupons/redeem`, `/api/payments/options`, `/api/payments/checkout`, and `/api/payments/webhook/<<account>>`, registers the `nosurf` CSRF exemption `^/api/payments/webhook/[0-9A-HJKMNP-TV-Z]{26}/?$`, and runs `orders.SuppliersQuery().Sync()`.
+  - Configures `SHOP.ADMIN_MENU`, the `products.Product` admin chooser, `admin.RegisterApp("shop", ...)` with model definitions from `contrib/shop/adminsite` (`CategoryAdmin`, `ProductAdmin`, `OrdersAdmin`, `CouponsAdmin`, `CustomersAdmin`), custom route `admin:commerce:new_with_supplier`, and admin extension route `admin:ext:shop:generate_coupon` (`POST /shop/coupon/generate`).
+  - In `SHOP.Ready`: mounts `/api/carts*` (including `POST /api/carts/customer`), `/api/coupons/redeem`, `/api/payments/options`, `/api/payments/checkout`, and `/api/payments/webhook/<<account>>`, resolves `APPVAR_SHOP_CURRENCY` via `resolveShopCurrency()`, and registers the `nosurf` CSRF exemption `^/api/payments/webhook/[0-9A-HJKMNP-TV-Z]{26}/?$`.
 
 ### App Variables
 
 | Constant | Key | Usage |
 | :--- | :--- | :--- |
-| `APPVAR_SHOP_CURRENCY` | `"SHOP_CURRENCY"` | Default ISO currency passed to `public.PaymentsAPI` and `public.CheckoutAPI`. |
+| `APPVAR_SHOP_CURRENCY` | `"SHOP_CURRENCY"` | Accepts a `currency.Unit` (e.g. `currency.EUR`), an ISO currency code `string` (e.g. `"EUR"`), or a dynamic `func(context.Context) currency.Unit` resolver passed to `public.PaymentsAPI` and `public.CheckoutAPI`. |
 | `APPVAR_SHOP_CHECKOUT_ORIGIN` | `"SHOP_CHECKOUT_ORIGIN"` | Origin URL used to build checkout return and webhook URLs. |
 | `APPVAR_SHOP_CHECKOUT_RETURN_PATH` | `"SHOP_CHECKOUT_RETURN_PATH"` | Return path appended to the origin (defaults to `"/"`). |
 
 ---
 
-## View Adapter Handlers (`contrib/shop/http.go`)
+## View Adapter Handlers (`contrib/shop/http.go`, `contrib/shop/adminsite/http.go`)
 
-`ShopHandler` and `ShopInstanceHandler[T]` adapt plain `http.HandlerFunc`-style functions into Go-Django `views.View` implementations that take control of request handling:
+`ShopHandler` and `ShopInstanceHandler[T]` (defined in both `contrib/shop/http.go` and `contrib/shop/adminsite/http.go`) adapt plain `http.HandlerFunc`-style functions into Go-Django `views.View` implementations that take control of request handling:
 
 ```go
 type ShopHandler struct {
@@ -69,11 +70,33 @@ func (s ShopInstanceHandler[T]) TakeControl(w http.ResponseWriter, r *http.Reque
 
 ## Shared Pricing (`contrib/shop/shared/price`)
 
-The `price` package uses `github.com/shopspring/decimal` for exact monetary calculations.
+The `price` package uses `github.com/shopspring/decimal` and `golang.org/x/text/currency` for exact monetary and currency-rounded fee calculations.
 
-### Types
+### Types & Helpers
 
 ```go
+// Money pairs a decimal amount with a developer-controlled ISO currency unit.
+// Marshals/unmarshals JSON as {"amount": "<decimal>", "currency": "<ISO>"}.
+type Money struct {
+	Amount   decimal.Decimal
+	Currency currency.Unit
+}
+
+func (m Money) Quote(fixedFee, percentageFee decimal.Decimal) (Quote, error)
+
+// Quote represents a currency-rounded subtotal, payment fee, and total.
+// Marshals/unmarshals JSON as {"subtotal": ..., "fee": ..., "total": ..., "currency": "<ISO>"}.
+type Quote struct {
+	Subtotal decimal.Decimal
+	Fee      decimal.Decimal
+	Total    decimal.Decimal
+	Currency currency.Unit
+}
+
+// QuoteFee rounds subtotal.Amount to subtotal.Currency's standard ISO scale and adds
+// fixedFee + base * percentageFee / 100 (rounded to scale) when base is positive.
+func QuoteFee(subtotal Money, fixedFee, percentageFee decimal.Decimal) (Quote, error)
+
 type AmountValue struct {
 	Amount       decimal.Decimal
 	IsPercentage bool
@@ -211,17 +234,12 @@ Builds a `modelforms.BaseModelForm[MODEL]` for `instance` using `r.Context()` an
 
 ### Products (`contrib/shop/products`)
 
-#### `Price`, `ProductModel`, and `SupplierValue`
+#### `ProductModel` and `SupplierValue`
 
 ```go
-type Price struct {
-	Unit   currency.Unit
-	Amount decimal.Decimal
-}
-
 type ProductModel interface {
 	specific.Model
-	ProductPrice(ctx context.Context) Price
+	ProductPrice(ctx context.Context) price.Money
 }
 
 type SupplierValue string
@@ -248,6 +266,8 @@ Embeds `specific.Specific[*Product]`. `BeforeSave` generates a `drivers.ULID` if
 | `Supplier` | `SupplierValue` | `supplier,omitempty` | Read-only supplier backend key. |
 | `Category` | `*models.Category` | `category,omitempty` | FK (`category_id`). |
 | `Editor` | `*editor.EditorJSBlockData` | `editor,omitempty` | Rich-text description (`paragraph`, `text-align`, `list`). |
+| `SpecificID` | `string` | `specific_id,omitempty` | Embedded from `specific.Specific[*Product]`; read-only, omitted from forms (`FormField` returns `nil`). |
+| `SpecificContentType` | `*contenttypes.BaseContentType[attrs.Definer]` | `specific_content_type,omitempty` | Embedded from `specific.Specific[*Product]`; read-only, omitted from forms (`FormField` returns `nil`). |
 | `Coupons` | `*queries.RelM2M[attrs.Definer, attrs.Definer]` | — | Reverse M2M to coupons. |
 
 - `ActualPrice() decimal.Decimal`: Computes `(Price + AdditionalFee) * (1 + TaxRate/100)`.
@@ -265,11 +285,17 @@ Implements `queries.ActsBeforeCreate` (`BeforeCreate` assigns a new `drivers.ULI
 | :--- | :--- | :--- | :--- |
 | `ID` | `drivers.ULID` | `id` | Primary key, read-only. |
 | `User` | `users.User` | `-` | Nullable read-only deferred FK (`user_id`, `users.MODEL_KEY`). |
+| `Customer` | `*customers.Customer` | `customer,omitempty` | Nullable FK (`customer_id`), used for guest or explicit checkout customer details. |
 | `Session` | `string` | `-` | Nullable read-only session token (`session_id`). |
 | `CreatedAt` | `time.Time` | `created_at` | `AutoNowAdd: true`, read-only. |
 | `Active` | `bool` | `active` | Whether the cart is active. |
 | `CartItems` | `*queries.RelRevFK[*CartItem]` | `-` | Reverse FK to `CartItem`. |
 | `Redemptions` | `*queries.RelRevFK[*coupons.Redemption]` | `-` | Reverse relation to applied redemptions (non-DB). |
+
+`carts/models_cart.go` also defines guest/cart customer attachment:
+- `ErrInvalidCustomerEmail`: returned when an email address fails `mail.ParseAddress` or is shorter than 3 characters.
+- `CustomerDetails{ Email string; FirstName string; LastName string; User users.User }`.
+- `SetCustomer(ctx context.Context, cart *Cart, details CustomerDetails) (*customers.Customer, error)`: updates the cart's existing `Customer` (preserving/attaching an authenticated `User` if unset) or creates a new `Customer` and links `cart.Customer` inside a transaction.
 
 #### `CartItem`
 
@@ -314,7 +340,7 @@ Key `CartQuery` methods (created via `carts.Query()`):
 
 ### Coupons (`contrib/shop/coupons`)
 
-Package constants: `MIN_CODE_LENGTH int64 = 6`, `MAX_CODE_LENGTH int64 = 32`.
+Package variables: `MIN_CODE_LENGTH int64 = 6`, `MAX_CODE_LENGTH int64 = 32`.
 
 ```go
 type CouponCode string
@@ -435,43 +461,29 @@ type InternalOrderState string
 func (i InternalOrderState) Label(ctx context.Context) string
 ```
 
-Built-in `InternalOrderState` values (unexported constants in `orders/models_order_state.go`):
-- `"order_accepted"` — `"Order Accepted"`
-- `"order_pending"` — `"Order Pending"`
-- `"order_rejected"` — `"Order Rejected"`
-- `"order_workflow"` — `"Order Workflow"`
+Exported `InternalOrderState` constants in `orders/models_order_state.go`:
+- `OrderStateAccepted` (`"order_accepted"`) — `"Order Accepted"`
+- `OrderStatePending` (`"order_pending"`) — `"Order Pending"`
+- `OrderStateRejected` (`"order_rejected"`) — `"Order Rejected"`
+- `OrderStateWorkflow` (`"order_workflow"`) — `"Order Workflow"`
 
 ---
 
 ### Payments (`contrib/shop/payments`)
 
-#### `ProviderAccount` & `Quote`
+#### `ProviderAccount`
 
-`ProviderAccount` configures one merchant PSP account (`BeforeCreate` generates `ID` if zero):
+`ProviderAccount` tracks which registered `ProviderBackend` implementations are enabled in the database (`BeforeCreate` generates `ID` if zero; unique index `provider_account_internal_name_idx` and `UniqueTogether: [["InternalName"]]`). Provider fees, currency, labels, and credentials stay in Go code via `payments.RegisterProvider` (see [Payments & Checkout](./payments-and-checkout.md)).
 
-| Field | Type | JSON Tag | Notes |
-| :--- | :--- | :--- | :--- |
-| `ID` | `drivers.ULID` | — | Primary key, read-only. |
-| `Driver` | `string` | — | Registered provider key (`MaxLength: 75`). |
-| `Label` | `string` | — | Display label (`MaxLength: 100`). |
-| `Enabled` | `bool` | — | Whether the account is active for checkout. |
-| `CredentialRef` | `string` | `-` | Secret reference resolved by `ProviderFactory` (`MaxLength: 255`). |
-| `Currency` | `string` | — | 3-letter ISO currency code (`MaxLength: 3`). |
-| `FixedFee` | `decimal.Decimal` | — | Customer-facing fixed fee (`Precision: 13`, `Scale: 4`). |
-| `PercentageFee` | `decimal.Decimal` | — | Customer-facing percentage fee (`Precision: 9`, `Scale: 4`). |
+| Field | Type | Notes |
+| :--- | :--- | :--- |
+| `ID` | `drivers.ULID` | Primary key, read-only. |
+| `InternalName` | `string` | Unique registered `ProviderBackend` key (`MinLength: 2`, `MaxLength: 75`, `attrs.AttrUniqueKey: true`). |
+| `Enabled` | `bool` | `Blank: true`, `Default: true`. Whether the account is active for checkout. |
 
 Methods:
-- `Provider(ctx context.Context) (Provider, error)`: Resolves the registered `ProviderFactory` for `a.Driver`.
-- `Quote(subtotal Money) (Quote, error)`: Validates currency and non-negative amounts/fees, rounds `subtotal` to the currency's standard scale, and computes customer-facing `Fee` (`0` if `base == 0`, otherwise `FixedFee + base * PercentageFee / 100`) and `Total`:
-
-```go
-type Quote struct {
-	Subtotal decimal.Decimal `json:"subtotal"`
-	Fee      decimal.Decimal `json:"fee"`
-	Total    decimal.Decimal `json:"total"`
-	Currency string          `json:"currency"`
-}
-```
+- `Provider(ctx context.Context) (Provider, error)`: Resolves the registered `ProviderBackend` for `a.InternalName` and calls `backend.Provider(ctx, a)`.
+- `Quote(ctx context.Context, subtotal price.Money) (price.Quote, error)`: Resolves the registered `ProviderBackend`, verifies `backend.Currency(ctx) == subtotal.Currency`, and delegates to `price.QuoteFee(subtotal, backend.FixedFee(ctx), backend.PercentageFee(ctx))`.
 
 #### `Payment`, `PaymentEvent`, & `PaymentEventKind`
 
@@ -482,23 +494,21 @@ type Quote struct {
 | `ID` | `drivers.ULID` | Primary key, read-only. |
 | `Order` | `attrs.Definer` | Nullable deferred FK (`order_id`, `modelkeys.OrderModelKey`, reverse `"Payments"`). |
 | `Account` | `*ProviderAccount` | Nullable FK (`account_id`). |
-| `Provider` | `string` | Provider key (`MaxLength: 75`), or `"shop:free-checkout"` for zero-total orders. |
+| `Provider` | `string` | Provider `InternalName` (`MaxLength: 75`), or `"shop:free-checkout"` for zero-total orders. |
 | `TransactionID` | `sql.NullString` | Provider reference (`MaxLength: 255`, nullable). |
 | `CheckoutURL` | `string` | Hosted checkout redirect URL (`MaxLength: 4096`). |
-| `Amount` | `decimal.Decimal` | Total charge amount including `Fee` (`Precision: 13`, `Scale: 4`). |
-| `Fee` | `decimal.Decimal` | Customer-facing payment fee included in `Amount` (`Precision: 13`, `Scale: 4`). |
-| `ProviderFee` | `drivers.JSON[*Money]` | Latest merchant processing fee reported by the PSP (read-only). |
-| `Currency` | `string` | 3-letter ISO currency code. |
 | `State` | `paystate.PayState` | Current payment state (`MaxLength: 40`). |
+| `Amount` | `decimal.Decimal` | Total charge amount including `Fee` (`Precision: 13`, `Scale: 4`). |
+| `Fee` | `decimal.Decimal` | Customer-facing payment fee included in `Amount` (`Precision: 13`, `Scale: 4`, `Default: 0`). |
+| `RefundedAmount` | `decimal.Decimal` | Cumulative refunded amount in `Currency` (`Precision: 13`, `Scale: 4`, `Default: 0`). |
+| `ProviderFee` | `drivers.JSON[*price.Money]` | Latest merchant processing fee reported by the PSP (read-only). |
+| `Currency` | `string` | Snapshotted 3-letter ISO currency code (`MaxLength: 3`). |
 | `CreatedAt` | `drivers.Timestamp` | `AutoNowAdd: true`. |
 | `UpdatedAt` | `drivers.Timestamp` | `AutoNow: true`. |
-| `AuthorizationRef` | `string` | Provider authorization reference (`MaxLength: 255`). |
-| `CaptureRef` | `string` | Provider capture reference (`MaxLength: 255`). |
-| `OperationKey` | `string` | Active/last operation idempotency key (`MaxLength: 128`). |
-| `OperationVersion` | `uint64` | Optimistic concurrency version for operations. |
-| `Operations` | `drivers.JSON[map[string]OperationRecord]` | Recorded post-payment operations keyed by request ID. |
 | `History` | `drivers.JSON[[]PaymentEvent]` | Append-only event log in write order (read-only). |
 
+Methods:
+- `CurrencyUnit() currency.Unit`: Parses the snapshotted ISO `Currency` string into a `currency.Unit` (returns zero `currency.Unit{}` if empty or invalid).
 - `IsFreeCheckout() bool`: Returns `true` when `Provider == "shop:free-checkout"`, `State == paystate.STATUS_NO_PAYMENT_REQUIRED`, `Account` is nil/zero, `!TransactionID.Valid`, `Amount.IsZero()`, and `Fee.IsZero()`.
 
 ```go
@@ -507,22 +517,20 @@ type PaymentEvent struct {
 	At          time.Time
 	Kind        PaymentEventKind
 	State       paystate.PayState
-	RequestID   string         `json:",omitempty"`
-	Operation   OperationKind  `json:",omitempty"`
-	Phase       OperationState `json:",omitempty"`
-	Amount      *Money         `json:",omitempty"`
-	ProviderFee *Money         `json:",omitempty"`
+	RequestID   string       `json:",omitempty"`
+	ProviderRef string       `json:",omitempty"`
+	Amount      *price.Money `json:",omitempty"`
+	ProviderFee *price.Money `json:",omitempty"`
 }
 
 type PaymentEventKind string
 
 const (
-	EventPrepared           PaymentEventKind = "prepared"
 	EventCheckoutOpened     PaymentEventKind = "checkout_opened"
-	EventCheckoutFailed     PaymentEventKind = "checkout_failed"
 	EventStatusUpdated      PaymentEventKind = "status_updated"
 	EventProviderFeeUpdated PaymentEventKind = "provider_fee_updated"
 	EventNoPaymentRequired  PaymentEventKind = "no_payment_required"
-	EventOperation          PaymentEventKind = "operation"
+	EventRefunded           PaymentEventKind = "refunded"
+	EventCancelled          PaymentEventKind = "cancelled"
 )
 ```

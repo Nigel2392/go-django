@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/coupons"
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
@@ -118,10 +119,11 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("payment options returned %d", resp.StatusCode)
 	}
-	var options []public.PaymentOption
-	if err := resp.JSON(&options); err != nil {
+	var optionsResp api.DataResponse[[]public.PaymentOption]
+	if err := resp.JSON(&optionsResp); err != nil {
 		t.Fatal(err)
 	}
+	options := optionsResp.Data
 	if len(options) != 2 || options[1].AccountID != account.ID || options[0].AccountID != other.ID {
 		t.Fatalf("unexpected payment options: %+v", options)
 	}
@@ -136,15 +138,16 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 		t.Fatalf("unexpected payment quote: %+v", option)
 	}
 
-	var activeCart public.CartResponse
+	var activeCartResp api.DataResponse[public.CartResponse]
 	customerResp, err := d.PostJson(django.Reverse("api:carts:customer"), nil, nil, public.CartCustomerRequest{
 		Email:     "checkout@example.test",
 		FirstName: "Test",
 		LastName:  "Customer",
-	}, &activeCart)
+	}, &activeCartResp)
 	require.NoError(t, err)
 	defer customerResp.Body.Close()
 	require.Equal(t, http.StatusOK, customerResp.StatusCode)
+	activeCart := activeCartResp.Data
 	require.NotNil(t, activeCart.Cart)
 	require.NotNil(t, activeCart.Cart.Customer)
 	customer := activeCart.Cart.Customer
@@ -307,26 +310,36 @@ func testPaymentOptions(d *djester.Tester, t *testing.T) {
 	require.Equal(t, currency.EUR, provider.refunds[0].Amount.Currency)
 
 	t.Run("audit committed checkout, reconciliation, and refund", func(t *testing.T) {
-		lookup := func(kind, objectID string) *auditlogs.Entry {
+		lookupAll := func(kind, objectID string) []*auditlogs.Entry {
 			t.Helper()
-			rows, err := queries.GetQuerySet(&auditlogs.Entry{}).Filter("Type", kind).OrderBy("-ID").All()
+			rows, err := queries.GetQuerySet(&auditlogs.Entry{}).Filter("Type", kind).OrderBy("-Timestamp").All()
 			require.NoError(t, err)
+			var matched []*auditlogs.Entry
 			for _, entry := range rows {
 				if attrs.ToString(entry.Object.ObjectID()) == objectID {
-					return entry.Object
+					matched = append(matched, entry.Object)
 				}
 			}
-			t.Fatalf("audit entry %s for object %s not found", kind, objectID)
-			return nil
+			require.NotEmpty(t, matched, "audit entry %s for object %s not found", kind, objectID)
+			return matched
+		}
+		lookup := func(kind, objectID string) *auditlogs.Entry {
+			t.Helper()
+			return lookupAll(kind, objectID)[0]
 		}
 		created := lookup("shop:orders:create", order.ID.String())
 		require.Equal(t, logger.INF, created.Level())
 		started := lookup("shop:payments:start", attempt.ID.String())
 		require.Equal(t, order.ID.String(), started.Data()["order_id"])
 		require.Equal(t, paystate.STATUS_PENDING, started.Data()["state"])
-		updatedEntry := lookup("shop:payments:update", attempt.ID.String())
-		require.Equal(t, paystate.STATUS_PARTIAL_REFUND, updatedEntry.Data()["state"])
-		require.Equal(t, paystate.STATUS_PAID, updatedEntry.Data()["previous_state"])
+		updates := lookupAll("shop:payments:update", attempt.ID.String())
+		require.Len(t, updates, 2)
+		transitions := make(map[[2]any]bool, len(updates))
+		for _, entry := range updates {
+			transitions[[2]any{entry.Data()["previous_state"], entry.Data()["state"]}] = true
+		}
+		require.True(t, transitions[[2]any{paystate.STATUS_PENDING, paystate.STATUS_PAID}], "expected PENDING->PAID audit entry")
+		require.True(t, transitions[[2]any{paystate.STATUS_PAID, paystate.STATUS_PARTIAL_REFUND}], "expected PAID->PARTIAL_REFUND audit entry")
 		refunded := lookup("shop:payments:refund", attempt.ID.String())
 		require.Equal(t, logger.INF, refunded.Level())
 		require.Equal(t, "refund-demo", refunded.Data()["request_id"])

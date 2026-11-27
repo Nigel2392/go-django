@@ -1,14 +1,14 @@
 # Shop Admin
 
-`contrib/shop` registers a `"shop"` admin application (`Commerce`) in [`contrib/shop/app.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/app.go), providing model CRUD, custom supplier-aware product views, order inspection views with payment history and coupon redemption panels, a coupon code generator endpoint, and reusable generic list/filter helpers.
+`contrib/shop` registers a `"shop"` admin application (`Commerce`) in [`contrib/shop/app.go`](../app.go) using model definitions from [`contrib/shop/adminsite`](../adminsite), providing model CRUD, custom supplier-aware product views, order inspection views with payment history and coupon redemption panels, a coupon code generator endpoint, and reusable generic list/filter helpers.
 
 ---
 
 ## App Registration, Hooks, and Choosers
 
-In `NewAppConfig()` / `SHOP.Init` ([`contrib/shop/app.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/app.go)):
+In `NewAppConfig()` / `SHOP.Init` ([`contrib/shop/app.go`](../app.go)):
 
-- **Admin App**: `admin.RegisterApp("shop", admin.AppOptions{...})`
+- **Admin App**: `admin.RegisterApp("shop", admin.AppOptions{...}, adminsite.CategoryAdmin, adminsite.ProductAdmin, adminsite.OrdersAdmin, adminsite.CouponsAdmin, adminsite.CustomersAdmin)`
   - `AppLabel`: `"Shop"`
   - `MenuLabel`: `"Commerce"`
   - `FullAdminMenu`: `true`
@@ -16,32 +16,28 @@ In `NewAppConfig()` / `SHOP.Init` ([`contrib/shop/app.go`](file:///c:/Users/PvPB
   - `EnableIndexView`: `true`
   - `AppDescription`: `"The commerce module is intended to manage your webshop, such as product stock, orders, refunds, etc."`
   - `MenuIcon`: inline Bootstrap `bi-cart4` SVG
-- **Custom Admin Menu (`SHOP.ADMIN_MENU`)**: Exposes `index`, `products`, `orders`, `coupons`, and permission-gated (`admin:list`) links for `customers`, `provider_accounts`, `payments`, `carts`, `redemptions`, and `order_states`.
+- **Custom Admin Menu (`SHOP.ADMIN_MENU`)**: Exposes `index`, `products`, `orders`, `coupons`, and permission-gated (`admin:list`) links for `customers`, `payments`, `carts`, `redemptions`, and `order_states`.
 - **Product Chooser (`chooser.Register`)**: Registers `*products.Product` as `"Product Chooser"` with list fields `["Title", "Supplier", "Price", "TaxRate", "DiscountPrice"]`, ordered by `"Title", "-Price"`, and `icontains` search on `Title`.
 - **Custom Admin Routes (`admin.RegisterRouteHook`)**: Mounts `commerce/products/add/<<supplier>>` (named `admin:commerce:new_with_supplier`) handled by `ShopHandler{Handle: adminviews.ViewAddProduct}`.
 - **Extension Routing (`app.Routing`)**: Mounts `POST /shop/coupon/generate` (named `admin:ext:shop:generate_coupon`) handled by `adminviews.GenerateCouponCode`.
 - **Home Page Display Panel (`admin.RegisterHomePageDisplayPanelHook`)**: Registers a display panel counting `&products.Product{}`.
-- **Settings Menu Hook (`settings.SettingsMenuHook`)**: Adds a `"Payment Providers"` link to `provider_accounts` when the user has permission `"shop:payments:providers"`.
-- **Shared CRUD Helpers**: `createModel`, `updateModel`, and `deleteModels` (transactional) are used by `Customer`, `ProviderAccount`, and `OrderState`.
+- **CLI Sync Commands (`SHOP.Cmd`)**: Registers `sync-psp` ([`contrib/shop/command_sync_psp.go`](../command_sync_psp.go)) and `sync-suppliers` ([`contrib/shop/command_sync_suppliers.go`](../command_sync_suppliers.go)). Payment provider accounts (`payments.ProviderAccount`) are configured in Go code via `payments.RegisterProvider` and synced with `sync-psp`, rather than managed through an admin form.
 
 ---
 
-## Registered Admin Models
+## Registered Admin Models (`contrib/shop/adminsite`)
 
-All models below are registered under the `"shop"` admin app in [`contrib/shop/app.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/app.go):
+The active model registrations live in [`contrib/shop/adminsite`](../adminsite) and are passed to `admin.RegisterApp("shop", ...)` in [`contrib/shop/app.go`](../app.go):
 
-| Name | Model | `MenuOrder` | `MenuLabel` | In Menu | Restrictions | List / Form Configuration |
+| Option Var | Name | Model | `MenuOrder` | `MenuLabel` | Restrictions | List / Form Configuration |
 | --- | --- | --- | --- | --- | --- | --- |
-| *(default)* | `&models.Category{}` | `100` | `Category` | Yes | — | List: `Name`, `ParentCategory`; `icontains` search on `Name`. Add/Edit: `Name`, `Slug`, `ParentCategory`, and collapsible `ModelFormPanel` for `Children` (`MinNum: 1`, fields `Name`, `Slug`). |
-| `products` | `&products.Product{}` | `200` | `Products` | Yes | — | List: `adminviews.ViewProductList`. Add: `ShopHandler{Handle: adminviews.ViewAddNewProductSupplier}`. Edit: `ShopInstanceHandler[*products.Product]{Handle: adminviews.ViewEditProduct}`. |
-| `orders` | `&orders.Order{}` | `300` | `Orders` | Yes | — | List: `adminviews.ViewOrderList`. Add: `ShopHandler{Handle: adminviews.ViewAddOrder}`. Edit: `ShopHandler{Handle: adminviews.ViewEditOrder}`. |
-| `customers` | `&customers.Customer{}` | `500` | `Customers` | Yes | — | List: `Email`, `FirstName`, `LastName`, `FirstSeen`; ordered by `-FirstSeen`; `icontains` search on `Email`, `FirstName`, `LastName`. Add/Edit: `Email` + row(`FirstName`, `LastName`). Delete: `deleteModels`. |
-| `provider_accounts` | `&payments.ProviderAccount{}` | `600` | `Payment providers` | No *(in Settings menu)* | — | List: `Label`, `Driver`, `Enabled`, `Currency`, `FixedFee`, `PercentageFee`; ordered by `Label`; `icontains` search on `Label`, `Driver`. Add/Edit: `TitlePanel(Label)`, row(`Driver`, `Enabled`), `CredentialRef`, `Currency`, row(`FixedFee`, `PercentageFee`). Delete: `deleteModels`. |
-| `payments` | `&payments.Payment{}` | `700` | `Payments` | Yes | `DisallowCreate`, `DisallowEdit`, `DisallowDelete` | List: `ID`, `Order`, `Account`, `Provider`, `TransactionID`, `Amount`, `Fee`, `Currency`, `State`, `CreatedAt`; ordered by `-CreatedAt`; `icontains` search on `ID`, `TransactionID`, `Provider`, `State`. |
-| `carts` | `&carts.Cart{}` | `800` | `Carts` | Yes | `DisallowCreate`, `DisallowEdit`, `DisallowDelete` | List: `ID`, `Active`, `CreatedAt`; ordered by `-CreatedAt`. |
-| `coupons` | `&coupons.Coupon{}` | `900` | `Coupons` | Yes | `DisallowDelete` | Custom labels (`ShortDescription` -> `Description`, `UsageCount` -> `Uses`, `UsageLimit` -> `Limit`, `ValidFrom` -> `Valid From`, `ValidUntil` -> `Valid Until`, `CreatedAt` -> `Created`). List: `ID`, `Code`, `Title`, `ShortDescription`, `UsageCount`, `UsageLimit`, `ValidFrom`, `ValidUntil`, `CreatedAt`; `icontains` search on `Code`, `Title`, `ShortDescription`, `CreatedBy.Email`. Add/Edit: 3 tabs (`Coupon`, `Constraints`, `Products` via collapsible `CouponProductThrough` `ModelFormPanel` with `MinNum: 1`); Edit tab also shows `CreatedBy`, `UsageCount`, `CreatedAt`, `UpdatedAt`. |
-| `redemptions` | `&coupons.Redemption{}` | `900` | `Coupon redemptions` | Yes | `DisallowCreate`, `DisallowEdit`, `DisallowDelete` | List: `ID`, `Coupon`, `DiscountAmount`, `Invalidated`, `RedeemedAt`; ordered by `-RedeemedAt`. |
-| `order_states` | `&orders.OrderState{}` | `1000` | `Order states` | Yes | — | List: `ID`, `Label`, `Action`, `WorkflowID`. Add: `ID`, `Label`, `Action`, `WorkflowID`. Edit: `Label`, `Action`, `WorkflowID`. Delete: `deleteModels`. |
+| `CategoryAdmin` ([`admin_category.go`](../adminsite/admin_category.go)) | *(default)* | `&models.Category{}` | `100` | `Category` | — | List: `Name`, `ParentCategory`; `icontains` search on `Name`. Add/Edit: `Name`, `Slug`, `ParentCategory`, and collapsible `ModelFormPanel` for `Children` (`MinNum: 1`, fields `Name`, `Slug`). |
+| `ProductAdmin` ([`admin_product.go`](../adminsite/admin_product.go)) | `products` | `&products.Product{}` | `200` | `Products` | — | List: `adminviews.ViewProductList`. Add: `adminsite.ShopHandler{Handle: adminviews.ViewAddNewProductSupplier}`. Edit: `adminsite.ShopInstanceHandler[*products.Product]{Handle: adminviews.ViewEditProduct}`. |
+| `OrdersAdmin` ([`admin_orders.go`](../adminsite/admin_orders.go)) | `orders` | `&orders.Order{}` | `300` | `Orders` | — | List: `adminviews.ViewOrderList`. Add: `adminsite.ShopHandler{Handle: adminviews.ViewAddOrder}`. Edit: `adminsite.ShopHandler{Handle: adminviews.ViewEditOrder}`. |
+| `CustomersAdmin` ([`admin_customers.go`](../adminsite/admin_customers.go)) | `customers` | `&customers.Customer{}` | `500` | `Customers` | — | List: `Email`, `FirstName`, `LastName`, `FirstSeen`; ordered by `-FirstSeen`; `icontains` search on `Email`, `FirstName`, `LastName`. Add/Edit: `Email` + row(`FirstName`, `LastName`). |
+| `CouponsAdmin` ([`admin_coupons.go`](../adminsite/admin_coupons.go)) | `coupons` | `&coupons.Coupon{}` | `900` | `Coupons` | `DisallowDelete` | Custom labels (`ShortDescription` -> `Description`, `UsageCount` -> `Uses`, `UsageLimit` -> `Limit`, `ValidFrom` -> `Valid From`, `ValidUntil` -> `Valid Until`, `CreatedAt` -> `Created`). List: `ID`, `Code`, `Title`, `ShortDescription`, `UsageCount`, `UsageLimit`, `ValidFrom`, `ValidUntil`, `CreatedAt`; `icontains` search on `Code`, `Title`, `ShortDescription`, `CreatedBy.Email`. Add/Edit: 3 tabs (`Coupon`, `Constraints`, `Products` via collapsible `CouponProductThrough` `ModelFormPanel` with `MinNum: 1`); Edit tab also shows `CreatedBy`, `UsageCount`, `CreatedAt`, `UpdatedAt`. |
+
+> **Note:** Registrations for `payments`, `carts`, `redemptions`, and `order_states` are currently commented out in [`contrib/shop/app.go`](../app.go) (though `SHOP.ADMIN_MENU` retains links for them).
 
 ---
 
@@ -49,11 +45,11 @@ All models below are registered under the `"shop"` admin app in [`contrib/shop/a
 
 ### `home.go`
 
-[`contrib/shop/views/adminviews/home.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/views/adminviews/home.go) defines `Home(w http.ResponseWriter, r *http.Request)` as an empty placeholder. The shop admin index is served by the core `admin` app (`EnableIndexView: true`), supplemented by `RegisterHomePageDisplayPanelHook`.
+[`contrib/shop/views/adminviews/home.go`](../views/adminviews/home.go) defines `Home(w http.ResponseWriter, r *http.Request)` as an empty placeholder. The shop admin index is served by the core `admin` app (`EnableIndexView: true`), supplemented by `RegisterHomePageDisplayPanelHook`.
 
 ### Product Views (`view_product.go`)
 
-Defined in [`contrib/shop/views/adminviews/view_product.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/views/adminviews/view_product.go):
+Defined in [`contrib/shop/views/adminviews/view_product.go`](../views/adminviews/view_product.go):
 
 - **`ViewProductList`**: A `generic.ListViewConfig[*products.Product]` requiring permission `"products:list"`.
   - Preloads `SelectRelated("Category")`.
@@ -66,7 +62,7 @@ Defined in [`contrib/shop/views/adminviews/view_product.go`](file:///c:/Users/Pv
 
 ### Order Views (`view_order.go`)
 
-Defined in [`contrib/shop/views/adminviews/view_order.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/views/adminviews/view_order.go):
+Defined in [`contrib/shop/views/adminviews/view_order.go`](../views/adminviews/view_order.go):
 
 - **`ViewOrderList`**: A `generic.ListViewConfig[*orders.Order]` requiring permission `"orders:list"`.
   - Preloads `Payments` via `queries.NoJoins("Payments")`.
@@ -78,15 +74,15 @@ Defined in [`contrib/shop/views/adminviews/view_order.go`](file:///c:/Users/PvPB
 
 ### Coupon Code Generator (`view_coupon_generate.go`)
 
-Defined in [`contrib/shop/views/adminviews/view_coupon_generate.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/views/adminviews/view_coupon_generate.go):
+Defined in [`contrib/shop/views/adminviews/view_coupon_generate.go`](../views/adminviews/view_coupon_generate.go):
 
-- **`GenerateCouponCode`**: Checks object permission `"coupons:generate"` on `&coupons.Coupon{}` (calling `admin.ReLogin` if unauthorized). Decodes `CouponGenerationRequest` (`code_format_parts: []generators.CodePart`), calls `generators.GenerateCouponCode(r.Context(), request.Parts)`, and returns `200 OK` with `CouponGenerationResponse` (`coupon_code: string`), or `400 Bad Request` on decode/generation errors (`500` on response encoding failure).
+- **`GenerateCouponCode`**: Checks object permission `"coupons:generate"` on `&coupons.Coupon{}` (calling `admin.ReLogin` if unauthorized). Decodes `CouponGenerationRequest` (`code_format_parts: []generators.CodePart`), calls `generators.GenerateCouponCode(r.Context(), request.Parts)`, and returns `200 OK` with `api.DataResponse[CouponGenerationResponse]` (`data.coupon_code`), or `400 Bad Request` on decode/generation errors (`500` on response encoding failure).
 
 ---
 
 ## Order Edit Panels: Payment History and Coupon Panels
 
-In [`contrib/shop/orders/models_order.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/orders/models_order.go), `Order.EditPanels(ctx)` builds a `TabbedPanel` with four tabs:
+In [`contrib/shop/orders/models_order.go`](../orders/models_order.go), `Order.EditPanels(ctx)` builds a `TabbedPanel` with four tabs:
 1. **Product Details**: `ID`, `State`, `Processed`, `Completed`
 2. **Order Items**: Collapsible `ModelFormPanel` for `OrderItems` (`ID`, `Amount`)
 3. **Payment Details**: One `*admin.AlertPanel` per associated `payments.Payment` (or an `ALERT_ERROR` panel if none exist)
@@ -94,16 +90,15 @@ In [`contrib/shop/orders/models_order.go`](file:///c:/Users/PvPBe/Desktop/dev/ag
 
 ### `paymentHistoryHTML` (`orders/payment_history.go`)
 
-[`contrib/shop/orders/payment_history.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/orders/payment_history.go) renders HTML for each payment's `AlertPanel`:
+[`contrib/shop/orders/payment_history.go`](../orders/payment_history.go) renders HTML for each payment's `AlertPanel`:
 - Alert severity in `Order.EditPanels` maps `paystate` constants: `ALERT_SUCCESS` (`STATUS_PAID`, `STATUS_NO_PAYMENT_REQUIRED`), `ALERT_WARNING` (`STATUS_VERIFY`, `STATUS_AUTHORIZE`, `STATUS_REFUNDING`, `STATUS_REFUND`, `STATUS_PARTLY_CAPTURED`), `ALERT_ERROR` (`STATUS_CANCEL`, `STATUS_EXPIRED`, `STATUS_DENIED`, `STATUS_FAILURE`, `STATUS_CHARGEBACK`, `STATUS_PARTIAL_REFUND`), and `ALERT_INFO` otherwise.
 - Summary line: `Provider · Amount Currency · State` (omitting `Provider` when `payment.IsFreeCheckout()`).
-- Fee breakdown: subtotal before payment fee (`Amount.Sub(Fee)`), customer payment fee (`Fee`), and optional `ProviderFee`.
-- Ordered list of `payment.History.Data` events (`EventPrepared`, `EventNoPaymentRequired`, `EventCheckoutOpened`, `EventCheckoutFailed`, `EventStatusUpdated`, `EventProviderFeeUpdated`, `EventOperation` formatted via `paymentOperationLabel`), including UTC timestamp, state, optional `RequestID`, and optional `ProviderFee`.
-- Fallback section (`Earlier operations without timestamps`) for entries in `payment.Operations.Data` not already present in `payment.History.Data`.
+- Fee & refund breakdown: subtotal before payment fee (`Amount.Sub(Fee)`), customer payment fee (`Fee`), cumulative refunded amount (`Refunded: RefundedAmount Currency` when positive), and optional `ProviderFee`.
+- Ordered list of `payment.History.Data` events (`EventNoPaymentRequired`, `EventCheckoutOpened`, `EventStatusUpdated`, `EventProviderFeeUpdated`, `EventRefunded`, `EventCancelled`), including UTC timestamp, state, optional `Amount`, `RequestID`, `ProviderRef`, and `ProviderFee`.
 
 ### `Order.couponPanels` (`orders/coupon_panels.go`)
 
-[`contrib/shop/orders/coupon_panels.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/orders/coupon_panels.go) queries `coupons.Redemption` rows for `Order = m.ID` (selecting `Coupon.Code` and `Coupon.Title`) and loads `m.OrderItems`:
+[`contrib/shop/orders/coupon_panels.go`](../orders/coupon_panels.go) queries `coupons.Redemption` rows for `Order = m.ID` (selecting `Coupon.Code` and `Coupon.Title`) and loads `m.OrderItems`:
 - Alert type and state label per redemption:
   - `Invalidated` -> `ALERT_WARNING` (`"Reservation released"`)
   - `Counted` -> `ALERT_SUCCESS` (`"Counted toward coupon usage"`)
@@ -116,16 +111,16 @@ In [`contrib/shop/orders/models_order.go`](file:///c:/Users/PvPBe/Desktop/dev/ag
 
 ### `generic/listview.go`
 
-[`contrib/shop/views/adminviews/generic/listview.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/views/adminviews/generic/listview.go) defines `ListViewConfig[T attrs.Definer]`, which implements `TakeControl(w, r, _)`:
+[`contrib/shop/views/adminviews/generic/listview.go`](../views/adminviews/generic/listview.go) defines `ListViewConfig[T attrs.Definer]`, which implements `TakeControl(w, r, _)`:
 - Enforces `permissions.HasObjectPermission(r, l.Model, l.Permissions...)` (redirects via `admin.ReLogin` on failure).
 - Wraps columns from `GetColumns(r)` with `columns.NewSortableColumnBuilder(l.Model)` and sorts the queryset by `r.URL.Query()["sort"]`.
-- Optionally prepends `columns.ListActionsColumn[T]` from `GetListActions(r)` and wraps column `0` with `list.TitleFieldColumn` using `GetEditLink(r, row)`.
+- Optionally inserts `columns.ListActionsColumn[T]` from `GetListActions(r)` (after column `0`) and wraps column `0` with `list.TitleFieldColumn` using `GetEditLink(r, row)`.
 - Applies `filters.NewFilters[T](ctx, "filters")` when `Filters` is non-empty; if `UsePanelFilters` is `true`, appends `admin.SidePanelFilters` to `PageOptions.SidePanels`.
 - Delegates rendering to `list.View[T]` using `BaseTemplateKey: "shop"` and `TemplateName: "shop/admin/models/list.tmpl"`, with `DefaultAmount: 25` and `MaxAmount: 100` (`AMOUNT_OPTIONS`).
 
 ### `generic/filters.go`
 
-[`contrib/shop/views/adminviews/generic/filters.go`](file:///c:/Users/PvPBe/Desktop/dev/agents/godjango/contrib/shop/views/adminviews/generic/filters.go) provides pagination size helpers:
+[`contrib/shop/views/adminviews/generic/filters.go`](../views/adminviews/generic/filters.go) provides pagination size helpers:
 - `AMOUNT_OPTIONS = []int{25, 50, 75, 100}`
 - `FilterSpecAmount[T attrs.Definer](name string, amounts []int, opts ...func(*filterSpecOpts)) filters.FilterSpec[T]`: Defaults `name` to `"amount"` and default value to `"10"`. Configurable via `OptFilterSpecFormField`, `OptFilterSpecApplyAmount`, and `OptFilterSpecDefaultAmount`. (Note: in the current implementation, `OptFilterSpecApplyAmount(b bool)` sets `fso.useApply = false` regardless of `b`.)
 - `AmountHeaderAction(r, currentAmount, reverseURL, amounts, reverseArgs...)`: Returns a `components.ShowableComponent` rendering a `GET` `<form>` that preserves existing query parameters (excluding `page` and `amount`) as hidden inputs and submits on `<select name="amount">` change.

@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/contrib/shop/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/payments"
 	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
 	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
 	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
@@ -108,16 +109,16 @@ func testPaymentCheckout(d *djester.Tester, t *testing.T, product, otherProduct 
 
 	getCart := func() *carts.Cart {
 		t.Helper()
-		var body struct {
+		var body api.DataResponse[struct {
 			Cart *carts.Cart `json:"cart"`
-		}
+		}]
 		response, err := d.Get(cartPath, nil, nil)
 		require.NoError(t, err)
 		defer response.Body.Close()
 		require.Equal(t, http.StatusOK, response.StatusCode)
 		require.NoError(t, response.JSON(&body))
-		require.NotNil(t, body.Cart)
-		return body.Cart
+		require.NotNil(t, body.Data.Cart)
+		return body.Data.Cart
 	}
 
 	// Clean carts before testing guest checkout
@@ -148,7 +149,7 @@ func testPaymentCheckout(d *djester.Tester, t *testing.T, product, otherProduct 
 
 	// 2. Guest 4-step checkout flow without logging in!
 	// Step 1: Add item to guest cart
-	var guestAddResp public.CartItemResponse
+	var guestAddResp api.DataResponse[public.CartItemResponse]
 	addResp, err := d.PostJson(addItemPath, nil, nil, public.CartItemRequest{
 		ProductID: product.ID.String(),
 		Amount:    1,
@@ -156,14 +157,14 @@ func testPaymentCheckout(d *djester.Tester, t *testing.T, product, otherProduct 
 	require.NoError(t, err)
 	addResp.Body.Close()
 	require.Equal(t, http.StatusOK, addResp.StatusCode)
-	guestCartID := guestAddResp.Cart.ID
+	guestCartID := guestAddResp.Data.Cart.ID
 
 	// Attempting checkout as guest before setting customer details -> 422 Unprocessable Entity
 	post(account.ID.String(), http.StatusUnprocessableEntity)
 	require.Empty(t, provider.requests)
 
 	// Step 2: Set customer details on guest cart via POST /api/carts/customer
-	var guestCartResp public.CartResponse
+	var guestCartResp api.DataResponse[public.CartResponse]
 	custResp, err := d.PostJson(customerPath, nil, nil, public.CartCustomerRequest{
 		Email:     "guest-checkout@example.test",
 		FirstName: "Guest",
@@ -172,17 +173,17 @@ func testPaymentCheckout(d *djester.Tester, t *testing.T, product, otherProduct 
 	require.NoError(t, err)
 	custResp.Body.Close()
 	require.Equal(t, http.StatusOK, custResp.StatusCode)
-	require.NotNil(t, guestCartResp.Cart.Customer)
-	guestCustomerID := guestCartResp.Cart.Customer.ID
+	require.NotNil(t, guestCartResp.Data.Cart.Customer)
+	guestCustomerID := guestCartResp.Data.Cart.Customer.ID
 
 	// Step 3: Fetch PSP list & quotes (GET /api/payments/options)
 	optResp, err := d.Get(optionsPath, nil, nil)
 	require.NoError(t, err)
-	var guestOpts []public.PaymentOption
+	var guestOpts api.DataResponse[[]public.PaymentOption]
 	require.NoError(t, optResp.JSON(&guestOpts))
 	optResp.Body.Close()
 	require.Equal(t, http.StatusOK, optResp.StatusCode)
-	require.NotEmpty(t, guestOpts)
+	require.NotEmpty(t, guestOpts.Data)
 
 	// Step 4: Submit PSP (POST /api/payments/checkout) as guest
 	guestCheckoutResp := post(account.ID.String(), http.StatusSeeOther)
@@ -396,8 +397,9 @@ func testPaymentCheckout(d *djester.Tester, t *testing.T, product, otherProduct 
 	require.NoError(t, err)
 	defer optionsResponse.Body.Close()
 	require.Equal(t, http.StatusOK, optionsResponse.StatusCode)
-	var options []public.PaymentOption
-	require.NoError(t, optionsResponse.JSON(&options))
+	var optionsResp api.DataResponse[[]public.PaymentOption]
+	require.NoError(t, optionsResponse.JSON(&optionsResp))
+	options := optionsResp.Data
 	require.Len(t, options, 1)
 	require.True(t, options[0].NoPaymentRequired)
 	require.True(t, options[0].AccountID.IsZero())

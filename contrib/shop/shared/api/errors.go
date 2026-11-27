@@ -9,13 +9,13 @@ import (
 )
 
 type ErrorResponse struct {
-	Response
-	Message string `json:"message"`
+	Response `json:",inline"`
+	Message  string `json:"message"`
 }
 
 func RespondError(w http.ResponseWriter, statusCode int, message string, args ...any) {
-	w.WriteHeader(statusCode)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 
 	if len(args) > 0 {
 		message = fmt.Sprintf(message, args...)

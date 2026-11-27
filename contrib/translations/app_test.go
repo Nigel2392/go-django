@@ -92,9 +92,11 @@ func setTestDjango(t *testing.T, settings django.Settings) {
 	t.Helper()
 	previous := django.Global
 	previousSettings := djangoapps.CONFIG.ApplicationSettings
+	djangoapps.ResetRegistry()
 	t.Cleanup(func() {
 		django.Global = previous
 		djangoapps.CONFIG.ApplicationSettings = previousSettings
+		djangoapps.ResetRegistry()
 	})
 	django.Global = &django.Application{Settings: settings}
 	djangoapps.CONFIG.ApplicationSettings = settings

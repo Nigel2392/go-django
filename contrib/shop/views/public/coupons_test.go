@@ -98,7 +98,7 @@ func testCouponRedemption(d *djester.Tester, t *testing.T, inCart, outsideCart *
 	redeem("UNKNOWN", http.StatusNotFound, nil)
 	redeem(string(cartWide.Code), http.StatusNotFound, nil)
 
-	var added public.CartItemResponse
+	var added api.DataResponse[public.CartItemResponse]
 	resp, err = d.PostJson(django.Reverse("api:carts:add_item"), nil, nil, public.CartItemRequest{
 		ProductID: inCart.ID.String(), Amount: 1,
 	}, &added)
@@ -111,24 +111,24 @@ func testCouponRedemption(d *djester.Tester, t *testing.T, inCart, outsideCart *
 	}
 	redeem(string(nonmatching.Code), http.StatusNotFound, nil)
 
-	var cart struct {
+	var cart api.DataResponse[struct {
 		Object *carts.Cart  `json:"cart"`
 		Totals price.Totals `json:"total_price"`
-	}
+	}]
 	redeem(string(cartWide.Code), http.StatusOK, &cart)
-	if cart.Object.ID != added.Cart.ID || !cart.Totals.TotalDiscount.Equal(decimal.NewFromInt(5)) {
+	if cart.Data.Object.ID != added.Data.Cart.ID || !cart.Data.Totals.TotalDiscount.Equal(decimal.NewFromInt(5)) {
 		t.Fatalf("unexpected discounted cart: %+v", cart)
 	}
 	redeem(string(cartWide.Code), http.StatusConflict, nil)
 	redeem(string(matching.Code), http.StatusOK, &cart)
-	if !cart.Totals.TotalDiscount.Equal(decimal.NewFromInt(10)) {
-		t.Fatalf("expected both coupons to apply, got discount %s", cart.Totals.TotalDiscount)
+	if !cart.Data.Totals.TotalDiscount.Equal(decimal.NewFromInt(10)) {
+		t.Fatalf("expected both coupons to apply, got discount %s", cart.Data.Totals.TotalDiscount)
 	}
 	redeem(string(matching.Code), http.StatusNotFound, nil)
 
 	for coupon, want := range map[*coupons.Coupon]int{cartWide: 1, matching: 1, nonmatching: 0} {
 		count, err := queries.GetQuerySet(&coupons.Redemption{}).
-			Filter("Cart", added.Cart.ID).Filter("Coupon", coupon.ID).Count()
+			Filter("Cart", added.Data.Cart.ID).Filter("Coupon", coupon.ID).Count()
 		if err != nil || int(count) != want {
 			t.Fatalf("coupon %s has %d redemptions, want %d (err %v)", coupon.Code, count, want, err)
 		}
@@ -233,11 +233,11 @@ func (c couponTestClient) post(t *testing.T, body string, status int, message st
 		return nil
 	}
 
-	var got couponTestResponse
+	var got api.DataResponse[couponTestResponse]
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decoding redeemed cart: %v", err)
 	}
-	return &got
+	return &got.Data
 }
 
 func (c couponTestClient) redeem(t *testing.T, coupon *coupons.Coupon, status int, message string) *couponTestResponse {

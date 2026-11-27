@@ -27,13 +27,29 @@ Re-exported from `public/api/index.ts`.
 - **`ULID`**: `string` — ULID serialized as a JSON string.
 - **`Timestamp`**: `string` — RFC 3339 timestamp serialized as a JSON string.
 - **`Decimal`**: `string` — `shopspring/decimal` serialized as a JSON string.
-- **`ErrorResponse`**:
+- **`Response`**, **`DataResponse<T>`**, & **`ErrorResponse`**:
   ```ts
-  export interface ErrorResponse {
+  export interface Response {
+      status_code: number;
+  }
+
+  export interface ErrorResponse extends Response {
       message: string;
   }
+
+  export interface DataResponse<T> extends Response {
+      data: T;
+  }
+
+  export function isErrorResponse(resp: any): resp is ErrorResponse {
+      return resp.status_code >= 400;
+  }
+
+  export function isResponseT<T>(resp: any): resp is T {
+      return resp.status_code == 200 && resp.data != undefined;
+  }
   ```
-- **`APIPromise<T>`**: `Promise<T | ErrorResponse>` — Return type of all `ShopController` API methods.
+- **`APIPromise<T>`**: `Promise<DataResponse<T> | ErrorResponse>` — Return type of all `ShopController` API methods.
 
 ### Domain & Response Interfaces
 
@@ -47,10 +63,28 @@ Re-exported from `public/api/index.ts`.
       left_over_discount: Decimal;
   }
   ```
+- **`EmailAddress`** & **`Customer`** *(Go casing preserved because the Go struct has no JSON tags)*:
+  ```ts
+  export interface EmailAddress {
+      Name: string;
+      Address: string;
+  }
+
+  export interface Customer {
+      ID: ULID;
+      Email: EmailAddress | null;
+      FirstName: string;
+      LastName: string;
+      User?: unknown;
+      FirstSeen: Timestamp;
+      Orders?: unknown;
+  }
+  ```
 - **`Cart`**:
   ```ts
   export interface Cart {
       id: ULID;
+      customer?: Customer | null;
       created_at: Timestamp;
       active: boolean;
   }
@@ -142,6 +176,7 @@ Re-exported from `public/api/index.ts`.
       RedeemedAt: Timestamp;
   }
   ```
+  *(Note: The Go `coupons.Redemption` model also serializes `Counted: boolean` in JSON responses, though it is not yet declared on the TypeScript `Redemption` interface.)*
 - **`CartItemRow`**:
   ```ts
   export interface CartItemRow {
@@ -164,6 +199,14 @@ Re-exported from `public/api/index.ts`.
   export interface CartResponse {
       cart: Cart | null;
       items: CartItem[] | null;
+  }
+  ```
+- **`CartCustomerRequest`**:
+  ```ts
+  export interface CartCustomerRequest {
+      email: string;
+      first_name: string;
+      last_name: string;
   }
   ```
 - **`CartItemRequest`** & **`CartItemResponse`**:
@@ -230,7 +273,7 @@ Re-exported from `public/api/index.ts`.
   }
   ```
 - **`ShopAPI`**:
-  Maps operation keys (`getCart`, `clearCart`, `addCartItem`, `removeCartItem`, `redeemCoupon`, `paymentOptions`) to `{ request, response }` pairs.
+  Maps operation keys (`getCart`, `clearCart`, `setCustomer`, `addCartItem`, `removeCartItem`, `redeemCoupon`, `paymentOptions`) to `{ request, response }` pairs.
 
 ---
 
@@ -245,6 +288,7 @@ Re-exported from `public/api/index.ts`.
 |---|---|---|---|
 | `getCartUrl` | `String` | `"/api/carts"` | `data-shop-get-cart-url-value` |
 | `clearCartUrl` | `String` | `"/api/carts/clear"` | `data-shop-clear-cart-url-value` |
+| `setCustomerUrl` | `String` | `"/api/carts/customer"` | `data-shop-set-customer-url-value` |
 | `addCartItemUrl` | `String` | `"/api/carts/items/add"` | `data-shop-add-cart-item-url-value` |
 | `removeCartItemUrl` | `String` | `"/api/carts/items/remove"` | `data-shop-remove-cart-item-url-value` |
 | `redeemCouponUrl` | `String` | `"/api/coupons/redeem"` | `data-shop-redeem-coupon-url-value` |
@@ -257,6 +301,7 @@ Example markup:
     data-controller="shop"
     data-shop-get-cart-url-value="{{ url "api:carts" }}"
     data-shop-clear-cart-url-value="{{ url "api:carts:clear" }}"
+    data-shop-set-customer-url-value="{{ url "api:carts:customer" }}"
     data-shop-add-cart-item-url-value="{{ url "api:carts:add_item" }}"
     data-shop-remove-cart-item-url-value="{{ url "api:carts:remove_item" }}"
     data-shop-redeem-coupon-url-value="{{ url "api:coupons:redeem" }}"
@@ -267,15 +312,17 @@ Example markup:
 ### Lifecycle & Behavior
 
 - **`connect()`**:
-  - Verifies `hasGetCartUrlValue`, `hasClearCartUrlValue`, `hasAddCartItemUrlValue`, `hasRemoveCartItemUrlValue`, `hasRedeemCouponUrlValue`, and `hasPaymentOptionsUrlValue`; throws an `Error` if any is missing.
+  - Verifies `hasGetCartUrlValue`, `hasClearCartUrlValue`, `hasAddCartItemUrlValue`, `hasRemoveCartItemUrlValue`, `hasRedeemCouponUrlValue`, and `hasPaymentOptionsUrlValue`; throws an `Error` if any is missing. (`setCustomerUrl` falls back to its default `"/api/carts/customer"` if omitted.)
   - Attaches itself to the host DOM element as `this.element.SHOP = this`.
 - **Methods:**
   - `getCart(): APIPromise<CartRow>` — `GET` to `getCartUrlValue`.
   - `clearCart(): APIPromise<CartRow>` — `POST` to `clearCartUrlValue`.
+  - `setCustomer(req: CartCustomerRequest): APIPromise<CartRow>` — `POST` JSON `req` to `setCustomerUrlValue`.
   - `addCartItem(req: CartItemRequest): APIPromise<CartItemResponse>` — `POST` JSON `req` to `addCartItemUrlValue`.
   - `removeCartItem(req: CartItemRequest): APIPromise<CartItemResponse>` — `POST` JSON `req` to `removeCartItemUrlValue`.
   - `redeemCoupon(req: RedemptionRequest): APIPromise<CartRow>` — `POST` JSON `req` to `redeemCouponUrlValue`.
   - `paymentOptions(): APIPromise<PaymentOption[]>` — `GET` to `paymentOptionsUrlValue`.
+  - *(Note: `POST /api/payments/checkout` is not wrapped on `ShopController` / `ShopAPI` because it responds with an HTTP `303 See Other` redirect to the provider or return URL and is typically submitted via an HTML `<form method="POST">`.)*
 - **Internal Request Handling (`request<T>`)**:
   - Sets `Accept: application/json` and `credentials: "same-origin"`.
   - For `POST` requests, resolves the CSRF token in order:
@@ -284,7 +331,8 @@ Example markup:
     3. `input[name="csrf_token"]` (`value`)
     If found, sets header `X-CSRF-Token`.
   - When `body !== undefined`, sets `Content-Type: application/json` and serializes with `JSON.stringify(body)`.
-  - On non-`2xx` responses, parses JSON and returns `{ message: data.message }` if `data?.message` is a string, otherwise `{ message: "Shop request failed (HTTP <status>)" }`.
+  - On `2xx` responses, returns `response.json()` as `Promise<DataResponse<T>>`.
+  - On non-`2xx` responses, parses JSON and returns `{ status_code: response.status, message: data.message }` if `data?.message` is a string, otherwise `{ status_code: response.status, message: "Shop request failed (HTTP <status>)" }`.
 
 ---
 

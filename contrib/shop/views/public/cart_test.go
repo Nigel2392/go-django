@@ -349,15 +349,15 @@ func TestCartsAPI(t *testing.T) {
 					loginResp.Body.Close()
 					defer d.Logout()
 
-					var cartResp public.CartResponse
+					var cartResp api.DataResponse[public.CartResponse]
 					resp, err := d.Get(django.Reverse("api:carts"), nil, nil)
 					asserter.Assert(err == nil, "GET /api/carts for authenticated user failed: %v", err)
 					asserter.AssertEqual(http.StatusOK, resp.StatusCode)
 					asserter.Assert(resp.JSON(&cartResp) == nil, "Failed to decode CartResponse JSON")
 					resp.Body.Close()
-					asserter.AssertNotNil(cartResp.Cart)
-					asserter.Assert(!cartResp.Cart.ID.IsZero(), "Expected valid cart ID for authenticated user")
-					asserter.Assert(cartResp.Cart.Active, "Expected active cart for authenticated user")
+					asserter.AssertNotNil(cartResp.Data.Cart)
+					asserter.Assert(!cartResp.Data.Cart.ID.IsZero(), "Expected valid cart ID for authenticated user")
+					asserter.Assert(cartResp.Data.Cart.Active, "Expected active cart for authenticated user")
 				},
 			},
 			&djester.BasicTest{
@@ -432,7 +432,7 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Failed to listen to Item.Add signal: %v", err)
 
 					// 1. Add prod1 (amount 2) when no cart exists yet -> creates Cart + CartItem
-					var itemResp1 public.CartItemResponse
+					var itemResp1 api.DataResponse[public.CartItemResponse]
 					resp, err := d.PostJson(addURL, nil, nil, public.CartItemRequest{
 						ProductID: prod1.ID.String(),
 						Amount:    2,
@@ -440,19 +440,19 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "First AddCartItem failed: %v", err)
 					resp.Body.Close()
 					asserter.AssertEqual(http.StatusOK, resp.StatusCode)
-					asserter.AssertNotNil(itemResp1.Cart)
-					asserter.AssertNotNil(itemResp1.Item)
-					asserter.AssertNotNil(itemResp1.Product)
-					asserter.AssertEqual(uint64(2), itemResp1.Item.Amount)
-					asserter.AssertEqual(prod1.ID, itemResp1.Product.ID)
+					asserter.AssertNotNil(itemResp1.Data.Cart)
+					asserter.AssertNotNil(itemResp1.Data.Item)
+					asserter.AssertNotNil(itemResp1.Data.Product)
+					asserter.AssertEqual(uint64(2), itemResp1.Data.Item.Amount)
+					asserter.AssertEqual(prod1.ID, itemResp1.Data.Product.ID)
 					asserter.AssertEqual(1, cartCreatedCount)
 					asserter.AssertEqual(1, itemAddedCount)
 					asserter.AssertEqual(uint64(2), lastAddedAmount)
 
-					cartID := itemResp1.Cart.ID
+					cartID := itemResp1.Data.Cart.ID
 
 					// 2. Add prod1 again (amount 3) -> reuses Cart and increments CartItem.Amount to 5
-					var itemResp2 public.CartItemResponse
+					var itemResp2 api.DataResponse[public.CartItemResponse]
 					resp2, err := d.PostJson(addURL, nil, nil, public.CartItemRequest{
 						ProductID: prod1.ID.String(),
 						Amount:    3,
@@ -460,8 +460,8 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Second AddCartItem failed: %v", err)
 					resp2.Body.Close()
 					asserter.AssertEqual(http.StatusOK, resp2.StatusCode)
-					asserter.AssertEqual(cartID, itemResp2.Cart.ID)
-					asserter.AssertEqual(uint64(5), itemResp2.Item.Amount)
+					asserter.AssertEqual(cartID, itemResp2.Data.Cart.ID)
+					asserter.AssertEqual(uint64(5), itemResp2.Data.Item.Amount)
 					asserter.AssertEqual(1, cartCreatedCount)
 					asserter.AssertEqual(2, itemAddedCount)
 					asserter.AssertEqual(uint64(5), lastAddedAmount)
@@ -475,7 +475,7 @@ func TestCartsAPI(t *testing.T) {
 					asserter.AssertEqual(uint64(5), dbItem.Object.Amount)
 
 					// 3. Add prod2 (amount 1) to existing cart -> creates second CartItem
-					var itemResp3 public.CartItemResponse
+					var itemResp3 api.DataResponse[public.CartItemResponse]
 					resp3, err := d.PostJson(addURL, nil, nil, public.CartItemRequest{
 						ProductID: prod2.ID.String(),
 						Amount:    1,
@@ -483,18 +483,18 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Third AddCartItem failed: %v", err)
 					resp3.Body.Close()
 					asserter.AssertEqual(http.StatusOK, resp3.StatusCode)
-					asserter.AssertEqual(cartID, itemResp3.Cart.ID)
-					asserter.AssertEqual(uint64(1), itemResp3.Item.Amount)
-					asserter.AssertEqual(prod2.ID, itemResp3.Product.ID)
+					asserter.AssertEqual(cartID, itemResp3.Data.Cart.ID)
+					asserter.AssertEqual(uint64(1), itemResp3.Data.Item.Amount)
+					asserter.AssertEqual(prod2.ID, itemResp3.Data.Product.ID)
 
 					// 4. Verify GET /api/carts preloads both items and their product details
-					var fullCart public.CartResponse
+					var fullCart api.DataResponse[public.CartResponse]
 					getResp, err := d.Get(django.Reverse("api:carts"), nil, nil)
 					asserter.Assert(err == nil, "GET /api/carts failed: %v", err)
 					asserter.AssertEqual(http.StatusOK, getResp.StatusCode)
 					asserter.Assert(getResp.JSON(&fullCart) == nil, "Failed to decode fullCart JSON")
 					getResp.Body.Close()
-					asserter.AssertEqual(2, len(fullCart.Items))
+					asserter.AssertEqual(2, len(fullCart.Data.Items))
 				},
 			},
 			&djester.BasicTest{
@@ -575,7 +575,7 @@ func TestCartsAPI(t *testing.T) {
 					remURL := django.Reverse("api:carts:remove_item")
 
 					// Add 5 units of prod1
-					var addResp public.CartItemResponse
+					var addResp api.DataResponse[public.CartItemResponse]
 					resp, err := d.PostJson(addURL, nil, nil, public.CartItemRequest{
 						ProductID: prod1.ID.String(),
 						Amount:    5,
@@ -598,7 +598,7 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Failed to listen to Item.Remove signal: %v", err)
 
 					// 1. Partial removal: remove 2 -> 3 remaining
-					var remResp1 public.CartItemResponse
+					var remResp1 api.DataResponse[public.CartItemResponse]
 					r1, err := d.PostJson(remURL, nil, nil, public.CartItemRequest{
 						ProductID: prod1.ID.String(),
 						Amount:    2,
@@ -606,21 +606,21 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Partial RemoveCartItem failed: %v", err)
 					r1.Body.Close()
 					asserter.AssertEqual(http.StatusOK, r1.StatusCode)
-					asserter.AssertNotNil(remResp1.Item)
-					asserter.AssertEqual(uint64(3), remResp1.Item.Amount)
+					asserter.AssertNotNil(remResp1.Data.Item)
+					asserter.AssertEqual(uint64(3), remResp1.Data.Item.Amount)
 					asserter.AssertEqual(1, removedSignals)
 					asserter.AssertEqual(uint64(3), lastRemaining)
 
 					// Verify DB still has the CartItem with Amount == 3
 					dbItem, err := queries.GetQuerySet(&carts.CartItem{}).
-						Filter("Cart", addResp.Cart.ID).
+						Filter("Cart", addResp.Data.Cart.ID).
 						Filter("Product", prod1.ID).
 						Get()
 					asserter.Assert(err == nil, "Expected CartItem to remain in DB after partial removal: %v", err)
 					asserter.AssertEqual(uint64(3), dbItem.Object.Amount)
 
 					// 2. Full removal: remove 5 (>= 3) -> deletes CartItem from DB and returns Amount == 0
-					var remResp2 public.CartItemResponse
+					var remResp2 api.DataResponse[public.CartItemResponse]
 					r2, err := d.PostJson(remURL, nil, nil, public.CartItemRequest{
 						ProductID: prod1.ID.String(),
 						Amount:    5,
@@ -628,14 +628,14 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Full RemoveCartItem failed: %v", err)
 					r2.Body.Close()
 					asserter.AssertEqual(http.StatusOK, r2.StatusCode)
-					asserter.AssertNotNil(remResp2.Item)
-					asserter.AssertEqual(uint64(0), remResp2.Item.Amount)
+					asserter.AssertNotNil(remResp2.Data.Item)
+					asserter.AssertEqual(uint64(0), remResp2.Data.Item.Amount)
 					asserter.AssertEqual(2, removedSignals)
 					asserter.AssertEqual(uint64(0), lastRemaining)
 
 					// Verify CartItem row was deleted from DB
 					exists, err := queries.GetQuerySet(&carts.CartItem{}).
-						Filter("Cart", addResp.Cart.ID).
+						Filter("Cart", addResp.Data.Cart.ID).
 						Filter("Product", prod1.ID).
 						Exists()
 					asserter.Assert(err == nil, "Failed checking CartItem existence: %v", err)
@@ -653,14 +653,14 @@ func TestCartsAPI(t *testing.T) {
 					clearURL := django.Reverse("api:carts:clear")
 
 					// 1. Add item to create an active cart with items
-					var addResp public.CartItemResponse
+					var addResp api.DataResponse[public.CartItemResponse]
 					r1, err := d.PostJson(addURL, nil, nil, public.CartItemRequest{
 						ProductID: prod1.ID.String(),
 						Amount:    2,
 					}, &addResp)
 					asserter.Assert(err == nil, "AddCartItem failed: %v", err)
 					r1.Body.Close()
-					oldCartID := addResp.Cart.ID
+					oldCartID := addResp.Data.Cart.ID
 
 					var clearedCarts []drivers.ULID
 					sigCtx, cancelSig := context.WithCancel(t.Context())
@@ -674,16 +674,16 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "Failed to listen to Cleared signal: %v", err)
 
 					// 2. Call POST /api/carts/clear
-					var clearResp public.CartResponse
+					var clearResp api.DataResponse[public.CartResponse]
 					r2, err := d.PostJson(clearURL, nil, nil, map[string]any{}, &clearResp)
 					asserter.Assert(err == nil, "ClearCart failed: %v", err)
 					r2.Body.Close()
 					asserter.AssertEqual(http.StatusOK, r2.StatusCode)
-					asserter.AssertNotNil(clearResp.Cart)
-					asserter.Assert(!clearResp.Cart.ID.IsZero(), "Expected new cart to have non-zero ID")
-					asserter.AssertNotEqual(oldCartID, clearResp.Cart.ID)
-					asserter.Assert(clearResp.Cart.Active, "Expected newly returned cart to be active")
-					asserter.AssertEqual(0, len(clearResp.Items))
+					asserter.AssertNotNil(clearResp.Data.Cart)
+					asserter.Assert(!clearResp.Data.Cart.ID.IsZero(), "Expected new cart to have non-zero ID")
+					asserter.AssertNotEqual(oldCartID, clearResp.Data.Cart.ID)
+					asserter.Assert(clearResp.Data.Cart.Active, "Expected newly returned cart to be active")
+					asserter.AssertEqual(0, len(clearResp.Data.Items))
 					asserter.AssertEqual(1, len(clearedCarts))
 					asserter.AssertEqual(oldCartID, clearedCarts[0])
 
@@ -698,13 +698,13 @@ func TestCartsAPI(t *testing.T) {
 					_, _ = queries.GetQuerySet(&carts.Cart{}).Delete()
 					clearedCarts = nil
 
-					var clearResp2 public.CartResponse
+					var clearResp2 api.DataResponse[public.CartResponse]
 					r3, err := d.PostJson(clearURL, nil, nil, map[string]any{}, &clearResp2)
 					asserter.Assert(err == nil, "ClearCart without prior cart failed: %v", err)
 					r3.Body.Close()
 					asserter.AssertEqual(http.StatusOK, r3.StatusCode)
-					asserter.AssertNotNil(clearResp2.Cart)
-					asserter.Assert(clearResp2.Cart.Active, "Expected new active cart")
+					asserter.AssertNotNil(clearResp2.Data.Cart)
+					asserter.Assert(clearResp2.Data.Cart.Active, "Expected new active cart")
 					asserter.AssertEqual(0, len(clearedCarts))
 				},
 			},
@@ -739,7 +739,7 @@ func TestCartsAPI(t *testing.T) {
 					}
 
 					// 3. Valid guest customer details -> creates customer and attaches to active cart
-					var cartResp1 public.CartResponse
+					var cartResp1 api.DataResponse[public.CartResponse]
 					r1, err := d.PostJson(customerURL, nil, nil, public.CartCustomerRequest{
 						Email:     "guest-cart@example.test",
 						FirstName: "Guest",
@@ -748,17 +748,17 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "POST valid customer failed: %v", err)
 					r1.Body.Close()
 					asserter.AssertEqual(http.StatusOK, r1.StatusCode)
-					asserter.AssertNotNil(cartResp1.Cart)
-					asserter.AssertNotNil(cartResp1.Cart.Customer)
-					asserter.Assert(!cartResp1.Cart.Customer.ID.IsZero(), "Expected non-zero customer ID")
-					asserter.AssertEqual("guest-cart@example.test", cartResp1.Cart.Customer.Email.Address)
-					asserter.AssertEqual("Guest", cartResp1.Cart.Customer.FirstName)
-					asserter.AssertEqual("One", cartResp1.Cart.Customer.LastName)
+					asserter.AssertNotNil(cartResp1.Data.Cart)
+					asserter.AssertNotNil(cartResp1.Data.Cart.Customer)
+					asserter.Assert(!cartResp1.Data.Cart.Customer.ID.IsZero(), "Expected non-zero customer ID")
+					asserter.AssertEqual("guest-cart@example.test", cartResp1.Data.Cart.Customer.Email.Address)
+					asserter.AssertEqual("Guest", cartResp1.Data.Cart.Customer.FirstName)
+					asserter.AssertEqual("One", cartResp1.Data.Cart.Customer.LastName)
 
-					custID := cartResp1.Cart.Customer.ID
+					custID := cartResp1.Data.Cart.Customer.ID
 
 					// 4. Updating customer details on the same active cart reuses and updates the Customer row
-					var cartResp2 public.CartResponse
+					var cartResp2 api.DataResponse[public.CartResponse]
 					r2, err := d.PostJson(customerURL, nil, nil, public.CartCustomerRequest{
 						Email:     "guest-updated@example.test",
 						FirstName: "Updated",
@@ -767,13 +767,13 @@ func TestCartsAPI(t *testing.T) {
 					asserter.Assert(err == nil, "POST updated customer failed: %v", err)
 					r2.Body.Close()
 					asserter.AssertEqual(http.StatusOK, r2.StatusCode)
-					asserter.AssertNotNil(cartResp2.Cart)
-					asserter.AssertEqual(cartResp1.Cart.ID, cartResp2.Cart.ID)
-					asserter.AssertNotNil(cartResp2.Cart.Customer)
-					asserter.AssertEqual(custID, cartResp2.Cart.Customer.ID)
-					asserter.AssertEqual("guest-updated@example.test", cartResp2.Cart.Customer.Email.Address)
-					asserter.AssertEqual("Updated", cartResp2.Cart.Customer.FirstName)
-					asserter.AssertEqual("Guest", cartResp2.Cart.Customer.LastName)
+					asserter.AssertNotNil(cartResp2.Data.Cart)
+					asserter.AssertEqual(cartResp1.Data.Cart.ID, cartResp2.Data.Cart.ID)
+					asserter.AssertNotNil(cartResp2.Data.Cart.Customer)
+					asserter.AssertEqual(custID, cartResp2.Data.Cart.Customer.ID)
+					asserter.AssertEqual("guest-updated@example.test", cartResp2.Data.Cart.Customer.Email.Address)
+					asserter.AssertEqual("Updated", cartResp2.Data.Cart.Customer.FirstName)
+					asserter.AssertEqual("Guest", cartResp2.Data.Cart.Customer.LastName)
 
 					dbCust, err := queries.GetQuerySet(&customers.Customer{}).Filter("ID", custID).Get()
 					asserter.Assert(err == nil, "Failed to query updated customer from DB: %v", err)

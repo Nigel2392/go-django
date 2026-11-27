@@ -102,11 +102,14 @@ locales: {nl: Alleen in catalogus}
 			t.Errorf("generated catalog unexpectedly contains %q", name)
 		}
 	}
-	for _, tc := range []struct{ text, dutch string }{
-		{"Checkout fixture", "Afrekenen"},
-		{"C Type", "Inhoudstype"},
-		{"Registered asset", "Extensie-element"},
-		{"Display title", ""},
+	for _, tc := range []struct {
+		text    string
+		locales map[string]string
+	}{
+		{"Checkout fixture", map[string]string{"nl": "Afrekenen"}},
+		{"C Type", map[string]string{"nl": "Inhoudstype", "en": "C Type", "de": "Inhaltstyp", "fr": "Type de contenu"}},
+		{"Registered asset", map[string]string{"nl": "Extensie-element"}},
+		{"Display title", nil},
 	} {
 		entry, exists := byText[tc.text]
 		if !exists || entry.Locales == nil {
@@ -114,10 +117,7 @@ locales: {nl: Alleen in catalogus}
 			continue
 		}
 		for _, locale := range []string{"nl", "en", "de", "fr"} {
-			want := ""
-			if locale == "nl" {
-				want = tc.dutch
-			}
+			want := tc.locales[locale]
 			if got, _ := entry.Locales.Get(locale); !slices.Equal(got, []string{want}) {
 				t.Errorf("%q in %s = %q, want %q", tc.text, locale, got, want)
 			}

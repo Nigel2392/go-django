@@ -14,6 +14,7 @@ In `contrib/shop/app.go`, `SHOP.Ready` mounts all public endpoints under the `/a
 |---|---|---|---|
 | `api:carts` | `GET` | `/api/carts` | `public.CartAPI.GetOrCreateCart` |
 | `api:carts:clear` | `POST` | `/api/carts/clear` | `public.CartAPI.ClearCart` |
+| `api:carts:customer` | `POST` | `/api/carts/customer` | `public.CartAPI.SetCustomer` |
 | `api:carts:add_item` | `POST` | `/api/carts/items/add` | `public.CartAPI.AddCartItem` |
 | `api:carts:remove_item` | `POST` | `/api/carts/items/remove` | `public.CartAPI.RemoveCartItem` |
 | `api:coupons:redeem` | `POST` | `/api/coupons/redeem` | `public.RedemptionAPI.RedeemCode` |
@@ -38,15 +39,15 @@ In `contrib/shop/app.go`, `app.Routing` mounts the shop admin API under the admi
   ```
 - **Session Middleware**: Cart endpoints (`/api/carts*`) and coupon redemption (`/api/coupons/redeem`) require session middleware (`sessions.Retrieve(r)`). Carts are scoped to the active session token and/or authenticated user (`carts.Query().CartForRequest(r)`).
 - **Authentication**:
-  - Cart, coupon redemption, and payment options endpoints work for both anonymous (session-backed) and authenticated users.
-  - `POST /api/payments/checkout` **requires** an authenticated user (`401 Unauthorized` otherwise).
+  - Cart, customer attachment, coupon redemption, payment options, and checkout endpoints work for both **anonymous (guest, session-backed)** and **authenticated** users.
+  - `POST /api/payments/checkout` requires a valid customer email address — either attached to the cart via `POST /api/carts/customer` (guest or authenticated) or resolved from the authenticated user/customer record (`422 Unprocessable Entity` otherwise).
   - `POST .../shop/coupon/generate` **requires** the `"coupons:generate"` object permission on `&coupons.Coupon{}` (redirects/renders `admin.ReLogin` otherwise).
 
 ---
 
 ## `shared/api` Package
 
-Package `github.com/Nigel2392/go-django/contrib/shop/shared/api` provides shared JSON decoding, encoding, error formatting, and request lifecycle hooks.
+Package `github.com/Nigel2392/go-django/contrib/shop/shared/api` provides shared JSON decoding, response envelopes, error formatting, and request lifecycle hooks.
 
 ### `APIRequest` & `BaseAPIRequest`
 
@@ -83,21 +84,39 @@ func (reg *RequestRegistry) RegisterNewAPIRequest(apiName string, newRequest fun
 - `RegisterNewAPIRequest` registers a factory for `apiName`. Panics if `apiName` is already registered.
 - `RequestStarted` looks up `apiName` under a read lock. If found and the factory returns a non-nil `APIRequest`, it calls and returns `req, req.Started()`. Otherwise it returns `&BaseAPIRequest{Request: r}, nil`.
 
-### `Decode`, `Respond`, `ErrorResponse`, `RespondError`
+### `Decode`, `Response`, `DataResponse[T]`, `ErrorResponse`, `Respond`, & `RespondError`
 
 - **`Decode(r *http.Request, dst any) error`**: Closes `r.Body` on return and decodes JSON into `dst` with `dec.DisallowUnknownFields()`. Unknown JSON fields cause a decode error.
-- **`Respond(w http.ResponseWriter, data any) error`**: Sets `Content-Type: application/json` and writes pretty-printed JSON (2-space indentation) of `data`.
-- **`ErrorResponse`**:
+- **`Response`, `DataResponse[DATA]`, & `ErrorResponse`**:
   ```go
+  type Response struct {
+      StatusCode int `json:"status_code"`
+  }
+
+  type DataResponse[DATA any] struct {
+      Response `json:",inline"`
+      Data     DATA `json:"data,omitempty"`
+  }
+
   type ErrorResponse struct {
-      Message string `json:"message"`
+      Response `json:",inline"`
+      Message  string `json:"message"`
   }
   ```
-- **`RespondError(w http.ResponseWriter, statusCode int, message string, args ...any)`**: Writes `statusCode`, sets `Content-Type: application/json`, formats `message` with `fmt.Sprintf` if `args` are provided, and encodes `ErrorResponse{Message: message}`. Calls `except.Fail(http.StatusInternalServerError, ...)` if JSON encoding fails.
+- **`Respond[T any](w http.ResponseWriter, data T) error`**: Sets `Content-Type: application/json` and writes pretty-printed JSON (2-space indentation) wrapping `data` in a `DataResponse[T]` envelope with `status_code: 200`:
+  ```json
+  {
+    "status_code": 200,
+    "data": { ... }
+  }
+  ```
+- **`RespondError(w http.ResponseWriter, statusCode int, message string, args ...any)`**: Sets `Content-Type: application/json`, writes `statusCode`, formats `message` with `fmt.Sprintf` if `args` are provided, and encodes `ErrorResponse` (`{"status_code": <statusCode>, "message": "..."}`). Calls `except.Fail(http.StatusInternalServerError, ...)` if JSON encoding fails.
 
 ---
 
 ## Common JSON Schemas
+
+All `200 OK` JSON endpoints below return their payload wrapped in `DataResponse[T]` (`{"status_code": 200, "data": <payload>}`).
 
 ### `Totals` (`price.Totals`)
 
@@ -113,16 +132,31 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 }
 ```
 
+### `Customer` (`customers.Customer`)
+
+*(No lowercase `json:` tags on `customers.Customer`, so Go field casing is preserved.)*
+
+```json
+{
+  "ID": "01JABCDEF...",
+  "Email": { "Name": "", "Address": "sam@example.test" },
+  "FirstName": "Sam",
+  "LastName": "Example",
+  "FirstSeen": "2026-01-01T12:00:00Z"
+}
+```
+
 ### `Cart` (`carts.Cart`)
 
 ```json
 {
   "id": "01JABCDEF...",
+  "customer": { ... },
   "created_at": "2026-01-01T12:00:00Z",
   "active": true
 }
 ```
-*(Fields `User`, `Session`, `CartItems`, `Redemptions` have `json:"-"`.)*
+*(`customer` uses `omitempty`; fields `User`, `Session`, `CartItems`, `Redemptions` have `json:"-"`.)*
 
 ### `Product` (`products.Product`)
 
@@ -130,7 +164,7 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 {
   "id": "01JABCDEF...",
   "title": "Example Product",
-  "image": { ... },
+  "image": "products/example.png",
   "slug": "example-product",
   "ranking": 1,
   "price": "50.00",
@@ -175,7 +209,7 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 }
 ```
 
-> **Note on `Coupon` and `Redemption` JSON casing:** `coupons.Coupon` and `coupons.Redemption` structs do not define lowercase `json:` struct tags, so their Go field names (`ID`, `Title`, `Code`, `DiscountAmount`, `Invalidated`, `RedeemedAt`, etc.) are preserved in JSON output.
+> **Note on `Coupon` and `Redemption` JSON casing:** `coupons.Coupon` and `coupons.Redemption` structs do not define lowercase `json:` struct tags, so their Go field names (`ID`, `Title`, `Code`, `DiscountAmount`, `Invalidated`, `Counted`, `RedeemedAt`, etc.) are preserved in JSON output.
 
 ---
 
@@ -185,8 +219,8 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 
 - **URL:** `GET /api/carts` (`api:carts`)
 - **Auth / Session / CSRF:** Session required (automatically renews a session token via `s.RenewToken()` if empty). Anonymous or authenticated users supported. No CSRF token needed for `GET`.
-- **Behavior:** Resolves the active cart for the request (with preloaded product fields `ID`, `Title`, `Image`, `Price`, `TaxRate`, `DiscountPrice`) or creates a new active cart (firing `carts.Signals.Created`), then calculates totals via `CalcOneOrCreate`.
-- **Response (`200 OK`):** [`CartRow`](#cartrow-cartscartrow) JSON object.
+- **Behavior:** Resolves the active cart for the request (preloading `Customer` and product fields `ID`, `Title`, `Image`, `Price`, `TaxRate`, `DiscountPrice`) or creates a new active cart (firing `carts.Signals.Created`), then calculates totals via `CalcOneOrCreate`.
+- **Response (`200 OK`):** `DataResponse` wrapping [`CartRow`](#cartrow-cartscartrow).
 - **Error Responses:**
   - `500 Internal Server Error` (`ErrorResponse`): Session middleware missing, database error, signal error, or JSON encoding failure.
 
@@ -198,14 +232,39 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 - **Auth / Session / CSRF:** Session required. CSRF token required (`nosurf`).
 - **Request Body:** None.
 - **Behavior:** If an active cart exists for the request, starts a transaction, marks the cart `Active = false`, invalidates any unattached coupon redemptions (`Order__isnull = true`, `Invalidated = false`), fires `carts.Signals.Cleared`, creates a fresh active cart (`carts.Signals.Created`), and commits.
-- **Response (`200 OK`):** [`CartRow`](#cartrow-cartscartrow) JSON object for the newly created active cart.
+- **Response (`200 OK`):** `DataResponse` wrapping [`CartRow`](#cartrow-cartscartrow) for the newly created active cart.
 - **Error Responses:**
   - `400 Bad Request`: Invalid/missing CSRF token (from `nosurf`).
   - `500 Internal Server Error` (`ErrorResponse`): Database, transaction, signal, or encoding error.
 
 ---
 
-### 3. Add Item to Cart
+### 3. Set Cart Customer
+
+- **URL:** `POST /api/carts/customer` (`api:carts:customer`)
+- **Auth / Session / CSRF:** Session required (`503 Service Unavailable` if session middleware is missing). Anonymous (guest) or authenticated users supported. CSRF token required (`nosurf`).
+- **Request Body (`CartCustomerRequest`):**
+  ```json
+  {
+    "email": "sam@example.test",
+    "first_name": "Sam",
+    "last_name": "Example"
+  }
+  ```
+  - `email` (`string`): Required valid email address (parsed via `mail.ParseAddress`, at least 3 chars).
+  - `first_name`, `last_name` (`string`): Optional customer name fields (trimmed).
+  - Unknown fields are rejected by `api.Decode`.
+- **Behavior:** Starts a transaction, gets or creates the active cart (firing `carts.Signals.Created` if created), creates or updates the cart's `customers.Customer` record via `carts.SetCustomer` (linking the authenticated user if present and unset), attaches `cart.Customer`, and commits.
+- **Response (`200 OK`):** `DataResponse` wrapping the updated [`CartRow`](#cartrow-cartscartrow) (with `cart.customer` populated).
+- **Error Responses:**
+  - `400 Bad Request` (`ErrorResponse`): Invalid JSON / unknown fields.
+  - `422 Unprocessable Entity` (`ErrorResponse`): Missing or invalid email address (`"a valid customer email address is required"`).
+  - `503 Service Unavailable` (`ErrorResponse`): Cart session middleware unavailable (`"cart session unavailable"`).
+  - `500 Internal Server Error` (`ErrorResponse`): Transaction, database, or encoding error.
+
+---
+
+### 4. Add Item to Cart
 
 - **URL:** `POST /api/carts/items/add` (`api:carts:add_item`)
 - **Auth / Session / CSRF:** Session required (`503 Service Unavailable` if session middleware is missing). CSRF token required (`nosurf`).
@@ -220,12 +279,15 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
   - `amount` (`int`): Quantity to add; must be `> 0`.
   - Unknown fields are rejected by `api.Decode`.
 - **Behavior:** Starts a transaction, loads the product, gets or creates the active cart, creates or atomically increments the `CartItem.Amount`, fires `carts.Signals.Created` (if new cart) and `carts.Signals.Item.Add`, and commits.
-- **Response (`200 OK`, `CartItemResponse`):**
+- **Response (`200 OK`):** `DataResponse` wrapping `CartItemResponse`:
   ```json
   {
-    "cart": { ... },
-    "item": { ... },
-    "product": { ... }
+    "status_code": 200,
+    "data": {
+      "cart": { ... },
+      "item": { ... },
+      "product": { ... }
+    }
   }
   ```
 - **Error Responses:**
@@ -236,7 +298,7 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 
 ---
 
-### 4. Remove Item from Cart
+### 5. Remove Item from Cart
 
 - **URL:** `POST /api/carts/items/remove` (`api:carts:remove_item`)
 - **Auth / Session / CSRF:** Session required. CSRF token required (`nosurf`).
@@ -249,14 +311,7 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
   ```
   - `amount` (`int`): Quantity to subtract; must be `> 0`. If `amount >= item.Amount`, the `CartItem` row is deleted and the returned `item.amount` is `0`.
 - **Behavior:** Starts a transaction, looks up the product, active cart, and `CartItem`, deletes or decrements the item, fires `carts.Signals.Item.Remove`, and commits.
-- **Response (`200 OK`, `CartItemResponse`):**
-  ```json
-  {
-    "cart": { ... },
-    "item": { ... },
-    "product": { ... }
-  }
-  ```
+- **Response (`200 OK`):** `DataResponse` wrapping `CartItemResponse`.
 - **Error Responses:**
   - `400 Bad Request` (`ErrorResponse`): Invalid JSON / unknown fields, or `amount <= 0`.
   - `404 Not Found` (`ErrorResponse`): Product not found, active cart does not exist, or cart item does not exist.
@@ -264,7 +319,7 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 
 ---
 
-### 5. Redeem Coupon Code
+### 6. Redeem Coupon Code
 
 - **URL:** `POST /api/coupons/redeem` (`api:coupons:redeem`)
 - **Auth / Session / CSRF:** Session required (must already have an active cart). CSRF token required (`nosurf`).
@@ -279,7 +334,7 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
   - Induces a random 5–100 ms delay (`laggy()`) on invalid/missing lookups to hinder code enumeration.
   - Starts a transaction, locks the active cart row and coupon row, checks `UsageLimit` against `UsageCount` plus active uncounted reservations (`Counted = false`, `Invalidated = false`), checks whether the coupon is already redeemed for this cart, and verifies at least one cart item matches `coupon.Products` (if product-restricted).
   - Creates a `coupons.Redemption` reservation, recalculates the cart (`CartRow`), fires `coupons.Signals.Redeemed`, and commits.
-- **Response (`200 OK`):** Updated [`CartRow`](#cartrow-cartscartrow) JSON object with applied discounts.
+- **Response (`200 OK`):** `DataResponse` wrapping the updated [`CartRow`](#cartrow-cartscartrow) with applied discounts.
 - **Error Responses:**
   - `400 Bad Request` (`ErrorResponse`): Invalid JSON / unknown fields.
   - `404 Not Found` (`ErrorResponse`): Coupon code invalid, no active cart exists, coupon usage limit reached (`"This coupon has reached its usage limit"`), no products in cart match coupon (`"No products in your cart match this coupon"`), or calculation error.
@@ -288,30 +343,32 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 
 ---
 
-### 6. List Payment Options
+### 7. List Payment Options
 
 - **URL:** `GET /api/payments/options` (`api:payments:options`)
-- **Auth / Session / CSRF:** Session required (must have an active cart). Configured with `APPVAR_SHOP_CURRENCY`.
+- **Auth / Session / CSRF:** Session required (must have an active cart). Configured with `APPVAR_SHOP_CURRENCY` (`currency.Unit`, ISO string, or dynamic `func(context.Context) currency.Unit`).
 - **Behavior:**
-  - Validates `PaymentsAPI.Currency` as an ISO currency code.
+  - Resolves `currency.Unit` via `PaymentsAPI.GetCurrency(ctx)` falling back to `PaymentsAPI.Currency` (`503` if zero).
   - Calculates the active cart (`cartQuery(ctx, r, false).CalcOne()`).
-  - If the cart has items (`len(cart.Items) > 0`) and `cart.Totals.Payable()` is zero (`quote.Total.IsZero()`), returns a single `"No payment required"` option with `no_payment_required: true` and zeroed `Quote`.
-  - Otherwise queries enabled `payments.ProviderAccount` records matching `Currency` (ordered by `Label`, `ID`), filters to accounts whose `Driver` is registered via `payments.ProviderRegistered`, and computes a fee `Quote` for each.
-- **Response (`200 OK`):** JSON array of `PaymentOption`:
+  - If the cart has items (`len(cart.Items) > 0`) and `price.QuoteFee(subtotal, 0, 0).Total.IsZero()`, returns a single `"No payment required"` option with `no_payment_required: true` and zeroed `Quote`.
+  - Otherwise queries `payments.ProviderAccount` records with `Enabled == true`, resolves each registered `ProviderBackend` via `payments.RetrieveProvider(account.InternalName)`, filters to backends whose `Currency(ctx)` matches the shop currency, quotes fees via `account.Quote(ctx, subtotal)`, and sorts by `(backend.Ordering(), backend.Label(ctx), account.ID)`.
+- **Response (`200 OK`):** `DataResponse` wrapping a JSON array of `PaymentOption`:
   ```json
-  [
-    {
-      "account_id": "01JABCDEF...",
-      "label": "Stripe EUR",
-      "no_payment_required": false,
-      "subtotal": "100.00",
-      "fee": "1.50",
-      "total": "101.50",
-      "currency": "EUR"
-    }
-  ]
+  {
+    "status_code": 200,
+    "data": [
+      {
+        "account_id": "01JABCDEF...",
+        "label": "Stripe EUR",
+        "subtotal": "100.00",
+        "fee": "1.50",
+        "total": "101.50",
+        "currency": "EUR"
+      }
+    ]
+  }
   ```
-  *(Note: `no_payment_required` has `omitempty` and is omitted when `false`; `account_id` is zero ULID when `no_payment_required` is `true`.)*
+  *(Note: `no_payment_required` uses `omitempty` and is only present when `true` for a zero-total cart, in which case `account_id` is the zero ULID and `subtotal`/`fee`/`total` are `"0"`.)*
 - **Error Responses:**
   - `404 Not Found` (`ErrorResponse`): Active cart not found (`"cart not found"`).
   - `503 Service Unavailable` (`ErrorResponse`): Shop currency is missing or invalid (`"shop payment currency is unavailable"`).
@@ -319,11 +376,11 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 
 ---
 
-### 7. Start Checkout
+### 8. Start Checkout
 
 - **URL:** `POST /api/payments/checkout` (`api:payments:checkout`)
 - **Auth / Session / CSRF:**
-  - **Authentication required:** Must be an authenticated `users.User` (`401 Unauthorized` if anonymous/missing).
+  - **Guest or authenticated checkout supported:** Buyer email is taken from `cart.Customer` (set via `POST /api/carts/customer`) or, if unset, from the authenticated user/customer record (`422 Unprocessable Entity` if missing/invalid).
   - **CSRF required:** Protected by `nosurf`.
   - Sets `Cache-Control: no-store` on every response.
   - Body size limited to 8 KiB (`http.MaxBytesReader`).
@@ -338,34 +395,31 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
   - Form (`application/x-www-form-urlencoded`): `account_id=<ULID>`
   - `account_id` may be empty (`""`) for free checkouts (`total == 0`). If non-empty, must be a valid ULID.
 - **Configuration Requirements:**
-  - `APPVAR_SHOP_CURRENCY` must be a valid ISO currency code.
+  - `APPVAR_SHOP_CURRENCY` must resolve to a non-zero `currency.Unit`.
   - `APPVAR_SHOP_CHECKOUT_ORIGIN` must be an `http` or `https` origin with hostname, no userinfo, no query, no fragment, and empty/`/` path.
   - `APPVAR_SHOP_CHECKOUT_RETURN_PATH` (defaults to `"/"`) must be a relative path starting with `/` (not `//`).
 - **Behavior:**
-  - Ensures the caller has a `customers.Customer` record with a valid email address (auto-creates one from the authenticated user's `Email`, `FirstName`, `LastName` attributes if none exists).
-  - Resolves the caller's active non-empty cart (or an already-converted cart with a payment attempt for idempotency).
-  - Calls `broker.Broker.PrepareCheckout` using `AttemptID: cart.ID`, marks the cart `Active = false` and binds `User`, invalidates unattached coupon redemptions, and commits the transaction.
-  - **Free checkout (`prepared.Payment.IsFreeCheckout()`):** Redirects (`303 See Other`) to `<Origin><ReturnPath>?payment_id=<payment_id>&order_id=<order_id>`.
-  - **Paid checkout:** Calls `broker.Broker.StartCheckout` with `returnURL` (`?payment_id=<payment_id>`) and `webhookURL` (`<Origin>/api/payments/webhook/<account_id>`).
-    - If the provider immediately reports a terminal state (`PAID`, `CANCEL`, `EXPIRED`, `DENIED`, `FAILURE`, `REFUND`, `PARTIAL_REFUND`, `CHARGEBACK`), redirects (`303 See Other`) to `returnURL`.
-    - Otherwise validates that `checkout.URL` is an `https://` URL with a hostname and no userinfo, and redirects (`303 See Other`) to `checkout.URL`.
+  - Delegates to `orders.CheckoutCart(r, orders.CheckoutOptions{...})`, which prices the active cart, resolves the customer, opens checkout with the payment provider (`payments.OpenCheckout`) **before** creating the order or deactivating the cart, and then atomically deactivates the cart, creates the `Order`/`OrderItem` snapshots, invalidates unapplied cart coupons, and saves the `Payment` (`payments.RecordPayment` or `payments.CreateFreePayment`).
+  - **Free checkout (`result.Free`):** Redirects (`303 See Other`) to `<Origin><ReturnPath>?payment_id=<payment_id>&order_id=<order_id>`.
+  - **Paid checkout:**
+    - If the provider immediately reports a terminal state (`PAID`, `CANCEL`, `EXPIRED`, `DENIED`, `FAILURE`, `REFUND`, `PARTIAL_REFUND`, `CHARGEBACK`), redirects (`303 See Other`) to `<Origin><ReturnPath>?payment_id=<payment_id>`.
+    - Otherwise validates that `result.Checkout.URL` is an `https://` URL with a hostname and no userinfo, and redirects (`303 See Other`) to `result.Checkout.URL`.
 - **Response (`303 See Other`):** HTTP redirect to return URL or provider checkout URL.
 - **Error Responses:**
-  - `400 Bad Request` (`ErrorResponse`): Invalid JSON/form, non-ULID `account_id`, or `ErrCheckoutAccountRequired` (`"select a payment account"`).
-  - `401 Unauthorized` (`ErrorResponse`): User is not authenticated (`"sign in to check out"`).
-  - `404 Not Found` (`ErrorResponse`): Cart not found (`"cart not found"`), or `ErrCheckoutAccountUnavailable` (`"payment account is unavailable"`).
+  - `400 Bad Request` (`ErrorResponse`): Invalid JSON/form, non-ULID `account_id`, or `orders.ErrCheckoutAccountRequired` (`"select a payment account"`).
+  - `404 Not Found` (`ErrorResponse`): Active cart not found (`"cart not found"`), or `orders.ErrCheckoutAccountUnavailable` (`"payment account is unavailable"`).
   - `405 Method Not Allowed` (`ErrorResponse`): Non-`POST` request (`Allow: POST`).
   - `409 Conflict` (`ErrorResponse`): Cart is empty (`"cart is empty"`), or cart changed / multiple active carts / already has a checkout (`"cart changed or already has a checkout"`).
   - `413 Request Entity Too Large` (`ErrorResponse`): Request body exceeds 8 KiB.
   - `415 Unsupported Media Type` (`ErrorResponse`): Unsupported `Content-Type`.
   - `422 Unprocessable Entity` (`ErrorResponse`): Missing/invalid customer email (`"a customer email address is required"`), or `payments.ErrNonPositiveTotal` (`"payment total must be positive"`).
-  - `500 Internal Server Error` (`ErrorResponse`): Endpoint called inside an existing/non-commit transaction context, or unexpected DB/commit error.
-  - `502 Bad Gateway` (`ErrorResponse`): `StartCheckout` failed (`"could not open provider checkout"`) or provider returned an invalid/non-HTTPS checkout URL.
+  - `500 Internal Server Error` (`ErrorResponse`): Endpoint called inside an existing/non-commit transaction context.
+  - `502 Bad Gateway` (`ErrorResponse`): Provider checkout failed (`"could not open provider checkout"`) or provider returned an invalid/non-HTTPS checkout URL.
   - `503 Service Unavailable` (`ErrorResponse`): Invalid `SHOP_CURRENCY`, `SHOP_CHECKOUT_ORIGIN`, or `SHOP_CHECKOUT_RETURN_PATH`.
 
 ---
 
-### 8. Payment Provider Webhook
+### 9. Payment Provider Webhook
 
 - **URL:** `POST /api/payments/webhook/<<account>>` (`api:payments:webhook`)
 - **Path Parameters:**
@@ -375,9 +429,9 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
   - No user session required; authenticity is verified by the provider's `HandleWebhook` implementation.
 - **Request Body:** Raw provider payload, capped at 1 MiB (`http.MaxBytesReader`).
 - **Behavior:**
-  - Parses `account` as a ULID and loads `ProviderAccount`.
+  - Parses `account` as a ULID and loads `ProviderAccount` (including disabled accounts so in-flight payments still reconcile).
   - Instantiates the provider and calls `provider.HandleWebhook(ctx, WebhookRequest{Method, Header, URL, Body})`.
-  - Reconciles the returned `PaymentStatus` against the matching `Payment` (`Account == account.ID` and `TransactionID == status.ProviderRef`) via `reconcileWebhook` and `applyStatus`.
+  - Verifies `payment.Provider == account.InternalName` and reconciles the returned `PaymentStatus` against the matching `Payment` (`Account == account.ID` and `TransactionID == status.ProviderRef`) via `reconcileWebhook` and `applyStatus`.
   - Calls `result.Acknowledge(w)` if non-nil, otherwise writes `200 OK`.
 - **Responses:**
   - `200 OK` (or custom response written by `result.Acknowledge(w)`).
@@ -389,7 +443,7 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
 
 ## Admin Endpoints
 
-### 9. Generate Coupon Code
+### 10. Generate Coupon Code
 
 - **URL:** `POST <admin_prefix>/shop/coupon/generate` (`admin:ext:shop:generate_coupon`)
 - **Auth / Permissions / CSRF:**
@@ -409,10 +463,13 @@ Decimal values are serialized as strings (`shopspring/decimal` default).
     - `type` (`uint`): `0` (`CPT_RANDOM`), `1` (`CPT_STATIC`), `2` (`CPT_YEAR`), `3` (`CPT_MONTH`), `4` (`CPT_WEEKDAY`), `5` (`CPT_DAY`), `6` (`CPT_HOUR`), `7` (`CPT_MINUTE`), `8` (`CPT_DASH`), `9` (`CPT_UUID`).
     - `length` (`int`): Used by `CPT_RANDOM` and `CPT_UUID`.
     - `value` (`string`): Used by `CPT_STATIC`.
-- **Response (`200 OK`, `CouponGenerationResponse`):**
+- **Response (`200 OK`):** `DataResponse` wrapping `CouponGenerationResponse`:
   ```json
   {
-    "coupon_code": "SALE-XKQMPZ"
+    "status_code": 200,
+    "data": {
+      "coupon_code": "SALE-XKQMPZ"
+    }
   }
   ```
 - **Error Responses:**

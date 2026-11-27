@@ -142,23 +142,40 @@ func (c CartAPI) SetCustomer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, tx, err := queries.StartTransaction(r.Context())
-	if err != nil {
+	cart, err := c.setCustomer(r, request)
+	switch {
+	case stderrors.Is(err, carts.ErrInvalidCustomerEmail):
 		api.RespondError(w,
-			http.StatusInternalServerError,
-			"failed to start transaction: %v", err,
+			http.StatusUnprocessableEntity,
+			"a valid customer email address is required",
 		)
 		return
+	case err != nil:
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"%v", err,
+		)
+		return
+	}
+
+	if err := api.Respond(w, cart); err != nil {
+		api.RespondError(w,
+			http.StatusInternalServerError,
+			"failed to encode the cart response: %v", err,
+		)
+	}
+}
+
+func (c CartAPI) setCustomer(r *http.Request, request CartCustomerRequest) (*carts.CartRow, error) {
+	ctx, tx, err := queries.StartTransaction(r.Context())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to start transaction")
 	}
 	defer tx.Rollback(ctx)
 
 	cart, _, err := c.getOrCreateCart(r.WithContext(ctx), true)
 	if err != nil {
-		api.RespondError(w,
-			http.StatusInternalServerError,
-			"failed to get or create the cart: %v", err,
-		)
-		return
+		return nil, errors.Wrap(err, "failed to get or create the cart")
 	}
 
 	var authUser users.User
@@ -174,37 +191,20 @@ func (c CartAPI) SetCustomer(w http.ResponseWriter, r *http.Request) {
 		LastName:  request.LastName,
 		User:      authUser,
 	})
-	switch {
-	case stderrors.Is(err, carts.ErrInvalidCustomerEmail):
-		api.RespondError(w,
-			http.StatusUnprocessableEntity,
-			"a valid customer email address is required",
-		)
-		return
-	case err != nil:
-		api.RespondError(w,
-			http.StatusInternalServerError,
-			"failed to save customer details: %v", err,
-		)
-		return
+	if err != nil {
+		if stderrors.Is(err, carts.ErrInvalidCustomerEmail) {
+			return nil, err
+		}
+		return nil, errors.Wrap(err, "failed to save customer details")
 	}
 
 	cart.Object.Customer = customer
 
 	if err := tx.Commit(ctx); err != nil {
-		api.RespondError(w,
-			http.StatusInternalServerError,
-			"failed to commit the changes to the database: %v", err,
-		)
-		return
+		return nil, errors.Wrap(err, "failed to commit the changes to the database")
 	}
 
-	if err := api.Respond(w, cart); err != nil {
-		api.RespondError(w,
-			http.StatusInternalServerError,
-			"failed to encode the cart response: %v", err,
-		)
-	}
+	return cart, nil
 }
 
 func (c CartAPI) AddCartItem(w http.ResponseWriter, r *http.Request) {
