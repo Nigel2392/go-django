@@ -2,7 +2,7 @@ package adminsite
 
 import (
 	"github.com/Nigel2392/go-django/contrib/admin"
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/models/orders"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"

@@ -9,8 +9,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/blocks"
 	"github.com/Nigel2392/go-django/contrib/settings"
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
-	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/models/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/models/products"
 	"github.com/Nigel2392/go-django/internal/forms"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
@@ -211,6 +211,6 @@ func (s *DBSupplierAppConfig) OrderBlock(ctx context.Context, order *orders.Orde
 	return nil, nil
 }
 
-func (s *DBSupplierAppConfig) OrderAccepted(ctx context.Context, order *orders.Order, orderItem *orders.OrderItem) (*blocks.StructBlockValue, error) {
+func (s *DBSupplierAppConfig) CompleteOrderItem(ctx context.Context, order *orders.Order, orderItem *orders.OrderItem) (*blocks.StructBlockValue, error) {
 	return nil, nil
 }

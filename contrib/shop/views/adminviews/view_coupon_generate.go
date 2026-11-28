@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/contrib/admin"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons/generators"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
+	"github.com/Nigel2392/go-django/contrib/shop/core/generators"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/api"
+	"github.com/Nigel2392/go-django/contrib/shop/models/coupons"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/permissions"
 )

@@ -1,41 +1,130 @@
 # Signals, Order Flow & Audit Logs
 
-> [!IMPORTANT]
-> **The `contrib/shop` order flow is primarily meant to be executed through signals.**
-> `contrib/shop` exposes a shared typed signal pool (`shared/signals.Pool`) across `products`, `carts`, `coupons`, `orders`, and `payments`. Applications subscribe to `payments.Signals.Start` and `payments.Signals.Update` to decide when an order is paid/accepted and emit `orders.Signals.Completed`, which triggers the built-in supplier fulfillment and coupon reconciliation workflow in `orders/supplier_workflow.go` (emitting `orders.Signals.Accepted` and `orders.Signals.Processed`), while `handlers.RegisterAuditLogs()` records audit entries across all domain signals.
+## Order Lifecycle
+
+The application decides whether to accept, keep pending, or deny each order. Accepted and pending orders both wait for payment. Once payment is confirmed, ensure delivery of every order line before the order is recorded as completed. Zero-total orders satisfy the payment requirement at checkout.
+
+Run all three order decisions in the [commerce tutorial](../../../examples/commerce/tutorial/README.md).
+
+Blue nodes are application logic. Green nodes are successful outcomes. Red nodes show where the flow stops or needs recovery.
 
 ```mermaid
 flowchart TD
-    cart["Cart & Coupon APIs (carts.Signals.*, coupons.Signals.Redeemed)"]
-    create["orders.CheckoutCart -> CreateOrderFromCart (OrderStatePending)"]
-    sigCreated["orders.Signals.Created (inside tx)"]
-    paySigs["payments.Signals.Start / Update (from RecordPayment, ServeWebhook, Refresh, Refund, Cancel)"]
-    policy{"Order Outcome"}
+    checkout(["Checkout creates a pending order"])
+    decision{"Apply order policy"}
+    accepted["Set order accepted"]
+    pending["Keep order pending"]
+    denied["Set order rejected and release coupon reservations"]
+    stopped(["Stop delivery flow"])
+    waiting["Wait for payment"]
+    delivery["Ensure delivery of every order line"]
+    completed(["Set order completed"])
 
-    reject["Order set to OrderStateRejected (admin edit or app handler)"]
-    releaseCoupons["orders.ReconcileCouponRedemptions -> Invalidated = true (releases coupon capacity)"]
-    sigUpdated["orders.Signals.Updated"]
+    checkout --> decision
+    decision -->|"Accepted"| accepted --> waiting
+    decision -->|"Pending"| pending --> waiting
+    decision -->|"Denied"| denied --> stopped
+    waiting -->|"Paid or zero total"| delivery -->|"All lines delivered"| completed
 
-    sigCompleted["Send orders.Signals.Completed"]
-    wfStart["Built-in handleOrderCompleted (orders/supplier_workflow.go): lock Order, set OrderStateWorkflow & Completed = true"]
-    wfFulfill["For each OrderItem: SupplierBackend.OrderAccepted & OrderBlock validation -> save SupplierData"]
-    wfFinish["Set OrderStateAccepted, Completed = true, Processed = true"]
-    countCoupons["orders.ReconcileCouponRedemptions -> Counted = true, increment Coupon.UsageCount"]
-    sigDone["Emit orders.Signals.Accepted & orders.Signals.Processed (inside tx)"]
-
-    audit["handlers.RegisterAuditLogs() -> contrib/reports/audit_logs"]
-
-    cart --> create --> sigCreated --> paySigs --> policy
-    policy -->|"Payment verified / accepted"| sigCompleted
-    policy -->|"Order rejected"| reject --> releaseCoupons --> sigUpdated
-    sigCompleted --> wfStart --> wfFulfill --> wfFinish --> countCoupons --> sigDone
-
-    sigCreated -.-> audit
-    paySigs -.-> audit
-    sigCompleted -.-> audit
-    sigDone -.-> audit
-    sigUpdated -.-> audit
+    classDef app fill:#eaf2ff,stroke:#3765aa,color:#182b4a
+    classDef success fill:#e4f6ec,stroke:#2c805a,color:#153d2d
+    classDef blocked fill:#fdeceb,stroke:#b64b46,color:#551f1c
+    class decision,accepted,pending,denied,waiting,delivery app
+    class completed success
+    class stopped blocked
 ```
+
+### Order Decision and Payment
+
+1. Implement the order decision in your application. Use `orders.Signals.Created` to evaluate the newly created order in the checkout transaction, or save the decision later through your own handler or the admin. `CheckoutCart` opens provider checkout for a nonzero total before it creates the order and records its payment. If your policy must block the provider checkout itself, check it before calling `CheckoutCart`. When your own handler saves `OrderStateRejected`, call `orders.ReconcileCouponRedemptions` in the same transaction to release outstanding reservations. Decide how to cancel or refund any existing payment attempt.
+2. Route `payments.Signals.Start` and `payments.Signals.Update` to the same payment handler. The initial provider status can already be `STATUS_PAID`. Later updates can arrive through a webhook or `payments.Refresh`. For zero-total checkout, route `CheckoutResult.Payment` with `IsFreeCheckout()` or read the committed internal payment record when using the stock HTTP endpoint. Free checkout emits neither payment signal.
+3. Reload the associated order and evaluate its current state. Use `STATUS_PAID` for confirmed provider payment and `Payment.IsFreeCheckout()` for the zero-total path. Keep waiting while payment is open or under verification. Apply your retry or rejection policy when an attempt fails, expires, or is cancelled. A provider's `STATUS_DENIED` is a payment outcome. The application decides whether to set the order to `OrderStateRejected`.
+
+```mermaid
+flowchart TD
+    initial["payments.Signals.Start<br/>Initial provider state"]
+    updated["payments.Signals.Update<br/>Reconciled payment state"]
+    free["Zero-total checkout result<br/>Payment.IsFreeCheckout()"]
+    eligible{"Reload order<br/>Accepted or pending?"}
+    settled{"Paid or zero total?"}
+    retryable{"Can this attempt still settle?"}
+    waitPayment["Wait for the next payment update"]
+    failed["Apply payment retry or rejection policy"]
+    stopOrder["Stop and handle any existing payment"]
+    startDelivery(["Start delivery"])
+
+    initial --> eligible
+    updated --> eligible
+    free --> eligible
+    eligible -->|"No"| stopOrder
+    eligible -->|"Accepted or pending"| settled
+    settled -->|"Yes"| startDelivery
+    settled -->|"No"| retryable
+    retryable -->|"Yes"| waitPayment
+    retryable -->|"No"| failed
+
+    classDef app fill:#eaf2ff,stroke:#3765aa,color:#182b4a
+    classDef success fill:#e4f6ec,stroke:#2c805a,color:#153d2d
+    classDef blocked fill:#fdeceb,stroke:#b64b46,color:#551f1c
+    class eligible,settled,retryable,waitPayment app
+    class startDelivery success
+    class stopOrder,failed blocked
+```
+
+Payment listeners run inside database transactions. Record delivery work in the same transaction and have a worker act on committed records. Key the work by order or order line so repeated payment notifications and worker retries can safely reuse it. See [Payments & Checkout](payments-and-checkout.md) for provider setup and reconciliation.
+
+### Delivery and Completion
+
+Send `orders.Signals.Completed` to start the built-in supplier workflow. Each `SupplierBackend.OrderAccepted` call confirms delivery for one order line by returning a nil error. Only after every line succeeds does the workflow set `Order.Completed` and `Order.Processed` to `true`, reconcile coupons, and emit the order-level `orders.Signals.Accepted` and `orders.Signals.Processed` before committing.
+
+- **Delivery confirmed during the supplier callback.** Start the workflow once payment is confirmed and the order is eligible. Have `OrderAccepted` return success after delivering the line. Make external delivery calls idempotent so a database rollback and retry can reuse an earlier delivery.
+- **Delivery confirmed later.** Dispatch and track delivery in the application after payment. Start the supplier workflow when all confirmations are available. Have `OrderAccepted` verify the existing delivery result for its line.
+
+```mermaid
+---
+config:
+  flowchart:
+    rankSpacing: 30
+    nodeSpacing: 35
+---
+flowchart TD
+    startDelivery(["Payment requirement met"])
+    eligible{"Eligible and<br/>unprocessed?"}
+    stopOrder(["Stop delivery flow"])
+    mode{"Delivery<br/>confirmation"}
+    dispatch["Dispatch each line and track confirmations"]
+    confirmed{"All lines<br/>delivered?"}
+    waiting["Await confirmations or handle failures"]
+    startWorkflow["Recheck eligibility<br/>Start supplier workflow"]
+    suppliers["Call supplier OrderAccepted per line<br/>Save any valid supplier data"]
+    suppliersDone{"Every line<br/>confirmed?"}
+    committed{"Committed?"}
+    rollback["Keep order incomplete<br/>Apply retry or review policy"]
+    save["Set order Completed and Processed<br/>Reconcile coupons and emit order signals"]
+    complete(["Order completed"])
+
+    startDelivery --> eligible
+    eligible -->|"No"| stopOrder
+    eligible -->|"Yes"| mode
+    mode -->|"During callback"| startWorkflow
+    mode -->|"Confirmed later"| dispatch --> confirmed
+    confirmed -->|"No"| waiting --> confirmed
+    confirmed -->|"Yes"| startWorkflow
+    startWorkflow --> suppliers --> suppliersDone
+    suppliersDone -->|"Yes"| save --> committed
+    suppliersDone -->|"No"| rollback
+    committed -->|"No"| rollback
+    committed -->|"Yes"| complete
+
+    classDef app fill:#eaf2ff,stroke:#3765aa,color:#182b4a
+    classDef success fill:#e4f6ec,stroke:#2c805a,color:#153d2d
+    classDef blocked fill:#fdeceb,stroke:#b64b46,color:#551f1c
+    class eligible,mode,dispatch,confirmed,waiting,startWorkflow app
+    class complete success
+    class stopOrder,rollback blocked
+```
+
+Implement delivery and its metadata schema through the [supplier backend](suppliers.md). See the [workflow execution steps](#execution-steps) for the transaction details.
 
 ---
 
@@ -100,7 +189,7 @@ Note: `CartAPISignal` and `CartItemAPISignal` do not embed `signals.BaseSignal`;
 | --- | --- | --- | --- |
 | `Created` | `"shop.orders.Order.Created"` | `OrderCreatedSignal{ BaseSignal; Order *Order; Lines []*OrderItem }` | `orders.CreateOrder` / `CreateOrderFromCart` (**inside** tx before `tx.Commit`) and admin order add (`view_order.go`, **inside** form save tx) |
 | `Updated` | `"shop.orders.Order.Updated"` | `OrderUpdatedSignal{ BaseSignal; Order *Order; Lines []*OrderItem }` | Admin order edit (`view_order.go`, **inside** form save tx after `ReconcileCouponRedemptions`) |
-| `Accepted` | `"shop.orders.Order.Accepted"` | `OrderAcceptedSignal{ BaseSignal; Order *Order; Lines []*OrderItem }` | Emitted by the built-in `orders.Signals.Completed` workflow (`orders/supplier_workflow.go`, **inside** tx after supplier fulfillment) or custom workflow handlers |
+| `Accepted` | `"shop.orders.Order.Accepted"` | `OrderAcceptedSignal{ BaseSignal; Order *Order; Lines []*OrderItem }` | Emitted **inside** the built-in workflow transaction after every supplier callback succeeds and the order is marked complete. Custom workflows can also emit it. |
 | `Processed` | `"shop.orders.Order.Processed"` | `OrderProcessedSignal{ BaseSignal; Order *Order }` | Emitted by the built-in `orders.Signals.Completed` workflow (`orders/supplier_workflow.go`, **inside** tx after `Accepted`) or custom workflow handlers |
 | `Completed` | `"shop.orders.Order.Completed"` | `OrderCompletedSignal{ BaseSignal; Order *Order }` | Emitted by applications when an order is ready for fulfillment; triggers the built-in listener in `orders/supplier_workflow.go` |
 
@@ -151,14 +240,15 @@ When an application sends `orders.Signals.Completed.Send(ctx, orders.OrderComple
 2. Starts/joins a database transaction and locks the `Order` row (`BulkUpdate(expr.As("Completed", expr.Field("Completed")))`), then loads `Order` with `Customer.*`.
 3. If `order.State == OrderStateRejected`, returns `ErrOrderRejected`.
 4. If `order.Processed == true`, commits and syncs `sig.Order` (idempotent no-op).
-5. Loads all `OrderItem` rows for the order (`OrderBy("ID")`), sets `order.State = OrderStateWorkflow` and `order.Completed = true`, and saves.
+5. Loads all `OrderItem` rows for the order (`OrderBy("ID")`) and saves `order.State = OrderStateWorkflow`.
 6. For each `OrderItem`:
    - Resolves `item.Supplier` (falling back to `item.Product.Data.Product.Supplier`), looks up the registered `SupplierBackend`, and verifies the supplier is not disabled in `orders.SupplierModel`.
-   - Skips supplier invocation if `item.SupplierData.HasData()` is already true.
-   - Calls `backend.OrderAccepted(ctx, order, item)`. If non-nil `*blocks.StructBlockValue` is returned, binds it to `backend.OrderBlock(ctx, order, item)` (if unbound), validates it with `block.Validate`, and persists `OrderItem.SupplierData`.
-7. Sets `order.State = OrderStateAccepted`, `order.Completed = true`, `order.Processed = true`, and saves.
+   - Calls `backend.OrderAccepted(ctx, order, item)` to confirm delivery, including for lines that already have `SupplierData`. If the callback returns a non-nil `*blocks.StructBlockValue`, binds it to the supplier's `OrderBlock` when needed, validates it when a block is available, and persists `OrderItem.SupplierData`.
+7. Once all callbacks and any supplier data validation succeed, saves `order.State = OrderStateAccepted`, `order.Completed = true`, and `order.Processed = true`.
 8. Calls `orders.ReconcileCouponRedemptions(ctx, order.ID)` to count pending coupon redemptions toward `Coupon.UsageCount`.
 9. Emits `orders.Signals.Accepted` (`OrderAcceptedSignal`) and `orders.Signals.Processed` (`OrderProcessedSignal`) inside the transaction, commits, and syncs `State`, `Completed`, `Processed`, and `Customer` back onto `sig.Order`.
+
+If the workflow joins your transaction, commit it after the workflow succeeds or roll it back on error.
 
 ---
 
@@ -168,7 +258,7 @@ When an application sends `orders.Signals.Completed.Send(ctx, orders.OrderComple
 
 Exported `InternalOrderState` constants:
 - `orders.OrderStatePending` (`"order_pending"` — `"Order Pending"`): initial state set by `createOrder`.
-- `orders.OrderStateAccepted` (`"order_accepted"` — `"Order Accepted"`): final state set after supplier fulfillment completes.
+- `orders.OrderStateAccepted` (`"order_accepted"` — `"Order Accepted"`): can be set by the application's order decision before payment. The built-in workflow also saves this state together with `Completed = true` and `Processed = true`.
 - `orders.OrderStateRejected` (`"order_rejected"` — `"Order Rejected"`): rejected order; blocks fulfillment and invalidates pending coupon reservations.
 - `orders.OrderStateWorkflow` (`"order_workflow"` — `"Order Workflow"`): transient state set while `handleOrderCompleted` runs supplier fulfillment.
 

@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/contrib/admin/chooser"
-	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons"
-	"github.com/Nigel2392/go-django/contrib/shop/customers"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
-	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/models/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/models/categories"
+	"github.com/Nigel2392/go-django/contrib/shop/models/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/models/customers"
+	"github.com/Nigel2392/go-django/contrib/shop/models/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/models/products"
 	"github.com/Nigel2392/go-django/djester"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -138,8 +138,8 @@ func adminCouponUITests() []djester.Test {
 		&djester.BasicTest{
 			Label: "Coupon Seed products for coupon admin UI tests",
 			Function: func(d *djester.Tester, t *testing.T) {
-				cat := &models.Category{Name: "Coupon Apparel", Slug: "coupon-apparel"}
-				if _, err := queries.GetQuerySet(&models.Category{}).Create(cat); err != nil {
+				cat := &categories.Category{Name: "Coupon Apparel", Slug: "coupon-apparel"}
+				if _, err := queries.GetQuerySet(&categories.Category{}).Create(cat); err != nil {
 					t.Fatalf("failed to seed category: %v", err)
 				}
 				_, p1 = seedAdminProduct(t, cat, "alpha_supplier", "Merino Shirt", "merino-shirt", "SKU-SHIRT-1", "49.99", "0.00")

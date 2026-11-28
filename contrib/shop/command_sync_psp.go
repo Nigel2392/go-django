@@ -3,7 +3,7 @@ package shop
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/models/payments"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/command"

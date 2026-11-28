@@ -1,0 +1,23 @@
+{{ define "title" }}Checkout{{ end }}
+
+{{ define "content" }}
+<h1>Stationery checkout</h1>
+<p>Each order includes two notebooks and one pen.</p>
+
+<form action="{{ url "store:checkout" }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <p>
+        <label for="notebook">Notebook</label>
+        <select id="notebook" name="notebook" required>
+            {{ range .Get "Notebooks" }}
+            <option value="{{ .Object.Slug }}">{{ .Object.Title }}</option>
+            {{ end }}
+        </select>
+    </p>
+    <p>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" value="buyer@example.test" required>
+    </p>
+    <button type="submit">Place order</button>
+</form>
+{{ end }}

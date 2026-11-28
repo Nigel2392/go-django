@@ -21,7 +21,7 @@
 4. **Signal-Driven Order Lifecycle (`orders`, `shared/signals`, `handlers`)**:
    - Domain packages emit typed signals on `shared/signals.Pool` during cart, coupon, product, order, and payment transitions.
    - `orders.CreateOrder` / `orders.CreateOrderFromCart` snapshot cart lines and pricing into `Order` and `OrderItem` records inside a transaction and emit `orders.Signals.Created`.
-   - `orders/supplier_workflow.go` registers a built-in listener on `orders.Signals.Completed` that validates and invokes each line's `SupplierBackend.OrderAccepted` / `OrderBlock`, transitions the order through `OrderStateWorkflow` to `OrderStateAccepted` (`Completed = true`, `Processed = true`), reconciles coupon usage (`orders.ReconcileCouponRedemptions`), and emits `orders.Signals.Accepted` and `orders.Signals.Processed`.
+   - `orders.Signals.Completed` starts the built-in workflow in `orders/supplier_workflow.go`. After `SupplierBackend.OrderAccepted` confirms delivery for every line and any supplier metadata passes validation, the workflow sets `Completed = true` and `Processed = true`, reconciles coupons, and emits the order-level `orders.Signals.Accepted` and `orders.Signals.Processed`.
    - `handlers.RegisterAuditLogs()` subscribes to all shop domain signals to record `contrib/reports/audit_logs` entries.
 5. **HTTP APIs, Admin & Frontend (`views/public`, `views/adminviews`, `adminsite`, `assets`)**:
    - Public JSON endpoints under `/api/carts`, `/api/coupons`, and `/api/payments`, using the `shared/api` `DataResponse[T]` / `ErrorResponse` JSON envelope.
@@ -58,8 +58,9 @@ flowchart TD
     subgraph SignalsFlow["Signals, Fulfillment & Audit"]
         paySignals["payments.Signals.Start / Update"]
         appPolicy["App Acceptance Policy Listener"]
-        completed["orders.Signals.Completed (orders/supplier_workflow.go)"]
-        fulfill["SupplierBackend.OrderAccepted & ReconcileCouponRedemptions"]
+        startFulfillment["Start supplier workflow"]
+        confirmDelivery["SupplierBackend.OrderAccepted for each line"]
+        orderComplete["Set order completed and reconcile coupons"]
         audit["handlers.RegisterAuditLogs() -> audit_logs"]
     end
 
@@ -78,11 +79,13 @@ flowchart TD
     paySvc -->|"RecordPayment emits Start"| paySignals
     reconcile -->|"State change emits Update"| paySignals
     paySignals --> appPolicy
-    appPolicy -->|"Send Completed"| completed
-    completed --> fulfill
-    fulfill --> suppliers
+    appPolicy -->|"Order eligible and payment confirmed"| startFulfillment
+    startFulfillment --> confirmDelivery
+    confirmDelivery --> suppliers
+    confirmDelivery -->|"Every line confirmed"| orderComplete
     paySignals -.-> audit
-    completed -.-> audit
+    startFulfillment -.-> audit
+    orderComplete -.-> audit
 ```
 
 ---
@@ -197,12 +200,12 @@ On startup, `NewAppConfig()` registers:
 
 ## Signal-Driven Order Flow (High Level)
 
-The shop's order lifecycle is **primarily signal-driven**:
+The application decides whether to accept, keep pending, or deny an order. Accepted and pending orders wait for payment, then proceed to delivery. The order is recorded as completed after delivery. See the [order lifecycle flowcharts](./docs/signals-and-order-flow.md#order-lifecycle) for the application handlers and shop APIs at each step.
 
 1. **Cart & Coupon Signals**: Public API handlers emit `carts.Signals` (`Created`, `Cleared`, `Item.Add`, `Item.Remove`) and `coupons.Signals` (`Redeemed`; `Created` and `Updated` are also declared for listeners) as shoppers build carts, attach customer details (`POST /api/carts/customer`), and apply promo codes.
 2. **Checkout & Order Creation**: `POST /api/payments/checkout` (or direct callers) invokes `orders.CheckoutCart`, which prices the active cart via `CalcOneWithProducts()`, opens provider checkout via `payments.OpenCheckout` (for positive balances) before mutating the database, and then atomically deactivates the cart, persists the `Order` and `OrderItem` snapshots via `orders.CreateOrderFromCart` (emitting `orders.Signals.Created`), invalidates unapplied cart coupons, and records the `Payment` via `payments.RecordPayment` (emitting `payments.Signals.Start`) or `payments.CreateFreePayment`.
 3. **Webhooks, Reconciliation & Operations**: `payments.Refresh`, `payments.ServeWebhook`, `payments.Refund`, and `payments.Cancel` emit `payments.Signals` (`Update`, `Refund`, `Cancel`).
-4. **Order Completion & Supplier Fulfillment**: Applications listen to `payments.Signals.Start` and `payments.Signals.Update` and, once their acceptance policy is met, emit `orders.Signals.Completed`. The built-in listener in `orders/supplier_workflow.go` then fulfills each order line through its registered `SupplierBackend`, transitions the order to `OrderStateAccepted` (`Completed = true`, `Processed = true`), reconciles coupon usage, and emits `orders.Signals.Accepted` and `orders.Signals.Processed` — while `handlers.RegisterAuditLogs()` records audit entries across all domain signals.
+4. **Delivery & Completion**: Applications handle `payments.Signals.Start`, `payments.Signals.Update`, and zero-total checkout results. `orders.Signals.Completed` starts the supplier workflow. `SupplierBackend.OrderAccepted` confirms delivery for each line, and the workflow marks the order complete after every line succeeds. For asynchronous delivery, start the workflow after every confirmation is available and have the callbacks verify those confirmations.
 
 ---
 
@@ -216,7 +219,7 @@ flowchart TD
     s2["2. Define Product Subtypes & Migrate (implement products.ProductModel with ProductPrice returning price.Money, register content types, run migrations)"]
     s3["3. Register & Sync Suppliers (implement orders.SupplierBackend, call orders.RegisterSupplier, run sync-suppliers or SuppliersQuery.Sync)"]
     s4["4. Register & Sync Payment Providers (implement payments.Provider & ProviderBackend/PSP, call payments.RegisterProvider, run sync-psp or ProvidersQuery.Sync)"]
-    s5a["5a. Wire Order Acceptance Signals (listen to payments.Signals.Start & Update, send orders.Signals.Completed for built-in supplier fulfillment & coupon reconciliation)"]
+    s5a["5a. Wire order decisions, payment signals, delivery, and completion"]
     s5b["5b. Wire Storefront UI & Checkout (mount templates, connect ShopController to /api/carts* & /api/payments/options, POST checkout form to /api/payments/checkout)"]
     ready["Shop Ready to Serve"]
 
@@ -242,8 +245,8 @@ flowchart TD
 3. **Payment Providers (`payments.Provider` & `payments.ProviderBackend` / `payments.PSP`)**:
    - Implement `payments.Provider` (`CreatePayment`, `GetPayment`, `HandleWebhook`) and optional capability interfaces (`payments.Refunder`, `payments.Canceller`).
    - Register a `payments.ProviderBackend` (such as `&payments.PSP{...}`) with `payments.RegisterProvider(...)` — keeping fees, currency, and credentials in Go code — and synchronize `payments.ProviderAccount` rows with the `sync-psp` CLI command or `payments.ProvidersQuery().Sync()`.
-4. **Payment-to-Order Acceptance Policy (`payments.Signals` -> `orders.Signals.Completed`)**:
-   - Subscribe to `payments.Signals.Start` and `payments.Signals.Update` to decide when a verified payment satisfies your acceptance policy, then send `orders.Signals.Completed` to trigger the built-in supplier fulfillment and coupon reconciliation workflow (or listen to `orders.Signals.Accepted` / `Processed` for notifications).
+4. **Order Decisions, Payment, and Delivery**:
+   - Implement the accepted, pending, and denied outcomes. Handle `payments.Signals.Start`, `payments.Signals.Update`, and zero-total checkouts. Use `orders.Signals.Completed` to run delivery in the supplier callbacks or finalize delivery confirmed by your application. [Order lifecycle and implementation flowcharts](./docs/signals-and-order-flow.md#order-lifecycle)
 5. **App Variables & Checkout Configuration**:
    - Configure `SHOP_CURRENCY`, `SHOP_CHECKOUT_ORIGIN`, and `SHOP_CHECKOUT_RETURN_PATH` in `django.Configure(...)` (or pass a custom `orders.CheckoutPricer` in `orders.CheckoutOptions` when calling `orders.CheckoutCart` directly).
 6. **Storefront Templates & Frontend Wiring**:

@@ -22,16 +22,16 @@ import (
 	"github.com/Nigel2392/go-django/contrib/revisions"
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/shop"
-	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons"
-	"github.com/Nigel2392/go-django/contrib/shop/customers"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
-	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/api"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/price"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/models/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/models/categories"
+	"github.com/Nigel2392/go-django/contrib/shop/models/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/models/customers"
+	"github.com/Nigel2392/go-django/contrib/shop/models/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/models/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/models/products"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	"github.com/Nigel2392/go-django/djester"
 	"github.com/Nigel2392/go-django/djester/quest"
@@ -118,7 +118,7 @@ func (p *testCartSupplierProduct) FieldDefs(ctx context.Context) attrs.Definitio
 	)
 }
 
-func createTestProduct(t *testing.T, cat *models.Category, title, slug, price, tax, discount string) *products.Product {
+func createTestProduct(t *testing.T, cat *categories.Category, title, slug, price, tax, discount string) *products.Product {
 	t.Helper()
 
 	spec := &testCartSupplierProduct{
@@ -197,7 +197,7 @@ func TestCartsAPI(t *testing.T) {
 			tables := quest.Table(t,
 				&CartTestUser{},
 				&auditlogs.Entry{},
-				&models.Category{},
+				&categories.Category{},
 				&orders.SupplierModel{},
 				&testCartSupplierProduct{},
 				&products.Product{},
@@ -285,11 +285,11 @@ func TestCartsAPI(t *testing.T) {
 						t.Fatalf("failed to seed CartTestUser: %v", err)
 					}
 
-					cat := &models.Category{
+					cat := &categories.Category{
 						Name: "Peripherals",
 						Slug: "peripherals",
 					}
-					if _, err := queries.GetQuerySet(&models.Category{}).Create(cat); err != nil {
+					if _, err := queries.GetQuerySet(&categories.Category{}).Create(cat); err != nil {
 						t.Fatalf("failed to seed Category: %v", err)
 					}
 

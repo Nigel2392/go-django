@@ -47,7 +47,7 @@ In `contrib/shop/app.go`, `app.Routing` mounts the shop admin API under the admi
 
 ## `shared/api` Package
 
-Package `github.com/Nigel2392/go-django/contrib/shop/shared/api` provides shared JSON decoding, response envelopes, error formatting, and request lifecycle hooks.
+Package `github.com/Nigel2392/go-django/contrib/shop/core/shared/api` provides shared JSON decoding, response envelopes, error formatting, and request lifecycle hooks.
 
 ### `APIRequest` & `BaseAPIRequest`
 

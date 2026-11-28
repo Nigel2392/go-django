@@ -308,6 +308,23 @@ type ptrField[MODEL attrs.Definer, VALUE any] struct {
 	confFunc  func() PtrFieldConfig[MODEL, VALUE]
 }
 
+func ConfPrimary[MODEL attrs.Definer, VALUE any]() PtrFieldConfig[MODEL, VALUE] {
+	return PtrFieldConfig[MODEL, VALUE]{
+		Primary: true,
+	}
+}
+
+func ConfZero[MODEL attrs.Definer, VALUE any]() PtrFieldConfig[MODEL, VALUE] {
+	return PtrFieldConfig[MODEL, VALUE]{}
+}
+
+func ConfNullBlank[MODEL attrs.Definer, VALUE any]() PtrFieldConfig[MODEL, VALUE] {
+	return PtrFieldConfig[MODEL, VALUE]{
+		Null:  true,
+		Blank: true,
+	}
+}
+
 func Field[MODEL attrs.Definer, VALUE any](obj MODEL, name string, ptr *VALUE, cnf func() PtrFieldConfig[MODEL, VALUE], optionsKey ...string) attrs.Field {
 	var opts, ok = GetOptions[*ptrFieldOpts[MODEL, VALUE]](reflect.TypeOf(obj), name, optionsKey...)
 	if !ok && cnf == nil {

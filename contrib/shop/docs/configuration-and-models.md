@@ -264,7 +264,7 @@ Embeds `specific.Specific[*Product]`. `BeforeSave` generates a `drivers.ULID` if
 | `TaxRate` | `decimal.Decimal` | `tax_rate,omitempty` | Tax percentage (`Precision: 13`, `Scale: 4`). |
 | `DiscountPrice` | `decimal.Decimal` | `discount_price,omitempty` | Optional discount price (`Precision: 13`, `Scale: 4`, `Blank: true`). |
 | `Supplier` | `SupplierValue` | `supplier,omitempty` | Read-only supplier backend key. |
-| `Category` | `*models.Category` | `category,omitempty` | FK (`category_id`). |
+| `Category` | `*categories.Category` | `category,omitempty` | FK (`category_id`). |
 | `Editor` | `*editor.EditorJSBlockData` | `editor,omitempty` | Rich-text description (`paragraph`, `text-align`, `list`). |
 | `SpecificID` | `string` | `specific_id,omitempty` | Embedded from `specific.Specific[*Product]`; read-only, omitted from forms (`FormField` returns `nil`). |
 | `SpecificContentType` | `*contenttypes.BaseContentType[attrs.Definer]` | `specific_content_type,omitempty` | Embedded from `specific.Specific[*Product]`; read-only, omitted from forms (`FormField` returns `nil`). |

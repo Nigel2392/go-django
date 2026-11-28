@@ -6,6 +6,8 @@ The `orders` checkout orchestration (`contrib/shop/orders/checkout.go`) and `pay
 
 ## Checkout & Webhook Reconciliation Flow
 
+For the application logic that uses the checkout result and payment signals to start delivery, see the [order decision and payment flow](signals-and-order-flow.md#order-decision-and-payment).
+
 ```mermaid
 flowchart TD
     start["POST /api/payments/checkout (or orders.CheckoutCart)"]

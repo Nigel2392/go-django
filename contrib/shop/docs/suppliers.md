@@ -6,6 +6,8 @@ The `contrib/shop/orders` package implements a pluggable supplier architecture t
 
 ## Supplier Lifecycle & Fulfillment Flow
 
+For the application's handoff from confirmed payment to delivery and order completion, see the [delivery and completion flow](signals-and-order-flow.md#delivery-and-completion).
+
 ```mermaid
 flowchart TD
     subgraph Setup["1. Registration & DB Sync"]
@@ -29,15 +31,20 @@ flowchart TD
     end
 
     subgraph Fulfillment["4. Automatic Fulfillment (orders/supplier_workflow.go)"]
-        completed["orders.Signals.Completed triggers handleOrderCompleted"]
+        startFulfillment["Start supplier workflow"]
         checkEnabled["RetrieveSupplier(item.Supplier) & check SupplierModel.Enabled"]
-        acceptCall["backend.OrderAccepted(ctx, order, item) -> validate with OrderBlock() -> save OrderItem.SupplierData"]
-        completed --> checkEnabled --> acceptCall
+        acceptCall["Call OrderAccepted for each line<br/>Validate any supplier data"]
+        allConfirmed{"Every line confirmed?"}
+        markComplete["Set order Completed and Processed"]
+        rollback["Roll back fulfillment"]
+        startFulfillment --> checkEnabled --> acceptCall --> allConfirmed
+        allConfirmed -->|"Yes"| markComplete
+        allConfirmed -->|"No"| rollback
     end
 
     sync --> choose
     saveProd --> orderCreate
-    orderCreate --> completed
+    orderCreate -->|"App confirms payment"| startFulfillment
 ```
 
 ---
@@ -76,7 +83,7 @@ type SupplierBackend interface {
 | `ProductAddPanel(ctx)` | Returns the `admin.Panel` slice used when creating a product for this supplier. |
 | `ProductEditPanel(ctx)` | Returns the `admin.Panel` slice used when editing a product for this supplier. |
 | `OrderBlock(ctx, order, orderItem)` | Returns the `blocks.Block` schema used to bind `OrderItem.SupplierData` after querying. |
-| `OrderAccepted(ctx, order, orderItem)` | Produces or evaluates supplier-specific `*blocks.StructBlockValue` data when an order is accepted. |
+| `OrderAccepted(ctx, order, orderItem)` | Returns a nil error when the supplier has confirmed delivery for the line. It can also return supplier data such as a receipt. Implement idempotent delivery for retries. |
 
 ### `CatalogableSupplierBackend`
 
@@ -111,6 +118,8 @@ All callback fields are nil-safe:
 - `Icon`, `Description`, `ProductType`, `ProductAddPanel`, `ProductEditPanel`, `OrderBlock`, and `OrderAccepted` return zero values (`""` / `nil` / `nil, nil`) when their callback is `nil`.
 - `Label` falls back to `attrs.NiceName(s.Name)` when `TextLabel` is `nil`.
 
+Set `OrderIsAccepted` for suppliers that deliver goods or services. The workflow treats a nil error as confirmation even when the callback returns no metadata.
+
 ```go
 orders.RegisterSupplier(&orders.Supplier{
 	Order: 10,
@@ -125,6 +134,7 @@ orders.RegisterSupplier(&orders.Supplier{
 	EditPanel: func(ctx context.Context) []admin.Panel {
 		return (&MyDigitalProduct{}).EditPanels(ctx)
 	},
+	OrderIsAccepted: deliverDownload,
 })
 ```
 
@@ -171,7 +181,7 @@ Defined in [`contrib/shop/orders/supplier_model.go`](../orders/supplier_model.go
 
 In [`contrib/shop/app.go`](../app.go), `NewAppConfig()` registers legacy contenttype aliases pointing to `&orders.SupplierModel{}`:
 - `github.com/Nigel2392/go-django/contrib/shop/supplier.SupplierModel`
-- `github.com/Nigel2392/go-django/contrib/shop/products/supplier.SupplierModel`
+- `github.com/Nigel2392/go-django/contrib/shop/models/products/supplier.SupplierModel`
 
 ### `SupplierQuery` and `SuppliersQuery().Sync()`
 
@@ -223,7 +233,7 @@ In [`contrib/shop/orders/models_order_create.go`](../orders/models_order_create.
 [`contrib/shop/orders/supplier_workflow.go`](../orders/supplier_workflow.go) registers an `init()` listener on `orders.Signals.Completed` that fulfills each `OrderItem` through its registered `SupplierBackend` inside a database transaction:
 
 1. Locks the `Order` row and rejects already-rejected orders (`orders.ErrOrderRejected`) or skips already-processed orders (`order.Processed == true`).
-2. Transitions the order to `OrderStateWorkflow` (`Completed = true`), then iterates `OrderItem`s ordered by `ID`.
-3. For each line, resolves the supplier (falling back to `item.Product.Data.Product.Supplier`), verifies the backend is registered (`orders.ErrSupplierNotFound`) and not disabled in `orders.SupplierModel` (`orders.ErrSupplierDisabled`), and skips items whose `SupplierData.HasData()` is already true.
-4. Calls `backend.OrderAccepted(ctx, order, item)`. If a non-nil `*blocks.StructBlockValue` is returned, binds it to `backend.OrderBlock(ctx, order, item)` (if unbound), validates it via `block.Validate` (`orders.ErrInvalidSupplierData` on failure), and persists `OrderItem.SupplierData`.
-5. Transitions the order to `OrderStateAccepted` (`Completed = true`, `Processed = true`), runs `orders.ReconcileCouponRedemptions(ctx, order.ID)`, and emits `orders.Signals.Accepted` and `orders.Signals.Processed` before committing.
+2. Saves `OrderStateWorkflow` and iterates the order lines by `ID`.
+3. Resolves each line's supplier, falling back to `item.Product.Data.Product.Supplier`. Requires a registered backend (`orders.ErrSupplierNotFound`) and checks for a disabled `orders.SupplierModel` (`orders.ErrSupplierDisabled`).
+4. Calls `backend.OrderAccepted(ctx, order, item)` for every line, including lines with existing `SupplierData`. A nil error confirms delivery for the line. If the callback returns data, the workflow binds and validates it against any configured `OrderBlock` and saves it to `OrderItem.SupplierData`.
+5. After every line succeeds, saves `OrderStateAccepted`, `Completed = true`, and `Processed = true`. It reconciles coupon redemptions and emits the order-level `orders.Signals.Accepted` and `orders.Signals.Processed` before committing. If the workflow joins your transaction, roll it back on error.

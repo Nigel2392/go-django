@@ -3,7 +3,7 @@ package adminsite
 import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/searches"
-	"github.com/Nigel2392/go-django/contrib/shop/customers"
+	"github.com/Nigel2392/go-django/contrib/shop/models/customers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/trans"
 )

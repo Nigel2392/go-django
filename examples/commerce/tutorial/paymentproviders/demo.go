@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
-	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
+	"github.com/Nigel2392/go-django/contrib/shop/core/util/paystate"
+	"github.com/Nigel2392/go-django/contrib/shop/models/payments"
 	"github.com/shopspring/decimal"
 	"golang.org/x/text/currency"
 )

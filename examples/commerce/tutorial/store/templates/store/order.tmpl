@@ -1,0 +1,72 @@
+{{ define "title" }}Order status{{ end }}
+
+{{ define "content" }}
+{{ $order := .Get "Order" }}
+{{ $payment := .Get "Payment" }}
+{{ $deliveries := .Get "Deliveries" }}
+{{ $denied := eq $order.State "order_rejected" }}
+{{ $csrfToken := csrf_token }}
+
+<h1>Order {{ $order.ID }}</h1>
+<dl>
+    <dt>Decision</dt>
+    <dd>{{ .Get "StateLabel" }}</dd>
+    <dt>Payment</dt>
+    <dd>{{ $payment.State }}</dd>
+    <dt>Total</dt>
+    <dd>{{ $payment.Currency }} {{ $payment.Amount.StringFixed 2 }}</dd>
+    <dt>Completed</dt>
+    <dd>{{ if $order.Completed }}Yes{{ else }}No{{ end }}</dd>
+</dl>
+
+{{ if and (not $denied) (.Get "CanPay") }}
+<form action="{{ url "store:pay" $order.ID }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ $csrfToken }}">
+    <button type="submit">Simulate payment</button>
+</form>
+{{ end }}
+
+<table>
+    <caption>Order lines</caption>
+    <thead>
+        <tr>
+            <th scope="col">Item</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Supplier</th>
+            <th scope="col">Delivery</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{ range .Get "Lines" }}
+        {{ $line := .Object }}
+        {{ $delivery := index $deliveries $line.ID }}
+        <tr>
+            <th scope="row">{{ $line.Product.Data.Product.Title }}</th>
+            <td>{{ $line.Amount }}</td>
+            <td>{{ $line.Supplier }}</td>
+            <td>
+                {{ if $denied }}
+                Stopped
+                {{ else if $delivery }}
+                    {{ if $delivery.Receipt }}
+                    Confirmed (<code>{{ $delivery.Receipt }}</code>)
+                    {{ else }}
+                    Awaiting confirmation
+                        {{ if not $order.Completed }}
+                        <form action="{{ url "store:confirm" $order.ID $delivery.ID }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ $csrfToken }}">
+                            <button type="submit" aria-label="Confirm delivery of {{ $line.Product.Data.Product.Title }}">Confirm delivery</button>
+                        </form>
+                        {{ end }}
+                    {{ end }}
+                {{ else }}
+                Waiting for payment
+                {{ end }}
+            </td>
+        </tr>
+        {{ end }}
+    </tbody>
+</table>
+
+<p><a href="{{ url "store:home" }}">Start another checkout</a></p>
+{{ end }}

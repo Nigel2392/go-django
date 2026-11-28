@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/api"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/api"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/price"
+	"github.com/Nigel2392/go-django/contrib/shop/models/payments"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"

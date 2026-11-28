@@ -158,8 +158,8 @@ locales:
 
 # [ModelFinder]:       auth.User               github.com/Nigel2392/go-django/contrib/auth.User:4:1
 # [ModelFinder.Field]: revisions.Revision.User github.com/Nigel2392/go-django/contrib/revisions.Revision.User:1:4
-# [ModelFinder.Field]: carts.Cart.User         github.com/Nigel2392/go-django/contrib/shop/carts.Cart.User:2:1
-# [ModelFinder.Field]: customers.Customer.User github.com/Nigel2392/go-django/contrib/shop/customers.Customer.User:14:4
+# [ModelFinder.Field]: carts.Cart.User         github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart.User:2:1
+# [ModelFinder.Field]: customers.Customer.User github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer.User:14:4
 text: User
 locales:
   de: "Benutzer"
@@ -191,9 +191,9 @@ locales:
 
 # [ModelFinder.Field]: auth.User.CreatedAt          github.com/Nigel2392/go-django/contrib/auth.User.CreatedAt:1:6
 # [ModelFinder.Field]: revisions.Revision.CreatedAt github.com/Nigel2392/go-django/contrib/revisions.Revision.CreatedAt:1:5
-# [ModelFinder.Field]: carts.Cart.CreatedAt         github.com/Nigel2392/go-django/contrib/shop/carts.Cart.CreatedAt:2:4
-# [ModelFinder.Field]: coupons.Coupon.CreatedAt     github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.CreatedAt:11:11
-# [ModelFinder.Field]: payments.Payment.CreatedAt   github.com/Nigel2392/go-django/contrib/shop/payments.Payment.CreatedAt:7:10
+# [ModelFinder.Field]: carts.Cart.CreatedAt         github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart.CreatedAt:2:4
+# [ModelFinder.Field]: coupons.Coupon.CreatedAt     github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.CreatedAt:11:11
+# [ModelFinder.Field]: payments.Payment.CreatedAt   github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.CreatedAt:7:10
 text: Created At
 locales:
   de: "Erstellt am"
@@ -214,8 +214,8 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.Email          github.com/Nigel2392/go-django/contrib/auth.User.Email:1:1
-# [ModelFinder.Field]: customers.Customer.Email github.com/Nigel2392/go-django/contrib/shop/customers.Customer.Email:14:1
-# [GoFileFinder]:      *Customer.FieldDefs      github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:51:25
+# [ModelFinder.Field]: customers.Customer.Email github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer.Email:14:1
+# [GoFileFinder]:      *Customer.FieldDefs      github.com/Nigel2392/go-django/contrib/shop/models/customers/model_customer.go:51:25
 text: Email
 locales:
   de: "E-Mail-Adresse"
@@ -236,8 +236,8 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.FirstName          github.com/Nigel2392/go-django/contrib/auth.User.FirstName:1:3
-# [ModelFinder.Field]: customers.Customer.FirstName github.com/Nigel2392/go-django/contrib/shop/customers.Customer.FirstName:14:2
-# [GoFileFinder]:      *Customer.FieldDefs          github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:61:25
+# [ModelFinder.Field]: customers.Customer.FirstName github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer.FirstName:14:2
+# [GoFileFinder]:      *Customer.FieldDefs          github.com/Nigel2392/go-django/contrib/shop/models/customers/model_customer.go:61:25
 text: First Name
 locales:
   de: "Vorname"
@@ -264,18 +264,18 @@ locales:
 # [ModelFinder.Field]: audit_logs.Entry.ID           github.com/Nigel2392/go-django/contrib/reports/audit_logs.Entry.ID:1:0
 # [ModelFinder.Field]: revisions.Revision.ID         github.com/Nigel2392/go-django/contrib/revisions.Revision.ID:1:0
 # [ModelFinder.Field]: settings.RegisteredSetting.ID github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting.ID:1:0
-# [ModelFinder.Field]: carts.Cart.ID                 github.com/Nigel2392/go-django/contrib/shop/carts.Cart.ID:2:0
-# [ModelFinder.Field]: carts.CartItem.ID             github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.ID:1:0
-# [ModelFinder.Field]: coupons.Coupon.ID             github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ID:11:0
-# [ModelFinder.Field]: coupons.Redemption.ID         github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.ID:13:0
-# [ModelFinder.Field]: customers.Customer.ID         github.com/Nigel2392/go-django/contrib/shop/customers.Customer.ID:14:0
-# [ModelFinder.Field]: models.Category.ID            github.com/Nigel2392/go-django/contrib/shop/models.Category.ID:9:0
-# [ModelFinder.Field]: orders.Order.ID               github.com/Nigel2392/go-django/contrib/shop/orders.Order.ID:5:0
-# [ModelFinder.Field]: orders.OrderItem.ID           github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.ID:4:0
-# [ModelFinder.Field]: orders.OrderState.ID          github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.ID:3:0
-# [ModelFinder.Field]: payments.Payment.ID           github.com/Nigel2392/go-django/contrib/shop/payments.Payment.ID:7:0
-# [ModelFinder.Field]: payments.ProviderAccount.ID   github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.ID:6:0
-# [ModelFinder.Field]: products.Product.ID           github.com/Nigel2392/go-django/contrib/shop/products.Product.ID:8:0
+# [ModelFinder.Field]: carts.Cart.ID                 github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart.ID:2:0
+# [ModelFinder.Field]: carts.CartItem.ID             github.com/Nigel2392/go-django/contrib/shop/models/carts.CartItem.ID:1:0
+# [ModelFinder.Field]: coupons.Coupon.ID             github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.ID:11:0
+# [ModelFinder.Field]: coupons.Redemption.ID         github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.ID:13:0
+# [ModelFinder.Field]: customers.Customer.ID         github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer.ID:14:0
+# [ModelFinder.Field]: categories.Category.ID            github.com/Nigel2392/go-django/contrib/shop/categories.Category.ID:9:0
+# [ModelFinder.Field]: orders.Order.ID               github.com/Nigel2392/go-django/contrib/shop/models/orders.Order.ID:5:0
+# [ModelFinder.Field]: orders.OrderItem.ID           github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.ID:4:0
+# [ModelFinder.Field]: orders.OrderState.ID          github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderState.ID:3:0
+# [ModelFinder.Field]: payments.Payment.ID           github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.ID:7:0
+# [ModelFinder.Field]: payments.ProviderAccount.ID   github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.ID:6:0
+# [ModelFinder.Field]: products.Product.ID           github.com/Nigel2392/go-django/contrib/shop/models/products.Product.ID:8:0
 # [ModelFinder.Field]: dbsupplier.Product.ID         github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.ID:1:0
 text: ID
 locales:
@@ -317,8 +317,8 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.LastName          github.com/Nigel2392/go-django/contrib/auth.User.LastName:1:4
-# [ModelFinder.Field]: customers.Customer.LastName github.com/Nigel2392/go-django/contrib/shop/customers.Customer.LastName:14:3
-# [GoFileFinder]:      *Customer.FieldDefs         github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:71:25
+# [ModelFinder.Field]: customers.Customer.LastName github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer.LastName:14:3
+# [GoFileFinder]:      *Customer.FieldDefs         github.com/Nigel2392/go-django/contrib/shop/models/customers/model_customer.go:71:25
 text: Last Name
 locales:
   de: "Nachname"
@@ -360,8 +360,8 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.UpdatedAt        github.com/Nigel2392/go-django/contrib/auth.User.UpdatedAt:1:7
-# [ModelFinder.Field]: coupons.Coupon.UpdatedAt   github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.UpdatedAt:11:12
-# [ModelFinder.Field]: payments.Payment.UpdatedAt github.com/Nigel2392/go-django/contrib/shop/payments.Payment.UpdatedAt:7:11
+# [ModelFinder.Field]: coupons.Coupon.UpdatedAt   github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.UpdatedAt:11:12
+# [ModelFinder.Field]: payments.Payment.UpdatedAt github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.UpdatedAt:7:11
 text: Updated At
 locales:
   de: "Aktualisiert am"
@@ -394,8 +394,8 @@ locales:
 # [ModelFinder.Field]: users.Group.Description      github.com/Nigel2392/go-django/contrib/auth/users.Group.Description:2:2
 # [ModelFinder.Field]: users.Permission.Description github.com/Nigel2392/go-django/contrib/auth/users.Permission.Description:3:2
 # [GoFileFinder]:      NewAppConfig                 github.com/Nigel2392/go-django/contrib/shop/app.go:500:34
-# [ModelFinder.Field]: products.Product.Editor      github.com/Nigel2392/go-django/contrib/shop/products.Product.Editor:8:5
-# [GoFileFinder]:      *Product.FieldDefs           github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:220:22
+# [ModelFinder.Field]: products.Product.Editor      github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Editor:8:5
+# [GoFileFinder]:      *Product.FieldDefs           github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:220:22
 # [ModelFinder.Field]: dbsupplier.Product.Editor    github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Editor:1:4
 text: Description
 locales:
@@ -643,7 +643,7 @@ locales:
 ---
 
 # [ModelFinder]:       session.Session    github.com/Nigel2392/go-django/contrib/session.Session:1:1
-# [ModelFinder.Field]: carts.Cart.Session github.com/Nigel2392/go-django/contrib/shop/carts.Cart.Session:2:2
+# [ModelFinder.Field]: carts.Cart.Session github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart.Session:2:2
 text: Session
 locales:
   de: "Sitzung"
@@ -684,7 +684,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: settings.RegisteredSetting.InternalName github.com/Nigel2392/go-django/contrib/settings.RegisteredSetting.InternalName:1:1
-# [ModelFinder.Field]: orders.SupplierModel.InternalName       github.com/Nigel2392/go-django/contrib/shop/orders.SupplierModel.InternalName:10:0
+# [ModelFinder.Field]: orders.SupplierModel.InternalName       github.com/Nigel2392/go-django/contrib/shop/models/orders.SupplierModel.InternalName:10:0
 text: Internal Name
 locales:
   de: "Interner Name"
@@ -708,7 +708,7 @@ locales:
 # [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:443:34
 # [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:549:17
 # [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:589:17
-# [ModelFinder.Field]: coupons.Coupon.Products   github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.Products:11:15
+# [ModelFinder.Field]: coupons.Coupon.Products   github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.Products:11:15
 # [GoFileFinder]:      ViewAddNewProductSupplier github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:200:33
 text: Products
 locales:
@@ -721,7 +721,7 @@ locales:
 
 # [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:217:36
 # [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:470:34
-# [ModelFinder.Field]: customers.Customer.Orders github.com/Nigel2392/go-django/contrib/shop/customers.Customer.Orders:14:6
+# [ModelFinder.Field]: customers.Customer.Orders github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer.Orders:14:6
 text: Orders
 locales:
   de: "Bestellungen"
@@ -733,7 +733,7 @@ locales:
 
 # [GoFileFinder]:      NewAppConfig             github.com/Nigel2392/go-django/contrib/shop/app.go:224:36
 # [GoFileFinder]:      NewAppConfig             github.com/Nigel2392/go-django/contrib/shop/app.go:496:34
-# [ModelFinder.Field]: products.Product.Coupons github.com/Nigel2392/go-django/contrib/shop/products.Product.Coupons:8:14
+# [ModelFinder.Field]: products.Product.Coupons github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Coupons:8:14
 text: Coupons
 locales:
   de: "Gutscheine"
@@ -767,7 +767,7 @@ locales:
 
 # [GoFileFinder]:      NewAppConfig          github.com/Nigel2392/go-django/contrib/shop/app.go:247:36
 # [GoFileFinder]:      NewAppConfig          github.com/Nigel2392/go-django/contrib/shop/app.go:713:33
-# [ModelFinder.Field]: orders.Order.Payments github.com/Nigel2392/go-django/contrib/shop/orders.Order.Payments:5:5
+# [ModelFinder.Field]: orders.Order.Payments github.com/Nigel2392/go-django/contrib/shop/models/orders.Order.Payments:5:5
 text: Payments
 locales:
   de: "Zahlungen"
@@ -870,8 +870,8 @@ locales:
 ---
 
 # [GoFileFinder]:      NewAppConfig                github.com/Nigel2392/go-django/contrib/shop/app.go:388:34
-# [ModelFinder]:       models.Category             github.com/Nigel2392/go-django/contrib/shop/models.Category:11:9
-# [ModelFinder.Field]: products.Product.Category   github.com/Nigel2392/go-django/contrib/shop/products.Product.Category:8:4
+# [ModelFinder]:       categories.Category             github.com/Nigel2392/go-django/contrib/shop/categories.Category:11:9
+# [ModelFinder.Field]: products.Product.Category   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Category:8:4
 # [GoFileFinder]:                                  github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:118:13
 # [ModelFinder.Field]: dbsupplier.Product.Category github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Category:1:5
 text: Category
@@ -904,7 +904,7 @@ locales:
 ---
 
 # [GoFileFinder]:      NewAppConfig             github.com/Nigel2392/go-django/contrib/shop/app.go:503:34
-# [ModelFinder.Field]: coupons.Coupon.ValidFrom github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ValidFrom:11:9
+# [ModelFinder.Field]: coupons.Coupon.ValidFrom github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.ValidFrom:11:9
 text: Valid From
 locales:
   de: "Gültig ab"
@@ -915,7 +915,7 @@ locales:
 ---
 
 # [GoFileFinder]:      NewAppConfig              github.com/Nigel2392/go-django/contrib/shop/app.go:504:34
-# [ModelFinder.Field]: coupons.Coupon.ValidUntil github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ValidUntil:11:10
+# [ModelFinder.Field]: coupons.Coupon.ValidUntil github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.ValidUntil:11:10
 text: Valid Until
 locales:
   de: "Gültig bis"
@@ -937,9 +937,9 @@ locales:
 
 # [GoFileFinder]:      NewAppConfig                        github.com/Nigel2392/go-django/contrib/shop/app.go:532:17
 # [GoFileFinder]:      NewAppConfig                        github.com/Nigel2392/go-django/contrib/shop/app.go:567:17
-# [ModelFinder]:       coupons.Coupon                      github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon:11:11
-# [ModelFinder.Field]: coupons.CouponProductThrough.Coupon github.com/Nigel2392/go-django/contrib/shop/coupons.CouponProductThrough.Coupon:12:0
-# [ModelFinder.Field]: coupons.Redemption.Coupon           github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Coupon:13:1
+# [ModelFinder]:       coupons.Coupon                      github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon:11:11
+# [ModelFinder.Field]: coupons.CouponProductThrough.Coupon github.com/Nigel2392/go-django/contrib/shop/models/coupons.CouponProductThrough.Coupon:12:0
+# [ModelFinder.Field]: coupons.Redemption.Coupon           github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.Coupon:13:1
 text: Coupon
 locales:
   de: "Gutschein"
@@ -1000,9 +1000,9 @@ locales:
 
 ---
 
-# [ModelFinder]:       carts.Cart              github.com/Nigel2392/go-django/contrib/shop/carts.Cart:11:2
-# [ModelFinder.Field]: carts.CartItem.Cart     github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.Cart:1:1
-# [ModelFinder.Field]: coupons.Redemption.Cart github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Cart:13:3
+# [ModelFinder]:       carts.Cart              github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart:11:2
+# [ModelFinder.Field]: carts.CartItem.Cart     github.com/Nigel2392/go-django/contrib/shop/models/carts.CartItem.Cart:1:1
+# [ModelFinder.Field]: coupons.Redemption.Cart github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.Cart:13:3
 text: Cart
 locales:
   de: "Warenkorb"
@@ -1012,7 +1012,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	carts.Cart.Active github.com/Nigel2392/go-django/contrib/shop/carts.Cart.Active:2:3
+# [ModelFinder.Field]:	carts.Cart.Active github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart.Active:2:3
 text: Active
 locales:
   de: "Aktiv"
@@ -1022,7 +1022,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	carts.Cart.CartItems github.com/Nigel2392/go-django/contrib/shop/carts.Cart.CartItems:2:5
+# [ModelFinder.Field]:	carts.Cart.CartItems github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart.CartItems:2:5
 text: Cart Items
 locales:
   de: "Warenkorbartikel"
@@ -1032,7 +1032,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	carts.Cart.Redemptions github.com/Nigel2392/go-django/contrib/shop/carts.Cart.Redemptions:2:6
+# [ModelFinder.Field]:	carts.Cart.Redemptions github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart.Redemptions:2:6
 text: Redemptions
 locales:
   de: "Einlösungen"
@@ -1042,7 +1042,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	carts.CartItem github.com/Nigel2392/go-django/contrib/shop/carts.CartItem:11:1
+# [ModelFinder]:	carts.CartItem github.com/Nigel2392/go-django/contrib/shop/models/carts.CartItem:11:1
 text: CartItem
 locales:
   de: "Warenkorbartikel"
@@ -1052,9 +1052,9 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: carts.CartItem.Amount   github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.Amount:1:3
-# [ModelFinder.Field]: orders.OrderItem.Amount github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Amount:4:4
-# [ModelFinder.Field]: payments.Payment.Amount github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Amount:7:7
+# [ModelFinder.Field]: carts.CartItem.Amount   github.com/Nigel2392/go-django/contrib/shop/models/carts.CartItem.Amount:1:3
+# [ModelFinder.Field]: orders.OrderItem.Amount github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.Amount:4:4
+# [ModelFinder.Field]: payments.Payment.Amount github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.Amount:7:7
 text: Amount
 locales:
   de: "Anzahl"
@@ -1064,10 +1064,10 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: carts.CartItem.Product               github.com/Nigel2392/go-django/contrib/shop/carts.CartItem.Product:1:2
-# [ModelFinder.Field]: coupons.CouponProductThrough.Product github.com/Nigel2392/go-django/contrib/shop/coupons.CouponProductThrough.Product:12:1
-# [ModelFinder.Field]: orders.OrderItem.Product             github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Product:4:1
-# [ModelFinder]:       products.Product                     github.com/Nigel2392/go-django/contrib/shop/products.Product:11:8
+# [ModelFinder.Field]: carts.CartItem.Product               github.com/Nigel2392/go-django/contrib/shop/models/carts.CartItem.Product:1:2
+# [ModelFinder.Field]: coupons.CouponProductThrough.Product github.com/Nigel2392/go-django/contrib/shop/models/coupons.CouponProductThrough.Product:12:1
+# [ModelFinder.Field]: orders.OrderItem.Product             github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.Product:4:1
+# [ModelFinder]:       products.Product                     github.com/Nigel2392/go-django/contrib/shop/models/products.Product:11:8
 # [ModelFinder]:       dbsupplier.Product                   github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product:13:1
 text: Product
 locales:
@@ -1078,7 +1078,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.Code github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.Code:11:2
+# [ModelFinder.Field]:	coupons.Coupon.Code github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.Code:11:2
 text: Code
 locales:
   de: "Code"
@@ -1088,7 +1088,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.CreatedBy github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.CreatedBy:11:13
+# [ModelFinder.Field]:	coupons.Coupon.CreatedBy github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.CreatedBy:11:13
 text: Created By
 locales:
   de: "Erstellt von"
@@ -1098,7 +1098,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.IsPercentage github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.IsPercentage:11:6
+# [ModelFinder.Field]:	coupons.Coupon.IsPercentage github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.IsPercentage:11:6
 text: Is Percentage
 locales:
   de: "Prozentual"
@@ -1108,7 +1108,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.MaxDiscount github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.MaxDiscount:11:7
+# [ModelFinder.Field]:	coupons.Coupon.MaxDiscount github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.MaxDiscount:11:7
 text: Max Discount
 locales:
   de: "Maximaler Rabatt"
@@ -1118,7 +1118,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.MinOrderAmount github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.MinOrderAmount:11:8
+# [ModelFinder.Field]:	coupons.Coupon.MinOrderAmount github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.MinOrderAmount:11:8
 text: Min Order Amount
 locales:
   de: "Mindestbestellwert"
@@ -1128,7 +1128,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.RedemptionSet github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.RedemptionSet:11:14
+# [ModelFinder.Field]:	coupons.Coupon.RedemptionSet github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.RedemptionSet:11:14
 text: Redemption Set
 locales:
   de: "Einlösungen"
@@ -1138,7 +1138,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.ShortDescription github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.ShortDescription:11:3
+# [ModelFinder.Field]:	coupons.Coupon.ShortDescription github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.ShortDescription:11:3
 text: Short Description
 locales:
   de: "Kurzbeschreibung"
@@ -1148,8 +1148,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: coupons.Coupon.Title     github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.Title:11:1
-# [ModelFinder.Field]: products.Product.Title   github.com/Nigel2392/go-django/contrib/shop/products.Product.Title:8:2
+# [ModelFinder.Field]: coupons.Coupon.Title     github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.Title:11:1
+# [ModelFinder.Field]: products.Product.Title   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Title:8:2
 # [GoFileFinder]:                               github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:102:13
 # [ModelFinder.Field]: dbsupplier.Product.Title github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Title:1:2
 text: Title
@@ -1161,7 +1161,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.UsageCount github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.UsageCount:11:5
+# [ModelFinder.Field]:	coupons.Coupon.UsageCount github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.UsageCount:11:5
 text: Usage Count
 locales:
   de: "Anzahl der Einlösungen"
@@ -1171,7 +1171,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Coupon.UsageLimit github.com/Nigel2392/go-django/contrib/shop/coupons.Coupon.UsageLimit:11:4
+# [ModelFinder.Field]:	coupons.Coupon.UsageLimit github.com/Nigel2392/go-django/contrib/shop/models/coupons.Coupon.UsageLimit:11:4
 text: Usage Limit
 locales:
   de: "Nutzungslimit"
@@ -1181,7 +1181,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	coupons.CouponProductThrough github.com/Nigel2392/go-django/contrib/shop/coupons.CouponProductThrough:11:12
+# [ModelFinder]:	coupons.CouponProductThrough github.com/Nigel2392/go-django/contrib/shop/models/coupons.CouponProductThrough:11:12
 text: CouponProductThrough
 locales:
   de: "Gutschein-Produkt-Zuordnung"
@@ -1191,7 +1191,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	coupons.Redemption github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption:11:13
+# [ModelFinder]:	coupons.Redemption github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption:11:13
 text: Redemption
 locales:
   de: "Einlösung"
@@ -1201,9 +1201,9 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: coupons.Redemption.Customer github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Customer:13:2
-# [ModelFinder]:       customers.Customer          github.com/Nigel2392/go-django/contrib/shop/customers.Customer:11:14
-# [ModelFinder.Field]: orders.Order.Customer       github.com/Nigel2392/go-django/contrib/shop/orders.Order.Customer:5:4
+# [ModelFinder.Field]: coupons.Redemption.Customer github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.Customer:13:2
+# [ModelFinder]:       customers.Customer          github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer:11:14
+# [ModelFinder.Field]: orders.Order.Customer       github.com/Nigel2392/go-django/contrib/shop/models/orders.Order.Customer:5:4
 text: Customer
 locales:
   de: "Kunde"
@@ -1213,7 +1213,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Redemption.DiscountAmount github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.DiscountAmount:13:5
+# [ModelFinder.Field]:	coupons.Redemption.DiscountAmount github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.DiscountAmount:13:5
 text: Discount Amount
 locales:
   de: "Rabattbetrag"
@@ -1223,7 +1223,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Redemption.Invalidated github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Invalidated:13:6
+# [ModelFinder.Field]:	coupons.Redemption.Invalidated github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.Invalidated:13:6
 text: Invalidated
 locales:
   de: "Ungültig gemacht"
@@ -1233,10 +1233,10 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: coupons.Redemption.Order github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.Order:13:4
-# [ModelFinder]:       orders.Order             github.com/Nigel2392/go-django/contrib/shop/orders.Order:11:5
-# [ModelFinder.Field]: orders.OrderItem.Order   github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Order:4:7
-# [ModelFinder.Field]: payments.Payment.Order   github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Order:7:1
+# [ModelFinder.Field]: coupons.Redemption.Order github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.Order:13:4
+# [ModelFinder]:       orders.Order             github.com/Nigel2392/go-django/contrib/shop/models/orders.Order:11:5
+# [ModelFinder.Field]: orders.OrderItem.Order   github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.Order:4:7
+# [ModelFinder.Field]: payments.Payment.Order   github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.Order:7:1
 text: Order
 locales:
   de: "Bestellung"
@@ -1246,7 +1246,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	coupons.Redemption.RedeemedAt github.com/Nigel2392/go-django/contrib/shop/coupons.Redemption.RedeemedAt:13:7
+# [ModelFinder.Field]:	coupons.Redemption.RedeemedAt github.com/Nigel2392/go-django/contrib/shop/models/coupons.Redemption.RedeemedAt:13:7
 text: Redeemed At
 locales:
   de: "Eingelöst am"
@@ -1256,7 +1256,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:54:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:54:26
 text: Length
 locales:
   de: "Länge"
@@ -1266,7 +1266,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:55:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:55:26
 text: Value
 locales:
   de: "Wert"
@@ -1276,7 +1276,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:56:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:56:26
 text: Refresh
 locales:
   de: "Aktualisieren"
@@ -1286,7 +1286,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:57:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:57:26
 text: Preview
 locales:
   de: "Vorschau"
@@ -1296,7 +1296,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:58:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:58:26
 text: Random
 locales:
   de: "Zufällig"
@@ -1306,7 +1306,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:59:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:59:26
 text: Static
 locales:
   de: "Fest"
@@ -1316,7 +1316,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:60:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:60:26
 text: Year
 locales:
   de: "Jahr"
@@ -1326,7 +1326,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:61:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:61:26
 text: Month
 locales:
   de: "Monat"
@@ -1336,7 +1336,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:62:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:62:26
 text: Weekday
 locales:
   de: "Wochentag"
@@ -1346,7 +1346,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:63:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:63:26
 text: Day
 locales:
   de: "Tag"
@@ -1356,7 +1356,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:64:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:64:26
 text: Hour
 locales:
   de: "Stunde"
@@ -1366,7 +1366,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:65:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:65:26
 text: Minute
 locales:
   de: "Minute"
@@ -1376,7 +1376,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:66:26
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:66:26
 text: UUID
 locales:
   de: "UUID"
@@ -1386,7 +1386,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:68:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:68:30
 text: Random String, requires length
 locales:
   de: "Zufällige Zeichenfolge, Länge erforderlich"
@@ -1396,7 +1396,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:69:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:69:30
 text: Static String, requires custom input
 locales:
   de: "Feste Zeichenfolge, Eingabe erforderlich"
@@ -1406,7 +1406,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:70:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:70:30
 text: Current Year
 locales:
   de: "Aktuelles Jahr"
@@ -1416,7 +1416,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:71:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:71:30
 text: Current Month
 locales:
   de: "Aktueller Monat"
@@ -1426,7 +1426,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:72:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:72:30
 text: Current Weekday
 locales:
   de: "Aktueller Wochentag"
@@ -1436,7 +1436,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:73:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:73:30
 text: Current day of the month
 locales:
   de: "Aktueller Tag des Monats"
@@ -1446,7 +1446,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:74:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:74:30
 text: Current hour
 locales:
   de: "Aktuelle Stunde"
@@ -1456,7 +1456,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:75:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:75:30
 text: Current minute
 locales:
   de: "Aktuelle Minute"
@@ -1466,7 +1466,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:76:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:76:30
 text: Dash delimiter
 locales:
   de: "Bindestrich als Trennzeichen"
@@ -1476,7 +1476,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/coupons/generators/widget.go:77:30
+# [GoFileFinder]:	*CouponGeneratorWidget.GetContextData github.com/Nigel2392/go-django/contrib/shop/models/coupons/generators/widget.go:77:30
 text: Random UUID, requires length
 locales:
   de: "Zufällige UUID, Länge erforderlich"
@@ -1486,7 +1486,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	customers.Customer.FirstSeen github.com/Nigel2392/go-django/contrib/shop/customers.Customer.FirstSeen:14:5
+# [ModelFinder.Field]:	customers.Customer.FirstSeen github.com/Nigel2392/go-django/contrib/shop/models/customers.Customer.FirstSeen:14:5
 text: First Seen
 locales:
   de: "Erstmals erfasst am"
@@ -1496,7 +1496,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:52:25
+# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/customers/model_customer.go:52:25
 text: The email address of the user.
 locales:
   de: "Die E-Mail-Adresse des Benutzers."
@@ -1506,7 +1506,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:62:25
+# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/customers/model_customer.go:62:25
 text: The first name of the user.
 locales:
   de: "Der Vorname des Benutzers."
@@ -1516,7 +1516,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/customers/model_customer.go:72:25
+# [GoFileFinder]:	*Customer.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/customers/model_customer.go:72:25
 text: The last name of the user.
 locales:
   de: "Der Nachname des Benutzers."
@@ -1526,7 +1526,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: models.Category.Children github.com/Nigel2392/go-django/contrib/shop/models.Category.Children:9:4
+# [ModelFinder.Field]: categories.Category.Children github.com/Nigel2392/go-django/contrib/shop/categories.Category.Children:9:4
 # [GoFileFinder]:      *Category.FieldDefs      github.com/Nigel2392/go-django/contrib/shop/models/models_category.go:104:23
 text: Child Categories.
 locales:
@@ -1537,7 +1537,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	models.Category.Name github.com/Nigel2392/go-django/contrib/shop/models.Category.Name:9:1
+# [ModelFinder.Field]:	categories.Category.Name github.com/Nigel2392/go-django/contrib/shop/categories.Category.Name:9:1
 text: Name
 locales:
   de: "Name"
@@ -1547,7 +1547,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	models.Category.ParentCategory github.com/Nigel2392/go-django/contrib/shop/models.Category.ParentCategory:9:3
+# [ModelFinder.Field]:	categories.Category.ParentCategory github.com/Nigel2392/go-django/contrib/shop/categories.Category.ParentCategory:9:3
 text: Parent Category
 locales:
   de: "Übergeordnete Kategorie"
@@ -1557,8 +1557,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: models.Category.Slug    github.com/Nigel2392/go-django/contrib/shop/models.Category.Slug:9:2
-# [ModelFinder.Field]: products.Product.Slug   github.com/Nigel2392/go-django/contrib/shop/products.Product.Slug:8:3
+# [ModelFinder.Field]: categories.Category.Slug    github.com/Nigel2392/go-django/contrib/shop/categories.Category.Slug:9:2
+# [ModelFinder.Field]: products.Product.Slug   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Slug:8:3
 # [ModelFinder.Field]: dbsupplier.Product.Slug github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Slug:1:3
 text: Slug
 locales:
@@ -1579,7 +1579,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	orders.Order.Completed github.com/Nigel2392/go-django/contrib/shop/orders.Order.Completed:5:2
+# [ModelFinder.Field]:	orders.Order.Completed github.com/Nigel2392/go-django/contrib/shop/models/orders.Order.Completed:5:2
 text: Completed
 locales:
   de: "Abgeschlossen"
@@ -1589,8 +1589,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: orders.Order.OrderItems github.com/Nigel2392/go-django/contrib/shop/orders.Order.OrderItems:5:6
-# [GoFileFinder]:      *Order.EditPanels       github.com/Nigel2392/go-django/contrib/shop/orders/models_order.go:89:13
+# [ModelFinder.Field]: orders.Order.OrderItems github.com/Nigel2392/go-django/contrib/shop/models/orders.Order.OrderItems:5:6
+# [GoFileFinder]:      *Order.EditPanels       github.com/Nigel2392/go-django/contrib/shop/models/orders/models_order.go:89:13
 text: Order Items
 locales:
   de: "Bestellpositionen"
@@ -1600,7 +1600,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	orders.Order.Processed github.com/Nigel2392/go-django/contrib/shop/orders.Order.Processed:5:3
+# [ModelFinder.Field]:	orders.Order.Processed github.com/Nigel2392/go-django/contrib/shop/models/orders.Order.Processed:5:3
 text: Processed
 locales:
   de: "Verarbeitet"
@@ -1610,8 +1610,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: orders.Order.State     github.com/Nigel2392/go-django/contrib/shop/orders.Order.State:5:1
-# [ModelFinder.Field]: payments.Payment.State github.com/Nigel2392/go-django/contrib/shop/payments.Payment.State:7:6
+# [ModelFinder.Field]: orders.Order.State     github.com/Nigel2392/go-django/contrib/shop/models/orders.Order.State:5:1
+# [ModelFinder.Field]: payments.Payment.State github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.State:7:6
 text: State
 locales:
   de: "Status"
@@ -1621,7 +1621,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	orders.OrderItem github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem:11:4
+# [ModelFinder]:	orders.OrderItem github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem:11:4
 text: OrderItem
 locales:
   de: "Bestellposition"
@@ -1631,7 +1631,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	orders.OrderItem.ItemPrice github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.ItemPrice:4:2
+# [ModelFinder.Field]:	orders.OrderItem.ItemPrice github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.ItemPrice:4:2
 text: Item Price
 locales:
   de: "Artikelpreis"
@@ -1641,8 +1641,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: orders.OrderItem.Supplier   github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.Supplier:4:5
-# [ModelFinder.Field]: products.Product.Supplier   github.com/Nigel2392/go-django/contrib/shop/products.Product.Supplier:8:11
+# [ModelFinder.Field]: orders.OrderItem.Supplier   github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.Supplier:4:5
+# [ModelFinder.Field]: products.Product.Supplier   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Supplier:8:11
 # [GoFileFinder]:                                  github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:122:13
 # [ModelFinder.Field]: dbsupplier.Product.Supplier github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Supplier:1:6
 text: Supplier
@@ -1654,7 +1654,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	orders.OrderItem.SupplierData github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.SupplierData:4:6
+# [ModelFinder.Field]:	orders.OrderItem.SupplierData github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.SupplierData:4:6
 text: Supplier Data
 locales:
   de: "Lieferantendaten"
@@ -1664,8 +1664,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: orders.OrderItem.TaxRate   github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem.TaxRate:4:3
-# [ModelFinder.Field]: products.Product.TaxRate   github.com/Nigel2392/go-django/contrib/shop/products.Product.TaxRate:8:8
+# [ModelFinder.Field]: orders.OrderItem.TaxRate   github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem.TaxRate:4:3
+# [ModelFinder.Field]: products.Product.TaxRate   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.TaxRate:8:8
 # [ModelFinder.Field]: dbsupplier.Product.TaxRate github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.TaxRate:1:8
 text: Tax Rate
 locales:
@@ -1676,7 +1676,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	orders.OrderState github.com/Nigel2392/go-django/contrib/shop/orders.OrderState:11:3
+# [ModelFinder]:	orders.OrderState github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderState:11:3
 text: OrderState
 locales:
   de: "Bestellstatus"
@@ -1686,7 +1686,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	orders.OrderState.Action github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.Action:3:2
+# [ModelFinder.Field]:	orders.OrderState.Action github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderState.Action:3:2
 text: Action
 locales:
   de: "Aktion"
@@ -1696,8 +1696,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: orders.OrderState.Label        github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.Label:3:1
-# [ModelFinder.Field]: payments.ProviderAccount.Label github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Label:6:2
+# [ModelFinder.Field]: orders.OrderState.Label        github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderState.Label:3:1
+# [ModelFinder.Field]: payments.ProviderAccount.Label github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.Label:6:2
 text: Label
 locales:
   de: "Bezeichnung"
@@ -1707,7 +1707,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	orders.OrderState.WorkflowID github.com/Nigel2392/go-django/contrib/shop/orders.OrderState.WorkflowID:3:3
+# [ModelFinder.Field]:	orders.OrderState.WorkflowID github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderState.WorkflowID:3:3
 text: Workflow ID
 locales:
   de: "Workflow-ID"
@@ -1717,7 +1717,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	orders.SupplierModel github.com/Nigel2392/go-django/contrib/shop/orders.SupplierModel:11:10
+# [ModelFinder]:	orders.SupplierModel github.com/Nigel2392/go-django/contrib/shop/models/orders.SupplierModel:11:10
 text: SupplierModel
 locales:
   de: "Lieferantenmodell"
@@ -1727,8 +1727,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: orders.SupplierModel.Enabled     github.com/Nigel2392/go-django/contrib/shop/orders.SupplierModel.Enabled:10:1
-# [ModelFinder.Field]: payments.ProviderAccount.Enabled github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Enabled:6:3
+# [ModelFinder.Field]: orders.SupplierModel.Enabled     github.com/Nigel2392/go-django/contrib/shop/models/orders.SupplierModel.Enabled:10:1
+# [ModelFinder.Field]: payments.ProviderAccount.Enabled github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.Enabled:6:3
 text: Enabled
 locales:
   de: "Aktiviert"
@@ -1738,7 +1738,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Order.EditPanels github.com/Nigel2392/go-django/contrib/shop/orders/models_order.go:84:13
+# [GoFileFinder]:	*Order.EditPanels github.com/Nigel2392/go-django/contrib/shop/models/orders/models_order.go:84:13
 text: Product Details
 locales:
   de: "Produktdetails"
@@ -1748,7 +1748,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Order.EditPanels github.com/Nigel2392/go-django/contrib/shop/orders/models_order.go:105:13
+# [GoFileFinder]:	*Order.EditPanels github.com/Nigel2392/go-django/contrib/shop/models/orders/models_order.go:105:13
 text: Payment Details
 locales:
   de: "Zahlungsdetails"
@@ -1758,7 +1758,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:42:30
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/models/orders/models_order_state.go:42:30
 text: Order Accepted
 locales:
   de: "Bestellung angenommen"
@@ -1768,7 +1768,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:43:30
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/models/orders/models_order_state.go:43:30
 text: Order Pending
 locales:
   de: "Bestellung ausstehend"
@@ -1778,7 +1778,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:44:30
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/models/orders/models_order_state.go:44:30
 text: Order Rejected
 locales:
   de: "Bestellung abgelehnt"
@@ -1788,7 +1788,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/orders/models_order_state.go:45:30
+# [GoFileFinder]:	InternalOrderState.Label github.com/Nigel2392/go-django/contrib/shop/models/orders/models_order_state.go:45:30
 text: Order Workflow
 locales:
   de: "Bestellablauf"
@@ -1798,7 +1798,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	payments.Payment github.com/Nigel2392/go-django/contrib/shop/payments.Payment:11:7
+# [ModelFinder]:	payments.Payment github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment:11:7
 text: Payment
 locales:
   de: "Zahlung"
@@ -1808,7 +1808,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.Account github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Account:7:2
+# [ModelFinder.Field]:	payments.Payment.Account github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.Account:7:2
 text: Account
 locales:
   de: "Konto"
@@ -1818,7 +1818,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.AuthorizationRef github.com/Nigel2392/go-django/contrib/shop/payments.Payment.AuthorizationRef:7:12
+# [ModelFinder.Field]:	payments.Payment.AuthorizationRef github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.AuthorizationRef:7:12
 text: Authorization Ref
 locales:
   de: "Autorisierungsreferenz"
@@ -1828,7 +1828,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.CaptureRef github.com/Nigel2392/go-django/contrib/shop/payments.Payment.CaptureRef:7:13
+# [ModelFinder.Field]:	payments.Payment.CaptureRef github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.CaptureRef:7:13
 text: Capture Ref
 locales:
   de: "Einzugsreferenz"
@@ -1838,7 +1838,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.CheckoutURL github.com/Nigel2392/go-django/contrib/shop/payments.Payment.CheckoutURL:7:5
+# [ModelFinder.Field]:	payments.Payment.CheckoutURL github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.CheckoutURL:7:5
 text: Checkout URL
 locales:
   de: "URL der Zahlungsseite"
@@ -1848,8 +1848,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: payments.Payment.Currency         github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Currency:7:9
-# [ModelFinder.Field]: payments.ProviderAccount.Currency github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Currency:6:5
+# [ModelFinder.Field]: payments.Payment.Currency         github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.Currency:7:9
+# [ModelFinder.Field]: payments.ProviderAccount.Currency github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.Currency:6:5
 text: Currency
 locales:
   de: "Währung"
@@ -1859,7 +1859,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.Fee github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Fee:7:8
+# [ModelFinder.Field]:	payments.Payment.Fee github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.Fee:7:8
 text: Fee
 locales:
   de: "Gebühr"
@@ -1869,7 +1869,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.OperationKey github.com/Nigel2392/go-django/contrib/shop/payments.Payment.OperationKey:7:14
+# [ModelFinder.Field]:	payments.Payment.OperationKey github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.OperationKey:7:14
 text: Operation Key
 locales:
   de: "Vorgangsschlüssel"
@@ -1879,7 +1879,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.OperationVersion github.com/Nigel2392/go-django/contrib/shop/payments.Payment.OperationVersion:7:15
+# [ModelFinder.Field]:	payments.Payment.OperationVersion github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.OperationVersion:7:15
 text: Operation Version
 locales:
   de: "Vorgangsversion"
@@ -1889,7 +1889,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.Operations github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Operations:7:16
+# [ModelFinder.Field]:	payments.Payment.Operations github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.Operations:7:16
 text: Operations
 locales:
   de: "Vorgänge"
@@ -1899,7 +1899,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.Provider github.com/Nigel2392/go-django/contrib/shop/payments.Payment.Provider:7:3
+# [ModelFinder.Field]:	payments.Payment.Provider github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.Provider:7:3
 text: Provider
 locales:
   de: "Anbieter"
@@ -1909,7 +1909,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.Payment.TransactionID github.com/Nigel2392/go-django/contrib/shop/payments.Payment.TransactionID:7:4
+# [ModelFinder.Field]:	payments.Payment.TransactionID github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment.TransactionID:7:4
 text: Transaction ID
 locales:
   de: "Transaktions-ID"
@@ -1919,7 +1919,7 @@ locales:
 
 ---
 
-# [ModelFinder]:	payments.ProviderAccount github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount:11:6
+# [ModelFinder]:	payments.ProviderAccount github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount:11:6
 text: ProviderAccount
 locales:
   de: "Anbieterkonto"
@@ -1929,7 +1929,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.ProviderAccount.CredentialRef github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.CredentialRef:6:4
+# [ModelFinder.Field]:	payments.ProviderAccount.CredentialRef github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.CredentialRef:6:4
 text: Credential Ref
 locales:
   de: "Referenz der Zugangsdaten"
@@ -1939,7 +1939,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.ProviderAccount.Driver github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.Driver:6:1
+# [ModelFinder.Field]:	payments.ProviderAccount.Driver github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.Driver:6:1
 text: Driver
 locales:
   de: "Treiber"
@@ -1949,7 +1949,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.ProviderAccount.FixedFee github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.FixedFee:6:6
+# [ModelFinder.Field]:	payments.ProviderAccount.FixedFee github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.FixedFee:6:6
 text: Fixed Fee
 locales:
   de: "Feste Gebühr"
@@ -1959,7 +1959,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	payments.ProviderAccount.PercentageFee github.com/Nigel2392/go-django/contrib/shop/payments.ProviderAccount.PercentageFee:6:7
+# [ModelFinder.Field]:	payments.ProviderAccount.PercentageFee github.com/Nigel2392/go-django/contrib/shop/models/payments.ProviderAccount.PercentageFee:6:7
 text: Percentage Fee
 locales:
   de: "Prozentuale Gebühr"
@@ -1969,7 +1969,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	products.Product.AdditionalFee github.com/Nigel2392/go-django/contrib/shop/products.Product.AdditionalFee:8:7
+# [ModelFinder.Field]:	products.Product.AdditionalFee github.com/Nigel2392/go-django/contrib/shop/models/products.Product.AdditionalFee:8:7
 text: Additional Fee
 locales:
   de: "Zusatzgebühr"
@@ -1979,7 +1979,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: products.Product.DiscountPrice   github.com/Nigel2392/go-django/contrib/shop/products.Product.DiscountPrice:8:9
+# [ModelFinder.Field]: products.Product.DiscountPrice   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.DiscountPrice:8:9
 # [ModelFinder.Field]: dbsupplier.Product.DiscountPrice github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.DiscountPrice:1:9
 text: Discount Price
 locales:
@@ -1990,7 +1990,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: products.Product.Image   github.com/Nigel2392/go-django/contrib/shop/products.Product.Image:8:1
+# [ModelFinder.Field]: products.Product.Image   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Image:8:1
 # [ModelFinder.Field]: dbsupplier.Product.Image github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Image:1:1
 text: Image
 locales:
@@ -2001,7 +2001,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: products.Product.Price   github.com/Nigel2392/go-django/contrib/shop/products.Product.Price:8:6
+# [ModelFinder.Field]: products.Product.Price   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Price:8:6
 # [GoFileFinder]:                               github.com/Nigel2392/go-django/contrib/shop/views/adminviews/view_product.go:110:13
 # [ModelFinder.Field]: dbsupplier.Product.Price github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Price:1:7
 text: Price
@@ -2013,7 +2013,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: products.Product.Ranking   github.com/Nigel2392/go-django/contrib/shop/products.Product.Ranking:8:10
+# [ModelFinder.Field]: products.Product.Ranking   github.com/Nigel2392/go-django/contrib/shop/models/products.Product.Ranking:8:10
 # [ModelFinder.Field]: dbsupplier.Product.Ranking github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier.Product.Ranking:1:10
 text: Ranking
 locales:
@@ -2024,7 +2024,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	products.Product.SpecificContentType github.com/Nigel2392/go-django/contrib/shop/products.Product.SpecificContentType:8:13
+# [ModelFinder.Field]:	products.Product.SpecificContentType github.com/Nigel2392/go-django/contrib/shop/models/products.Product.SpecificContentType:8:13
 text: Specific Content Type
 locales:
   de: "Konkreter Inhaltstyp"
@@ -2034,7 +2034,7 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	products.Product.SpecificID github.com/Nigel2392/go-django/contrib/shop/products.Product.SpecificID:8:12
+# [ModelFinder.Field]:	products.Product.SpecificID github.com/Nigel2392/go-django/contrib/shop/models/products.Product.SpecificID:8:12
 text: Specific ID
 locales:
   de: "Konkrete ID"
@@ -2044,7 +2044,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*productsLogDefinition.GetLabel github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:38:31
+# [GoFileFinder]:	*productsLogDefinition.GetLabel github.com/Nigel2392/go-django/contrib/shop/models/products/auditlogs.go:38:31
 text: '%s was added'
 locales:
   de: "%s wurde hinzugefügt"
@@ -2054,7 +2054,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*productsLogDefinition.GetLabel github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:43:31
+# [GoFileFinder]:	*productsLogDefinition.GetLabel github.com/Nigel2392/go-django/contrib/shop/models/products/auditlogs.go:43:31
 text: '%s was changed'
 locales:
   de: "%s wurde geändert"
@@ -2064,8 +2064,8 @@ locales:
 
 ---
 
-# [GoFileFinder]: *productsLogDefinition.GetLabel      github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:48:30
-# [GoFileFinder]: *productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:137:30
+# [GoFileFinder]: *productsLogDefinition.GetLabel      github.com/Nigel2392/go-django/contrib/shop/models/products/auditlogs.go:48:30
+# [GoFileFinder]: *productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/models/products/auditlogs.go:137:30
 text: Unknown shop log entry type
 locales:
   de: "Unbekannter Typ für Shop-Protokolleintrag"
@@ -2075,7 +2075,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*productsLogDefinition.GetActions github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:60:39
+# [GoFileFinder]:	*productsLogDefinition.GetActions github.com/Nigel2392/go-django/contrib/shop/models/products/auditlogs.go:60:39
 text: Edit Product
 locales:
   de: "Produkt bearbeiten"
@@ -2085,7 +2085,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:91:31
+# [GoFileFinder]:	*productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/models/products/auditlogs.go:91:31
 text: '%q with id %v was added'
 locales:
   de: "%q mit der ID %v wurde hinzugefügt"
@@ -2095,7 +2095,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/products/auditlogs.go:96:35
+# [GoFileFinder]:	*productsLogDefinition.FormatMessage github.com/Nigel2392/go-django/contrib/shop/models/products/auditlogs.go:96:35
 text: '%q with id %v was edited'
 locales:
   de: "%q mit der ID %v wurde bearbeitet"
@@ -2105,7 +2105,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:180:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:180:26
 text: This image should depict the product you are selling.
 locales:
   de: "Dieses Bild sollte das zum Verkauf angebotene Produkt zeigen."
@@ -2115,7 +2115,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:187:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:187:26
 text: The name of your product as visible to users.
 locales:
   de: "Der Produktname, den Benutzer sehen."
@@ -2125,7 +2125,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:198:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:198:26
 text: The path part of this product in the browsers' search bar.
 locales:
   de: "Der Teil der URL, der dieses Produkt in der Adressleiste des Browsers identifiziert."
@@ -2135,7 +2135,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:211:29
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:211:29
 text: The category this product falls under.
 locales:
   de: "Die Kategorie, der dieses Produkt zugeordnet ist."
@@ -2145,7 +2145,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:221:22
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:221:22
 text: Describe your product
 locales:
   de: "Beschreiben Sie Ihr Produkt"
@@ -2155,7 +2155,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:232:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:232:26
 text: The price you are selling this product for.
 locales:
   de: "Der Preis, zu dem Sie dieses Produkt verkaufen."
@@ -2165,7 +2165,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:244:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:244:26
 text: The fee to add to the price per product.
 locales:
   de: "Die Gebühr, die pro Produkt zum Preis hinzukommt."
@@ -2175,7 +2175,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:256:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:256:26
 text: The additional tax fee to add to the purchase price.
 locales:
   de: "Die zusätzliche Steuer, die auf den Kaufpreis aufgeschlagen wird."
@@ -2185,7 +2185,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:268:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:268:26
 text: The discount price you are selling this product for. (Precedence over price)
 locales:
   de: "Der reduzierte Verkaufspreis dieses Produkts. Er hat Vorrang vor dem regulären Preis."
@@ -2195,7 +2195,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:280:26
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:280:26
 text: How well this product ranks generally measured across all products. (1-10)
 locales:
   de: "Wie gut dieses Produkt im Vergleich zu allen anderen Produkten abschneidet (1–10)."
@@ -2205,7 +2205,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/products/models_product.go:288:25
+# [GoFileFinder]:	*Product.FieldDefs github.com/Nigel2392/go-django/contrib/shop/models/products/models_product.go:288:25
 text: The supplier that handles delivery of this product.
 locales:
   de: "Der Lieferant, der dieses Produkt ausliefert."
@@ -2215,7 +2215,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:77:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:77:35
 text: Initialised
 locales:
   de: "Initialisiert"
@@ -2225,7 +2225,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:78:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:78:35
 text: Pending
 locales:
   de: "Ausstehend"
@@ -2235,7 +2235,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:79:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:79:35
 text: Cancelled
 locales:
   de: "Storniert"
@@ -2245,7 +2245,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:80:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:80:35
 text: Expired
 locales:
   de: "Abgelaufen"
@@ -2255,7 +2255,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:81:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:81:35
 text: Denied
 locales:
   de: "Abgelehnt"
@@ -2265,7 +2265,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:82:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:82:35
 text: Failure
 locales:
   de: "Fehlgeschlagen"
@@ -2275,7 +2275,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:83:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:83:35
 text: Check Amount
 locales:
   de: "Betrag prüfen"
@@ -2285,7 +2285,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:84:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:84:35
 text: Partial Payment
 locales:
   de: "Teilzahlung"
@@ -2295,7 +2295,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:85:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:85:35
 text: Manual Verify
 locales:
   de: "Manuell prüfen"
@@ -2305,7 +2305,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:86:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:86:35
 text: Authorize
 locales:
   de: "Autorisiert"
@@ -2315,7 +2315,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:87:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:87:35
 text: Partly Captured
 locales:
   de: "Teilweise eingezogen"
@@ -2325,7 +2325,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:88:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:88:35
 text: Paid
 locales:
   de: "Bezahlt"
@@ -2335,7 +2335,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:89:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:89:35
 text: Chargeback
 locales:
   de: "Rückbuchung"
@@ -2345,7 +2345,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:90:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:90:35
 text: Refunding
 locales:
   de: "Rückerstattung läuft"
@@ -2355,7 +2355,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:91:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:91:35
 text: Refunded
 locales:
   de: "Rückerstattet"
@@ -2365,7 +2365,7 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/util/paystate/status.go:92:35
+# [GoFileFinder]:	 github.com/Nigel2392/go-django/contrib/shop/core/util/paystate/status.go:92:35
 text: Partial Refund
 locales:
   de: "Teilweise rückerstattet"

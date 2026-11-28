@@ -3,7 +3,7 @@ package adminsite
 import (
 	"github.com/Nigel2392/go-django/contrib/admin"
 	"github.com/Nigel2392/go-django/contrib/admin/searches"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
+	"github.com/Nigel2392/go-django/contrib/shop/models/categories"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -11,7 +11,7 @@ import (
 
 var CategoryAdmin = admin.ModelOptions{
 	MenuOrder:           100,
-	Model:               &models.Category{},
+	Model:               &categories.Category{},
 	MenuLabel:           trans.S("Category"),
 	RegisterToAdminMenu: true,
 	ListView: admin.ListViewOptions{
@@ -27,8 +27,8 @@ var CategoryAdmin = admin.ModelOptions{
 			admin.FieldPanel("Name"),
 			admin.FieldPanel("Slug"),
 			admin.FieldPanel("ParentCategory"),
-			&admin.ModelFormPanel[*models.Category, modelforms.ModelForm[*models.Category]]{
-				TargetType: &models.Category{},
+			&admin.ModelFormPanel[*categories.Category, modelforms.ModelForm[*categories.Category]]{
+				TargetType: &categories.Category{},
 				FieldName:  "Children",
 				Classname:  "collapsible",
 				// SubClassname: "collapsed",
@@ -47,8 +47,8 @@ var CategoryAdmin = admin.ModelOptions{
 			admin.FieldPanel("Name"),
 			admin.FieldPanel("Slug"),
 			admin.FieldPanel("ParentCategory"),
-			&admin.ModelFormPanel[*models.Category, modelforms.ModelForm[*models.Category]]{
-				TargetType: &models.Category{},
+			&admin.ModelFormPanel[*categories.Category, modelforms.ModelForm[*categories.Category]]{
+				TargetType: &categories.Category{},
 				FieldName:  "Children",
 				Classname:  "collapsible",
 				// SubClassname: "collapsed",

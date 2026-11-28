@@ -20,8 +20,8 @@ import (
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/settings"
 	"github.com/Nigel2392/go-django/contrib/shop"
-	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/models/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/models/coupons"
 	"github.com/Nigel2392/go-django/contrib/translations"
 	"github.com/Nigel2392/go-django/examples/commerce/src/suppliers/dbsupplier"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -112,31 +112,31 @@ func main() {
 
 	contenttypes.RegisterAlias(
 		"github.com/Nigel2392/go-django/contrib/shop/models.CartItem",
-		"github.com/Nigel2392/go-django/contrib/shop/carts.CartItem",
+		"github.com/Nigel2392/go-django/contrib/shop/models/carts.CartItem",
 	)
 	contenttypes.RegisterAlias(
 		"github.com/Nigel2392/go-django/contrib/shop/models.Cart",
-		"github.com/Nigel2392/go-django/contrib/shop/carts.Cart",
+		"github.com/Nigel2392/go-django/contrib/shop/models/carts.Cart",
 	)
 	contenttypes.RegisterAlias(
 		"github.com/Nigel2392/go-django/contrib/shop/models.OrderState",
-		"github.com/Nigel2392/go-django/contrib/shop/orders.OrderState",
+		"github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderState",
 	)
 	contenttypes.RegisterAlias(
 		"github.com/Nigel2392/go-django/contrib/shop/models.OrderItem",
-		"github.com/Nigel2392/go-django/contrib/shop/orders.OrderItem",
+		"github.com/Nigel2392/go-django/contrib/shop/models/orders.OrderItem",
 	)
 	contenttypes.RegisterAlias(
 		"github.com/Nigel2392/go-django/contrib/shop/models.Order",
-		"github.com/Nigel2392/go-django/contrib/shop/orders.Order",
+		"github.com/Nigel2392/go-django/contrib/shop/models/orders.Order",
 	)
 	contenttypes.RegisterAlias(
 		"github.com/Nigel2392/go-django/contrib/shop/models.Payment",
-		"github.com/Nigel2392/go-django/contrib/shop/payments.Payment",
+		"github.com/Nigel2392/go-django/contrib/shop/models/payments.Payment",
 	)
 	contenttypes.RegisterAlias(
 		"github.com/Nigel2392/go-django/contrib/shop/models.Product",
-		"github.com/Nigel2392/go-django/contrib/shop/products.Product",
+		"github.com/Nigel2392/go-django/contrib/shop/models/products.Product",
 	)
 	err = app.Initialize()
 	if err != nil {

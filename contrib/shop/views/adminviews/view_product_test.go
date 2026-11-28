@@ -26,16 +26,16 @@ import (
 	"github.com/Nigel2392/go-django/contrib/revisions"
 	"github.com/Nigel2392/go-django/contrib/session"
 	"github.com/Nigel2392/go-django/contrib/shop"
-	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons"
-	"github.com/Nigel2392/go-django/contrib/shop/customers"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
-	"github.com/Nigel2392/go-django/contrib/shop/products"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/price"
-	"github.com/Nigel2392/go-django/contrib/shop/shared/signals"
-	"github.com/Nigel2392/go-django/contrib/shop/util/paystate"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/price"
+	"github.com/Nigel2392/go-django/contrib/shop/core/shared/signals"
+	"github.com/Nigel2392/go-django/contrib/shop/core/util/paystate"
+	"github.com/Nigel2392/go-django/contrib/shop/models/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/models/categories"
+	"github.com/Nigel2392/go-django/contrib/shop/models/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/models/customers"
+	"github.com/Nigel2392/go-django/contrib/shop/models/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/models/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/models/products"
 	"github.com/Nigel2392/go-django/djester"
 	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/djester/testdb"
@@ -151,7 +151,7 @@ func testProductPanels(ctx context.Context) []admin.Panel {
 	}
 }
 
-func seedAdminProduct(t *testing.T, cat *models.Category, sup string, title, slug, sku, price, discount string) (*testAdminSupplierProduct, *products.Product) {
+func seedAdminProduct(t *testing.T, cat *categories.Category, sup string, title, slug, sku, price, discount string) (*testAdminSupplierProduct, *products.Product) {
 	t.Helper()
 
 	spec := &testAdminSupplierProduct{
@@ -260,7 +260,7 @@ func TestAdminProductViews(t *testing.T) {
 			tables := quest.Table(t,
 				&AdminProductTestUser{},
 				&auditlogs.Entry{},
-				&models.Category{},
+				&categories.Category{},
 				&orders.SupplierModel{},
 				&testAdminSupplierProduct{},
 				&products.Product{},
@@ -292,8 +292,8 @@ func TestAdminProductViews(t *testing.T) {
 	}
 
 	var (
-		catHardware *models.Category
-		catAudio    *models.Category
+		catHardware *categories.Category
+		catAudio    *categories.Category
 		seededProd1 *products.Product
 	)
 
@@ -349,7 +349,7 @@ func TestAdminProductViews(t *testing.T) {
 				Function: func(d *djester.Tester, t *testing.T) {
 					for _, name := range []string{
 						"github.com/Nigel2392/go-django/contrib/shop/supplier.SupplierModel",
-						"github.com/Nigel2392/go-django/contrib/shop/products/supplier.SupplierModel",
+						"github.com/Nigel2392/go-django/contrib/shop/models/products/supplier.SupplierModel",
 					} {
 						definition := contenttypes.DefinitionForType(name)
 						if definition == nil {
@@ -374,13 +374,13 @@ func TestAdminProductViews(t *testing.T) {
 						t.Fatalf("failed to seed admin_user: %v", err)
 					}
 
-					catHardware = &models.Category{Name: "Computer Hardware", Slug: "computer-hardware"}
-					if _, err := queries.GetQuerySet(&models.Category{}).Create(catHardware); err != nil {
+					catHardware = &categories.Category{Name: "Computer Hardware", Slug: "computer-hardware"}
+					if _, err := queries.GetQuerySet(&categories.Category{}).Create(catHardware); err != nil {
 						t.Fatalf("failed to seed catHardware: %v", err)
 					}
 
-					catAudio = &models.Category{Name: "Studio Audio", Slug: "studio-audio"}
-					if _, err := queries.GetQuerySet(&models.Category{}).Create(catAudio); err != nil {
+					catAudio = &categories.Category{Name: "Studio Audio", Slug: "studio-audio"}
+					if _, err := queries.GetQuerySet(&categories.Category{}).Create(catAudio); err != nil {
 						t.Fatalf("failed to seed catAudio: %v", err)
 					}
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/models/orders"
 	"github.com/Nigel2392/go-django/src/core/trans"
 )
 

@@ -13,14 +13,14 @@ import (
 	"github.com/Nigel2392/go-django/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/contrib/admin/searches"
 	"github.com/Nigel2392/go-django/contrib/shop/adminsite"
-	"github.com/Nigel2392/go-django/contrib/shop/carts"
-	"github.com/Nigel2392/go-django/contrib/shop/coupons"
-	"github.com/Nigel2392/go-django/contrib/shop/customers"
-	"github.com/Nigel2392/go-django/contrib/shop/handlers"
-	"github.com/Nigel2392/go-django/contrib/shop/models"
-	"github.com/Nigel2392/go-django/contrib/shop/orders"
-	"github.com/Nigel2392/go-django/contrib/shop/payments"
-	"github.com/Nigel2392/go-django/contrib/shop/products"
+	"github.com/Nigel2392/go-django/contrib/shop/core/handlers"
+	"github.com/Nigel2392/go-django/contrib/shop/models/carts"
+	"github.com/Nigel2392/go-django/contrib/shop/models/categories"
+	"github.com/Nigel2392/go-django/contrib/shop/models/coupons"
+	"github.com/Nigel2392/go-django/contrib/shop/models/customers"
+	"github.com/Nigel2392/go-django/contrib/shop/models/orders"
+	"github.com/Nigel2392/go-django/contrib/shop/models/payments"
+	"github.com/Nigel2392/go-django/contrib/shop/models/products"
 	"github.com/Nigel2392/go-django/contrib/shop/views/adminviews"
 	"github.com/Nigel2392/go-django/contrib/shop/views/public"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -98,7 +98,7 @@ func NewAppConfig() (django.AppConfig, error) {
 
 	supplierType := contenttypes.NewContentType(&orders.SupplierModel{}).TypeName()
 	contenttypes.RegisterAlias("github.com/Nigel2392/go-django/contrib/shop/supplier.SupplierModel", supplierType)
-	contenttypes.RegisterAlias("github.com/Nigel2392/go-django/contrib/shop/products/supplier.SupplierModel", supplierType)
+	contenttypes.RegisterAlias("github.com/Nigel2392/go-django/contrib/shop/models/products/supplier.SupplierModel", supplierType)
 
 	tplFS, err := fs.Sub(assetFilesystem, "assets/templates")
 	if err != nil {
@@ -158,7 +158,7 @@ func NewAppConfig() (django.AppConfig, error) {
 		&products.Product{},
 
 		// Categories
-		&models.Category{},
+		&categories.Category{},
 
 		// Suppliers
 		&orders.SupplierModel{},
